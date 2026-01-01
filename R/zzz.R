@@ -28,6 +28,18 @@
   # Step registration data
   # Format: list(step_name, category, description)
   steps <- list(
+    # Preprocessing
+    list(
+      "step_sec_detector_delay",
+      "preprocessing",
+      "Correct inter-detector volume delays"
+    ),
+
+    # Detector processing
+    list("step_sec_ri", "detector", "RI detector with dn/dc handling"),
+    list("step_sec_uv", "detector", "UV detector with extinction coefficient"),
+    list("step_sec_concentration", "calculation", "Convert signal to concentration"),
+
     # Baseline correction
     list("step_sec_baseline", "baseline", "SEC-optimized baseline correction"),
 
@@ -36,11 +48,7 @@
     list("step_sec_mw_fractions", "calculation", "Calculate MW fractions"),
     list("step_sec_mw_distribution", "processing", "Generate MW distribution curves")
 
-    # TODO: Add these steps when implemented:
-    # list("step_sec_detector_delay", "preprocessing", "Correct inter-detector volume delays"),
-    # list("step_sec_ri", "detector", "RI detector with dn/dc handling"),
-    # list("step_sec_uv", "detector", "UV detector with extinction coefficient"),
-    # list("step_sec_concentration", "calculation", "Convert signal to concentration"),
+    # TODO: Add when implemented:
     # list("step_sec_calibrate", "calibration", "Calibration curve fitting")
   )
 
