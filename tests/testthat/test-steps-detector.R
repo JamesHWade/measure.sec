@@ -127,10 +127,16 @@ test_that("step_sec_mals requires dn_dc parameter", {
   test_data <- tibble::tibble(sample_id = "test")
 
   test_data$mals <- measure::new_measure_list(
-    list(measure::new_measure_tbl(location = time, value = dnorm(time, 10, 0.5)))
+    list(measure::new_measure_tbl(
+      location = time,
+      value = dnorm(time, 10, 0.5)
+    ))
   )
   test_data$ri <- measure::new_measure_list(
-    list(measure::new_measure_tbl(location = time, value = dnorm(time, 10, 0.5)))
+    list(measure::new_measure_tbl(
+      location = time,
+      value = dnorm(time, 10, 0.5)
+    ))
   )
 
   expect_error(
@@ -144,7 +150,7 @@ test_that("step_sec_viscometer processes DP signal", {
   skip_if_not_installed("measure")
 
   time <- seq(5, 15, by = 0.1)
-  dp_signal <- dnorm(time, mean = 10, sd = 0.5) * 100  # DP in arbitrary units
+  dp_signal <- dnorm(time, mean = 10, sd = 0.5) * 100 # DP in arbitrary units
 
   test_data <- tibble::tibble(sample_id = "test")
 

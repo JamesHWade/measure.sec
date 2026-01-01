@@ -96,6 +96,11 @@
 
     # Calibration
     list(
+      "step_sec_conventional_cal",
+      "calibration",
+      "Conventional calibration using narrow standards"
+    ),
+    list(
       "step_sec_universal_cal",
       "calibration",
       "Universal calibration using Mark-Houwink"

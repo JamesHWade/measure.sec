@@ -17,7 +17,11 @@ test_that("measure_sec_slice_table extracts slice data", {
     measure::new_measure_tbl(location = time, value = signal * 1.5)
   ))
 
-  slices <- measure_sec_slice_table(test_data, measures = "ri", sample_id = "sample_id")
+  slices <- measure_sec_slice_table(
+    test_data,
+    measures = "ri",
+    sample_id = "sample_id"
+  )
 
   expect_s3_class(slices, "tbl_df")
   expect_true("sample_id" %in% names(slices))
@@ -115,7 +119,11 @@ test_that("measure_sec_summary_table rounds to specified digits", {
     Mw = 23456.7891
   )
 
-  summary <- measure_sec_summary_table(test_data, sample_id = "sample_id", digits = 0)
+  summary <- measure_sec_summary_table(
+    test_data,
+    sample_id = "sample_id",
+    digits = 0
+  )
 
   expect_equal(summary$Mn[1], 12346)
   expect_equal(summary$Mw[1], 23457)

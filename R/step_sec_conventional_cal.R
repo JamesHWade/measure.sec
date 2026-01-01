@@ -307,7 +307,7 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
   cal_summary <- suppressWarnings(summary(cal_fit))
   r_squared <- cal_summary$r.squared
   adj_r_squared <- cal_summary$adj.r.squared
-  sigma <- cal_summary$sigma  # Residual standard error
+  sigma <- cal_summary$sigma # Residual standard error
 
   # Predictions and residuals for each standard
   predicted_log_mw <- stats::predict(cal_fit)
@@ -513,7 +513,11 @@ tidy.step_sec_conventional_cal <- function(x, ...) {
   } else {
     tibble::tibble(
       fit_type = x$fit_type,
-      n_standards = if (is.null(x$standards)) NA_integer_ else nrow(x$standards),
+      n_standards = if (is.null(x$standards)) {
+        NA_integer_
+      } else {
+        nrow(x$standards)
+      },
       r_squared = NA_real_,
       adj_r_squared = NA_real_,
       rmse_log_mw = NA_real_,

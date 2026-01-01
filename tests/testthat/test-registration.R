@@ -26,8 +26,7 @@ test_that("SEC steps are registered", {
   expect_true("step_sec_mw_distribution" %in% step_names)
 })
 
-test_that("SEC steps have correct categories",
- {
+test_that("SEC steps have correct categories", {
   skip_if_not_installed("measure")
 
   steps <- measure::measure_steps(techniques = "SEC/GPC")
