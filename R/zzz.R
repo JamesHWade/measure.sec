@@ -39,10 +39,18 @@
     list("step_sec_ri", "detector", "RI detector with dn/dc handling"),
     list("step_sec_uv", "detector", "UV detector with extinction coefficient"),
     list(
+      "step_sec_dad",
+      "detector",
+      "Diode array detector processing (multi-wavelength UV)"
+    ),
+    list(
       "step_sec_mals",
       "detector",
       "Multi-angle light scattering for absolute MW"
     ),
+    list("step_sec_lals", "detector", "Low-angle light scattering (LALS)"),
+    list("step_sec_rals", "detector", "Right-angle light scattering (RALS)"),
+    list("step_sec_dls", "detector", "Dynamic light scattering (DLS)"),
     list(
       "step_sec_viscometer",
       "detector",

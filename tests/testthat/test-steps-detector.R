@@ -197,3 +197,146 @@ test_that("step_sec_intrinsic_visc calculates from viscosity and concentration",
   expect_s3_class(result, "tbl_df")
   expect_true("intrinsic_visc" %in% names(result))
 })
+
+test_that("step_sec_dad applies extinction coefficients and ratios", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  uv_254 <- dnorm(time, mean = 5, sd = 1)
+  uv_280 <- dnorm(time, mean = 5.5, sd = 1)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$uv_254 <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = uv_254))
+  )
+  test_data$uv_280 <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = uv_280))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_dad(
+      measures = c("uv_254", "uv_280"),
+      wavelengths = c(254, 280),
+      extinction_coefs = c(`254` = 2, `280` = 1),
+      reference_wavelength = 280,
+      output_prefix = "uv"
+    )
+
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("uv_254" %in% names(result))
+  expect_true("uv_280" %in% names(result))
+  expect_true("uv_254_to_280" %in% names(result))
+
+  processed_max <- max(result$uv_254[[1]]$value)
+  expect_equal(processed_max, max(uv_254) / 2, tolerance = 0.01)
+})
+
+test_that("step_sec_lals computes MW and validates angle", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  lals_signal <- dnorm(time, mean = 5, sd = 1)
+  ri_signal <- dnorm(time, mean = 5, sd = 1)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$lals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = lals_signal))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = ri_signal))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("mw_lals" %in% names(result))
+  expect_true(!all(is.na(result$mw_lals[[1]]$value)))
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_lals(
+        measures = "lals",
+        concentration_col = "ri",
+        dn_dc = 0.185,
+        angle = 25
+      ),
+    "angle"
+  )
+})
+
+test_that("step_sec_rals computes MW", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  rals_signal <- dnorm(time, mean = 5, sd = 1)
+  ri_signal <- dnorm(time, mean = 5, sd = 1)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$rals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = rals_signal))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = ri_signal))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("mw_rals" %in% names(result))
+  expect_true(!all(is.na(result$mw_rals[[1]]$value)))
+})
+
+test_that("step_sec_dls estimates diffusion and Rh", {
+  skip_if_not_installed("measure")
+
+  tau <- seq(1e-6, 1e-3, length.out = 50)
+  laser_wavelength <- 633
+  angle <- 90
+  solvent_ri <- 1.333
+  diffusion <- 1e-10
+
+  q_val <- (4 * pi * solvent_ri / (laser_wavelength * 1e-9)) * sin(pi / 4)
+  gamma <- diffusion * q_val^2
+  beta <- 0.8
+  g2 <- 1 + beta * exp(-2 * gamma * tau)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = tau, value = g2))
+  )
+  test_data$rg <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = tau, value = rep(10, length(tau))))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_dls(
+      measures = "dls",
+      temperature = 25,
+      viscosity = 1.0,
+      laser_wavelength = laser_wavelength,
+      angle = angle,
+      solvent_ri = solvent_ri
+    )
+
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("rh" %in% names(result))
+  expect_true("diffusion_coef" %in% names(result))
+  expect_true("rg_rh" %in% names(result))
+
+  rh_vals <- result$rh[[1]]$value
+  expect_true(all(is.finite(rh_vals)))
+
+  k_b <- 1.380649e-23
+  expected_rh_m <- k_b * (25 + 273.15) / (6 * pi * 1e-3 * diffusion)
+  expect_equal(mean(rh_vals), expected_rh_m * 1e9, tolerance = 0.2)
+})

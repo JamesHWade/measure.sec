@@ -96,8 +96,12 @@ rec <- recipe(~., data = sec_visc_data) |>
 
 Other sec-detectors: 
 \code{\link{step_sec_concentration}()},
+\code{\link{step_sec_dad}()},
+\code{\link{step_sec_dls}()},
 \code{\link{step_sec_intrinsic_visc}()},
+\code{\link{step_sec_lals}()},
 \code{\link{step_sec_mals}()},
+\code{\link{step_sec_rals}()},
 \code{\link{step_sec_ri}()},
 \code{\link{step_sec_uv}()}
 }
