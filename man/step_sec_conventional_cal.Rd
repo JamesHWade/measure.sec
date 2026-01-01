@@ -121,6 +121,9 @@ tidy(rec, number = 3)
 }
 \seealso{
 Other sec-calibration: 
+\code{\link{sec_calibration_standards}},
+\code{\link{sec_pmma_standards}},
+\code{\link{sec_ps_standards}},
 \code{\link{step_sec_universal_cal}()}
 }
 \concept{sec-calibration}

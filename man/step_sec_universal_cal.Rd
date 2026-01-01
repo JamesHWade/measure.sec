@@ -121,6 +121,9 @@ rec <- recipe(~., data = pmma_data) |>
 }
 \seealso{
 Other sec-calibration: 
+\code{\link{sec_calibration_standards}},
+\code{\link{sec_pmma_standards}},
+\code{\link{sec_ps_standards}},
 \code{\link{step_sec_conventional_cal}()}
 }
 \concept{sec-calibration}
