@@ -258,7 +258,7 @@ prep.step_sec_mw_distribution <- function(x, training, info = NULL, ...) {
       interp_w <- rep(w[1], length(out_log_mw))
     }
 
-    # Cumulative sum normalized to [0, 1]
+    # Cumulative sum normalized to \[0, 1\]
     cum_dist <- cumsum(interp_w)
     if (max(cum_dist) > 0) {
       cum_dist <- cum_dist / max(cum_dist)
