@@ -131,7 +131,7 @@ step_sec_conventional_cal <- function(
       log_output = log_output,
       calibration_fit = NULL,
       calibration_range = NULL,
-      r_squared = NULL,
+      calibration_diagnostics = NULL,
       role = role,
       trained = trained,
       skip = skip,
@@ -228,7 +228,7 @@ step_sec_conventional_cal_new <- function(
   log_output,
   calibration_fit,
   calibration_range,
-  r_squared,
+  calibration_diagnostics,
   role,
   trained,
   skip,
@@ -244,7 +244,7 @@ step_sec_conventional_cal_new <- function(
     log_output = log_output,
     calibration_fit = calibration_fit,
     calibration_range = calibration_range,
-    r_squared = r_squared,
+    calibration_diagnostics = calibration_diagnostics,
     role = role,
     trained = trained,
     skip = skip,
@@ -268,6 +268,9 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
   location_col <- .get_location_col(standards)
   location <- standards[[location_col]]
   log_mw <- .get_log_mw(standards)
+
+  # Get MW in Daltons for % deviation calculation
+  mw_daltons <- 10^log_mw
 
   # Validate sufficient standards for fit type
   n_standards <- length(location)
@@ -300,19 +303,81 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
   cal_data <- data.frame(location = location, log_mw = log_mw)
   cal_fit <- stats::lm(log_mw ~ stats::poly(location, degree), data = cal_data)
 
-  # Calculate R-squared (suppress "essentially perfect fit" warning for exact fits)
-  r_squared <- suppressWarnings(summary(cal_fit)$r.squared)
+  # Calculate comprehensive diagnostics
+  cal_summary <- suppressWarnings(summary(cal_fit))
+  r_squared <- cal_summary$r.squared
+  adj_r_squared <- cal_summary$adj.r.squared
+  sigma <- cal_summary$sigma  # Residual standard error
+
+  # Predictions and residuals for each standard
+  predicted_log_mw <- stats::predict(cal_fit)
+  residuals_log_mw <- log_mw - predicted_log_mw
+
+  # Calculate MW from predictions
+  predicted_mw <- 10^predicted_log_mw
+
+  # Calculate % deviation in MW space (more intuitive for scientists)
+  pct_deviation <- 100 * (predicted_mw - mw_daltons) / mw_daltons
+
+  # RMSE in log(MW) space
+  rmse_log <- sqrt(mean(residuals_log_mw^2))
+
+  # Calculate prediction intervals at standard locations
+  pred_with_se <- stats::predict(
+    cal_fit,
+    newdata = cal_data,
+    se.fit = TRUE,
+    interval = "prediction",
+    level = 0.95
+  )
+
+  # Build per-standard diagnostics table
+  standard_diagnostics <- tibble::tibble(
+    location = location,
+    actual_log_mw = log_mw,
+    predicted_log_mw = as.numeric(predicted_log_mw),
+    residual_log_mw = as.numeric(residuals_log_mw),
+    actual_mw = mw_daltons,
+    predicted_mw = as.numeric(predicted_mw),
+    pct_deviation = as.numeric(pct_deviation),
+    prediction_se = as.numeric(pred_with_se$se.fit),
+    ci_lower_log_mw = as.numeric(pred_with_se$fit[, "lwr"]),
+    ci_upper_log_mw = as.numeric(pred_with_se$fit[, "upr"])
+  )
 
   # Store calibration range
   calibration_range <- range(location)
 
-  # Warn if R² is low
+  # Build comprehensive diagnostics object
+  calibration_diagnostics <- list(
+    r_squared = r_squared,
+    adj_r_squared = adj_r_squared,
+    rmse_log_mw = rmse_log,
+    residual_std_error = sigma,
+    degrees_of_freedom = cal_fit$df.residual,
+    max_abs_residual = max(abs(residuals_log_mw)),
+    max_abs_pct_deviation = max(abs(pct_deviation)),
+    mean_abs_pct_deviation = mean(abs(pct_deviation)),
+    standard_results = standard_diagnostics
+  )
 
+  # Warn if R² is low
   if (r_squared < 0.99) {
     cli::cli_warn(
       c(
         "Calibration fit quality is low (R\\u00b2 = {round(r_squared, 4)}).",
         "i" = "Typical calibrations have R\\u00b2 > 0.999."
+      )
+    )
+  }
+
+  # Warn if any standard has high deviation
+  if (max(abs(pct_deviation)) > 5) {
+    worst_idx <- which.max(abs(pct_deviation))
+    cli::cli_warn(
+      c(
+        "Standard at {round(location[worst_idx], 2)} has {round(pct_deviation[worst_idx], 1)}% MW deviation.",
+        "i" = "Consider removing outlier standards or using a different fit type."
       )
     )
   }
@@ -326,7 +391,7 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
     log_output = x$log_output,
     calibration_fit = cal_fit,
     calibration_range = calibration_range,
-    r_squared = r_squared,
+    calibration_diagnostics = calibration_diagnostics,
     role = x$role,
     trained = TRUE,
     skip = x$skip,
@@ -401,8 +466,14 @@ print.step_sec_conventional_cal <- function(
 ) {
   title <- sprintf("SEC conventional calibration (%s fit)", x$fit_type)
 
-  if (x$trained && !is.null(x$r_squared)) {
-    title <- sprintf("%s, R\u00b2=%.4f", title, x$r_squared)
+  if (x$trained && !is.null(x$calibration_diagnostics)) {
+    diag <- x$calibration_diagnostics
+    title <- sprintf(
+      "%s, R\u00b2=%.4f, RMSE=%.4f",
+      title,
+      diag$r_squared,
+      diag$rmse_log_mw
+    )
   }
 
   if (x$trained) {
@@ -410,6 +481,7 @@ print.step_sec_conventional_cal <- function(
   } else {
     cat(title)
   }
+
   cat("\n")
   invisible(x)
 }
@@ -418,30 +490,41 @@ print.step_sec_conventional_cal <- function(
 #' @export
 #' @keywords internal
 tidy.step_sec_conventional_cal <- function(x, ...) {
-  if (x$trained && !is.null(x$calibration_fit)) {
+  if (x$trained && !is.null(x$calibration_diagnostics)) {
+    diag <- x$calibration_diagnostics
     coefs <- stats::coef(x$calibration_fit)
     tibble::tibble(
       fit_type = x$fit_type,
-      r_squared = x$r_squared,
+      n_standards = nrow(x$standards),
+      r_squared = diag$r_squared,
+      adj_r_squared = diag$adj_r_squared,
+      rmse_log_mw = diag$rmse_log_mw,
+      residual_std_error = diag$residual_std_error,
+      max_abs_pct_deviation = diag$max_abs_pct_deviation,
+      mean_abs_pct_deviation = diag$mean_abs_pct_deviation,
       calibration_min = x$calibration_range[1],
       calibration_max = x$calibration_range[2],
-      n_standards = nrow(x$standards),
+      degrees_of_freedom = diag$degrees_of_freedom,
       coefficients = list(coefs),
+      standard_results = list(diag$standard_results),
       output_col = x$output_col,
       id = x$id
     )
   } else {
     tibble::tibble(
       fit_type = x$fit_type,
+      n_standards = if (is.null(x$standards)) NA_integer_ else nrow(x$standards),
       r_squared = NA_real_,
+      adj_r_squared = NA_real_,
+      rmse_log_mw = NA_real_,
+      residual_std_error = NA_real_,
+      max_abs_pct_deviation = NA_real_,
+      mean_abs_pct_deviation = NA_real_,
       calibration_min = NA_real_,
       calibration_max = NA_real_,
-      n_standards = if (is.null(x$standards)) {
-        NA_integer_
-      } else {
-        nrow(x$standards)
-      },
+      degrees_of_freedom = NA_integer_,
       coefficients = list(NULL),
+      standard_results = list(NULL),
       output_col = x$output_col,
       id = x$id
     )

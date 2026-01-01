@@ -131,9 +131,18 @@ test_that("step_sec_conventional_cal fits calibration curve during prep", {
   step <- prepped$steps[[1]]
   expect_true(step$trained)
   expect_true(inherits(step$calibration_fit, "lm"))
-  expect_true(!is.null(step$r_squared))
-  expect_true(step$r_squared > 0.99)
+  expect_true(!is.null(step$calibration_diagnostics))
+  expect_true(step$calibration_diagnostics$r_squared > 0.99)
   expect_equal(length(step$calibration_range), 2)
+
+  # Check new diagnostics fields
+  diag <- step$calibration_diagnostics
+  expect_true(!is.null(diag$rmse_log_mw))
+  expect_true(!is.null(diag$adj_r_squared))
+  expect_true(!is.null(diag$residual_std_error))
+  expect_true(!is.null(diag$standard_results))
+  expect_s3_class(diag$standard_results, "tbl_df")
+  expect_equal(nrow(diag$standard_results), 6)  # 6 standards
 })
 
 test_that("step_sec_conventional_cal warns on poor fit quality", {
@@ -331,6 +340,7 @@ test_that("step_sec_conventional_cal print method works", {
 
   suppressWarnings(prepped <- recipes::prep(rec))
   expect_output(print(prepped), "R\u00b2")
+  expect_output(print(prepped), "RMSE")
 })
 
 test_that("step_sec_conventional_cal tidy method returns expected structure", {
@@ -346,16 +356,41 @@ test_that("step_sec_conventional_cal tidy method returns expected structure", {
   tidy_result <- recipes::tidy(prepped, number = 1)
 
   expect_s3_class(tidy_result, "tbl_df")
+
+  # Core fit quality columns
   expect_true("fit_type" %in% names(tidy_result))
   expect_true("r_squared" %in% names(tidy_result))
+  expect_true("adj_r_squared" %in% names(tidy_result))
+  expect_true("rmse_log_mw" %in% names(tidy_result))
+  expect_true("residual_std_error" %in% names(tidy_result))
+
+  # Standard deviation metrics
+  expect_true("max_abs_pct_deviation" %in% names(tidy_result))
+  expect_true("mean_abs_pct_deviation" %in% names(tidy_result))
+
+  # Calibration range and metadata
   expect_true("calibration_min" %in% names(tidy_result))
   expect_true("calibration_max" %in% names(tidy_result))
   expect_true("n_standards" %in% names(tidy_result))
+  expect_true("degrees_of_freedom" %in% names(tidy_result))
   expect_true("coefficients" %in% names(tidy_result))
+  expect_true("standard_results" %in% names(tidy_result))
 
+  # Validate values
   expect_equal(tidy_result$fit_type, "cubic")
   expect_equal(tidy_result$n_standards, 6)
   expect_true(tidy_result$r_squared > 0.99)
+  expect_true(tidy_result$rmse_log_mw >= 0)
+
+  # Check standard_results is a nested tibble with expected columns
+  std_results <- tidy_result$standard_results[[1]]
+  expect_s3_class(std_results, "tbl_df")
+  expect_equal(nrow(std_results), 6)
+  expect_true(all(c(
+    "location", "actual_log_mw", "predicted_log_mw", "residual_log_mw",
+    "actual_mw", "predicted_mw", "pct_deviation", "prediction_se",
+    "ci_lower_log_mw", "ci_upper_log_mw"
+  ) %in% names(std_results)))
 })
 
 # -- Integration with other steps ----------------------------------------------
