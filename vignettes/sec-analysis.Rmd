@@ -1,0 +1,414 @@
+---
+title: "Size Exclusion Chromatography Analysis with measure.sec"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Size Exclusion Chromatography Analysis with measure.sec}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+Size Exclusion Chromatography (SEC), also known as Gel Permeation Chromatography (GPC), is a fundamental technique for characterizing the molecular weight distribution of polymers, proteins, and other macromolecules. The **measure.sec** package extends the [measure](https://github.com/JamesHWade/measure) package with specialized preprocessing steps for SEC/GPC data analysis.
+This vignette demonstrates how to:
+
+1. Process multi-detector SEC data (RI, UV, MALS)
+2. Calculate molecular weight averages and distributions
+3. Analyze copolymer composition
+4. Quantify protein aggregates
+5. Perform quality control checks
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## The measure.sec Data Model
+
+The package uses the **measure** framework, where chromatographic signals are stored as nested tibbles. Each sample has a `measure_tbl` containing:
+
+- `location`: Elution time or volume
+- `value`: Detector response
+
+Multiple samples are combined into a `measure_list` column.
+
+## Example Dataset
+
+The package includes `sec_triple_detect`, a synthetic dataset representing multi-detector SEC analysis:
+
+```{r data}
+data(sec_triple_detect, package = "measure.sec")
+
+# Overview of the dataset
+glimpse(sec_triple_detect)
+
+# Sample types included
+sec_triple_detect |>
+  distinct(sample_id, sample_type, polymer_type) |>
+  print(n = 12)
+```
+
+## Basic Workflow: Single Detector Analysis
+
+Let's start with a simple RI detector workflow for polystyrene standards:
+
+```{r basic-workflow, eval = FALSE}
+# Filter to PS standards
+ps_standards <- sec_triple_detect |>
+  filter(polymer_type == "polystyrene")
+
+# Create the preprocessing recipe
+rec <- recipe(~., data = ps_standards) |>
+  # Convert to measure format
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  # Apply baseline correction
+  step_sec_baseline(measures = "ri") |>
+  # Process RI detector with dn/dc
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  # Calculate molecular weight averages
+  step_sec_mw_averages(mw_column = "known_mw")
+
+# Prep and bake
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# View results
+result |>
+  select(sample_id, Mn, Mw, Mz, dispersity)
+```
+
+## Multi-Detector SEC Workflow
+
+For more accurate molecular weight determination, multi-detector SEC uses RI for concentration and MALS for absolute molecular weight:
+
+```{r multi-detector, eval = FALSE}
+rec_multi <- recipe(~., data = sec_triple_detect) |>
+  # Convert each detector to measure format
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  step_measure_input_long(
+    mals_signal,
+    location = vars(elution_time),
+    col_name = "mals"
+  ) |>
+  # Correct inter-detector delays
+  step_sec_detector_delay(
+    reference = "ri",
+    delay_volumes = c(uv = -0.05, mals = 0.10)
+  ) |>
+  # Apply baseline correction
+  step_sec_baseline(measures = c("ri", "uv", "mals")) |>
+  # Process detectors
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
+  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  # Convert to concentration
+  step_sec_concentration(measures = "ri", detector = "ri") |>
+  # Calculate MW averages from MALS-derived MW
+  step_sec_mw_averages(mw_column = "mw_mals")
+
+prepped <- prep(rec_multi)
+result <- bake(prepped, new_data = NULL)
+```
+
+## Copolymer Composition Analysis
+
+The UV/RI ratio can reveal compositional heterogeneity across the molecular weight distribution:
+
+```{r composition, eval = FALSE}
+# Filter to copolymer samples
+copolymers <- sec_triple_detect |>
+  filter(polymer_type == "copolymer")
+
+rec_comp <- recipe(~., data = copolymers) |>
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_sec_baseline(measures = c("ri", "uv")) |>
+  # Calculate UV/RI ratio
+  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE) |>
+  # Calculate composition (requires known response factors)
+  step_sec_composition(
+    uv_col = "uv",
+    ri_col = "ri",
+    component_a_uv = 1.0,   # UV response factor for component A
+    component_a_ri = 0.185, # RI response factor for component A
+    component_b_uv = 0.1,   # UV response factor for component B
+    component_b_ri = 0.084  # RI response factor for component B
+  )
+
+prepped <- prep(rec_comp)
+result <- bake(prepped, new_data = NULL)
+
+# The result contains:
+# - uv_ri_ratio: Point-by-point UV/RI ratio
+# - composition_a: Weight fraction of component A at each point
+```
+
+## Protein SEC: Aggregate Quantitation
+
+For protein therapeutics, SEC is used to quantify high molecular weight species (HMWS/aggregates) and low molecular weight species (LMWS/fragments):
+
+```{r protein-sec, eval = FALSE}
+# Create protein-like data (using UV at 280 nm)
+protein_data <- sec_triple_detect |>
+  filter(sample_type == "sample") |>
+  head(1)
+
+rec_protein <- recipe(~., data = protein_data) |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_sec_baseline(measures = "uv") |>
+  # Quantify aggregates with manual peak boundaries
+  step_sec_aggregates(
+    measures = "uv",
+    monomer_start = 10,  # Monomer peak start time
+    monomer_end = 14,    # Monomer peak end time
+    method = "manual"
+  )
+
+prepped <- prep(rec_protein)
+result <- bake(prepped, new_data = NULL)
+
+# Results include:
+# - purity_hmws: % high MW species (before monomer)
+# - purity_monomer: % main peak
+# - purity_lmws: % low MW species (after monomer)
+result |>
+  select(sample_id, purity_hmws, purity_monomer, purity_lmws)
+```
+
+## Molecular Weight Distribution
+
+Generate differential and cumulative molecular weight distributions:
+```{r mwd, eval = FALSE}
+rec_mwd <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_sec_baseline(measures = "ri") |>
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  # Add MW distribution curves
+  step_sec_mw_distribution(
+    signal_col = "ri",
+    mw_column = "known_mw",
+    output_type = "both"  # "differential", "cumulative", or "both"
+  )
+
+prepped <- prep(rec_mwd)
+result <- bake(prepped, new_data = NULL)
+
+# The result contains:
+# - mwd_differential: dw/d(logM) vs logM
+# - mwd_cumulative: cumulative weight fraction vs logM
+```
+
+## Quality Control Functions
+
+The package provides functions for chromatographic system suitability testing:
+
+### Peak Resolution
+
+```{r resolution}
+# Calculate USP resolution between two peaks
+Rs <- measure_sec_resolution(
+  retention_1 = 8.5,
+  retention_2 = 10.0,
+  width_1 = 0.3,
+  width_2 = 0.35,
+  method = "usp"
+)
+
+cat("Resolution (Rs):", round(Rs, 2), "\n")
+```
+
+### Plate Count
+
+```{r plates}
+# Calculate theoretical plates
+N <- measure_sec_plate_count(
+  retention = 10.0,
+  width = 0.25,
+  width_type = "half_height"
+)
+
+cat("Theoretical plates:", round(N), "\n")
+```
+
+### System Suitability
+
+```{r sst}
+# Comprehensive system suitability testing
+peaks <- data.frame(
+  name = c("dimer", "monomer"),
+  retention = c(8.5, 10.0),
+  width = c(0.3, 0.35),
+  area = c(5, 95)
+)
+
+sst <- measure_sec_suitability(
+  peaks = peaks,
+  reference_peaks = c("dimer", "monomer")
+)
+
+print(sst)
+```
+
+## Polymer Analysis: Mark-Houwink Parameters
+
+Estimate Mark-Houwink parameters from intrinsic viscosity data:
+
+```{r mark-houwink}
+# Molecular weight and intrinsic viscosity data
+mw <- c(10000, 25000, 50000, 100000, 250000)
+iv <- 0.0001 * mw^0.7  # Simulated data
+
+mh <- measure_mh_parameters(mw, iv)
+print(mh)
+```
+
+## Branching Analysis
+
+Calculate branching indices for branched polymers:
+
+```{r branching, eval = FALSE}
+# Compare branched polymer to linear reference
+mw <- c(100000, 200000, 500000)
+rg_branched <- c(10, 15, 25)
+rg_linear <- c(12, 18, 32)
+
+g <- measure_branching_index(
+  mw = mw,
+  rg = rg_branched,
+  reference = data.frame(mw = mw, rg = rg_linear),
+  method = "g"
+)
+
+print(g)
+# g < 1 indicates branching (smaller Rg than linear)
+```
+
+## Exporting Results
+
+### Slice-by-Slice Data
+
+Extract point-by-point chromatographic data:
+
+```{r slice-table, eval = FALSE}
+slices <- measure_sec_slice_table(
+  result,
+  measures = c("ri", "mw"),
+  sample_id = "sample_id",
+  pivot = TRUE  # Wide format with one column per measure
+)
+
+head(slices)
+```
+
+### Summary Table
+
+Generate a summary table for reporting:
+
+```{r summary-table, eval = FALSE}
+summary <- measure_sec_summary_table(
+  result,
+  sample_id = "sample_id",
+  digits = 0
+)
+
+print(summary)
+```
+
+## Complete Workflow Example
+
+Here's a complete workflow for analyzing polymer standards:
+
+```{r complete-workflow, eval = FALSE}
+library(measure)
+library(measure.sec)
+library(recipes)
+
+# Load data
+data(sec_triple_detect, package = "measure.sec")
+
+# Create comprehensive recipe
+rec <- recipe(~., data = sec_triple_detect) |>
+  # Input conversion
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
+  # Preprocessing
+  step_sec_detector_delay(reference = "ri", delay_volumes = c(uv = -0.05, mals = 0.10)) |>
+  step_sec_baseline(measures = c("ri", "uv", "mals")) |>
+  # Detector processing
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
+  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_concentration(measures = "ri", detector = "ri") |>
+  # Molecular weight calculations
+  step_sec_mw_averages(mw_column = "known_mw") |>
+  step_sec_mw_fractions(mw_column = "known_mw", cutoffs = c(10000, 100000)) |>
+  # Composition analysis
+  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri")
+
+# Process
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# View molecular weight results
+result |>
+  select(sample_id, polymer_type, Mn, Mw, Mz, dispersity) |>
+  print(n = 12)
+
+# Generate summary
+summary <- measure_sec_summary_table(result, sample_id = "sample_id")
+print(summary)
+```
+
+## Available Steps Reference
+
+| Step | Category | Description |
+|------|----------|-------------|
+| `step_sec_detector_delay()` | Preprocessing | Correct inter-detector delays |
+| `step_sec_baseline()` | Preprocessing | SEC-optimized baseline correction |
+| `step_sec_ri()` | Detector | RI detector with dn/dc |
+| `step_sec_uv()` | Detector | UV detector with extinction coefficient |
+| `step_sec_mals()` | Detector | Multi-angle light scattering |
+| `step_sec_viscometer()` | Detector | Differential viscometer |
+| `step_sec_concentration()` | Calculation | Signal to concentration |
+| `step_sec_intrinsic_visc()` | Calculation | Intrinsic viscosity |
+| `step_sec_mw_averages()` | MW | Mn, Mw, Mz, dispersity |
+| `step_sec_mw_fractions()` | MW | MW fractions above/below cutoffs |
+| `step_sec_mw_distribution()` | MW | Differential/cumulative MWD |
+| `step_sec_universal_cal()` | Calibration | Universal calibration |
+| `step_sec_uv_ri_ratio()` | Composition | UV/RI ratio |
+| `step_sec_composition()` | Composition | Copolymer composition |
+| `step_sec_aggregates()` | Protein | HMWS/monomer/LMWS quantitation |
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
