@@ -193,7 +193,7 @@
 #' calibration. A convenient subset of \code{\link{sec_calibration_standards}}
 #' containing only polystyrene standards.
 #'
-#' @format A tibble with 16 rows and 11 columns:
+#' @format A tibble with 16 rows and 12 columns:
 #' \describe{
 #'   \item{standard_name}{Character. Standard identifier (e.g., "PS-67500")}
 #'   \item{mp}{Numeric. Peak molecular weight in Da}
@@ -271,7 +271,7 @@
 #' calibration. A convenient subset of \code{\link{sec_calibration_standards}}
 #' containing only PMMA standards.
 #'
-#' @format A tibble with 10 rows and 11 columns:
+#' @format A tibble with 10 rows and 12 columns:
 #' \describe{
 #'   \item{standard_name}{Character. Standard identifier (e.g., "PMMA-67700")}
 #'   \item{mp}{Numeric. Peak molecular weight in Da}
@@ -296,7 +296,6 @@
 #' }
 #'
 #' At equivalent molecular weight, PMMA has a smaller hydrodynamic volume than
-
 #' PS in THF, so PMMA standards elute later than PS of the same MW. This
 #' demonstrates why conventional calibration is polymer-specific.
 #'

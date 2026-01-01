@@ -5,7 +5,7 @@
 \alias{sec_ps_standards}
 \title{SEC Polystyrene Calibration Standards}
 \format{
-A tibble with 16 rows and 11 columns:
+A tibble with 16 rows and 12 columns:
 \describe{
 \item{standard_name}{Character. Standard identifier (e.g., "PS-67500")}
 \item{mp}{Numeric. Peak molecular weight in Da}

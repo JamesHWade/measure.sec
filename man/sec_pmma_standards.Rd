@@ -5,7 +5,7 @@
 \alias{sec_pmma_standards}
 \title{SEC PMMA Calibration Standards}
 \format{
-A tibble with 10 rows and 11 columns:
+A tibble with 10 rows and 12 columns:
 \describe{
 \item{standard_name}{Character. Standard identifier (e.g., "PMMA-67700")}
 \item{mp}{Numeric. Peak molecular weight in Da}
