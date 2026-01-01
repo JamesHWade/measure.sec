@@ -1,0 +1,32 @@
+Package: measure.sec
+Title: SEC/GPC Analysis Extensions for the Measure Package
+Version: 0.0.0.9000
+Authors@R:
+    person("James", "Wade", , "github@jameshwade.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-9740-1905"))
+Description: Provides preprocessing and analysis recipe steps for Size Exclusion
+    Chromatography (SEC) and Gel Permeation Chromatography (GPC) data. Includes
+    multi-detector support (RI, UV, MALS), inter-detector delay correction,
+    molecular weight calculations (Mn, Mw, Mz, dispersity), and calibration
+    curve fitting. This package is a technique pack for the 'measure' package.
+License: MIT + file LICENSE
+URL: https://github.com/JamesHWade/measure-sec
+BugReports: https://github.com/JamesHWade/measure-sec/issues
+Depends:
+    R (>= 4.1.0),
+    measure (>= 0.0.1.9001)
+Imports:
+    cli,
+    dplyr,
+    purrr,
+    rlang,
+    recipes,
+    stats,
+    tibble
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+LazyData: true
