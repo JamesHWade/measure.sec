@@ -34,6 +34,8 @@ library(measure)
 library(measure.sec)
 library(recipes)
 library(dplyr)
+library(tidyr)
+library(purrr)
 library(ggplot2)
 ```
 
@@ -94,6 +96,222 @@ result <- bake(prepped, new_data = NULL)
 result |>
   select(sample_id, Mn, Mw, Mz, dispersity)
 ```
+
+## Conventional Calibration
+
+Conventional (relative) calibration uses narrow molecular weight standards to establish the relationship between elution time and molecular weight. This is the most common approach for routine polymer analysis.
+
+### Calibration Standards
+
+The package includes comprehensive polystyrene and PMMA calibration standards:
+```{r calibration-data}
+# Load polystyrene calibration standards
+data(sec_ps_standards, package = "measure.sec")
+
+# View the standards (16 standards from 162 Da to 3.15 MDa)
+sec_ps_standards |>
+  select(standard_name, mp, log_mp, retention_time, dispersity) |>
+  print(n = 8)
+```
+
+### Visualizing the Calibration Curve
+
+Before fitting, it's good practice to visualize the standards:
+
+```{r calibration-plot, fig.width=7, fig.height=5}
+ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
+  geom_point(size = 3, color = "#2E86AB") +
+  geom_smooth(
+    method = "lm",
+    formula = y ~ poly(x, 3),
+    se = TRUE,
+    color = "#A23B72",
+    fill = "#A23B72",
+    alpha = 0.2
+  ) +
+  labs(
+    x = "Retention Time (min)",
+    y = expression(log[10](M[p])),
+    title = "Polystyrene Calibration Curve",
+    subtitle = "Cubic polynomial fit with 95% confidence band"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(size = 11)
+  )
+```
+
+### Building a Calibration Curve
+
+Use `step_sec_conventional_cal()` to fit the calibration and apply it to samples:
+
+```{r conventional-cal, eval = FALSE}
+# Prepare standards for the step (needs 'retention' and 'log_mw' columns)
+ps_cal <- sec_ps_standards |>
+  select(retention = retention_time, log_mw = log_mp)
+
+# Filter to a polystyrene sample for demonstration
+ps_sample <- sec_triple_detect |>
+  filter(sample_id == "PS-50K")
+
+# Build the calibration recipe
+rec_cal <- recipe(~., data = ps_sample) |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri") |>
+  step_sec_conventional_cal(
+    standards = ps_cal,
+    fit_type = "cubic",
+    output_col = "log_mw",
+    extrapolation = "none"
+  ) |>
+  step_sec_mw_averages(measures = "log_mw")
+
+# Prep and bake
+prepped <- prep(rec_cal)
+result <- bake(prepped, new_data = NULL)
+
+# View molecular weight results
+result |>
+  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+```
+
+### Assessing Calibration Quality
+
+The `tidy()` method provides comprehensive diagnostics for evaluating calibration quality:
+
+```{r calibration-diagnostics, eval = FALSE}
+# Get calibration diagnostics
+diagnostics <- tidy(prepped, number = 3)  # step_sec_conventional_cal is step 3
+
+# Overview metrics
+diagnostics |>
+  select(fit_type, n_standards, r_squared, rmse_log_mw, max_abs_pct_deviation)
+
+# Access per-standard residuals
+std_results <- diagnostics$standard_results[[1]]
+std_results |>
+  select(
+    location,
+    actual_log_mw,
+    predicted_log_mw,
+    residual_log_mw,
+    pct_deviation
+  )
+```
+
+**Key quality metrics:**
+
+| Metric | Good Value | Description |
+|--------|------------|-------------|
+| R² | > 0.999 | Coefficient of determination |
+| RMSE | < 0.02 | Root mean square error in log(MW) |
+| Max % Deviation | < 5% | Largest deviation at any standard |
+| Dispersity | < 1.10 | Standards should be narrow |
+
+### Comparing Fit Types
+
+Different polynomial orders may be appropriate depending on column behavior:
+
+```{r compare-fits, fig.width=8, fig.height=5}
+# Compare linear, quadratic, and cubic fits
+library(tidyr)
+
+fits <- tibble(
+  fit_type = c("Linear", "Quadratic", "Cubic"),
+  degree = c(1, 2, 3)
+) |>
+  mutate(
+    predictions = map(degree, function(d) {
+      model <- lm(log_mp ~ poly(retention_time, d), data = sec_ps_standards)
+      tibble(
+        retention_time = seq(11, 21, by = 0.1),
+        log_mp = predict(model, newdata = tibble(retention_time = seq(11, 21, by = 0.1)))
+      )
+    }),
+    r_squared = map_dbl(degree, function(d) {
+      model <- lm(log_mp ~ poly(retention_time, d), data = sec_ps_standards)
+      summary(model)$r.squared
+    })
+  )
+
+fit_curves <- fits |>
+  unnest(predictions)
+
+ggplot() +
+  geom_point(
+    data = sec_ps_standards,
+    aes(retention_time, log_mp),
+    size = 3,
+    alpha = 0.7
+  ) +
+  geom_line(
+    data = fit_curves,
+    aes(retention_time, log_mp, color = fit_type),
+    linewidth = 1
+  ) +
+  scale_color_manual(
+    values = c("Linear" = "#E8751A", "Quadratic" = "#2E86AB", "Cubic" = "#A23B72")
+  ) +
+  labs(
+    x = "Retention Time (min)",
+    y = expression(log[10](M[p])),
+    color = "Fit Type",
+    title = "Calibration Curve Fit Comparison",
+    subtitle = sprintf(
+      "R²: Linear=%.5f, Quadratic=%.5f, Cubic=%.5f",
+      fits$r_squared[1], fits$r_squared[2], fits$r_squared[3]
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold")
+  )
+```
+
+### Polymer-Specific Calibration
+
+Conventional calibration is polymer-specific because different polymers have different hydrodynamic volumes at the same molecular weight:
+
+```{r polymer-comparison, fig.width=7, fig.height=5}
+data(sec_pmma_standards, package = "measure.sec")
+
+# Combine PS and PMMA for comparison
+combined <- bind_rows(
+  sec_ps_standards |> mutate(polymer = "Polystyrene"),
+  sec_pmma_standards |> mutate(polymer = "PMMA")
+)
+
+ggplot(combined, aes(retention_time, log_mp, color = polymer, shape = polymer)) +
+  geom_point(size = 3) +
+  geom_smooth(
+    method = "lm",
+    formula = y ~ poly(x, 3),
+    se = FALSE,
+    linewidth = 1
+  ) +
+  scale_color_manual(values = c("Polystyrene" = "#2E86AB", "PMMA" = "#A23B72")) +
+  labs(
+    x = "Retention Time (min)",
+    y = expression(log[10](M[p])),
+    color = "Polymer",
+    shape = "Polymer",
+    title = "PS vs PMMA Calibration Curves",
+    subtitle = "At same MW, PMMA elutes later (smaller hydrodynamic volume in THF)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold")
+  )
+```
+
+**Key insight:** Using a PS calibration for PMMA samples will underestimate molecular weight. For cross-polymer analysis, use universal calibration with Mark-Houwink parameters.
 
 ## Multi-Detector SEC Workflow
 
@@ -402,6 +620,7 @@ print(summary)
 | `step_sec_mw_averages()` | MW | Mn, Mw, Mz, dispersity |
 | `step_sec_mw_fractions()` | MW | MW fractions above/below cutoffs |
 | `step_sec_mw_distribution()` | MW | Differential/cumulative MWD |
+| `step_sec_conventional_cal()` | Calibration | Narrow standard calibration |
 | `step_sec_universal_cal()` | Calibration | Universal calibration |
 | `step_sec_uv_ri_ratio()` | Composition | UV/RI ratio |
 | `step_sec_composition()` | Composition | Copolymer composition |
