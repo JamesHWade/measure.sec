@@ -220,6 +220,13 @@ bake.step_sec_lals <- function(object, new_data, ...) {
   output_mw <- object$output_mw
 
   if (is.null(calibration_constant)) {
+    cli::cli_warn(
+      c(
+        "No {.arg calibration_constant} provided.",
+        "i" = "Results will be in relative units, not absolute MW.",
+        "i" = "Provide a calibration constant for absolute values."
+      )
+    )
     calibration_constant <- 1.0
   }
 

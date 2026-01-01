@@ -249,7 +249,12 @@ test_that("step_sec_lals computes MW and validates angle", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_lals(
+      measures = "lals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      calibration_constant = 1.0
+    )
 
   prepped <- recipes::prep(rec)
   result <- recipes::bake(prepped, new_data = NULL)
@@ -285,7 +290,12 @@ test_that("step_sec_rals computes MW", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_rals(
+      measures = "rals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      calibration_constant = 1.0
+    )
 
   prepped <- recipes::prep(rec)
   result <- recipes::bake(prepped, new_data = NULL)
@@ -339,4 +349,298 @@ test_that("step_sec_dls estimates diffusion and Rh", {
   k_b <- 1.380649e-23
   expected_rh_m <- k_b * (25 + 273.15) / (6 * pi * 1e-3 * diffusion)
   expect_equal(mean(rh_vals), expected_rh_m * 1e9, tolerance = 0.2)
+})
+
+# ==============================================================================
+# Parameter validation tests
+# ==============================================================================
+
+test_that("step_sec_lals requires dn_dc or optical_constant", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$lals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_lals(measures = "lals", concentration_col = "ri"),
+    "dn_dc|optical_constant"
+  )
+})
+
+test_that("step_sec_rals requires dn_dc or optical_constant", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$rals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_rals(measures = "rals", concentration_col = "ri"),
+    "dn_dc|optical_constant"
+  )
+})
+
+test_that("step_sec_dls validates temperature above absolute zero", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dls(measures = "dls", temperature = -300),
+    "absolute zero"
+  )
+})
+
+test_that("step_sec_dls validates positive viscosity", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dls(measures = "dls", temperature = 25, viscosity = -1),
+    "positive"
+  )
+})
+
+test_that("step_sec_dls validates angle range", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dls(measures = "dls", temperature = 25, angle = 200),
+    "angle"
+  )
+})
+
+test_that("step_sec_dls validates output_cols is character", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dls(measures = "dls", temperature = 25, output_cols = c(1, 2)),
+    "output_cols"
+  )
+})
+
+test_that("step_sec_dls validates output_cols length", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dls(measures = "dls", temperature = 25, output_cols = "rh"),
+    "output_cols"
+  )
+})
+
+test_that("step_sec_dad validates positive path_length", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$uv_254 <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_dad(measures = "uv_254", wavelengths = 254, path_length = -1),
+    "path_length"
+  )
+})
+
+# ==============================================================================
+# tidy() method tests
+# ==============================================================================
+
+test_that("tidy.step_sec_dad returns expected structure", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$uv_254 <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$uv_280 <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_dad(
+      measures = c("uv_254", "uv_280"),
+      wavelengths = c(254, 280),
+      reference_wavelength = 280
+    )
+
+  prepped <- recipes::prep(rec)
+  tidy_result <- recipes::tidy(prepped, number = 1)
+
+  expect_s3_class(tidy_result, "tbl_df")
+  expect_true("measures" %in% names(tidy_result))
+  expect_true("wavelengths" %in% names(tidy_result))
+  expect_true("reference_wavelength" %in% names(tidy_result))
+  expect_true("id" %in% names(tidy_result))
+})
+
+test_that("tidy.step_sec_lals returns expected structure", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$lals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+
+  prepped <- suppressWarnings(recipes::prep(rec))
+  tidy_result <- recipes::tidy(prepped, number = 1)
+
+  expect_s3_class(tidy_result, "tbl_df")
+  expect_true("lals_col" %in% names(tidy_result))
+  expect_true("concentration_col" %in% names(tidy_result))
+  expect_true("angle" %in% names(tidy_result))
+  expect_true("dn_dc" %in% names(tidy_result))
+  expect_true("id" %in% names(tidy_result))
+})
+
+test_that("tidy.step_sec_rals returns expected structure", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$rals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+
+  prepped <- suppressWarnings(recipes::prep(rec))
+  tidy_result <- recipes::tidy(prepped, number = 1)
+
+  expect_s3_class(tidy_result, "tbl_df")
+  expect_true("rals_col" %in% names(tidy_result))
+  expect_true("concentration_col" %in% names(tidy_result))
+  expect_true("angle" %in% names(tidy_result))
+  expect_true("dn_dc" %in% names(tidy_result))
+  expect_true("id" %in% names(tidy_result))
+})
+
+test_that("tidy.step_sec_dls returns expected structure", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$dls <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_dls(measures = "dls", temperature = 25)
+
+  prepped <- recipes::prep(rec)
+  tidy_result <- recipes::tidy(prepped, number = 1)
+
+  expect_s3_class(tidy_result, "tbl_df")
+  expect_true("dls_col" %in% names(tidy_result))
+  expect_true("temperature" %in% names(tidy_result))
+  expect_true("angle" %in% names(tidy_result))
+  expect_true("output_cols" %in% names(tidy_result))
+  expect_true("id" %in% names(tidy_result))
+})
+
+# ==============================================================================
+# Calibration constant warning tests
+# ==============================================================================
+
+test_that("step_sec_lals warns when calibration_constant is NULL", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$lals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+
+  # Warning is raised during prep (which internally bakes training data)
+  expect_warning(
+    recipes::prep(rec),
+    "calibration_constant"
+  )
+})
+
+test_that("step_sec_rals warns when calibration_constant is NULL", {
+  skip_if_not_installed("measure")
+
+  time <- seq(1, 10, by = 0.5)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$rals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = dnorm(time, 5, 1)))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+
+  # Warning is raised during prep (which internally bakes training data)
+  expect_warning(
+    recipes::prep(rec),
+    "calibration_constant"
+  )
 })
