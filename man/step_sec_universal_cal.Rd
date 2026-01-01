@@ -119,4 +119,8 @@ rec <- recipe(~., data = pmma_data) |>
   prep()
 }
 }
+\seealso{
+Other sec-calibration: 
+\code{\link{step_sec_conventional_cal}()}
+}
 \concept{sec-calibration}
