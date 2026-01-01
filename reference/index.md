@@ -39,10 +39,16 @@
   Detector Signal to Concentration
 - [`step_sec_conventional_cal()`](step_sec_conventional_cal.md) :
   Conventional Calibration for SEC Using Narrow Standards
+- [`step_sec_dad()`](step_sec_dad.md) : Diode Array Detector Processing
+  for SEC
 - [`step_sec_detector_delay()`](step_sec_detector_delay.md) : Correct
   Inter-Detector Volume Delays
+- [`step_sec_dls()`](step_sec_dls.md) : Dynamic Light Scattering
+  Processing for SEC
 - [`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md) : Calculate
   Intrinsic Viscosity for SEC
+- [`step_sec_lals()`](step_sec_lals.md) : Low-Angle Light Scattering
+  Processing for SEC
 - [`step_sec_mals()`](step_sec_mals.md) : Multi-Angle Light Scattering
   Processing for SEC
 - [`step_sec_mw_averages()`](step_sec_mw_averages.md) : Calculate
@@ -51,6 +57,8 @@
   Molecular Weight Distribution Curve
 - [`step_sec_mw_fractions()`](step_sec_mw_fractions.md) : Calculate
   Molecular Weight Fractions for SEC/GPC
+- [`step_sec_rals()`](step_sec_rals.md) : Right-Angle Light Scattering
+  Processing for SEC
 - [`step_sec_ri()`](step_sec_ri.md) : RI Detector Processing for SEC
 - [`step_sec_universal_cal()`](step_sec_universal_cal.md) : Universal
   Calibration for SEC

@@ -56,12 +56,16 @@
 </h1></div>
 <!-- badges: start -->
 
+<div class="section level2">
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
+<p><strong>measure.sec</strong> is an R package that extends the <a href="https://github.com/JamesHWade/measure" class="external-link">measure</a> package with preprocessing and analysis steps for Size Exclusion Chromatography (SEC) and Gel Permeation Chromatography (GPC) data.</p>
 <div class="section level3">
 <h3 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
 </h3>
 <ul>
 <li>
-<strong>Multi-detector support</strong>: RI, UV, MALS, and viscometer processing</li>
+<strong>Multi-detector support</strong>: RI, UV/DAD, MALS, LALS, RALS, DLS, and viscometer processing</li>
 <li>
 <strong>Inter-detector delay correction</strong>: Align signals from detectors in series</li>
 <li>
@@ -77,6 +81,7 @@
 <li>
 <strong>Polymer analysis</strong>: Branching indices and Mark-Houwink parameter estimation</li>
 </ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -130,8 +135,8 @@
 </h3>
 <table class="table">
 <colgroup>
-<col width="38%">
-<col width="61%">
+<col width="50%">
+<col width="50%">
 </colgroup>
 <thead><tr class="header">
 <th>Step</th>
@@ -147,8 +152,24 @@
 <td>UV detector with extinction coefficient</td>
 </tr>
 <tr class="odd">
+<td><code><a href="reference/step_sec_dad.html">step_sec_dad()</a></code></td>
+<td>Diode array detector processing (multi-wavelength UV)</td>
+</tr>
+<tr class="even">
 <td><code><a href="reference/step_sec_mals.html">step_sec_mals()</a></code></td>
 <td>Multi-angle light scattering for absolute MW</td>
+</tr>
+<tr class="odd">
+<td><code><a href="reference/step_sec_lals.html">step_sec_lals()</a></code></td>
+<td>Low-angle light scattering for absolute MW</td>
+</tr>
+<tr class="even">
+<td><code><a href="reference/step_sec_rals.html">step_sec_rals()</a></code></td>
+<td>Right-angle light scattering for absolute MW</td>
+</tr>
+<tr class="odd">
+<td><code><a href="reference/step_sec_dls.html">step_sec_dls()</a></code></td>
+<td>Dynamic light scattering for Rh and diffusion</td>
 </tr>
 <tr class="even">
 <td><code><a href="reference/step_sec_viscometer.html">step_sec_viscometer()</a></code></td>
@@ -384,7 +405,6 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/JamesHWade/measure-sec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/JamesHWade/measure-sec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://CRAN.R-project.org/package=measure.sec" class="external-link"><img src="https://www.r-pkg.org/badges/version/measure.sec" alt="CRAN status"></a></li>
 <li><a href="https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>

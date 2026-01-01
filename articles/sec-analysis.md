@@ -10,7 +10,7 @@ macromolecules. The **measure.sec** package extends the
 specialized preprocessing steps for SEC/GPC data analysis. This vignette
 demonstrates how to:
 
-1.  Process multi-detector SEC data (RI, UV, MALS)
+1.  Process multi-detector SEC data (RI, UV/DAD, MALS, LALS, RALS, DLS)
 2.  Calculate molecular weight averages and distributions
 3.  Analyze copolymer composition
 4.  Quantify protein aggregates
@@ -703,24 +703,28 @@ print(summary)
 
 ## Available Steps Reference
 
-| Step                                                                       | Category      | Description                             |
-|----------------------------------------------------------------------------|---------------|-----------------------------------------|
-| [`step_sec_detector_delay()`](../reference/step_sec_detector_delay.md)     | Preprocessing | Correct inter-detector delays           |
-| [`step_sec_baseline()`](../reference/step_sec_baseline.md)                 | Preprocessing | SEC-optimized baseline correction       |
-| [`step_sec_ri()`](../reference/step_sec_ri.md)                             | Detector      | RI detector with dn/dc                  |
-| [`step_sec_uv()`](../reference/step_sec_uv.md)                             | Detector      | UV detector with extinction coefficient |
-| [`step_sec_mals()`](../reference/step_sec_mals.md)                         | Detector      | Multi-angle light scattering            |
-| [`step_sec_viscometer()`](../reference/step_sec_viscometer.md)             | Detector      | Differential viscometer                 |
-| [`step_sec_concentration()`](../reference/step_sec_concentration.md)       | Calculation   | Signal to concentration                 |
-| [`step_sec_intrinsic_visc()`](../reference/step_sec_intrinsic_visc.md)     | Calculation   | Intrinsic viscosity                     |
-| [`step_sec_mw_averages()`](../reference/step_sec_mw_averages.md)           | MW            | Mn, Mw, Mz, dispersity                  |
-| [`step_sec_mw_fractions()`](../reference/step_sec_mw_fractions.md)         | MW            | MW fractions above/below cutoffs        |
-| [`step_sec_mw_distribution()`](../reference/step_sec_mw_distribution.md)   | MW            | Differential/cumulative MWD             |
-| [`step_sec_conventional_cal()`](../reference/step_sec_conventional_cal.md) | Calibration   | Narrow standard calibration             |
-| [`step_sec_universal_cal()`](../reference/step_sec_universal_cal.md)       | Calibration   | Universal calibration                   |
-| [`step_sec_uv_ri_ratio()`](../reference/step_sec_uv_ri_ratio.md)           | Composition   | UV/RI ratio                             |
-| [`step_sec_composition()`](../reference/step_sec_composition.md)           | Composition   | Copolymer composition                   |
-| [`step_sec_aggregates()`](../reference/step_sec_aggregates.md)             | Protein       | HMWS/monomer/LMWS quantitation          |
+| Step                                                                       | Category      | Description                                |
+|----------------------------------------------------------------------------|---------------|--------------------------------------------|
+| [`step_sec_detector_delay()`](../reference/step_sec_detector_delay.md)     | Preprocessing | Correct inter-detector delays              |
+| [`step_sec_baseline()`](../reference/step_sec_baseline.md)                 | Preprocessing | SEC-optimized baseline correction          |
+| [`step_sec_ri()`](../reference/step_sec_ri.md)                             | Detector      | RI detector with dn/dc                     |
+| [`step_sec_uv()`](../reference/step_sec_uv.md)                             | Detector      | UV detector with extinction coefficient    |
+| [`step_sec_dad()`](../reference/step_sec_dad.md)                           | Detector      | Diode array detector (multi-wavelength UV) |
+| [`step_sec_mals()`](../reference/step_sec_mals.md)                         | Detector      | Multi-angle light scattering               |
+| [`step_sec_lals()`](../reference/step_sec_lals.md)                         | Detector      | Low-angle light scattering                 |
+| [`step_sec_rals()`](../reference/step_sec_rals.md)                         | Detector      | Right-angle light scattering               |
+| [`step_sec_dls()`](../reference/step_sec_dls.md)                           | Detector      | Dynamic light scattering                   |
+| [`step_sec_viscometer()`](../reference/step_sec_viscometer.md)             | Detector      | Differential viscometer                    |
+| [`step_sec_concentration()`](../reference/step_sec_concentration.md)       | Calculation   | Signal to concentration                    |
+| [`step_sec_intrinsic_visc()`](../reference/step_sec_intrinsic_visc.md)     | Calculation   | Intrinsic viscosity                        |
+| [`step_sec_mw_averages()`](../reference/step_sec_mw_averages.md)           | MW            | Mn, Mw, Mz, dispersity                     |
+| [`step_sec_mw_fractions()`](../reference/step_sec_mw_fractions.md)         | MW            | MW fractions above/below cutoffs           |
+| [`step_sec_mw_distribution()`](../reference/step_sec_mw_distribution.md)   | MW            | Differential/cumulative MWD                |
+| [`step_sec_conventional_cal()`](../reference/step_sec_conventional_cal.md) | Calibration   | Narrow standard calibration                |
+| [`step_sec_universal_cal()`](../reference/step_sec_universal_cal.md)       | Calibration   | Universal calibration                      |
+| [`step_sec_uv_ri_ratio()`](../reference/step_sec_uv_ri_ratio.md)           | Composition   | UV/RI ratio                                |
+| [`step_sec_composition()`](../reference/step_sec_composition.md)           | Composition   | Copolymer composition                      |
+| [`step_sec_aggregates()`](../reference/step_sec_aggregates.md)             | Protein       | HMWS/monomer/LMWS quantitation             |
 
 ## Session Info
 

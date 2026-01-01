@@ -1,8 +1,16 @@
 # measure.sec ![](reference/figures/logo.png)
 
+## Overview
+
+**measure.sec** is an R package that extends the
+[measure](https://github.com/JamesHWade/measure) package with
+preprocessing and analysis steps for Size Exclusion Chromatography (SEC)
+and Gel Permeation Chromatography (GPC) data.
+
 ### Features
 
-- **Multi-detector support**: RI, UV, MALS, and viscometer processing
+- **Multi-detector support**: RI, UV/DAD, MALS, LALS, RALS, DLS, and
+  viscometer processing
 - **Inter-detector delay correction**: Align signals from detectors in
   series
 - **Molecular weight calculations**: Mn, Mw, Mz, dispersity (PDI)
@@ -68,14 +76,18 @@ result <- bake(prepped, new_data = NULL)
 
 ### Detector Processing
 
-| Step                                                                | Description                                  |
-|---------------------------------------------------------------------|----------------------------------------------|
-| [`step_sec_ri()`](reference/step_sec_ri.md)                         | RI detector with dn/dc normalization         |
-| [`step_sec_uv()`](reference/step_sec_uv.md)                         | UV detector with extinction coefficient      |
-| [`step_sec_mals()`](reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW |
-| [`step_sec_viscometer()`](reference/step_sec_viscometer.md)         | Differential viscometer processing           |
-| [`step_sec_concentration()`](reference/step_sec_concentration.md)   | Convert signal to concentration              |
-| [`step_sec_intrinsic_visc()`](reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation              |
+| Step                                                                | Description                                           |
+|---------------------------------------------------------------------|-------------------------------------------------------|
+| [`step_sec_ri()`](reference/step_sec_ri.md)                         | RI detector with dn/dc normalization                  |
+| [`step_sec_uv()`](reference/step_sec_uv.md)                         | UV detector with extinction coefficient               |
+| [`step_sec_dad()`](reference/step_sec_dad.md)                       | Diode array detector processing (multi-wavelength UV) |
+| [`step_sec_mals()`](reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW          |
+| [`step_sec_lals()`](reference/step_sec_lals.md)                     | Low-angle light scattering for absolute MW            |
+| [`step_sec_rals()`](reference/step_sec_rals.md)                     | Right-angle light scattering for absolute MW          |
+| [`step_sec_dls()`](reference/step_sec_dls.md)                       | Dynamic light scattering for Rh and diffusion         |
+| [`step_sec_viscometer()`](reference/step_sec_viscometer.md)         | Differential viscometer processing                    |
+| [`step_sec_concentration()`](reference/step_sec_concentration.md)   | Convert signal to concentration                       |
+| [`step_sec_intrinsic_visc()`](reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation                       |
 
 ### Preprocessing
 

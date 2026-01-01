@@ -74,7 +74,8 @@ macromolecules. The <strong>measure.sec</strong> package extends the <a href="ht
 specialized preprocessing steps for SEC/GPC data analysis. This vignette
 demonstrates how to:</p>
 <ol style="list-style-type: decimal">
-<li>Process multi-detector SEC data (RI, UV, MALS)</li>
+<li>Process multi-detector SEC data (RI, UV/DAD, MALS, LALS, RALS,
+DLS)</li>
 <li>Calculate molecular weight averages and distributions</li>
 <li>Analyze copolymer composition</li>
 <li>Quantify protein aggregates</li>
@@ -811,9 +812,29 @@ testing:</p>
 <td>UV detector with extinction coefficient</td>
 </tr>
 <tr class="odd">
+<td><code><a href="../reference/step_sec_dad.html">step_sec_dad()</a></code></td>
+<td>Detector</td>
+<td>Diode array detector (multi-wavelength UV)</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code></td>
 <td>Detector</td>
 <td>Multi-angle light scattering</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code></td>
+<td>Detector</td>
+<td>Low-angle light scattering</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_rals.html">step_sec_rals()</a></code></td>
+<td>Detector</td>
+<td>Right-angle light scattering</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_dls.html">step_sec_dls()</a></code></td>
+<td>Detector</td>
+<td>Dynamic light scattering</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/step_sec_viscometer.html">step_sec_viscometer()</a></code></td>

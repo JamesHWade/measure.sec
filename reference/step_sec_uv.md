@@ -121,8 +121,12 @@ signals by dividing by the extinction coefficient and path length.
 
 Other sec-detectors:
 [`step_sec_concentration()`](step_sec_concentration.md),
+[`step_sec_dad()`](step_sec_dad.md),
+[`step_sec_dls()`](step_sec_dls.md),
 [`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](step_sec_lals.md),
 [`step_sec_mals()`](step_sec_mals.md),
+[`step_sec_rals()`](step_sec_rals.md),
 [`step_sec_ri()`](step_sec_ri.md),
 [`step_sec_viscometer()`](step_sec_viscometer.md)
 

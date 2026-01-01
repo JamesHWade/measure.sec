@@ -21,10 +21,19 @@ tidy(x, ...)
 # S3 method for class 'step_sec_conventional_cal'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_dad'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_detector_delay'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_dls'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_intrinsic_visc'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_lals'
 tidy(x, ...)
 
 # S3 method for class 'step_sec_mals'
@@ -37,6 +46,9 @@ tidy(x, ...)
 tidy(x, ...)
 
 # S3 method for class 'step_sec_mw_fractions'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_rals'
 tidy(x, ...)
 
 # S3 method for class 'step_sec_ri'

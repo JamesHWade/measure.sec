@@ -20,10 +20,19 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_conventional_cal'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_dad'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_detector_delay'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_dls'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_intrinsic_visc'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_lals'
 required_pkgs(x, ...)
 
 # S3 method for class 'step_sec_mals'
@@ -36,6 +45,9 @@ required_pkgs(x, ...)
 required_pkgs(x, ...)
 
 # S3 method for class 'step_sec_mw_fractions'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_rals'
 required_pkgs(x, ...)
 
 # S3 method for class 'step_sec_ri'
