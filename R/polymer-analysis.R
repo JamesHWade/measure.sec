@@ -64,15 +64,17 @@
 #' print(mh)
 #' # K = 0.000114, a = 0.716 (typical for PS in THF)
 measure_mh_parameters <- function(
-    mw,
-    intrinsic_visc,
-    weights = NULL,
-    mw_range = NULL,
-    log_fit = TRUE
+  mw,
+  intrinsic_visc,
+  weights = NULL,
+  mw_range = NULL,
+  log_fit = TRUE
 ) {
   # Validate inputs
   if (length(mw) != length(intrinsic_visc)) {
-    cli::cli_abort("{.arg mw} and {.arg intrinsic_visc} must have the same length.")
+    cli::cli_abort(
+      "{.arg mw} and {.arg intrinsic_visc} must have the same length."
+    )
   }
 
   # Remove NA and invalid values
@@ -112,7 +114,6 @@ measure_mh_parameters <- function(
     K <- 10^intercept
     a <- slope
     r_squared <- summary(fit)$r.squared
-
   } else {
     # Non-linear fit (less common)
     start_params <- list(K = 0.0001, a = 0.7)
@@ -234,13 +235,13 @@ print.mh_parameters <- function(x, ...) {
 #'   method = "g"
 #' )
 measure_branching_index <- function(
-    mw,
-    rg = NULL,
-    intrinsic_visc = NULL,
-    reference = "linear",
-    mh_linear = NULL,
-    rg_linear_fit = NULL,
-    method = c("g", "g_prime", "both")
+  mw,
+  rg = NULL,
+  intrinsic_visc = NULL,
+  reference = "linear",
+  mh_linear = NULL,
+  rg_linear_fit = NULL,
+  method = c("g", "g_prime", "both")
 ) {
   method <- match.arg(method)
 
@@ -269,10 +270,14 @@ measure_branching_index <- function(
     } else if (!is.null(rg_linear_fit)) {
       # Use Rg-MW relationship
       if (is.list(rg_linear_fit) && "slope" %in% names(rg_linear_fit)) {
-        log_rg_linear <- rg_linear_fit$intercept + rg_linear_fit$slope * log10(mw)
+        log_rg_linear <- rg_linear_fit$intercept +
+          rg_linear_fit$slope * log10(mw)
         rg_linear <- 10^log_rg_linear
       } else if (inherits(rg_linear_fit, "lm")) {
-        log_rg_linear <- stats::predict(rg_linear_fit, newdata = data.frame(log_mw = log10(mw)))
+        log_rg_linear <- stats::predict(
+          rg_linear_fit,
+          newdata = data.frame(log_mw = log10(mw))
+        )
         rg_linear <- 10^log_rg_linear
       } else {
         cli::cli_abort(
@@ -295,7 +300,9 @@ measure_branching_index <- function(
   # Calculate g' (viscosity-based branching index)
   if (method %in% c("g_prime", "both")) {
     if (is.null(intrinsic_visc)) {
-      cli::cli_abort("{.arg intrinsic_visc} is required for method {.val {method}}.")
+      cli::cli_abort(
+        "{.arg intrinsic_visc} is required for method {.val {method}}."
+      )
     }
 
     if (is.data.frame(reference)) {
@@ -355,23 +362,29 @@ print.branching_index <- function(x, ...) {
   cat("MW Range:", sprintf("%.0f - %.0f\n", min(x$mw), max(x$mw)))
 
   if ("g" %in% names(x)) {
-    cat(sprintf("g (Rg ratio): %.3f - %.3f (mean: %.3f)\n",
-                min(x$g, na.rm = TRUE),
-                max(x$g, na.rm = TRUE),
-                mean(x$g, na.rm = TRUE)))
+    cat(sprintf(
+      "g (Rg ratio): %.3f - %.3f (mean: %.3f)\n",
+      min(x$g, na.rm = TRUE),
+      max(x$g, na.rm = TRUE),
+      mean(x$g, na.rm = TRUE)
+    ))
   }
 
   if ("g_prime" %in% names(x)) {
-    cat(sprintf("g' (IV ratio): %.3f - %.3f (mean: %.3f)\n",
-                min(x$g_prime, na.rm = TRUE),
-                max(x$g_prime, na.rm = TRUE),
-                mean(x$g_prime, na.rm = TRUE)))
+    cat(sprintf(
+      "g' (IV ratio): %.3f - %.3f (mean: %.3f)\n",
+      min(x$g_prime, na.rm = TRUE),
+      max(x$g_prime, na.rm = TRUE),
+      mean(x$g_prime, na.rm = TRUE)
+    ))
   }
 
   if ("branches_per_molecule" %in% names(x)) {
-    cat(sprintf("\nEstimated branches/molecule: %.1f - %.1f\n",
-                min(x$branches_per_molecule, na.rm = TRUE),
-                max(x$branches_per_molecule, na.rm = TRUE)))
+    cat(sprintf(
+      "\nEstimated branches/molecule: %.1f - %.1f\n",
+      min(x$branches_per_molecule, na.rm = TRUE),
+      max(x$branches_per_molecule, na.rm = TRUE)
+    ))
   }
 
   cat("\n")
@@ -414,10 +427,10 @@ print.branching_index <- function(x, ...) {
 #' #   geom_point() +
 #' #   geom_smooth(method = "lm")
 measure_conformation_data <- function(
-    mw,
-    y,
-    y_type = c("iv", "rg"),
-    fit_line = TRUE
+  mw,
+  y,
+  y_type = c("iv", "rg"),
+  fit_line = TRUE
 ) {
   y_type <- match.arg(y_type)
 

@@ -73,19 +73,18 @@
 #'   prep()
 #' }
 step_sec_uv_ri_ratio <- function(
-    recipe,
-    uv_col = NULL,
-    ri_col = NULL,
-    output_col = "uv_ri_ratio",
-    min_signal = 0.01,
-    smooth = TRUE,
-    smooth_window = 5,
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_uv_ri_ratio")
+  recipe,
+  uv_col = NULL,
+  ri_col = NULL,
+  output_col = "uv_ri_ratio",
+  min_signal = 0.01,
+  smooth = TRUE,
+  smooth_window = 5,
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_uv_ri_ratio")
 ) {
-
   # Validate inputs
 
   if (!is.numeric(min_signal) || min_signal < 0 || min_signal > 1) {
@@ -114,16 +113,16 @@ step_sec_uv_ri_ratio <- function(
 }
 
 step_sec_uv_ri_ratio_new <- function(
-    uv_col,
-    ri_col,
-    output_col,
-    min_signal,
-    smooth,
-    smooth_window,
-    role,
-    trained,
-    skip,
-    id
+  uv_col,
+  ri_col,
+  output_col,
+  min_signal,
+  smooth,
+  smooth_window,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_uv_ri_ratio",
@@ -145,7 +144,6 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
 
   measure_cols <- find_measure_cols(training)
-
 
   # Find UV column if not specified
   if (is.null(x$uv_col)) {
@@ -193,7 +191,9 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
 #' @noRd
 .moving_average <- function(x, window) {
   n <- length(x)
-  if (n < window) return(x)
+  if (n < window) {
+    return(x)
+  }
 
   result <- x
   half_window <- floor(window / 2)
@@ -256,13 +256,23 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_uv_ri_ratio <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- "SEC UV/RI ratio"
   if (x$trained) {
-    cat(title, " (", x$uv_col, "/", x$ri_col, " -> ", x$output_col, ")", sep = "")
+    cat(
+      title,
+      " (",
+      x$uv_col,
+      "/",
+      x$ri_col,
+      " -> ",
+      x$output_col,
+      ")",
+      sep = ""
+    )
   } else {
     cat(title)
   }
@@ -274,7 +284,7 @@ print.step_sec_uv_ri_ratio <- function(
 #' @export
 #' @keywords internal
 tidy.step_sec_uv_ri_ratio <- function(x, ...) {
- tibble::tibble(
+  tibble::tibble(
     uv_col = x$uv_col %||% NA_character_,
     ri_col = x$ri_col %||% NA_character_,
     output_col = x$output_col,

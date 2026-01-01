@@ -55,7 +55,7 @@
 #' library(measure)
 #'
 #' # Generate differential MW distribution
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline() |>
 #'   step_sec_mw_distribution(type = "differential") |>

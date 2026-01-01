@@ -52,7 +52,7 @@
 #' 3. Apply this step with known injection parameters
 #' 4. Result: concentration at each elution point
 #'
-#' @family sec-chromatography
+#' @family sec-detectors
 #' @export
 #'
 #' @examples
@@ -61,7 +61,7 @@
 #' library(measure)
 #'
 #' # Convert RI signal to concentration
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
 #'   step_sec_baseline() |>
 #'   step_sec_ri(dn_dc = 0.185) |>
@@ -92,7 +92,10 @@ step_sec_concentration <- function(
 
   # Validate injection parameters
   if (normalize_to_mass) {
-    if (is.null(injection_mass) && (is.null(injection_volume) || is.null(sample_concentration))) {
+    if (
+      is.null(injection_mass) &&
+        (is.null(injection_volume) || is.null(sample_concentration))
+    ) {
       cli::cli_abort(
         c(
           "For mass normalization, provide either:",
@@ -217,12 +220,16 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
         value <- m$value
         n <- length(location)
 
-        if (n < 2) return(m)
+        if (n < 2) {
+          return(m)
+        }
 
         # Calculate time step (assuming uniform spacing)
         dt <- mean(diff(location))
 
-        if (normalize_to_mass && !is.null(injection_mass) && injection_mass > 0) {
+        if (
+          normalize_to_mass && !is.null(injection_mass) && injection_mass > 0
+        ) {
           # Calculate total area under the curve
           # Area = sum(signal * dt) in signal*min units
           # For concentration: area should equal injected mass / flow_rate
@@ -257,7 +264,12 @@ print.step_sec_concentration <- function(
 ) {
   title <- "SEC concentration conversion"
   if (!is.null(x$injection_mass)) {
-    title <- paste0(title, " (", round(x$injection_mass * 1000, 1), " ug injected)")
+    title <- paste0(
+      title,
+      " (",
+      round(x$injection_mass * 1000, 1),
+      " ug injected)"
+    )
   }
 
   if (x$trained) {

@@ -38,28 +38,68 @@
     # Detector processing
     list("step_sec_ri", "detector", "RI detector with dn/dc handling"),
     list("step_sec_uv", "detector", "UV detector with extinction coefficient"),
-    list("step_sec_mals", "detector", "Multi-angle light scattering for absolute MW"),
-    list("step_sec_viscometer", "detector", "Differential viscometer processing"),
-    list("step_sec_concentration", "calculation", "Convert signal to concentration"),
-    list("step_sec_intrinsic_visc", "calculation", "Intrinsic viscosity from viscometer"),
+    list(
+      "step_sec_mals",
+      "detector",
+      "Multi-angle light scattering for absolute MW"
+    ),
+    list(
+      "step_sec_viscometer",
+      "detector",
+      "Differential viscometer processing"
+    ),
+    list(
+      "step_sec_concentration",
+      "calculation",
+      "Convert signal to concentration"
+    ),
+    list(
+      "step_sec_intrinsic_visc",
+      "calculation",
+      "Intrinsic viscosity from viscometer"
+    ),
 
     # Baseline correction
     list("step_sec_baseline", "baseline", "SEC-optimized baseline correction"),
 
     # Composition analysis
-    list("step_sec_uv_ri_ratio", "composition", "UV/RI ratio for heterogeneity"),
-    list("step_sec_composition", "composition", "Copolymer composition from UV/RI"),
+    list(
+      "step_sec_uv_ri_ratio",
+      "composition",
+      "UV/RI ratio for heterogeneity"
+    ),
+    list(
+      "step_sec_composition",
+      "composition",
+      "Copolymer composition from UV/RI"
+    ),
 
     # Molecular weight calculations
-    list("step_sec_mw_averages", "calculation", "Calculate Mn, Mw, Mz, dispersity"),
+    list(
+      "step_sec_mw_averages",
+      "calculation",
+      "Calculate Mn, Mw, Mz, dispersity"
+    ),
     list("step_sec_mw_fractions", "calculation", "Calculate MW fractions"),
-    list("step_sec_mw_distribution", "processing", "Generate MW distribution curves"),
+    list(
+      "step_sec_mw_distribution",
+      "processing",
+      "Generate MW distribution curves"
+    ),
 
     # Protein SEC
-    list("step_sec_aggregates", "protein", "Aggregate and fragment quantitation"),
+    list(
+      "step_sec_aggregates",
+      "protein",
+      "Aggregate and fragment quantitation"
+    ),
 
     # Calibration
-    list("step_sec_universal_cal", "calibration", "Universal calibration using Mark-Houwink")
+    list(
+      "step_sec_universal_cal",
+      "calibration",
+      "Universal calibration using Mark-Houwink"
+    )
   )
 
   for (s in steps) {

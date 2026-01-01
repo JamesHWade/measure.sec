@@ -103,18 +103,18 @@
 #'   prep()
 #' }
 step_sec_aggregates <- function(
-    recipe,
-    measures = NULL,
-    monomer_start = NULL,
-    monomer_end = NULL,
-    method = c("tallest", "manual"),
-    hmws_threshold = 0.001,
-    include_main_peak = TRUE,
-    output_prefix = "purity_",
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_aggregates")
+  recipe,
+  measures = NULL,
+  monomer_start = NULL,
+  monomer_end = NULL,
+  method = c("tallest", "manual"),
+  hmws_threshold = 0.001,
+  include_main_peak = TRUE,
+  output_prefix = "purity_",
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_aggregates")
 ) {
   method <- match.arg(method)
 
@@ -148,17 +148,17 @@ step_sec_aggregates <- function(
 }
 
 step_sec_aggregates_new <- function(
-    measures,
-    monomer_start,
-    monomer_end,
-    method,
-    hmws_threshold,
-    include_main_peak,
-    output_prefix,
-    role,
-    trained,
-    skip,
-    id
+  measures,
+  monomer_start,
+  monomer_end,
+  method,
+  hmws_threshold,
+  include_main_peak,
+  output_prefix,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_aggregates",
@@ -273,7 +273,9 @@ bake.step_sec_aggregates <- function(object, new_data, ...) {
     value <- pmax(value, 0)
 
     # Determine peak boundaries
-    if (method == "tallest" && (is.null(monomer_start) || is.null(monomer_end))) {
+    if (
+      method == "tallest" && (is.null(monomer_start) || is.null(monomer_end))
+    ) {
       peak_info <- .find_main_peak(location, value, threshold_frac = 0.05)
       m_start <- peak_info$start
       m_end <- peak_info$end
@@ -296,7 +298,10 @@ bake.step_sec_aggregates <- function(object, new_data, ...) {
         hmws_locs <- location[hmws_idx]
         if (length(hmws_vals) > 1) {
           hmws_dt <- diff(hmws_locs)
-          hmws_area <- sum(hmws_vals[-1] * hmws_dt + hmws_vals[-length(hmws_vals)] * hmws_dt) / 2
+          hmws_area <- sum(
+            hmws_vals[-1] * hmws_dt + hmws_vals[-length(hmws_vals)] * hmws_dt
+          ) /
+            2
         } else {
           hmws_area <- 0
         }
@@ -311,7 +316,10 @@ bake.step_sec_aggregates <- function(object, new_data, ...) {
         mono_locs <- location[mono_idx]
         if (length(mono_vals) > 1) {
           mono_dt <- diff(mono_locs)
-          mono_area <- sum(mono_vals[-1] * mono_dt + mono_vals[-length(mono_vals)] * mono_dt) / 2
+          mono_area <- sum(
+            mono_vals[-1] * mono_dt + mono_vals[-length(mono_vals)] * mono_dt
+          ) /
+            2
         } else {
           mono_area <- 0
         }
@@ -326,7 +334,10 @@ bake.step_sec_aggregates <- function(object, new_data, ...) {
         lmws_locs <- location[lmws_idx]
         if (length(lmws_vals) > 1) {
           lmws_dt <- diff(lmws_locs)
-          lmws_area <- sum(lmws_vals[-1] * lmws_dt + lmws_vals[-length(lmws_vals)] * lmws_dt) / 2
+          lmws_area <- sum(
+            lmws_vals[-1] * lmws_dt + lmws_vals[-length(lmws_vals)] * lmws_dt
+          ) /
+            2
         } else {
           lmws_area <- 0
         }
@@ -359,9 +370,9 @@ bake.step_sec_aggregates <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_aggregates <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- "SEC aggregate quantitation"
   if (x$trained) {

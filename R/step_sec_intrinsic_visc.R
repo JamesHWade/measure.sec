@@ -81,16 +81,16 @@
 #'   prep()
 #' }
 step_sec_intrinsic_visc <- function(
-    recipe,
-    specific_visc_col = NULL,
-    concentration_col = NULL,
-    output_col = "intrinsic_visc",
-    min_concentration = 1e-6,
-    units = c("dL/g", "mL/g"),
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_intrinsic_visc")
+  recipe,
+  specific_visc_col = NULL,
+  concentration_col = NULL,
+  output_col = "intrinsic_visc",
+  min_concentration = 1e-6,
+  units = c("dL/g", "mL/g"),
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_intrinsic_visc")
 ) {
   units <- match.arg(units)
 
@@ -115,15 +115,15 @@ step_sec_intrinsic_visc <- function(
 }
 
 step_sec_intrinsic_visc_new <- function(
-    specific_visc_col,
-    concentration_col,
-    output_col,
-    min_concentration,
-    units,
-    role,
-    trained,
-    skip,
-    id
+  specific_visc_col,
+  concentration_col,
+  output_col,
+  min_concentration,
+  units,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_intrinsic_visc",
@@ -147,7 +147,11 @@ prep.step_sec_intrinsic_visc <- function(x, training, info = NULL, ...) {
 
   # Find specific viscosity column if not specified
   if (is.null(x$specific_visc_col)) {
-    visc_cols <- measure_cols[grepl("visc|eta", measure_cols, ignore.case = TRUE)]
+    visc_cols <- measure_cols[grepl(
+      "visc|eta",
+      measure_cols,
+      ignore.case = TRUE
+    )]
     if (length(visc_cols) == 0) {
       cli::cli_abort(
         "No specific viscosity column found. Specify {.arg specific_visc_col} explicitly."
@@ -165,7 +169,11 @@ prep.step_sec_intrinsic_visc <- function(x, training, info = NULL, ...) {
 
   # Find concentration column if not specified
   if (is.null(x$concentration_col)) {
-    conc_cols <- measure_cols[grepl("ri|conc", measure_cols, ignore.case = TRUE)]
+    conc_cols <- measure_cols[grepl(
+      "ri|conc",
+      measure_cols,
+      ignore.case = TRUE
+    )]
     if (length(conc_cols) == 0) {
       cli::cli_abort(
         "No concentration column found. Specify {.arg concentration_col} explicitly."
@@ -218,14 +226,16 @@ bake.step_sec_intrinsic_visc <- function(object, new_data, ...) {
       # Calculate \[eta\] = eta_sp / c
       iv <- rep(NA_real_, length(visc_val))
 
-      valid <- !is.na(visc_val) & !is.na(conc_val) &
-        conc_val > min_concentration & visc_val > 0
+      valid <- !is.na(visc_val) &
+        !is.na(conc_val) &
+        conc_val > min_concentration &
+        visc_val > 0
 
       if (any(valid)) {
         iv[valid] <- unit_factor * visc_val[valid] / conc_val[valid]
 
         # Filter unrealistic values
-        iv[valid][iv[valid] > 100] <- NA_real_  # \[eta\] > 100 dL/g is unusual
+        iv[valid][iv[valid] > 100] <- NA_real_ # \[eta\] > 100 dL/g is unusual
         iv[valid][iv[valid] < 0] <- NA_real_
       }
 
@@ -240,14 +250,22 @@ bake.step_sec_intrinsic_visc <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_intrinsic_visc <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- paste0("SEC intrinsic viscosity (", x$units, ")")
   if (x$trained) {
-    cat(title, " on ", x$specific_visc_col, "/", x$concentration_col,
-        " -> ", x$output_col, sep = "")
+    cat(
+      title,
+      " on ",
+      x$specific_visc_col,
+      "/",
+      x$concentration_col,
+      " -> ",
+      x$output_col,
+      sep = ""
+    )
   } else {
     cat(title)
   }

@@ -85,7 +85,7 @@ step_sec_detector_delay <- function(
 
   # Validate inputs
 
-if (is.null(reference)) {
+  if (is.null(reference)) {
     cli::cli_abort("{.arg reference} must be specified.")
   }
 
@@ -215,7 +215,9 @@ prep.step_sec_detector_delay <- function(x, training, info = NULL, ...) {
   value <- m$value
   n <- length(location)
 
-  if (n < 2) return(m)
+  if (n < 2) {
+    return(m)
+  }
 
   # Calculate the location spacing (assume uniform)
   # For time-based data, this is time per point
@@ -254,7 +256,6 @@ prep.step_sec_detector_delay <- function(x, training, info = NULL, ...) {
     }
 
     m$value <- new_value
-
   } else if (method == "interpolate") {
     # Interpolation method
     # Create new location grid shifted by delay
@@ -265,7 +266,7 @@ prep.step_sec_detector_delay <- function(x, training, info = NULL, ...) {
       x = location,
       y = value,
       xout = new_location,
-      rule = 1  # NA for extrapolation
+      rule = 1 # NA for extrapolation
     )$y
 
     m$value <- new_value

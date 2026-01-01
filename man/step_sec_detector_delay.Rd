@@ -98,11 +98,8 @@ rec <- recipe(~., data = sec_triple_detect) |>
 \seealso{
 Other sec-chromatography: 
 \code{\link{step_sec_baseline}()},
-\code{\link{step_sec_concentration}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()}
+\code{\link{step_sec_mw_fractions}()}
 }
 \concept{sec-chromatography}

@@ -95,13 +95,13 @@ library(recipes)
 library(measure)
 
 # SEC baseline correction with default settings
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline() |>
   prep()
 
 # Using median method for robustness to outliers
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline(left_frac = 0.1, right_frac = 0.1, method = "median") |>
   prep()
@@ -112,12 +112,9 @@ rec <- recipe(~., data = sec_data) |>
 correction, \code{\link[measure:step_measure_detrend]{measure::step_measure_detrend()}} for simple trend removal.
 
 Other sec-chromatography: 
-\code{\link{step_sec_concentration}()},
 \code{\link{step_sec_detector_delay}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()}
+\code{\link{step_sec_mw_fractions}()}
 }
 \concept{sec-chromatography}

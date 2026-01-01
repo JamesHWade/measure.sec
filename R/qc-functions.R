@@ -56,17 +56,17 @@
 #'   width_2 = 0.5
 #' )
 measure_sec_resolution <- function(
-    retention_1,
-    retention_2,
-    width_1,
-    width_2,
-    width_type = c("baseline", "half_height", "tangent"),
-    method = c("usp", "ep")
+  retention_1,
+  retention_2,
+  width_1,
+  width_2,
+  width_type = c("baseline", "half_height", "tangent"),
+  method = c("usp", "ep")
 ) {
   width_type <- match.arg(width_type)
   method <- match.arg(method)
 
- # Validate inputs
+  # Validate inputs
   if (!is.numeric(retention_1) || !is.numeric(retention_2)) {
     cli::cli_abort("Retention times must be numeric.")
   }
@@ -158,10 +158,10 @@ measure_sec_resolution <- function(
 #'   dead_time = 3.0
 #' )
 measure_sec_plate_count <- function(
-    retention,
-    width,
-    width_type = c("half_height", "baseline", "inflection"),
-    dead_time = NULL
+  retention,
+  width,
+  width_type = c("half_height", "baseline", "inflection"),
+  dead_time = NULL
 ) {
   width_type <- match.arg(width_type)
 
@@ -247,9 +247,9 @@ measure_sec_plate_count <- function(
 #'   method = "usp"
 #' )
 measure_sec_asymmetry <- function(
-    leading,
-    tailing,
-    method = c("usp", "ep")
+  leading,
+  tailing,
+  method = c("usp", "ep")
 ) {
   method <- match.arg(method)
 
@@ -318,9 +318,9 @@ measure_sec_asymmetry <- function(
 #' )
 #' # Returns 97.5%
 measure_sec_recovery <- function(
-    detected_mass,
-    injected_mass,
-    units = "mg"
+  detected_mass,
+  injected_mass,
+  units = "mg"
 ) {
   if (!is.numeric(detected_mass) || detected_mass < 0) {
     cli::cli_abort("Detected mass must be a non-negative number.")
@@ -409,12 +409,12 @@ measure_sec_recovery <- function(
 #' print(sst)
 #' }
 measure_sec_suitability <- function(
-    data = NULL,
-    peaks,
-    reference_peaks = NULL,
-    injected_mass = NULL,
-    criteria = NULL,
-    column_length = NULL
+  data = NULL,
+  peaks,
+  reference_peaks = NULL,
+  injected_mass = NULL,
+  criteria = NULL,
+  column_length = NULL
 ) {
   # Default criteria (typical biopharmaceutical)
   if (is.null(criteria)) {
@@ -531,7 +531,7 @@ measure_sec_suitability <- function(
     # Assume area is proportional to mass (needs calibration in practice)
     # This is a placeholder - real implementation needs response factor
     recovery <- measure_sec_recovery(
-      detected_mass = total_area / 100 * injected_mass,  # Simplified
+      detected_mass = total_area / 100 * injected_mass, # Simplified
       injected_mass = injected_mass
     )
 
@@ -541,7 +541,12 @@ measure_sec_suitability <- function(
 
     results$recovery <- list(
       value = round(recovery, 1),
-      criterion = paste0(criteria$recovery_min, "-", criteria$recovery_max, "%"),
+      criterion = paste0(
+        criteria$recovery_min,
+        "-",
+        criteria$recovery_max,
+        "%"
+      ),
       passed = recovery_pass
     )
   }
@@ -576,14 +581,22 @@ measure_sec_suitability <- function(
   summary_lines <- character()
   for (metric in names(results)) {
     r <- results[[metric]]
-    status <- if (is.na(r$passed)) "INFO" else if (r$passed) "PASS" else "FAIL"
+    status <- if (is.na(r$passed)) {
+      "INFO"
+    } else if (r$passed) {
+      "PASS"
+    } else {
+      "FAIL"
+    }
     summary_lines <- c(
       summary_lines,
-      sprintf("%-20s: %s (%s) [%s]",
-              gsub("_", " ", metric),
-              format(r$value, nsmall = 1),
-              r$criterion,
-              status)
+      sprintf(
+        "%-20s: %s (%s) [%s]",
+        gsub("_", " ", metric, fixed = TRUE),
+        format(r$value, nsmall = 1),
+        r$criterion,
+        status
+      )
     )
   }
 
@@ -628,20 +641,34 @@ summary.sec_suitability <- function(object, ...) {
   cat("SEC System Suitability Summary\n\n")
 
   n_metrics <- length(object$results)
-  n_passed <- sum(vapply(object$results, function(r) {
-    if (is.na(r$passed)) return(FALSE)
-    r$passed
-  }, logical(1)))
-  n_failed <- sum(vapply(object$results, function(r) {
-    if (is.na(r$passed)) return(FALSE)
-    !r$passed
-  }, logical(1)))
+  n_passed <- sum(vapply(
+    object$results,
+    function(r) {
+      if (is.na(r$passed)) {
+        return(FALSE)
+      }
+      r$passed
+    },
+    logical(1)
+  ))
+  n_failed <- sum(vapply(
+    object$results,
+    function(r) {
+      if (is.na(r$passed)) {
+        return(FALSE)
+      }
+      !r$passed
+    },
+    logical(1)
+  ))
   n_info <- sum(vapply(object$results, function(r) is.na(r$passed), logical(1)))
 
   cat("Metrics evaluated:", n_metrics, "\n")
   cat("  Passed:", n_passed, "\n")
   cat("  Failed:", n_failed, "\n")
-  if (n_info > 0) cat("  Informational:", n_info, "\n")
+  if (n_info > 0) {
+    cat("  Informational:", n_info, "\n")
+  }
 
   cat("\nOverall:", if (object$passed) "PASSED" else "FAILED", "\n")
 

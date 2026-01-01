@@ -106,23 +106,23 @@
 #'   prep()
 #' }
 step_sec_mals <- function(
-    recipe,
-    mals_col = NULL,
-    concentration_col = NULL,
-    dn_dc = NULL,
-    dn_dc_column = NULL,
-    wavelength = 658,
-    solvent_ri = 1.333,
-    angles = 90,
-    formalism = c("zimm", "debye", "berry"),
-    calibration_constant = NULL,
-    output_mw = "mw_mals",
-    output_rg = "rg",
-    min_signal = 0.01,
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_mals")
+  recipe,
+  mals_col = NULL,
+  concentration_col = NULL,
+  dn_dc = NULL,
+  dn_dc_column = NULL,
+  wavelength = 658,
+  solvent_ri = 1.333,
+  angles = 90,
+  formalism = c("zimm", "debye", "berry"),
+  calibration_constant = NULL,
+  output_mw = "mw_mals",
+  output_rg = "rg",
+  min_signal = 0.01,
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_mals")
 ) {
   formalism <- match.arg(formalism)
 
@@ -169,22 +169,22 @@ step_sec_mals <- function(
 }
 
 step_sec_mals_new <- function(
-    mals_col,
-    concentration_col,
-    dn_dc,
-    dn_dc_column,
-    wavelength,
-    solvent_ri,
-    angles,
-    formalism,
-    calibration_constant,
-    output_mw,
-    output_rg,
-    min_signal,
-    role,
-    trained,
-    skip,
-    id
+  mals_col,
+  concentration_col,
+  dn_dc,
+  dn_dc_column,
+  wavelength,
+  solvent_ri,
+  angles,
+  formalism,
+  calibration_constant,
+  output_mw,
+  output_rg,
+  min_signal,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_mals",
@@ -215,8 +215,8 @@ step_sec_mals_new <- function(
   # dn/dc in mL/g = cm^3/g
   # Result in mol*cm^2/g^2
 
-  lambda_cm <- wavelength_nm * 1e-7  # nm to cm
-  NA_val <- 6.022e23  # Avogadro's number
+  lambda_cm <- wavelength_nm * 1e-7 # nm to cm
+  NA_val <- 6.022e23 # Avogadro's number
 
   K <- 4 * pi^2 * solvent_ri^2 * dn_dc^2 / (NA_val * lambda_cm^4)
   K
@@ -230,22 +230,34 @@ prep.step_sec_mals <- function(x, training, info = NULL, ...) {
 
   # Find MALS column if not specified
   if (is.null(x$mals_col)) {
-    mals_cols <- measure_cols[grepl("mals|ls|light", measure_cols, ignore.case = TRUE)]
+    mals_cols <- measure_cols[grepl(
+      "mals|ls|light",
+      measure_cols,
+      ignore.case = TRUE
+    )]
     if (length(mals_cols) == 0) {
-      cli::cli_abort("No MALS column found. Specify {.arg mals_col} explicitly.")
+      cli::cli_abort(
+        "No MALS column found. Specify {.arg mals_col} explicitly."
+      )
     }
     mals_col <- mals_cols[1]
   } else {
     mals_col <- x$mals_col
     if (!mals_col %in% measure_cols) {
-      cli::cli_abort("MALS column {.val {mals_col}} not found in measure columns.")
+      cli::cli_abort(
+        "MALS column {.val {mals_col}} not found in measure columns."
+      )
     }
   }
 
   # Find concentration column if not specified
   if (is.null(x$concentration_col)) {
     # Try to find RI or concentration column
-    conc_cols <- measure_cols[grepl("ri|conc", measure_cols, ignore.case = TRUE)]
+    conc_cols <- measure_cols[grepl(
+      "ri|conc",
+      measure_cols,
+      ignore.case = TRUE
+    )]
     if (length(conc_cols) == 0) {
       cli::cli_abort(
         "No concentration column found. Specify {.arg concentration_col} explicitly."
@@ -336,7 +348,10 @@ bake.step_sec_mals <- function(object, new_data, ...) {
 
       # Calculate MW at each point
       mw <- rep(NA_real_, length(mals_val))
-      valid <- abs(conc_val) > threshold & mals_val > 0 & !is.na(mals_val) & !is.na(conc_val)
+      valid <- abs(conc_val) > threshold &
+        mals_val > 0 &
+        !is.na(mals_val) &
+        !is.na(conc_val)
 
       if (any(valid)) {
         # For single angle at 90 degrees, P(theta) ~ 1 for small particles
@@ -346,8 +361,8 @@ bake.step_sec_mals <- function(object, new_data, ...) {
         mw[valid] <- R_theta / (K * conc_val[valid])
 
         # Ensure reasonable MW values (filter out noise)
-        mw[valid][mw[valid] < 100] <- NA_real_  # MW < 100 is unrealistic
-        mw[valid][mw[valid] > 1e10] <- NA_real_  # MW > 10 billion is unrealistic
+        mw[valid][mw[valid] < 100] <- NA_real_ # MW < 100 is unrealistic
+        mw[valid][mw[valid] > 1e10] <- NA_real_ # MW > 10 billion is unrealistic
       }
 
       # Return as measure object
@@ -362,12 +377,17 @@ bake.step_sec_mals <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_mals <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
-  title <- paste0("SEC MALS processing (", length(x$angles), " angle",
-                  if (length(x$angles) > 1) "s" else "", ")")
+  title <- paste0(
+    "SEC MALS processing (",
+    length(x$angles),
+    " angle",
+    if (length(x$angles) > 1) "s" else "",
+    ")"
+  )
   if (x$trained) {
     cat(title, " on ", x$mals_col, " -> ", x$output_mw, sep = "")
   } else {

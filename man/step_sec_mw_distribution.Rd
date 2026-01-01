@@ -79,7 +79,7 @@ library(recipes)
 library(measure)
 
 # Generate differential MW distribution
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline() |>
   step_sec_mw_distribution(type = "differential") |>
@@ -89,11 +89,8 @@ rec <- recipe(~., data = sec_data) |>
 \seealso{
 Other sec-chromatography: 
 \code{\link{step_sec_baseline}()},
-\code{\link{step_sec_concentration}()},
 \code{\link{step_sec_detector_delay}()},
 \code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()}
+\code{\link{step_sec_mw_fractions}()}
 }
 \concept{sec-chromatography}

@@ -93,7 +93,7 @@ library(recipes)
 library(measure)
 
 # Convert RI signal to concentration
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_sec_baseline() |>
   step_sec_ri(dn_dc = 0.185) |>
@@ -107,13 +107,11 @@ rec <- recipe(~., data = sec_data) |>
 }
 }
 \seealso{
-Other sec-chromatography: 
-\code{\link{step_sec_baseline}()},
-\code{\link{step_sec_detector_delay}()},
-\code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
+Other sec-detectors: 
+\code{\link{step_sec_intrinsic_visc}()},
+\code{\link{step_sec_mals}()},
 \code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()}
+\code{\link{step_sec_uv}()},
+\code{\link{step_sec_viscometer}()}
 }
-\concept{sec-chromatography}
+\concept{sec-detectors}

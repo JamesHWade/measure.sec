@@ -1,0 +1,9 @@
+pandoc: 3.8.3
+pkgdown: 2.1.1
+pkgdown_sha: ~
+articles:
+  sec-analysis: sec-analysis.html
+last_built: 2026-01-01T13:11Z
+urls:
+  reference: https://jameshwade.github.io/measure-sec/reference
+  article: https://jameshwade.github.io/measure-sec/articles

@@ -91,25 +91,28 @@
 #'   prep()
 #' }
 step_sec_composition <- function(
-    recipe,
-    uv_col = NULL,
-    ri_col = NULL,
-    component_a_uv,
-    component_a_ri,
-    component_b_uv,
-    component_b_ri,
-    output_col = "composition_a",
-    min_signal = 0.01,
-    clip = TRUE,
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_composition")
+  recipe,
+  uv_col = NULL,
+  ri_col = NULL,
+  component_a_uv,
+  component_a_ri,
+  component_b_uv,
+  component_b_ri,
+  output_col = "composition_a",
+  min_signal = 0.01,
+  clip = TRUE,
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_composition")
 ) {
-
   # Validate response factors
-  if (missing(component_a_uv) || missing(component_a_ri) ||
-      missing(component_b_uv) || missing(component_b_ri)) {
+  if (
+    missing(component_a_uv) ||
+      missing(component_a_ri) ||
+      missing(component_b_uv) ||
+      missing(component_b_ri)
+  ) {
     cli::cli_abort(
       "All response factors must be specified: {.arg component_a_uv}, {.arg component_a_ri}, {.arg component_b_uv}, {.arg component_b_ri}."
     )
@@ -151,21 +154,21 @@ step_sec_composition <- function(
 }
 
 step_sec_composition_new <- function(
-    uv_col,
-    ri_col,
-    component_a_uv,
-    component_a_ri,
-    component_b_uv,
-    component_b_ri,
-    ratio_a,
-    ratio_b,
-    output_col,
-    min_signal,
-    clip,
-    role,
-    trained,
-    skip,
-    id
+  uv_col,
+  ri_col,
+  component_a_uv,
+  component_a_ri,
+  component_b_uv,
+  component_b_ri,
+  ratio_a,
+  ratio_b,
+  output_col,
+  min_signal,
+  clip,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_composition",
@@ -292,13 +295,23 @@ bake.step_sec_composition <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_composition <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- "SEC composition analysis"
   if (x$trained) {
-    cat(title, " (", x$uv_col, "/", x$ri_col, " -> ", x$output_col, ")", sep = "")
+    cat(
+      title,
+      " (",
+      x$uv_col,
+      "/",
+      x$ri_col,
+      " -> ",
+      x$output_col,
+      ")",
+      sep = ""
+    )
   } else {
     cat(title)
   }

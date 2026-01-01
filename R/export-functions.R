@@ -58,7 +58,7 @@
 #' library(measure)
 #'
 #' # Process SEC data
-#' prepped <- recipe(~., data = sec_data) |>
+#' prepped <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(ri, location = vars(time), col_name = "ri") |>
 #'   step_sec_baseline() |>
 #'   prep() |>
@@ -78,11 +78,11 @@
 #' write.csv(slices, "sec_slices.csv", row.names = FALSE)
 #' }
 measure_sec_slice_table <- function(
-    data,
-    measures = NULL,
-    sample_id = NULL,
-    include_location = TRUE,
-    pivot = FALSE
+  data,
+  measures = NULL,
+  sample_id = NULL,
+  include_location = TRUE,
+  pivot = FALSE
 ) {
   if (!is.data.frame(data)) {
     cli::cli_abort("{.arg data} must be a data frame.")
@@ -118,7 +118,9 @@ measure_sec_slice_table <- function(
     for (measure_col in measures) {
       m <- data[[measure_col]][[i]]
 
-      if (is.null(m)) next
+      if (is.null(m)) {
+        next
+      }
 
       n_slices <- length(m$value)
 
@@ -132,7 +134,13 @@ measure_sec_slice_table <- function(
       if (include_location) {
         slice_df$location <- m$location
         # Reorder columns
-        slice_df <- slice_df[, c("sample_id", "slice", "location", "measure", "value")]
+        slice_df <- slice_df[, c(
+          "sample_id",
+          "slice",
+          "location",
+          "measure",
+          "value"
+        )]
       }
 
       slice_list <- c(slice_list, list(slice_df))
@@ -142,7 +150,7 @@ measure_sec_slice_table <- function(
   result <- dplyr::bind_rows(slice_list)
 
   # Pivot to wide format if requested
- if (pivot && nrow(result) > 0) {
+  if (pivot && nrow(result) > 0) {
     if (include_location) {
       result <- tidyr::pivot_wider(
         result,
@@ -225,14 +233,14 @@ measure_sec_slice_table <- function(
 #' writexl::write_xlsx(summary_tbl, "sec_summary.xlsx")
 #' }
 measure_sec_summary_table <- function(
-    data,
-    mw_col = NULL,
-    include_mw = TRUE,
-    include_fractions = TRUE,
-    include_purity = TRUE,
-    sample_id = NULL,
-    additional_cols = NULL,
-    digits = 2
+  data,
+  mw_col = NULL,
+  include_mw = TRUE,
+  include_fractions = TRUE,
+  include_purity = TRUE,
+  sample_id = NULL,
+  additional_cols = NULL,
+  digits = 2
 ) {
   if (!is.data.frame(data)) {
     cli::cli_abort("{.arg data} must be a data frame.")
@@ -249,7 +257,16 @@ measure_sec_summary_table <- function(
 
   # Add molecular weight columns if available
   if (include_mw) {
-    mw_cols <- c("Mn", "Mw", "Mz", "dispersity", "mw_mn", "mw_mw", "mw_mz", "mw_dispersity")
+    mw_cols <- c(
+      "Mn",
+      "Mw",
+      "Mz",
+      "dispersity",
+      "mw_mn",
+      "mw_mw",
+      "mw_mz",
+      "mw_dispersity"
+    )
     for (col in mw_cols) {
       if (col %in% names(data)) {
         result[[col]] <- round(data[[col]], digits)
@@ -270,7 +287,11 @@ measure_sec_summary_table <- function(
   # Add fraction columns if available
   if (include_fractions) {
     # Look for fraction columns (pattern: frac_* or *_fraction)
-    frac_cols <- names(data)[grepl("frac|fraction", names(data), ignore.case = TRUE)]
+    frac_cols <- names(data)[grepl(
+      "frac|fraction",
+      names(data),
+      ignore.case = TRUE
+    )]
     for (col in frac_cols) {
       if (is.numeric(data[[col]])) {
         result[[col]] <- round(data[[col]], digits)

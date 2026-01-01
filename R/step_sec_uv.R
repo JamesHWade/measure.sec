@@ -55,7 +55,7 @@
 #' - RI is more universal but less sensitive
 #' - For accurate MW, combine both detectors
 #'
-#' @family sec-chromatography
+#' @family sec-detectors
 #' @export
 #'
 #' @examples
@@ -64,13 +64,13 @@
 #' library(measure)
 #'
 #' # Apply fixed extinction coefficient
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
 #'   step_sec_uv(extinction_coef = 1.0, wavelength = 280) |>
 #'   prep()
 #'
 #' # Use sample-specific extinction coefficients
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
 #'   step_sec_uv(extinction_column = "ext_coef") |>
 #'   prep()
@@ -96,7 +96,11 @@ step_sec_uv <- function(
   }
 
   if (!is.null(extinction_coef)) {
-    if (!is.numeric(extinction_coef) || length(extinction_coef) != 1 || extinction_coef <= 0) {
+    if (
+      !is.numeric(extinction_coef) ||
+        length(extinction_coef) != 1 ||
+        extinction_coef <= 0
+    ) {
       cli::cli_abort("{.arg extinction_coef} must be a positive numeric value.")
     }
   }
@@ -205,7 +209,7 @@ bake.step_sec_uv <- function(object, new_data, ...) {
     } else if (!is.null(extinction_coef)) {
       ext_values <- rep(extinction_coef, nrow(new_data))
     } else {
-      ext_values <- rep(1.0, nrow(new_data))  # No normalization
+      ext_values <- rep(1.0, nrow(new_data)) # No normalization
     }
 
     # Process each sample

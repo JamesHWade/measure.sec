@@ -95,7 +95,10 @@ rec <- recipe(~., data = sec_visc_data) |>
 \code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}} for intrinsic viscosity calculation
 
 Other sec-detectors: 
+\code{\link{step_sec_concentration}()},
 \code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_mals}()}
+\code{\link{step_sec_mals}()},
+\code{\link{step_sec_ri}()},
+\code{\link{step_sec_uv}()}
 }
 \concept{sec-detectors}

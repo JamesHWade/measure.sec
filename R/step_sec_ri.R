@@ -48,7 +48,7 @@
 #' - Proteins: ~0.185 mL/g
 #' - DNA: ~0.170 mL/g
 #'
-#' @family sec-chromatography
+#' @family sec-detectors
 #' @export
 #'
 #' @examples
@@ -57,13 +57,13 @@
 #' library(measure)
 #'
 #' # Apply fixed dn/dc value
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
 #'   step_sec_ri(dn_dc = 0.185) |>
 #'   prep()
 #'
 #' # Use sample-specific dn/dc from a column
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
 #'   step_sec_ri(dn_dc_column = "dn_dc") |>
 #'   prep()
@@ -94,7 +94,9 @@ step_sec_ri <- function(
   }
 
   if (!is.numeric(instrument_constant) || instrument_constant <= 0) {
-    cli::cli_abort("{.arg instrument_constant} must be a positive numeric value.")
+    cli::cli_abort(
+      "{.arg instrument_constant} must be a positive numeric value."
+    )
   }
 
   recipes::add_step(
@@ -193,7 +195,7 @@ bake.step_sec_ri <- function(object, new_data, ...) {
     } else if (!is.null(dn_dc)) {
       dn_dc_values <- rep(dn_dc, nrow(new_data))
     } else {
-      dn_dc_values <- rep(1.0, nrow(new_data))  # No normalization
+      dn_dc_values <- rep(1.0, nrow(new_data)) # No normalization
     }
 
     # Process each sample
@@ -256,6 +258,3 @@ tidy.step_sec_ri <- function(x, ...) {
 required_pkgs.step_sec_ri <- function(x, ...) {
   c("measure.sec", "measure")
 }
-
-# Helper for null coalescing
-`%||%` <- function(x, y) if (is.null(x)) y else x

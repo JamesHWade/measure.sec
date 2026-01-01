@@ -94,26 +94,24 @@ library(recipes)
 library(measure)
 
 # Apply fixed extinction coefficient
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_uv(extinction_coef = 1.0, wavelength = 280) |>
   prep()
 
 # Use sample-specific extinction coefficients
-rec <- recipe(~., data = sec_data) |>
+rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_uv(extinction_column = "ext_coef") |>
   prep()
 }
 }
 \seealso{
-Other sec-chromatography: 
-\code{\link{step_sec_baseline}()},
+Other sec-detectors: 
 \code{\link{step_sec_concentration}()},
-\code{\link{step_sec_detector_delay}()},
-\code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_ri}()}
+\code{\link{step_sec_intrinsic_visc}()},
+\code{\link{step_sec_mals}()},
+\code{\link{step_sec_ri}()},
+\code{\link{step_sec_viscometer}()}
 }
-\concept{sec-chromatography}
+\concept{sec-detectors}

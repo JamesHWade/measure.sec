@@ -75,13 +75,13 @@
 #' library(measure)
 #'
 #' # SEC baseline correction with default settings
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline() |>
 #'   prep()
 #'
 #' # Using median method for robustness to outliers
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline(left_frac = 0.1, right_frac = 0.1, method = "median") |>
 #'   prep()
@@ -248,7 +248,7 @@ tidy.step_sec_baseline <- function(x, ...) {
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_baseline <- function(x, ...) {
- c("measure.sec", "measure")
+  c("measure.sec", "measure")
 }
 
 # ------------------------------------------------------------------------------
@@ -317,10 +317,15 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
     left_center <- mean(left_idx)
     right_center <- mean(right_idx)
 
-    slope <- (right_mean - left_mean) / (right_center - left_center)
-    intercept <- left_mean - slope * left_center
-
-    baseline <- intercept + slope * seq_len(n)
+    # Guard against division by zero if regions overlap
+    if (abs(right_center - left_center) < .Machine$double.eps) {
+      cli::cli_warn("Baseline regions overlap; using constant baseline.")
+      baseline <- rep(mean(c(left_mean, right_mean)), n)
+    } else {
+      slope <- (right_mean - left_mean) / (right_center - left_center)
+      intercept <- left_mean - slope * left_center
+      baseline <- intercept + slope * seq_len(n)
+    }
   } else if (method == "median") {
     # Use medians for robustness
     left_med <- stats::median(left_values, na.rm = TRUE)
@@ -329,10 +334,15 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
     left_center <- mean(left_idx)
     right_center <- mean(right_idx)
 
-    slope <- (right_med - left_med) / (right_center - left_center)
-    intercept <- left_med - slope * left_center
-
-    baseline <- intercept + slope * seq_len(n)
+    # Guard against division by zero if regions overlap
+    if (abs(right_center - left_center) < .Machine$double.eps) {
+      cli::cli_warn("Baseline regions overlap; using constant baseline.")
+      baseline <- rep(mean(c(left_med, right_med)), n)
+    } else {
+      slope <- (right_med - left_med) / (right_center - left_center)
+      intercept <- left_med - slope * left_center
+      baseline <- intercept + slope * seq_len(n)
+    }
   } else if (method == "spline") {
     # Smooth spline through baseline regions
     baseline_idx <- c(left_idx, right_idx)
@@ -349,9 +359,13 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
       right_mean <- mean(right_values, na.rm = TRUE)
       left_center <- mean(left_idx)
       right_center <- mean(right_idx)
-      slope <- (right_mean - left_mean) / (right_center - left_center)
-      intercept <- left_mean - slope * left_center
-      baseline <- intercept + slope * seq_len(n)
+      if (abs(right_center - left_center) < .Machine$double.eps) {
+        baseline <- rep(mean(c(left_mean, right_mean)), n)
+      } else {
+        slope <- (right_mean - left_mean) / (right_center - left_center)
+        intercept <- left_mean - slope * left_center
+        baseline <- intercept + slope * seq_len(n)
+      }
     } else {
       fit <- tryCatch(
         stats::smooth.spline(
@@ -373,9 +387,13 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
         right_mean <- mean(right_values, na.rm = TRUE)
         left_center <- mean(left_idx)
         right_center <- mean(right_idx)
-        slope <- (right_mean - left_mean) / (right_center - left_center)
-        intercept <- left_mean - slope * left_center
-        baseline <- intercept + slope * seq_len(n)
+        if (abs(right_center - left_center) < .Machine$double.eps) {
+          baseline <- rep(mean(c(left_mean, right_mean)), n)
+        } else {
+          slope <- (right_mean - left_mean) / (right_center - left_center)
+          intercept <- left_mean - slope * left_center
+          baseline <- intercept + slope * seq_len(n)
+        }
       } else {
         baseline <- stats::predict(fit, x = seq_len(n))$y
       }

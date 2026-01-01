@@ -91,20 +91,20 @@
 #'   prep()
 #' }
 step_sec_universal_cal <- function(
-    recipe,
-    measures = NULL,
-    calibration = NULL,
-    calibration_col = NULL,
-    intrinsic_visc_col = NULL,
-    K_sample,
-    a_sample,
-    K_standard = 0.000114,
-    a_standard = 0.716,
-    output_col = "mw_universal",
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_universal_cal")
+  recipe,
+  measures = NULL,
+  calibration = NULL,
+  calibration_col = NULL,
+  intrinsic_visc_col = NULL,
+  K_sample,
+  a_sample,
+  K_standard = 0.000114,
+  a_standard = 0.716,
+  output_col = "mw_universal",
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_universal_cal")
 ) {
   # Validate Mark-Houwink parameters
   if (missing(K_sample) || missing(a_sample)) {
@@ -147,19 +147,19 @@ step_sec_universal_cal <- function(
 }
 
 step_sec_universal_cal_new <- function(
-    measures,
-    calibration,
-    calibration_col,
-    intrinsic_visc_col,
-    K_sample,
-    a_sample,
-    K_standard,
-    a_standard,
-    output_col,
-    role,
-    trained,
-    skip,
-    id
+  measures,
+  calibration,
+  calibration_col,
+  intrinsic_visc_col,
+  K_sample,
+  a_sample,
+  K_standard,
+  a_standard,
+  output_col,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_universal_cal",
@@ -264,7 +264,7 @@ bake.step_sec_universal_cal <- function(object, new_data, ...) {
   }
 
   # Calculate MW for each sample
-  col <- measures[1]  # Use first measure column for location
+  col <- measures[1] # Use first measure column for location
 
   mw_list <- purrr::map(new_data[[col]], function(m) {
     location <- m$location
@@ -276,7 +276,11 @@ bake.step_sec_universal_cal <- function(object, new_data, ...) {
 
     # Convert to sample polymer using universal calibration
     mw_sample <- .convert_mw_universal(
-      mw_std, K_standard, a_standard, K_sample, a_sample
+      mw_std,
+      K_standard,
+      a_standard,
+      K_sample,
+      a_sample
     )
 
     # Handle edge cases
@@ -293,13 +297,14 @@ bake.step_sec_universal_cal <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_universal_cal <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- sprintf(
     "SEC universal calibration (K=%.2e, a=%.3f)",
-    x$K_sample, x$a_sample
+    x$K_sample,
+    x$a_sample
   )
   if (x$trained) {
     cat(title, " -> ", x$output_col, sep = "")

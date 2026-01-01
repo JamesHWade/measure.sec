@@ -72,18 +72,17 @@
 #'   prep()
 #' }
 step_sec_viscometer <- function(
-    recipe,
-    dp_col = NULL,
-    ip_col = NULL,
-    output_col = "specific_visc",
-    viscometer_constant = 1.0,
-    min_signal = 0.01,
-    role = NA,
-    trained = FALSE,
-    skip = FALSE,
-    id = recipes::rand_id("sec_viscometer")
+  recipe,
+  dp_col = NULL,
+  ip_col = NULL,
+  output_col = "specific_visc",
+  viscometer_constant = 1.0,
+  min_signal = 0.01,
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_viscometer")
 ) {
-
   if (!is.numeric(viscometer_constant) || viscometer_constant <= 0) {
     cli::cli_abort("{.arg viscometer_constant} must be a positive number.")
   }
@@ -105,15 +104,15 @@ step_sec_viscometer <- function(
 }
 
 step_sec_viscometer_new <- function(
-    dp_col,
-    ip_col,
-    output_col,
-    viscometer_constant,
-    min_signal,
-    role,
-    trained,
-    skip,
-    id
+  dp_col,
+  ip_col,
+  output_col,
+  viscometer_constant,
+  min_signal,
+  role,
+  trained,
+  skip,
+  id
 ) {
   recipes::step(
     subclass = "sec_viscometer",
@@ -137,7 +136,11 @@ prep.step_sec_viscometer <- function(x, training, info = NULL, ...) {
 
   # Find DP column if not specified
   if (is.null(x$dp_col)) {
-    dp_cols <- measure_cols[grepl("dp|visc|pressure", measure_cols, ignore.case = TRUE)]
+    dp_cols <- measure_cols[grepl(
+      "dp|visc|pressure",
+      measure_cols,
+      ignore.case = TRUE
+    )]
     if (length(dp_cols) == 0) {
       cli::cli_abort(
         "No viscometer column found. Specify {.arg dp_col} explicitly."
@@ -216,11 +219,16 @@ bake.step_sec_viscometer <- function(object, new_data, ...) {
         denominator <- ip_val - 2 * dp_val
 
         # Valid where signal is above threshold and denominator is positive
-        valid <- abs(dp_val) > threshold & !is.na(dp_val) & !is.na(ip_val) &
+        valid <- abs(dp_val) > threshold &
+          !is.na(dp_val) &
+          !is.na(ip_val) &
           denominator > 0
 
         if (any(valid)) {
-          eta_sp[valid] <- viscometer_constant * 4 * dp_val[valid] / denominator[valid]
+          eta_sp[valid] <- viscometer_constant *
+            4 *
+            dp_val[valid] /
+            denominator[valid]
         }
 
         new_measure_tbl(location = location, value = eta_sp)
@@ -235,16 +243,26 @@ bake.step_sec_viscometer <- function(object, new_data, ...) {
 
 #' @export
 print.step_sec_viscometer <- function(
-    x,
-    width = max(20, options()$width - 30),
-    ...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
   title <- "SEC viscometer processing"
   if (x$trained) {
     if (is.null(x$ip_col)) {
       cat(title, " (", x$dp_col, " -> ", x$output_col, ")", sep = "")
     } else {
-      cat(title, " (", x$dp_col, ", ", x$ip_col, " -> ", x$output_col, ")", sep = "")
+      cat(
+        title,
+        " (",
+        x$dp_col,
+        ", ",
+        x$ip_col,
+        " -> ",
+        x$output_col,
+        ")",
+        sep = ""
+      )
     }
   } else {
     cat(title)

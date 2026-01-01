@@ -142,7 +142,10 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 \seealso{
 Other sec-detectors: 
+\code{\link{step_sec_concentration}()},
 \code{\link{step_sec_intrinsic_visc}()},
+\code{\link{step_sec_ri}()},
+\code{\link{step_sec_uv}()},
 \code{\link{step_sec_viscometer}()}
 }
 \concept{sec-detectors}

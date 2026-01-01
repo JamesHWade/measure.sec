@@ -45,7 +45,7 @@
 #' library(measure)
 #'
 #' # Calculate fractions at multiple cutoffs
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline() |>
 #'   step_sec_mw_fractions(cutoffs = c(1000, 10000, 100000)) |>

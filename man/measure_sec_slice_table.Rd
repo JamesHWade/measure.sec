@@ -68,7 +68,7 @@ library(recipes)
 library(measure)
 
 # Process SEC data
-prepped <- recipe(~., data = sec_data) |>
+prepped <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(ri, location = vars(time), col_name = "ri") |>
   step_sec_baseline() |>
   prep() |>

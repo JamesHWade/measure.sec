@@ -58,7 +58,7 @@
 #' library(measure)
 #'
 #' # Assuming x-axis is already calibrated to log10(MW)
-#' rec <- recipe(~., data = sec_data) |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline() |>
 #'   step_sec_mw_averages() |>
