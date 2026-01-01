@@ -10,6 +10,9 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/measure.sec)](https://CRAN.R-project.org/package=measure.sec)
+[![R-CMD-check](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/JamesHWade/measure.sec/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/measure.sec)
 <!-- badges: end --> \## Overview **measure.sec** is an R package that
 extends the [measure](https://github.com/JamesHWade/measure) package
 with preprocessing and analysis steps for Size Exclusion Chromatography

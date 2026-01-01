@@ -76,7 +76,7 @@ test_that("step_sec_baseline handles short chromatograms", {
   skip_if_not_installed("measure")
 
   # Very short chromatogram (< 10 points)
-  time <- seq(1, 5, by = 1)  # Only 5 points
+  time <- seq(1, 5, by = 1) # Only 5 points
   signal <- c(0.1, 0.5, 1.0, 0.5, 0.1)
 
   test_data <- tibble::tibble(sample_id = "test")
@@ -123,7 +123,7 @@ test_that("step_sec_mw_averages handles zero-weight chromatograms", {
   skip_if_not_installed("measure")
 
   log_mw <- seq(3, 6, by = 0.05)
-  conc <- rep(0, length(log_mw))  # All zeros
+  conc <- rep(0, length(log_mw)) # All zeros
 
   test_data <- tibble::tibble(sample_id = "test")
   test_data$ri <- measure::new_measure_list(
@@ -147,7 +147,7 @@ test_that("step_sec_mw_averages handles single valid point", {
 
   log_mw <- seq(3, 6, by = 0.05)
   conc <- rep(0, length(log_mw))
-  conc[30] <- 1.0  # Only one non-zero point
+  conc[30] <- 1.0 # Only one non-zero point
 
   test_data <- tibble::tibble(sample_id = "test")
   test_data$ri <- measure::new_measure_list(
@@ -203,7 +203,7 @@ test_that("step_sec_mw_fractions works with single cutoff", {
 
   expect_s3_class(result, "tbl_df")
   # Should have fraction columns
-  frac_cols <- names(result)[grepl("frac", names(result))]
+  frac_cols <- names(result)[grepl("frac", names(result), fixed = TRUE)]
   expect_true(length(frac_cols) > 0)
 })
 
@@ -284,7 +284,11 @@ test_that("step_sec_aggregates requires boundaries for manual method", {
   # Missing monomer_end
   expect_error(
     recipes::recipe(~., data = test_data) |>
-      step_sec_aggregates(measures = "uv", method = "manual", monomer_start = 10),
+      step_sec_aggregates(
+        measures = "uv",
+        method = "manual",
+        monomer_start = 10
+      ),
     "monomer_start.*monomer_end"
   )
 

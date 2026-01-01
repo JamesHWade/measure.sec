@@ -13,7 +13,7 @@ test_that("measure_sec_resolution calculates USP resolution", {
   )
 
   # Rs = 2 * (10 - 8) / (0.5 + 0.5) = 2 * 2 / 1 = 4
- expect_equal(Rs, 4.0)
+  expect_equal(Rs, 4.0)
 
   # Test with EP method
   Rs_ep <- measure_sec_resolution(

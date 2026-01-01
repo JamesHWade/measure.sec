@@ -7,7 +7,7 @@ test_that("step_sec_uv_ri_ratio calculates ratio correctly", {
 
   time <- seq(5, 15, by = 0.1)
   ri_signal <- dnorm(time, mean = 10, sd = 0.5)
-  uv_signal <- 0.5 * dnorm(time, mean = 10, sd = 0.5)  # Half the RI
+  uv_signal <- 0.5 * dnorm(time, mean = 10, sd = 0.5) # Half the RI
 
   test_data <- tibble::tibble(sample_id = "test")
 
@@ -82,9 +82,10 @@ test_that("step_sec_aggregates quantifies HMWS/monomer/LMWS", {
 
   # Create a typical protein SEC profile:
   # Small aggregate peak at t=7, main monomer at t=12, fragment at t=16
-  signal <- 0.05 * dnorm(time, mean = 7, sd = 0.3) +  # HMWS
-    0.90 * dnorm(time, mean = 12, sd = 0.5) +         # Monomer
-    0.05 * dnorm(time, mean = 16, sd = 0.4)           # LMWS
+  signal <- 0.05 *
+    dnorm(time, mean = 7, sd = 0.3) + # HMWS
+    0.90 * dnorm(time, mean = 12, sd = 0.5) + # Monomer
+    0.05 * dnorm(time, mean = 16, sd = 0.4) # LMWS
 
   test_data <- tibble::tibble(sample_id = "test")
 
@@ -113,7 +114,9 @@ test_that("step_sec_aggregates quantifies HMWS/monomer/LMWS", {
   expect_gt(result$purity_monomer[1], result$purity_lmws[1])
 
   # Sum should be close to 100%
-  total <- result$purity_hmws[1] + result$purity_monomer[1] + result$purity_lmws[1]
+  total <- result$purity_hmws[1] +
+    result$purity_monomer[1] +
+    result$purity_lmws[1]
   expect_equal(total, 100, tolerance = 1)
 })
 

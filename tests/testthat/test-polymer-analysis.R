@@ -76,7 +76,7 @@ test_that("measure_branching_index calculates g from Rg data", {
   expect_true(all(g$g < 1))
 
   # g = (10/12)^2, (15/18)^2, (25/32)^2
-  expect_equal(g$g[1], (10/12)^2, tolerance = 0.01)
+  expect_equal(g$g[1], (10 / 12)^2, tolerance = 0.01)
 })
 
 test_that("measure_branching_index calculates g_prime from IV data", {

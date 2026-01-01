@@ -8,12 +8,12 @@ test_that("step_sec_mw_averages calculates Mn, Mw, Mz correctly", {
   # Create test data with known MW distribution
   # Use a unimodal distribution for testing
   # Assume x-axis is log10(MW)
-  log_mw <- seq(3, 6, by = 0.05)  # log10(MW) from 1000 to 1M
+  log_mw <- seq(3, 6, by = 0.05) # log10(MW) from 1000 to 1M
   n <- length(log_mw)
 
   # Concentration profile (Gaussian)
   conc <- dnorm(log_mw, mean = 4.5, sd = 0.5)
-  conc <- conc / sum(conc)  # Normalize
+  conc <- conc / sum(conc) # Normalize
 
   test_data <- tibble::tibble(sample_id = "test")
 
@@ -41,7 +41,11 @@ test_that("step_sec_mw_averages calculates Mn, Mw, Mz correctly", {
   expect_gt(result$mw_mz[1], result$mw_mw[1])
 
   # Check dispersity = Mw/Mn
-  expect_equal(result$mw_dispersity[1], result$mw_mw[1] / result$mw_mn[1], tolerance = 0.01)
+  expect_equal(
+    result$mw_dispersity[1],
+    result$mw_mw[1] / result$mw_mn[1],
+    tolerance = 0.01
+  )
 })
 
 test_that("step_sec_mw_averages respects integration_range", {
@@ -87,7 +91,7 @@ test_that("step_sec_mw_fractions calculates fractions correctly", {
   expect_s3_class(result, "tbl_df")
 
   # Should have fraction columns
-  frac_cols <- names(result)[grepl("frac", names(result))]
+  frac_cols <- names(result)[grepl("frac", names(result), fixed = TRUE)]
   expect_true(length(frac_cols) > 0)
 })
 
@@ -123,7 +127,7 @@ test_that("step_sec_baseline corrects baseline", {
 
   # Signal with baseline drift
   peak <- dnorm(time, mean = 15, sd = 1)
-  baseline <- 0.1 + 0.005 * time  # Linear drift
+  baseline <- 0.1 + 0.005 * time # Linear drift
   signal <- peak + baseline
 
   test_data <- tibble::tibble(sample_id = "test")

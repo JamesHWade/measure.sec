@@ -142,7 +142,7 @@ test_that("step_sec_conventional_cal fits calibration curve during prep", {
   expect_true(!is.null(diag$residual_std_error))
   expect_true(!is.null(diag$standard_results))
   expect_s3_class(diag$standard_results, "tbl_df")
-  expect_equal(nrow(diag$standard_results), 6)  # 6 standards
+  expect_equal(nrow(diag$standard_results), 6) # 6 standards
 })
 
 test_that("step_sec_conventional_cal warns on poor fit quality", {
@@ -386,11 +386,21 @@ test_that("step_sec_conventional_cal tidy method returns expected structure", {
   std_results <- tidy_result$standard_results[[1]]
   expect_s3_class(std_results, "tbl_df")
   expect_equal(nrow(std_results), 6)
-  expect_true(all(c(
-    "location", "actual_log_mw", "predicted_log_mw", "residual_log_mw",
-    "actual_mw", "predicted_mw", "pct_deviation", "prediction_se",
-    "ci_lower_log_mw", "ci_upper_log_mw"
-  ) %in% names(std_results)))
+  expect_true(all(
+    c(
+      "location",
+      "actual_log_mw",
+      "predicted_log_mw",
+      "residual_log_mw",
+      "actual_mw",
+      "predicted_mw",
+      "pct_deviation",
+      "prediction_se",
+      "ci_lower_log_mw",
+      "ci_upper_log_mw"
+    ) %in%
+      names(std_results)
+  ))
 })
 
 # -- Integration with other steps ----------------------------------------------
