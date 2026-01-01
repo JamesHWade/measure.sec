@@ -3,8 +3,9 @@
 %   R/step_sec_composition.R, R/step_sec_concentration.R,
 %   R/step_sec_detector_delay.R, R/step_sec_intrinsic_visc.R,
 %   R/step_sec_mals.R, R/step_sec_mw_averages.R, R/step_sec_mw_distribution.R,
-%   R/step_sec_mw_fractions.R, R/step_sec_ri.R, R/step_sec_uv.R,
-%   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
+%   R/step_sec_mw_fractions.R, R/step_sec_ri.R, R/step_sec_universal_cal.R,
+%   R/step_sec_uv.R, R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R,
+%   R/tidy-methods.R
 \name{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_baseline}
@@ -17,6 +18,7 @@
 \alias{tidy.step_sec_mw_distribution}
 \alias{tidy.step_sec_mw_fractions}
 \alias{tidy.step_sec_ri}
+\alias{tidy.step_sec_universal_cal}
 \alias{tidy.step_sec_uv}
 \alias{tidy.step_sec_uv_ri_ratio}
 \alias{tidy.step_sec_viscometer}
@@ -44,6 +46,8 @@
 \method{tidy}{step_sec_mw_fractions}(x, ...)
 
 \method{tidy}{step_sec_ri}(x, ...)
+
+\method{tidy}{step_sec_universal_cal}(x, ...)
 
 \method{tidy}{step_sec_uv}(x, ...)
 

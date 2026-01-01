@@ -56,10 +56,10 @@
     list("step_sec_mw_distribution", "processing", "Generate MW distribution curves"),
 
     # Protein SEC
-    list("step_sec_aggregates", "protein", "Aggregate and fragment quantitation")
+    list("step_sec_aggregates", "protein", "Aggregate and fragment quantitation"),
 
-    # TODO: Add when implemented:
-    # list("step_sec_calibrate", "calibration", "Calibration curve fitting")
+    # Calibration
+    list("step_sec_universal_cal", "calibration", "Universal calibration using Mark-Houwink")
   )
 
   for (s in steps) {

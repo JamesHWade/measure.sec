@@ -3,8 +3,9 @@
 %   R/step_sec_composition.R, R/step_sec_concentration.R,
 %   R/step_sec_detector_delay.R, R/step_sec_intrinsic_visc.R,
 %   R/step_sec_mals.R, R/step_sec_mw_averages.R, R/step_sec_mw_distribution.R,
-%   R/step_sec_mw_fractions.R, R/step_sec_ri.R, R/step_sec_uv.R,
-%   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
+%   R/step_sec_mw_fractions.R, R/step_sec_ri.R, R/step_sec_universal_cal.R,
+%   R/step_sec_uv.R, R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R,
+%   R/tidy-methods.R
 \name{required_pkgs.step_sec_aggregates}
 \alias{required_pkgs.step_sec_aggregates}
 \alias{required_pkgs.step_sec_baseline}
@@ -17,6 +18,7 @@
 \alias{required_pkgs.step_sec_mw_distribution}
 \alias{required_pkgs.step_sec_mw_fractions}
 \alias{required_pkgs.step_sec_ri}
+\alias{required_pkgs.step_sec_universal_cal}
 \alias{required_pkgs.step_sec_uv}
 \alias{required_pkgs.step_sec_uv_ri_ratio}
 \alias{required_pkgs.step_sec_viscometer}
@@ -44,6 +46,8 @@
 \method{required_pkgs}{step_sec_mw_fractions}(x, ...)
 
 \method{required_pkgs}{step_sec_ri}(x, ...)
+
+\method{required_pkgs}{step_sec_universal_cal}(x, ...)
 
 \method{required_pkgs}{step_sec_uv}(x, ...)
 
