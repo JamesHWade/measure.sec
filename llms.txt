@@ -1,0 +1,274 @@
+# measure.sec ![](reference/figures/logo.png)
+
+### Features
+
+- **Multi-detector support**: RI, UV, MALS, and viscometer processing
+- **Inter-detector delay correction**: Align signals from detectors in
+  series
+- **Molecular weight calculations**: Mn, Mw, Mz, dispersity (PDI)
+- **Copolymer composition**: UV/RI ratio and composition analysis
+- **Protein SEC**: Aggregate and fragment quantitation (HMWS/LMWS)
+- **Universal calibration**: Mark-Houwink parameter-based MW conversion
+- **Quality control**: System suitability testing (resolution, plate
+  count, asymmetry)
+- **Polymer analysis**: Branching indices and Mark-Houwink parameter
+  estimation
+
+## Installation
+
+You can install the development version of measure.sec from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("JamesHWade/measure-sec")
+```
+
+Note: measure.sec requires the
+[measure](https://github.com/JamesHWade/measure) package:
+
+``` r
+pak::pak("JamesHWade/measure")
+```
+
+## Quick Start
+
+``` r
+library(measure)
+library(measure.sec)
+library(recipes)
+
+# Load example triple-detection SEC data
+data(sec_triple_detect, package = "measure.sec")
+
+# Create a processing recipe
+rec <- recipe(~ ., data = sec_triple_detect) |>
+  # Convert to measure format
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+
+  # Correct inter-detector delays
+  step_sec_detector_delay(
+    reference = "ri",
+    delay_volumes = c(uv = -0.05)
+  ) |>
+
+  # Apply baseline correction
+  step_sec_baseline() |>
+
+  # Process RI detector with dn/dc
+  step_sec_ri(dn_dc_column = "dn_dc")
+
+# Prep and bake
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+```
+
+## Available Steps
+
+### Detector Processing
+
+| Step                                                                | Description                                  |
+|---------------------------------------------------------------------|----------------------------------------------|
+| [`step_sec_ri()`](reference/step_sec_ri.md)                         | RI detector with dn/dc normalization         |
+| [`step_sec_uv()`](reference/step_sec_uv.md)                         | UV detector with extinction coefficient      |
+| [`step_sec_mals()`](reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW |
+| [`step_sec_viscometer()`](reference/step_sec_viscometer.md)         | Differential viscometer processing           |
+| [`step_sec_concentration()`](reference/step_sec_concentration.md)   | Convert signal to concentration              |
+| [`step_sec_intrinsic_visc()`](reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation              |
+
+### Preprocessing
+
+| Step                                                                | Description                          |
+|---------------------------------------------------------------------|--------------------------------------|
+| [`step_sec_detector_delay()`](reference/step_sec_detector_delay.md) | Correct inter-detector volume delays |
+| [`step_sec_baseline()`](reference/step_sec_baseline.md)             | SEC-optimized baseline correction    |
+
+### Molecular Weight
+
+| Step                                                                  | Description                                |
+|-----------------------------------------------------------------------|--------------------------------------------|
+| [`step_sec_mw_averages()`](reference/step_sec_mw_averages.md)         | Calculate Mn, Mw, Mz, dispersity           |
+| [`step_sec_mw_fractions()`](reference/step_sec_mw_fractions.md)       | Calculate MW fractions above/below cutoffs |
+| [`step_sec_mw_distribution()`](reference/step_sec_mw_distribution.md) | Generate differential/cumulative MWD       |
+| [`step_sec_universal_cal()`](reference/step_sec_universal_cal.md)     | Universal calibration with Mark-Houwink    |
+
+### Composition Analysis
+
+| Step                                                          | Description                             |
+|---------------------------------------------------------------|-----------------------------------------|
+| [`step_sec_uv_ri_ratio()`](reference/step_sec_uv_ri_ratio.md) | UV/RI ratio for heterogeneity detection |
+| [`step_sec_composition()`](reference/step_sec_composition.md) | Copolymer composition from UV/RI        |
+
+### Protein SEC
+
+| Step                                                        | Description                    |
+|-------------------------------------------------------------|--------------------------------|
+| [`step_sec_aggregates()`](reference/step_sec_aggregates.md) | HMWS/monomer/LMWS quantitation |
+
+## Quality Control Functions
+
+``` r
+# Peak resolution
+Rs <- measure_sec_resolution(
+  retention_1 = 8.5,
+  retention_2 = 10.0,
+  width_1 = 0.3,
+  width_2 = 0.35
+)
+
+# Plate count
+N <- measure_sec_plate_count(retention = 10.0, width = 0.25)
+
+# System suitability testing
+peaks <- data.frame(
+  name = c("dimer", "monomer"),
+  retention = c(8.5, 10.0),
+  width = c(0.3, 0.35),
+  area = c(5, 95)
+)
+
+sst <- measure_sec_suitability(
+  peaks = peaks,
+  reference_peaks = c("dimer", "monomer")
+)
+print(sst)
+```
+
+## Polymer Analysis Functions
+
+``` r
+# Estimate Mark-Houwink parameters
+mw <- c(10000, 25000, 50000, 100000, 250000)
+iv <- c(0.15, 0.28, 0.45, 0.72, 1.2)
+
+mh <- measure_mh_parameters(mw, iv)
+print(mh)
+# K = 1.14e-04, a = 0.716
+
+# Calculate branching index
+g <- measure_branching_index(
+  mw = mw,
+  rg = c(8, 12, 18, 28, 45),
+  reference = data.frame(mw = mw, rg = c(10, 15, 22, 35, 55)),
+  method = "g"
+)
+```
+
+## Data Export
+
+``` r
+# Extract slice-by-slice data
+slices <- measure_sec_slice_table(result, measures = c("ri", "mw"))
+
+# Generate summary table
+summary <- measure_sec_summary_table(result, sample_id = "sample_id")
+```
+
+## Example Dataset
+
+The package includes `sec_triple_detect`, a synthetic multi-detector SEC
+dataset with:
+
+- 12 polymer samples (PS standards, PMMA, PEG, copolymers)
+- RI, UV, and MALS detector signals
+- Known molecular weights and dispersities
+- Sample-specific dn/dc and extinction coefficients
+
+``` r
+data(sec_triple_detect)
+head(sec_triple_detect)
+```
+
+## Integration with measure
+
+measure.sec automatically registers with the measure package on load:
+
+``` r
+library(measure)
+library(measure.sec)
+
+# View registered SEC steps
+measure_steps(techniques = "SEC/GPC")
+```
+
+## Getting Help
+
+- [Package documentation](https://jameshwade.github.io/measure-sec/)
+- [GitHub Issues](https://github.com/JamesHWade/measure-sec/issues)
+
+## Code of Conduct
+
+Please note that the measure.sec project is released with a [Contributor
+Code of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.
+
+# Package index
+
+## All functions
+
+- [`measure_branching_index()`](measure_branching_index.md) : Calculate
+  Branching Index
+- [`measure_conformation_data()`](measure_conformation_data.md) : Create
+  Conformation Plot Data
+- [`measure_mh_parameters()`](measure_mh_parameters.md) : Estimate
+  Mark-Houwink Parameters
+- [`measure_sec_asymmetry()`](measure_sec_asymmetry.md) : Calculate Peak
+  Asymmetry Factor
+- [`measure_sec_plate_count()`](measure_sec_plate_count.md) : Calculate
+  Theoretical Plate Count
+- [`measure_sec_recovery()`](measure_sec_recovery.md) : Calculate Mass
+  Recovery
+- [`measure_sec_resolution()`](measure_sec_resolution.md) : Calculate
+  Peak Resolution
+- [`measure_sec_slice_table()`](measure_sec_slice_table.md) : Extract
+  Slice-by-Slice SEC Data
+- [`measure_sec_suitability()`](measure_sec_suitability.md) : System
+  Suitability Test for SEC
+- [`measure_sec_summary_table()`](measure_sec_summary_table.md) :
+  Generate SEC Summary Table
+- [`sec_calibration_standards`](sec_calibration_standards.md) : SEC
+  Calibration Standards - Complete Dataset
+- [`sec_pmma_standards`](sec_pmma_standards.md) : SEC PMMA Calibration
+  Standards
+- [`sec_ps_standards`](sec_ps_standards.md) : SEC Polystyrene
+  Calibration Standards
+- [`sec_triple_detect`](sec_triple_detect.md) : Multi-Detector SEC Data
+- [`step_sec_aggregates()`](step_sec_aggregates.md) : Quantify Protein
+  Aggregates and Fragments in SEC
+- [`step_sec_baseline()`](step_sec_baseline.md) : SEC/GPC Baseline
+  Correction
+- [`step_sec_composition()`](step_sec_composition.md) : Calculate
+  Copolymer Composition from Detector Signals
+- [`step_sec_concentration()`](step_sec_concentration.md) : Convert
+  Detector Signal to Concentration
+- [`step_sec_conventional_cal()`](step_sec_conventional_cal.md) :
+  Conventional Calibration for SEC Using Narrow Standards
+- [`step_sec_detector_delay()`](step_sec_detector_delay.md) : Correct
+  Inter-Detector Volume Delays
+- [`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md) : Calculate
+  Intrinsic Viscosity for SEC
+- [`step_sec_mals()`](step_sec_mals.md) : Multi-Angle Light Scattering
+  Processing for SEC
+- [`step_sec_mw_averages()`](step_sec_mw_averages.md) : Calculate
+  Molecular Weight Averages for SEC/GPC
+- [`step_sec_mw_distribution()`](step_sec_mw_distribution.md) : Generate
+  Molecular Weight Distribution Curve
+- [`step_sec_mw_fractions()`](step_sec_mw_fractions.md) : Calculate
+  Molecular Weight Fractions for SEC/GPC
+- [`step_sec_ri()`](step_sec_ri.md) : RI Detector Processing for SEC
+- [`step_sec_universal_cal()`](step_sec_universal_cal.md) : Universal
+  Calibration for SEC
+- [`step_sec_uv()`](step_sec_uv.md) : UV Detector Processing for SEC
+- [`step_sec_uv_ri_ratio()`](step_sec_uv_ri_ratio.md) : Calculate UV/RI
+  Ratio for Composition Analysis
+- [`step_sec_viscometer()`](step_sec_viscometer.md) : Differential
+  Viscometer Processing for SEC
+
+# Articles
+
+### All vignettes
+
+- [Size Exclusion Chromatography Analysis with
+  measure.sec](sec-analysis.md):
