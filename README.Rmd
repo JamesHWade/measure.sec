@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
 
 ### Features
 
-- **Multi-detector support**: RI, UV, MALS, and viscometer processing
+- **Multi-detector support**: RI, UV/DAD, MALS, LALS, RALS, DLS, and viscometer processing
 - **Inter-detector delay correction**: Align signals from detectors in series
 - **Molecular weight calculations**: Mn, Mw, Mz, dispersity (PDI)
 - **Copolymer composition**: UV/RI ratio and composition analysis
@@ -92,7 +92,11 @@ result <- bake(prepped, new_data = NULL)
 |------|-------------|
 | `step_sec_ri()` | RI detector with dn/dc normalization |
 | `step_sec_uv()` | UV detector with extinction coefficient |
+| `step_sec_dad()` | Diode array detector processing (multi-wavelength UV) |
 | `step_sec_mals()` | Multi-angle light scattering for absolute MW |
+| `step_sec_lals()` | Low-angle light scattering for absolute MW |
+| `step_sec_rals()` | Right-angle light scattering for absolute MW |
+| `step_sec_dls()` | Dynamic light scattering for Rh and diffusion |
 | `step_sec_viscometer()` | Differential viscometer processing |
 | `step_sec_concentration()` | Convert signal to concentration |
 | `step_sec_intrinsic_visc()` | Intrinsic viscosity calculation |
