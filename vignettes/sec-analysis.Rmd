@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 Size Exclusion Chromatography (SEC), also known as Gel Permeation Chromatography (GPC), is a fundamental technique for characterizing the molecular weight distribution of polymers, proteins, and other macromolecules. The **measure.sec** package extends the [measure](https://github.com/JamesHWade/measure) package with specialized preprocessing steps for SEC/GPC data analysis.
 This vignette demonstrates how to:
 
-1. Process multi-detector SEC data (RI, UV, MALS)
+1. Process multi-detector SEC data (RI, UV/DAD, MALS, LALS, RALS, DLS)
 2. Calculate molecular weight averages and distributions
 3. Analyze copolymer composition
 4. Quantify protein aggregates
@@ -613,7 +613,11 @@ print(summary)
 | `step_sec_baseline()` | Preprocessing | SEC-optimized baseline correction |
 | `step_sec_ri()` | Detector | RI detector with dn/dc |
 | `step_sec_uv()` | Detector | UV detector with extinction coefficient |
+| `step_sec_dad()` | Detector | Diode array detector (multi-wavelength UV) |
 | `step_sec_mals()` | Detector | Multi-angle light scattering |
+| `step_sec_lals()` | Detector | Low-angle light scattering |
+| `step_sec_rals()` | Detector | Right-angle light scattering |
+| `step_sec_dls()` | Detector | Dynamic light scattering |
 | `step_sec_viscometer()` | Detector | Differential viscometer |
 | `step_sec_concentration()` | Calculation | Signal to concentration |
 | `step_sec_intrinsic_visc()` | Calculation | Intrinsic viscosity |

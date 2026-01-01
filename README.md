@@ -5,7 +5,6 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/JamesHWade/measure-sec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/measure-sec/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
@@ -13,14 +12,19 @@ status](https://www.r-pkg.org/badges/version/measure.sec)](https://CRAN.R-projec
 [![R-CMD-check](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/JamesHWade/measure.sec/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/measure.sec)
-<!-- badges: end --> \## Overview **measure.sec** is an R package that
-extends the [measure](https://github.com/JamesHWade/measure) package
-with preprocessing and analysis steps for Size Exclusion Chromatography
-(SEC) and Gel Permeation Chromatography (GPC) data.
+<!-- badges: end -->
+
+## Overview
+
+**measure.sec** is an R package that extends the
+[measure](https://github.com/JamesHWade/measure) package with
+preprocessing and analysis steps for Size Exclusion Chromatography (SEC)
+and Gel Permeation Chromatography (GPC) data.
 
 ### Features
 
-- **Multi-detector support**: RI, UV, MALS, and viscometer processing
+- **Multi-detector support**: RI, UV/DAD, MALS, LALS, RALS, DLS, and
+  viscometer processing
 - **Inter-detector delay correction**: Align signals from detectors in
   series
 - **Molecular weight calculations**: Mn, Mw, Mz, dispersity (PDI)
@@ -86,14 +90,18 @@ result <- bake(prepped, new_data = NULL)
 
 ### Detector Processing
 
-| Step                        | Description                                  |
-|-----------------------------|----------------------------------------------|
-| `step_sec_ri()`             | RI detector with dn/dc normalization         |
-| `step_sec_uv()`             | UV detector with extinction coefficient      |
-| `step_sec_mals()`           | Multi-angle light scattering for absolute MW |
-| `step_sec_viscometer()`     | Differential viscometer processing           |
-| `step_sec_concentration()`  | Convert signal to concentration              |
-| `step_sec_intrinsic_visc()` | Intrinsic viscosity calculation              |
+| Step | Description |
+|----|----|
+| `step_sec_ri()` | RI detector with dn/dc normalization |
+| `step_sec_uv()` | UV detector with extinction coefficient |
+| `step_sec_dad()` | Diode array detector processing (multi-wavelength UV) |
+| `step_sec_mals()` | Multi-angle light scattering for absolute MW |
+| `step_sec_lals()` | Low-angle light scattering for absolute MW |
+| `step_sec_rals()` | Right-angle light scattering for absolute MW |
+| `step_sec_dls()` | Dynamic light scattering for Rh and diffusion |
+| `step_sec_viscometer()` | Differential viscometer processing |
+| `step_sec_concentration()` | Convert signal to concentration |
+| `step_sec_intrinsic_visc()` | Intrinsic viscosity calculation |
 
 ### Preprocessing
 

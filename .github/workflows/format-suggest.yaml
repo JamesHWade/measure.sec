@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      # Required to checkout the code
+      contents: read
       # Required to push suggestion comments to the PR
       pull-requests: write
 
