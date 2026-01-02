@@ -1,0 +1,386 @@
+---
+title: "Copolymer Composition Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Copolymer Composition Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+SEC with dual detection (UV and RI) can reveal compositional heterogeneity in copolymers. By analyzing the UV/RI ratio across the molecular weight distribution, you can:
+
+- Detect compositional drift during polymerization
+- Identify blocky vs random copolymer structures
+- Quantify the composition at different molecular weights
+
+This vignette covers:
+
+1. UV/RI ratio analysis
+2. Composition calculations
+3. Interpreting compositional heterogeneity
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## Copolymer Detection Principles
+
+### UV and RI Response
+
+Different monomers have different detector responses:
+
+| Monomer Type | UV Response | RI Response |
+|--------------|-------------|-------------|
+| Aromatic (styrene) | Strong | Moderate |
+| Aliphatic (acrylate) | Weak/None | Moderate |
+| UV-absorbing chromophore | Strong | Variable |
+| Non-absorbing | None | Based on dn/dc |
+
+### UV/RI Ratio Interpretation
+
+```{r uv-ri-concept, echo = FALSE, fig.width=8, fig.height=4}
+# Simulate different copolymer types
+time <- seq(8, 14, by = 0.05)
+n_points <- length(time)
+
+# Homogeneous copolymer (flat ratio)
+homo_ri <- dnorm(time, mean = 11, sd = 0.8)
+homo_uv <- 0.5 * homo_ri
+homo_ratio <- rep(0.5, n_points)
+
+# Gradient copolymer (ratio changes across MW)
+gradient_ri <- dnorm(time, mean = 11, sd = 0.8)
+gradient_uv <- 0.5 * gradient_ri * (1 + 0.3 * (time - 11))
+gradient_ratio <- gradient_uv / gradient_ri
+
+copolymer_data <- tibble(
+  time = rep(time, 2),
+  ratio = c(homo_ratio, gradient_ratio),
+  type = rep(c("Homogeneous (random)", "Compositional drift"), each = n_points)
+)
+
+ggplot(copolymer_data, aes(time, ratio, color = type)) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    x = "Elution Time (min)",
+    y = "UV/RI Ratio",
+    title = "UV/RI Ratio Profiles",
+    subtitle = "Flat ratio = uniform composition; changing ratio = compositional heterogeneity",
+    color = "Copolymer Type"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Example Dataset
+
+```{r data}
+data(sec_triple_detect, package = "measure.sec")
+
+# Select copolymer samples
+copolymers <- sec_triple_detect |>
+  filter(polymer_type == "copolymer")
+
+glimpse(copolymers)
+```
+
+## UV/RI Ratio Analysis
+
+### Basic Workflow
+
+```{r uv-ri-ratio, eval = FALSE}
+rec <- recipe(~., data = copolymers) |>
+  # Convert signals to measure format
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  # Baseline correction
+  step_sec_baseline(measures = c("ri", "uv")) |>
+  # Calculate UV/RI ratio
+  step_sec_uv_ri_ratio(
+    uv_col = "uv",
+    ri_col = "ri",
+    smooth = TRUE,          # Apply smoothing for noise reduction
+    smooth_span = 0.1,      # Smoothing window (fraction of data)
+    min_signal = 0.01       # Minimum signal threshold
+  )
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# The result contains a uv_ri_ratio column with the ratio curve
+```
+
+### Extracting the Ratio Curve
+
+```{r extract-ratio, eval = FALSE}
+# Get the ratio values at each elution time
+ratio_data <- result |>
+  select(sample_id, uv_ri_ratio) |>
+  tidyr::unnest(uv_ri_ratio)
+
+# Plot ratio vs elution time
+ggplot(ratio_data, aes(location, value)) +
+  geom_line() +
+  facet_wrap(~sample_id) +
+  labs(
+    x = "Elution Time (min)",
+    y = "UV/RI Ratio",
+    title = "Compositional Profile"
+  ) +
+  theme_minimal()
+```
+
+## Composition Calculation
+
+### Using Known Response Factors
+
+When you know the response factors for each monomer, calculate actual composition:
+
+```{r composition, eval = FALSE}
+rec <- recipe(~., data = copolymers) |>
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_sec_baseline(measures = c("ri", "uv")) |>
+  # Calculate composition from UV/RI
+  step_sec_composition(
+    uv_col = "uv",
+    ri_col = "ri",
+    # Response factors for component A (e.g., styrene)
+    component_a_uv = 1.0,    # UV extinction coefficient
+    component_a_ri = 0.185,  # RI response (dn/dc)
+    # Response factors for component B (e.g., butadiene)
+    component_b_uv = 0.1,    # UV extinction coefficient
+    component_b_ri = 0.084   # RI response (dn/dc)
+  )
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# Result contains:
+# - composition_a: Weight fraction of component A at each point
+# - composition_b: Weight fraction of component B at each point
+```
+
+### Response Factor Determination
+
+Response factors should be measured experimentally:
+
+1. **dn/dc**: Measure with differential refractometer
+2. **UV extinction**: Measure with UV-Vis spectrophotometer
+
+Typical values (THF, 25°C):
+
+| Polymer | dn/dc (mL/g) | ε₂₅₄ (mL/(g·cm)) |
+|---------|--------------|-------------------|
+| Polystyrene | 0.185 | 1.0 |
+| PMMA | 0.084 | ~0.01 |
+| Polybutadiene | 0.127 | 0.05 |
+| PEG | 0.069 | ~0 |
+
+## Interpreting Results
+
+### Uniform Composition
+
+```{r uniform-concept, echo = FALSE, fig.width=7, fig.height=5}
+time <- seq(8, 14, by = 0.05)
+
+# Uniform copolymer
+ri_signal <- dnorm(time, mean = 11, sd = 0.8)
+composition <- rep(0.45, length(time))
+
+plot_data <- tibble(
+  time = time,
+  ri = ri_signal,
+  composition = composition
+)
+
+ggplot(plot_data) +
+  geom_area(aes(time, ri), alpha = 0.3, fill = "#2E86AB") +
+  geom_line(aes(time, ri), color = "#2E86AB", linewidth = 1) +
+  geom_line(aes(time, composition), color = "#A23B72", linewidth = 1.2) +
+  scale_y_continuous(
+    name = "RI Signal",
+    sec.axis = sec_axis(~., name = "Weight Fraction A")
+  ) +
+  labs(
+    x = "Elution Time (min)",
+    title = "Uniform Random Copolymer",
+    subtitle = "Flat composition profile across MW distribution"
+  ) +
+  theme_minimal()
+```
+
+**Characteristics:**
+- Constant UV/RI ratio
+- Flat composition profile
+- Indicates random or alternating copolymer
+
+### Compositional Drift
+
+```{r drift-concept, echo = FALSE, fig.width=7, fig.height=5}
+# Gradient copolymer
+composition_drift <- 0.35 + 0.2 * (time - 11) / 3
+
+plot_data <- tibble(
+  time = time,
+  ri = ri_signal,
+  composition = pmax(0.2, pmin(0.7, composition_drift))
+)
+
+ggplot(plot_data) +
+  geom_area(aes(time, ri), alpha = 0.3, fill = "#2E86AB") +
+  geom_line(aes(time, ri), color = "#2E86AB", linewidth = 1) +
+  geom_line(aes(time, composition), color = "#A23B72", linewidth = 1.2) +
+  scale_y_continuous(
+    name = "RI Signal",
+    sec.axis = sec_axis(~., name = "Weight Fraction A")
+  ) +
+  labs(
+    x = "Elution Time (min)",
+    title = "Compositional Drift",
+    subtitle = "High MW chains enriched in component A (styrene)"
+  ) +
+  theme_minimal()
+```
+
+**Characteristics:**
+- Changing UV/RI ratio
+- Sloped composition profile
+- Indicates gradient copolymer or reactivity differences
+
+### Bimodal Composition
+
+```{r bimodal-concept, echo = FALSE, fig.width=7, fig.height=5}
+# Two polymer populations
+ri_bimodal <- 0.6 * dnorm(time, mean = 10, sd = 0.6) +
+              0.4 * dnorm(time, mean = 12, sd = 0.5)
+uv_bimodal <- 0.8 * dnorm(time, mean = 10, sd = 0.6) +
+              0.1 * dnorm(time, mean = 12, sd = 0.5)
+composition_bimodal <- uv_bimodal / (ri_bimodal + 0.01)
+composition_bimodal <- composition_bimodal / max(composition_bimodal) * 0.6
+
+plot_data <- tibble(
+  time = time,
+  ri = ri_bimodal,
+  composition = composition_bimodal
+)
+
+ggplot(plot_data) +
+  geom_area(aes(time, ri), alpha = 0.3, fill = "#2E86AB") +
+  geom_line(aes(time, ri), color = "#2E86AB", linewidth = 1) +
+  geom_line(aes(time, composition), color = "#A23B72", linewidth = 1.2) +
+  scale_y_continuous(
+    name = "RI Signal",
+    sec.axis = sec_axis(~., name = "Weight Fraction A")
+  ) +
+  labs(
+    x = "Elution Time (min)",
+    title = "Bimodal Composition",
+    subtitle = "Two distinct polymer populations with different compositions"
+  ) +
+  theme_minimal()
+```
+
+**Characteristics:**
+- Abrupt ratio changes
+- Step-like composition profile
+- Indicates blend or block copolymer
+
+## Complete Workflow Example
+
+```{r complete-workflow, eval = FALSE}
+# Full copolymer analysis
+rec <- recipe(~., data = copolymers) |>
+  # Input signals
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+
+  # Preprocessing
+  step_sec_detector_delay(reference = "ri", delay_volumes = c(uv = -0.05)) |>
+  step_sec_baseline(measures = c("ri", "uv")) |>
+
+  # Detector processing
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
+
+  # Composition analysis
+  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE) |>
+  step_sec_composition(
+    uv_col = "uv",
+    ri_col = "ri",
+    component_a_uv = 1.0,
+    component_a_ri = 0.185,
+    component_b_uv = 0.05,
+    component_b_ri = 0.084
+  ) |>
+
+  # MW calculations
+  step_sec_conventional_cal(
+    standards = ps_standards,
+    fit_type = "cubic"
+  ) |>
+  step_sec_mw_averages(measures = "log_mw")
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# Report composition statistics
+result |>
+  select(
+    sample_id,
+    mw_mw,
+    composition_a_mean,
+    composition_a_sd
+  )
+```
+
+## Best Practices
+
+### Detector Calibration
+
+1. **Verify response factors** with homopolymer standards
+2. **Account for detector delay** between UV and RI
+3. **Use same solvent** as for response factor determination
+
+### Data Quality
+
+1. **Adequate signal-to-noise** on both detectors
+2. **Baseline correction** before ratio calculation
+3. **Signal threshold** to avoid noise in low-signal regions
+
+### Interpretation Caveats
+
+1. **UV/RI ratio is relative**, not absolute composition
+2. **Assumes no specific interactions** between detector and polymer
+3. **Block copolymers** may show different behavior than random
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```

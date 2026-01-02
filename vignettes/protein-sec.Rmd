@@ -1,0 +1,365 @@
+---
+title: "Protein SEC Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Protein SEC Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+Size Exclusion Chromatography (SEC) is a critical analytical technique for biopharmaceutical characterization. It separates proteins based on hydrodynamic size, enabling quantification of:
+
+- **High Molecular Weight Species (HMWS)**: Aggregates, dimers, oligomers
+- **Monomer**: The intended product
+- **Low Molecular Weight Species (LMWS)**: Fragments, degradation products
+
+This vignette covers:
+
+1. Protein SEC basics
+2. Aggregate quantitation workflows
+3. Detailed oligomer analysis
+4. Regulatory considerations
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## Protein SEC Principles
+
+### Elution Order
+
+In SEC, proteins elute in order of decreasing size:
+
+```{r elution-concept, echo = FALSE, fig.width=7, fig.height=4}
+# Simulate protein SEC chromatogram
+time <- seq(5, 18, by = 0.05)
+
+# HMW aggregate
+hmw <- 0.03 * dnorm(time, mean = 7, sd = 0.3)
+# Dimer
+dimer <- 0.08 * dnorm(time, mean = 8.5, sd = 0.35)
+# Monomer (main peak)
+monomer <- 0.85 * dnorm(time, mean = 10, sd = 0.4)
+# Fragment
+fragment <- 0.04 * dnorm(time, mean = 13, sd = 0.5)
+
+chrom_data <- tibble(
+  time = time,
+  signal = hmw + dimer + monomer + fragment
+)
+
+peak_labels <- tibble(
+  time = c(7, 8.5, 10, 13),
+  signal = c(0.035, 0.09, 0.9, 0.05),
+  label = c("HMW\nAggregate", "Dimer", "Monomer", "Fragment")
+)
+
+ggplot(chrom_data, aes(time, signal)) +
+  geom_line(linewidth = 1, color = "#2E86AB") +
+  geom_area(alpha = 0.2, fill = "#2E86AB") +
+  geom_text(data = peak_labels, aes(label = label), vjust = -0.5, size = 3.5) +
+  annotate(
+    "segment",
+    x = 9, xend = 11, y = 0.88, yend = 0.88,
+    arrow = arrow(ends = "both", length = unit(0.1, "inches"))
+  ) +
+  annotate("text", x = 10, y = 0.92, label = "Monomer region") +
+  labs(
+    x = "Retention Time (min)",
+    y = "UV Absorbance (280 nm)",
+    title = "Typical Protein SEC Chromatogram",
+    subtitle = "mAb with aggregates and fragments"
+  ) +
+  theme_minimal()
+```
+
+### Detection
+
+Protein SEC typically uses UV detection at 280 nm (tryptophan/tyrosine absorbance).
+
+## Basic Aggregate Quantitation
+
+### Using step_sec_aggregates()
+
+For simple HMWS/monomer/LMWS quantitation:
+
+```{r aggregates-basic, eval = FALSE}
+# Load or create protein SEC data
+protein_data <- sec_triple_detect |>
+  filter(sample_type == "sample") |>
+  head(1)
+
+rec <- recipe(~., data = protein_data) |>
+  # Convert UV signal to measure format
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  # Baseline correction
+  step_sec_baseline(measures = "uv") |>
+  # Aggregate quantitation
+  step_sec_aggregates(
+    measures = "uv",
+    monomer_start = 9.5,   # Monomer peak start
+    monomer_end = 11.0,    # Monomer peak end
+    method = "manual"
+  )
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# View aggregate results
+result |>
+  select(sample_id, purity_hmws, purity_monomer, purity_lmws)
+```
+
+### Automatic Peak Detection
+
+Let the algorithm find the monomer peak:
+
+```{r aggregates-auto, eval = FALSE}
+step_sec_aggregates(
+  measures = "uv",
+  method = "auto",
+  min_peak_height = 0.01
+)
+```
+
+## Complete Protein Workflow
+
+### Using step_sec_protein()
+
+The `step_sec_protein()` function provides a streamlined workflow combining baseline correction, aggregate analysis, and optional oligomer detection:
+
+```{r protein-workflow, eval = FALSE}
+rec <- recipe(~., data = protein_data) |>
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  step_sec_protein(
+    type = "native",
+    monomer_mw = 150000,        # mAb ~150 kDa
+    extinction_coef = 1.4,      # E1% at 280 nm
+    include_oligomer = TRUE,
+    baseline_method = "linear"
+  )
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# View comprehensive results
+result |>
+  select(
+    sample_id,
+    protein_hmws_pct,
+    protein_monomer_pct,
+    protein_lmws_pct,
+    protein_dimer_pct,
+    protein_species_count
+  )
+```
+
+### Output Columns
+
+The `step_sec_protein()` step creates:
+
+| Column | Description |
+|--------|-------------|
+| `protein_hmws_pct` | % high molecular weight species |
+| `protein_monomer_pct` | % main peak (monomer) |
+| `protein_lmws_pct` | % low molecular weight species |
+| `protein_main_start` | Start of monomer region |
+| `protein_main_end` | End of monomer region |
+
+With `include_oligomer = TRUE`:
+
+| Column | Description |
+|--------|-------------|
+| `protein_monomer_oligo_pct` | % monomer from oligomer analysis |
+| `protein_dimer_pct` | % dimer |
+| `protein_trimer_pct` | % trimer |
+| `protein_hmw_oligo_pct` | % higher oligomers |
+| `protein_lmw_oligo_pct` | % fragments |
+| `protein_species_count` | Number of detected species |
+
+## Native vs Denaturing SEC
+
+### Native SEC
+
+Preserves non-covalent interactions:
+
+```{r native, eval = FALSE}
+step_sec_protein(
+  type = "native",
+  monomer_mw = 150000
+)
+```
+
+Use for:
+- Detecting reversible aggregates
+- Oligomer state assessment
+- Native quaternary structure
+
+### Denaturing SEC (SDS-SEC)
+
+Disrupts non-covalent interactions:
+
+```{r denaturing, eval = FALSE}
+step_sec_protein(
+  type = "denaturing",
+  monomer_mw = 150000
+)
+```
+
+Use for:
+- Covalent aggregate detection
+- Clipped/truncated species
+- Heavy/light chain analysis
+
+## Detailed Oligomer Analysis
+
+### Using step_sec_oligomer()
+
+For more control over oligomer detection:
+
+```{r oligomer, eval = FALSE}
+rec <- recipe(~., data = protein_data) |>
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  step_sec_baseline(measures = "uv") |>
+  step_sec_oligomer(
+    measures = "uv",
+    monomer_mw = 150000,
+    mw_tolerance = 0.15,     # 15% MW tolerance for species assignment
+    min_peak_area = 0.001    # Minimum 0.1% to report
+  )
+```
+
+### Species Assignment
+
+The oligomer step identifies species based on expected MW:
+
+| Species | Expected MW | Example (mAb) |
+|---------|-------------|---------------|
+| Fragment | < 0.7 × monomer | < 105 kDa |
+| Monomer | 1.0 × monomer | 150 kDa |
+| Dimer | 2.0 × monomer | 300 kDa |
+| Trimer | 3.0 × monomer | 450 kDa |
+| Higher oligomer | > 3 × monomer | > 450 kDa |
+
+## Regulatory Considerations
+
+### ICH Guidelines
+
+- **ICH Q6B**: Specifications for biotechnology products
+  - Aggregate content is a critical quality attribute
+  - Typical specification: HMWS < 5%
+
+- **ICH Q5E**: Comparability of biotechnology products
+  - Aggregate profiles should be comparable
+
+### USP Guidelines
+
+- **USP <129>**: Analytical procedures for proteins
+- **USP <1032>**: Design and development of biological assays
+
+### Typical Specifications
+
+| Parameter | Typical Limit | Notes |
+|-----------|--------------|-------|
+| HMWS | < 5% | May be tighter for high-dose products |
+| Monomer | > 95% | Primary quality indicator |
+| LMWS | < 2% | Product-specific |
+| Dimer | Report | Not always specified separately |
+
+## Best Practices
+
+### Sample Preparation
+
+1. **Filter samples** through 0.22 μm before injection
+2. **Minimize time** between prep and analysis
+3. **Use appropriate buffer** (match formulation buffer)
+4. **Control temperature** during autosampler storage
+
+### Method Parameters
+
+1. **Column selection**: Appropriate exclusion limit for aggregates
+2. **Mobile phase**: Typically PBS or phosphate buffer
+3. **Flow rate**: 0.5-1.0 mL/min
+4. **Injection volume**: 10-100 μL (depending on concentration)
+5. **Detection**: 280 nm (standard) or 214 nm (higher sensitivity)
+
+### Integration
+
+1. **Consistent baseline** selection across samples
+2. **Same integration limits** for all samples in a study
+3. **Report detection limit** for minor species
+
+## Example: Stability Study Analysis
+
+```{r stability-example, eval = FALSE}
+# Simulate stability data
+stability_data <- tibble(
+  sample_id = c("T0", "T1M", "T3M", "T6M"),
+  timepoint = c(0, 1, 3, 6),
+  uv_signal = list(chrom1, chrom2, chrom3, chrom4),
+  elution_time = list(time, time, time, time)
+)
+
+# Analyze all timepoints
+rec <- recipe(~., data = stability_data) |>
+  step_measure_input_long(
+    uv_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
+  step_sec_protein(
+    monomer_mw = 150000,
+    include_oligomer = TRUE
+  )
+
+prepped <- prep(rec)
+result <- bake(prepped, new_data = NULL)
+
+# Plot stability trend
+ggplot(result, aes(timepoint, protein_monomer_pct)) +
+  geom_line(linewidth = 1, color = "#2E86AB") +
+  geom_point(size = 3, color = "#2E86AB") +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
+  annotate("text", x = 5, y = 94.5, label = "Specification: > 95%", color = "red") +
+  labs(
+    x = "Time (months)",
+    y = "% Monomer",
+    title = "Stability Profile: Monomer Content"
+  ) +
+  ylim(90, 100) +
+  theme_minimal()
+```
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
