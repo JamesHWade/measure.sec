@@ -1,0 +1,119 @@
+---
+title: "`r params$title`"
+author: "`r params$author`"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true
+    theme: flatly
+  pdf:
+    toc: true
+    toc-depth: 2
+  docx:
+    toc: true
+    toc-depth: 2
+params:
+  title: "SEC Analysis Report"
+  author: ""
+  data: NULL
+  sample_id: NULL
+  include_plots: true
+  include_summary: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(measure.sec)
+library(ggplot2)
+
+# Extract data from params
+data <- params$data
+sample_id <- params$sample_id
+```
+
+# Summary
+
+This report presents the results of Size Exclusion Chromatography (SEC) analysis.
+
+```{r}
+#| label: sample-info
+#| results: asis
+
+n_samples <- nrow(data)
+cat(sprintf("**Number of samples analyzed:** %d\n\n", n_samples))
+```
+
+## Molecular Weight Results
+
+```{r}
+#| label: summary-table
+
+if (params$include_summary) {
+  summary_tbl <- measure_sec_summary_table(
+    data,
+    sample_id = sample_id
+  )
+
+  knitr::kable(
+    summary_tbl,
+    caption = "Molecular Weight Summary",
+    digits = 0,
+    format.args = list(big.mark = ",")
+  )
+}
+```
+
+## Chromatograms
+
+```{r}
+#| label: chromatogram
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "SEC Chromatogram overlay showing detector response vs. elution time."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_chromatogram(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Chromatogram plot not available.*\n")
+    }
+  )
+}
+```
+
+## Molecular Weight Distribution
+
+```{r}
+#| label: mwd
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Molecular weight distribution showing the differential weight fraction."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_mwd(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Molecular weight distribution plot not available. Ensure calibration has been applied.*\n")
+    }
+  )
+}
+```
+
+---
+
+*Report generated with measure.sec v`r packageVersion("measure.sec")`*

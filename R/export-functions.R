@@ -358,3 +358,364 @@ print.sec_summary_table <- function(x, ...) {
 
   invisible(x)
 }
+
+
+# ==============================================================================
+# Multi-Sample Comparison
+# ==============================================================================
+
+#' Compare Multiple SEC Samples
+#'
+#' Compares SEC analysis results across multiple samples, providing a summary
+#' table of key metrics and optional overlay plots.
+#'
+#' @param ... Data frames containing SEC results. Each should be a baked recipe
+#'   output with measure columns (MW, concentration, etc.).
+#' @param samples Character vector of sample names. If `NULL`, uses names from
+#'   `...` or generates sequential names ("Sample 1", "Sample 2", etc.).
+#' @param metrics Character vector specifying which metrics to compare. Options:
+#'   \itemize{
+#'     \item `"mw_averages"`: Mn, Mw, Mz, dispersity
+#'     \item `"mwd"`: Molecular weight distribution overlap
+#'     \item `"branching"`: Branching metrics (if available)
+#'   }
+#'   Default includes all available metrics.
+#' @param plot Logical. Generate comparison plot? Default is `TRUE`.
+#' @param reference Integer or character. Which sample to use as reference for
+#'   percent differences. Default is `1` (first sample).
+#' @param digits Integer. Number of decimal places for numeric values.
+#'   Default is `2`.
+#'
+#' @return A list of class `sec_comparison` containing:
+#'   \describe{
+#'     \item{summary}{Tibble with comparison metrics for all samples}
+#'     \item{differences}{Tibble with absolute and percent differences vs reference}
+#'     \item{plot}{ggplot2 object (if `plot = TRUE`)}
+#'     \item{samples}{Character vector of sample names}
+#'     \item{reference}{Name of reference sample}
+#'   }
+#'
+#' @details
+#' This function is useful for:
+#' \itemize{
+#'   \item Batch-to-batch comparison
+#'   \item Stability studies
+#'   \item Process optimization
+#'   \item Quality control
+#' }
+#'
+#' **Comparison Metrics:**
+#'
+#' *MW Averages:* Compares Mn, Mw, Mz, and dispersity with absolute and
+#' percent differences from the reference sample.
+#'
+#' *MWD Overlay:* Creates overlaid MWD plots showing distribution differences.
+#' Useful for detecting bimodality, tailing, or distribution shifts.
+#'
+#' *Branching:* Compares branching index and frequency if available from
+#' triple-detection data.
+#'
+#' @family sec-export
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Compare three batches
+#' comparison <- measure_sec_compare(
+#'   batch1_data,
+#'   batch2_data,
+#'   batch3_data,
+#'   samples = c("Batch 1", "Batch 2", "Batch 3")
+#' )
+#'
+#' # View summary table
+#' comparison$summary
+#'
+#' # View differences from reference
+#' comparison$differences
+#'
+#' # Display overlay plot
+#' comparison$plot
+#'
+#' # Compare only MW averages without plot
+#' comparison <- measure_sec_compare(
+#'   sample_a, sample_b,
+#'   metrics = "mw_averages",
+#'   plot = FALSE
+#' )
+#' }
+measure_sec_compare <- function(
+  ...,
+  samples = NULL,
+  metrics = c("mw_averages", "mwd", "branching"),
+  plot = TRUE,
+  reference = 1,
+  digits = 2
+) {
+  # Capture input data frames
+  data_list <- list(...)
+
+  if (length(data_list) < 2) {
+    cli::cli_abort("At least 2 samples are required for comparison.")
+  }
+
+  # Validate all inputs are data frames
+  for (i in seq_along(data_list)) {
+    if (!is.data.frame(data_list[[i]])) {
+      cli::cli_abort(
+        "All inputs must be data frames. Input {i} is not a data frame."
+      )
+    }
+  }
+
+  # Generate sample names
+  if (is.null(samples)) {
+    # Try to get names from ... arguments
+    call_args <- as.list(match.call())[-1]
+    call_args <- call_args[
+      !names(call_args) %in%
+        c("samples", "metrics", "plot", "reference", "digits")
+    ]
+    arg_names <- vapply(call_args, deparse, character(1))
+
+    # Use argument names if they look like variable names, otherwise generate
+    samples <- ifelse(
+      grepl("^[a-zA-Z][a-zA-Z0-9_.]*$", arg_names),
+      arg_names,
+      paste("Sample", seq_along(data_list))
+    )
+  }
+
+  if (length(samples) != length(data_list)) {
+    cli::cli_abort(
+      "{.arg samples} length ({length(samples)}) must match number of data inputs ({length(data_list)})."
+    )
+  }
+
+  # Resolve reference
+  if (is.character(reference)) {
+    ref_idx <- match(reference, samples)
+    if (is.na(ref_idx)) {
+      cli::cli_abort(
+        "Reference sample {.val {reference}} not found in sample names."
+      )
+    }
+  } else {
+    ref_idx <- as.integer(reference)
+    if (ref_idx < 1 || ref_idx > length(data_list)) {
+      cli::cli_abort(
+        "{.arg reference} must be between 1 and {length(data_list)}."
+      )
+    }
+  }
+
+  # Build comparison summary
+  summary_list <- list()
+
+  for (i in seq_along(data_list)) {
+    df <- data_list[[i]]
+    row <- tibble::tibble(sample = samples[i])
+
+    # MW averages
+    if ("mw_averages" %in% metrics) {
+      mw_cols <- c(
+        "mw_mn",
+        "mw_mw",
+        "mw_mz",
+        "mw_dispersity",
+        "Mn",
+        "Mw",
+        "Mz",
+        "dispersity"
+      )
+      for (col in mw_cols) {
+        if (col %in% names(df) && is.numeric(df[[col]])) {
+          # Take first value if multiple rows, or mean
+          val <- if (nrow(df) == 1) df[[col]] else mean(df[[col]], na.rm = TRUE)
+          row[[col]] <- round(val, digits)
+        }
+      }
+    }
+
+    # Branching metrics
+    if ("branching" %in% metrics) {
+      branch_cols <- c(
+        "branching_index",
+        "branching_frequency",
+        "g_ratio",
+        "g_prime"
+      )
+      for (col in branch_cols) {
+        if (col %in% names(df) && is.numeric(df[[col]])) {
+          val <- if (nrow(df) == 1) df[[col]] else mean(df[[col]], na.rm = TRUE)
+          row[[col]] <- round(val, digits)
+        }
+      }
+    }
+
+    summary_list[[i]] <- row
+  }
+
+  summary_tbl <- dplyr::bind_rows(summary_list)
+
+  # Calculate differences from reference
+  diff_tbl <- calculate_differences(summary_tbl, ref_idx, digits)
+
+  # Create overlay plot if requested
+  plot_obj <- NULL
+  if (plot && "mwd" %in% metrics) {
+    plot_obj <- create_comparison_plot(data_list, samples)
+  }
+
+  # Build result object
+  result <- list(
+    summary = summary_tbl,
+    differences = diff_tbl,
+    plot = plot_obj,
+    samples = samples,
+    reference = samples[ref_idx]
+  )
+
+  class(result) <- c("sec_comparison", "list")
+  result
+}
+
+
+#' Calculate differences from reference sample
+#' @noRd
+calculate_differences <- function(summary_tbl, ref_idx, digits = 2) {
+  ref_row <- summary_tbl[ref_idx, ]
+  numeric_cols <- names(summary_tbl)[vapply(
+    summary_tbl,
+    is.numeric,
+    logical(1)
+  )]
+
+  if (length(numeric_cols) == 0) {
+    return(tibble::tibble(sample = summary_tbl$sample))
+  }
+
+  diff_list <- list()
+
+  for (i in seq_len(nrow(summary_tbl))) {
+    row <- tibble::tibble(sample = summary_tbl$sample[i])
+
+    for (col in numeric_cols) {
+      val <- summary_tbl[[col]][i]
+      ref_val <- ref_row[[col]]
+
+      if (!is.na(val) && !is.na(ref_val) && ref_val != 0) {
+        # Absolute difference
+        row[[paste0(col, "_diff")]] <- round(val - ref_val, digits)
+        # Percent difference
+        row[[paste0(col, "_pct")]] <- round((val - ref_val) / ref_val * 100, 1)
+      }
+    }
+
+    diff_list[[i]] <- row
+  }
+
+  dplyr::bind_rows(diff_list)
+}
+
+
+#' Create MWD overlay comparison plot
+#' @noRd
+create_comparison_plot <- function(data_list, samples) {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    cli::cli_warn("Package {.pkg ggplot2} is required for plotting.")
+    return(NULL)
+  }
+
+  # Combine data for plotting
+  plot_data_list <- list()
+
+  for (i in seq_along(data_list)) {
+    df <- data_list[[i]]
+
+    # Check for MW column
+    mw_col <- if ("mw" %in% names(df)) "mw" else NULL
+
+    if (is.null(mw_col)) {
+      # Skip samples without MW data
+      next
+    }
+
+    # Extract MW distribution data
+    if (
+      inherits(df[[mw_col]], "measure_list") ||
+        (is.list(df[[mw_col]]) && length(df[[mw_col]]) > 0)
+    ) {
+      # Handle measure_list format
+      for (j in seq_len(nrow(df))) {
+        m <- df[[mw_col]][[j]]
+        if (!is.null(m) && !is.null(m$location) && !is.null(m$value)) {
+          slice_df <- tibble::tibble(
+            sample = samples[i],
+            location = m$location,
+            mw = m$value
+          )
+          # Filter positive MW values
+          slice_df <- slice_df[slice_df$mw > 0, ]
+          if (nrow(slice_df) > 0) {
+            plot_data_list <- c(plot_data_list, list(slice_df))
+          }
+        }
+      }
+    }
+  }
+
+  if (length(plot_data_list) == 0) {
+    cli::cli_warn("No valid MW data found for plotting.")
+    return(NULL)
+  }
+
+  plot_data <- dplyr::bind_rows(plot_data_list)
+
+  # Create overlay plot
+  p <- ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(
+      x = log10(.data$mw),
+      y = .data$location,
+      color = .data$sample
+    )
+  ) +
+    ggplot2::geom_line(linewidth = 0.8) +
+    ggplot2::labs(
+      x = expression(log[10](M)),
+      y = "Signal",
+      color = "Sample",
+      title = "MWD Comparison"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      legend.position = "bottom",
+      plot.title = ggplot2::element_text(hjust = 0.5)
+    )
+
+  p
+}
+
+
+#' @export
+print.sec_comparison <- function(x, ...) {
+  cat("SEC Multi-Sample Comparison\n")
+  cat(strrep("=", 60), "\n")
+  cat("Samples:", length(x$samples), "\n")
+  cat("Reference:", x$reference, "\n\n")
+
+  cat("Summary:\n")
+  print(x$summary, ...)
+
+  if (ncol(x$differences) > 1) {
+    cat("\nDifferences from reference:\n")
+    print(x$differences, ...)
+  }
+
+  if (!is.null(x$plot)) {
+    cat("\nPlot available in $plot\n")
+  }
+
+  invisible(x)
+}

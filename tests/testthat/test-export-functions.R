@@ -141,3 +141,196 @@ test_that("measure_sec_summary_table print method works", {
   expect_output(print(summary), "SEC Analysis Summary")
   expect_output(print(summary), "Samples: 1")
 })
+
+
+# ==============================================================================
+# measure_sec_compare tests
+# ==============================================================================
+
+test_that("measure_sec_compare compares MW averages", {
+  sample1 <- tibble::tibble(
+    sample_id = "A",
+    mw_mn = 10000,
+    mw_mw = 15000,
+    mw_mz = 20000,
+    mw_dispersity = 1.5
+  )
+
+  sample2 <- tibble::tibble(
+    sample_id = "B",
+    mw_mn = 12000,
+    mw_mw = 18000,
+    mw_mz = 24000,
+    mw_dispersity = 1.5
+  )
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    samples = c("Sample 1", "Sample 2"),
+    metrics = "mw_averages",
+    plot = FALSE
+  )
+
+  expect_s3_class(result, "sec_comparison")
+  expect_equal(nrow(result$summary), 2)
+  expect_true("mw_mn" %in% names(result$summary))
+  expect_true("mw_mw" %in% names(result$summary))
+  expect_equal(result$samples, c("Sample 1", "Sample 2"))
+  expect_equal(result$reference, "Sample 1")
+})
+
+test_that("measure_sec_compare calculates differences", {
+  sample1 <- tibble::tibble(
+    sample_id = "A",
+    mw_mn = 10000,
+    mw_mw = 20000
+  )
+
+  sample2 <- tibble::tibble(
+    sample_id = "B",
+    mw_mn = 11000,
+    mw_mw = 22000
+  )
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    metrics = "mw_averages",
+    plot = FALSE
+  )
+
+  # Check differences are calculated
+  expect_true("mw_mn_diff" %in% names(result$differences))
+  expect_true("mw_mn_pct" %in% names(result$differences))
+
+  # Reference sample should have 0 difference
+  expect_equal(result$differences$mw_mn_diff[1], 0)
+  expect_equal(result$differences$mw_mn_pct[1], 0)
+
+  # Second sample should have 10% increase
+  expect_equal(result$differences$mw_mn_diff[2], 1000)
+  expect_equal(result$differences$mw_mn_pct[2], 10)
+})
+
+test_that("measure_sec_compare accepts character reference", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+  sample2 <- tibble::tibble(mw_mn = 12000)
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    samples = c("Control", "Test"),
+    reference = "Test",
+    metrics = "mw_averages",
+    plot = FALSE
+  )
+
+  expect_equal(result$reference, "Test")
+})
+
+test_that("measure_sec_compare errors with fewer than 2 samples", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+
+  expect_error(
+    measure_sec_compare(sample1, plot = FALSE),
+    "At least 2 samples"
+  )
+})
+
+test_that("measure_sec_compare errors with non-data frame input", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+  sample2 <- "not a data frame"
+
+  expect_error(
+    measure_sec_compare(sample1, sample2, plot = FALSE),
+    "must be data frames"
+  )
+})
+
+test_that("measure_sec_compare errors with wrong samples length", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+  sample2 <- tibble::tibble(mw_mn = 12000)
+
+  expect_error(
+    measure_sec_compare(
+      sample1,
+      sample2,
+      samples = c("A", "B", "C"),
+      plot = FALSE
+    ),
+    "must match number of data inputs"
+  )
+})
+
+test_that("measure_sec_compare errors with invalid reference", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+  sample2 <- tibble::tibble(mw_mn = 12000)
+
+  expect_error(
+    measure_sec_compare(
+      sample1,
+      sample2,
+      reference = "NonExistent",
+      plot = FALSE
+    ),
+    "not found in sample names"
+  )
+})
+
+test_that("measure_sec_compare handles branching metrics", {
+  sample1 <- tibble::tibble(
+    mw_mn = 10000,
+    branching_index = 0.85,
+    g_ratio = 0.9
+  )
+
+  sample2 <- tibble::tibble(
+    mw_mn = 12000,
+    branching_index = 0.75,
+    g_ratio = 0.8
+  )
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    metrics = c("mw_averages", "branching"),
+    plot = FALSE
+  )
+
+  expect_true("branching_index" %in% names(result$summary))
+  expect_true("g_ratio" %in% names(result$summary))
+})
+
+test_that("measure_sec_compare print method works", {
+  sample1 <- tibble::tibble(mw_mn = 10000, mw_mw = 15000)
+  sample2 <- tibble::tibble(mw_mn = 12000, mw_mw = 18000)
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    samples = c("Control", "Test"),
+    metrics = "mw_averages",
+    plot = FALSE
+  )
+
+  expect_output(print(result), "SEC Multi-Sample Comparison")
+  expect_output(print(result), "Samples: 2")
+  expect_output(print(result), "Reference: Control")
+})
+
+test_that("measure_sec_compare auto-generates sample names", {
+  sample1 <- tibble::tibble(mw_mn = 10000)
+  sample2 <- tibble::tibble(mw_mn = 12000)
+
+  result <- measure_sec_compare(
+    sample1,
+    sample2,
+    metrics = "mw_averages",
+    plot = FALSE
+  )
+
+  # Should have auto-generated names
+  expect_equal(length(result$samples), 2)
+  expect_true(all(nchar(result$samples) > 0))
+})
