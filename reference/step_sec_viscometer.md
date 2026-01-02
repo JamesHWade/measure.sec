@@ -101,23 +101,24 @@ where K is a calibration constant.
 ## Note
 
 For intrinsic viscosity calculation, use
-[`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md) after this
-step.
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md)
+after this step.
 
 ## See also
 
-[`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md) for intrinsic
-viscosity calculation
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md)
+for intrinsic viscosity calculation
 
 Other sec-detectors:
-[`step_sec_concentration()`](step_sec_concentration.md),
-[`step_sec_dad()`](step_sec_dad.md),
-[`step_sec_dls()`](step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](step_sec_lals.md),
-[`step_sec_mals()`](step_sec_mals.md),
-[`step_sec_rals()`](step_sec_rals.md),
-[`step_sec_ri()`](step_sec_ri.md), [`step_sec_uv()`](step_sec_uv.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
+[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)
 
 ## Examples
 

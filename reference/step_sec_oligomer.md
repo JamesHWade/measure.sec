@@ -135,8 +135,9 @@ An updated recipe with new columns:
 
 ## Details
 
-This step extends [`step_sec_aggregates()`](step_sec_aggregates.md) by
-providing detailed species identification rather than just
+This step extends
+[`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)
+by providing detailed species identification rather than just
 HMWS/monomer/LMWS classification.
 
 **Species Assignment:**
@@ -184,11 +185,12 @@ For best results:
 
 ## See also
 
-[`step_sec_aggregates()`](step_sec_aggregates.md) for simpler
-HMWS/monomer/LMWS analysis
+[`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)
+for simpler HMWS/monomer/LMWS analysis
 
-Other sec-protein: [`step_sec_aggregates()`](step_sec_aggregates.md),
-[`step_sec_protein()`](step_sec_protein.md)
+Other sec-protein:
+[`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md),
+[`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md)
 
 ## Examples
 

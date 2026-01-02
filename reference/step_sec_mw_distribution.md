@@ -44,7 +44,8 @@ step_sec_mw_distribution(
 - calibration:
 
   Calibration method for converting x-axis to log(MW). See
-  [`step_sec_mw_averages()`](step_sec_mw_averages.md) for details.
+  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+  for details.
 
 - n_points:
 
@@ -100,11 +101,11 @@ distribution values.
 ## See also
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](step_sec_band_broadening.md),
-[`step_sec_baseline()`](step_sec_baseline.md),
-[`step_sec_detector_delay()`](step_sec_detector_delay.md),
-[`step_sec_mw_averages()`](step_sec_mw_averages.md),
-[`step_sec_mw_fractions()`](step_sec_mw_fractions.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)
 
 ## Examples
 

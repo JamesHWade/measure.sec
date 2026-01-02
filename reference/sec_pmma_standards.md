@@ -2,8 +2,8 @@
 
 Poly(methyl methacrylate) narrow molecular weight standards for SEC/GPC
 calibration. A convenient subset of
-[`sec_calibration_standards`](sec_calibration_standards.md) containing
-only PMMA standards.
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md)
+containing only PMMA standards.
 
 ## Usage
 
@@ -87,22 +87,23 @@ universal calibration is valid for the column.
 
 ## See also
 
-[`sec_calibration_standards`](sec_calibration_standards.md) for full
-dataset with PS [`sec_ps_standards`](sec_ps_standards.md) for
-polystyrene standards
-[`step_sec_universal_cal`](step_sec_universal_cal.md) for universal
-calibration
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md)
+for full dataset with PS
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md)
+for polystyrene standards
+[`step_sec_universal_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+for universal calibration
 
 Other sec-data:
-[`sec_calibration_standards`](sec_calibration_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`sec_triple_detect`](sec_triple_detect.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
 
 Other sec-calibration:
-[`sec_calibration_standards`](sec_calibration_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`step_sec_conventional_cal()`](step_sec_conventional_cal.md),
-[`step_sec_universal_cal()`](step_sec_universal_cal.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

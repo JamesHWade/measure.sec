@@ -110,7 +110,7 @@ It automatically detects and includes available metrics.
 ## See also
 
 Other sec-export:
-[`measure_sec_slice_table()`](measure_sec_slice_table.md)
+[`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)
 
 ## Examples
 

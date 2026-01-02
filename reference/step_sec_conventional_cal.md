@@ -117,7 +117,7 @@ quadratic, etc.
   hydrodynamic volumes at the same MW)
 
 - For cross-polymer comparisons, use universal calibration instead
-  ([`step_sec_universal_cal`](step_sec_universal_cal.md))
+  ([`step_sec_universal_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md))
 
 **Fit Quality Metrics:** The
 [`tidy()`](https://generics.r-lib.org/reference/tidy.html) method
@@ -127,10 +127,10 @@ quality. R² \> 0.999 is typical for good calibrations.
 ## See also
 
 Other sec-calibration:
-[`sec_calibration_standards`](sec_calibration_standards.md),
-[`sec_pmma_standards`](sec_pmma_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`step_sec_universal_cal()`](step_sec_universal_cal.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

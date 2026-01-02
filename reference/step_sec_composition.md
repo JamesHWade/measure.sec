@@ -134,7 +134,7 @@ matter as long as the ratios are correct for pure components.
 ## See also
 
 Other sec-composition:
-[`step_sec_uv_ri_ratio()`](step_sec_uv_ri_ratio.md)
+[`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md)
 
 ## Examples
 

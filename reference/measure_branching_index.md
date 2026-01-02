@@ -103,8 +103,8 @@ where n_b is the number of branch points per molecule.
 ## See also
 
 Other sec-polymer:
-[`measure_conformation_data()`](measure_conformation_data.md),
-[`measure_mh_parameters()`](measure_mh_parameters.md)
+[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md),
+[`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md)
 
 ## Examples
 

@@ -136,10 +136,10 @@ For absolute MW determination, consider using MALS detection instead.
 ## See also
 
 Other sec-calibration:
-[`sec_calibration_standards`](sec_calibration_standards.md),
-[`sec_pmma_standards`](sec_pmma_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`step_sec_conventional_cal()`](step_sec_conventional_cal.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
 
 ## Examples
 

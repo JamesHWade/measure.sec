@@ -76,47 +76,47 @@ result <- bake(prepped, new_data = NULL)
 
 ### Detector Processing
 
-| Step                                                                | Description                                           |
-|---------------------------------------------------------------------|-------------------------------------------------------|
-| [`step_sec_ri()`](reference/step_sec_ri.md)                         | RI detector with dn/dc normalization                  |
-| [`step_sec_uv()`](reference/step_sec_uv.md)                         | UV detector with extinction coefficient               |
-| [`step_sec_dad()`](reference/step_sec_dad.md)                       | Diode array detector processing (multi-wavelength UV) |
-| [`step_sec_mals()`](reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW          |
-| [`step_sec_lals()`](reference/step_sec_lals.md)                     | Low-angle light scattering for absolute MW            |
-| [`step_sec_rals()`](reference/step_sec_rals.md)                     | Right-angle light scattering for absolute MW          |
-| [`step_sec_dls()`](reference/step_sec_dls.md)                       | Dynamic light scattering for Rh and diffusion         |
-| [`step_sec_viscometer()`](reference/step_sec_viscometer.md)         | Differential viscometer processing                    |
-| [`step_sec_concentration()`](reference/step_sec_concentration.md)   | Convert signal to concentration                       |
-| [`step_sec_intrinsic_visc()`](reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation                       |
+| Step                                                                                                         | Description                                           |
+|--------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
+| [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)                         | RI detector with dn/dc normalization                  |
+| [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)                         | UV detector with extinction coefficient               |
+| [`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md)                       | Diode array detector processing (multi-wavelength UV) |
+| [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW          |
+| [`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md)                     | Low-angle light scattering for absolute MW            |
+| [`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md)                     | Right-angle light scattering for absolute MW          |
+| [`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md)                       | Dynamic light scattering for Rh and diffusion         |
+| [`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)         | Differential viscometer processing                    |
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)   | Convert signal to concentration                       |
+| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation                       |
 
 ### Preprocessing
 
-| Step                                                                | Description                          |
-|---------------------------------------------------------------------|--------------------------------------|
-| [`step_sec_detector_delay()`](reference/step_sec_detector_delay.md) | Correct inter-detector volume delays |
-| [`step_sec_baseline()`](reference/step_sec_baseline.md)             | SEC-optimized baseline correction    |
+| Step                                                                                                         | Description                          |
+|--------------------------------------------------------------------------------------------------------------|--------------------------------------|
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md) | Correct inter-detector volume delays |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)             | SEC-optimized baseline correction    |
 
 ### Molecular Weight
 
-| Step                                                                  | Description                                |
-|-----------------------------------------------------------------------|--------------------------------------------|
-| [`step_sec_mw_averages()`](reference/step_sec_mw_averages.md)         | Calculate Mn, Mw, Mz, dispersity           |
-| [`step_sec_mw_fractions()`](reference/step_sec_mw_fractions.md)       | Calculate MW fractions above/below cutoffs |
-| [`step_sec_mw_distribution()`](reference/step_sec_mw_distribution.md) | Generate differential/cumulative MWD       |
-| [`step_sec_universal_cal()`](reference/step_sec_universal_cal.md)     | Universal calibration with Mark-Houwink    |
+| Step                                                                                                           | Description                                |
+|----------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)         | Calculate Mn, Mw, Mz, dispersity           |
+| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)       | Calculate MW fractions above/below cutoffs |
+| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md) | Generate differential/cumulative MWD       |
+| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)     | Universal calibration with Mark-Houwink    |
 
 ### Composition Analysis
 
-| Step                                                          | Description                             |
-|---------------------------------------------------------------|-----------------------------------------|
-| [`step_sec_uv_ri_ratio()`](reference/step_sec_uv_ri_ratio.md) | UV/RI ratio for heterogeneity detection |
-| [`step_sec_composition()`](reference/step_sec_composition.md) | Copolymer composition from UV/RI        |
+| Step                                                                                                   | Description                             |
+|--------------------------------------------------------------------------------------------------------|-----------------------------------------|
+| [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md) | UV/RI ratio for heterogeneity detection |
+| [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md) | Copolymer composition from UV/RI        |
 
 ### Protein SEC
 
-| Step                                                        | Description                    |
-|-------------------------------------------------------------|--------------------------------|
-| [`step_sec_aggregates()`](reference/step_sec_aggregates.md) | HMWS/monomer/LMWS quantitation |
+| Step                                                                                                 | Description                    |
+|------------------------------------------------------------------------------------------------------|--------------------------------|
+| [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md) | HMWS/monomer/LMWS quantitation |
 
 ## Quality Control Functions
 

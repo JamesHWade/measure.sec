@@ -51,8 +51,8 @@ A data frame suitable for plotting with columns:
 ## See also
 
 Other sec-polymer:
-[`measure_branching_index()`](measure_branching_index.md),
-[`measure_mh_parameters()`](measure_mh_parameters.md)
+[`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md),
+[`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md)
 
 ## Examples
 

@@ -91,14 +91,15 @@ additionally creates ratio columns for each wavelength vs the reference.
 ## See also
 
 Other sec-detectors:
-[`step_sec_concentration()`](step_sec_concentration.md),
-[`step_sec_dls()`](step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](step_sec_lals.md),
-[`step_sec_mals()`](step_sec_mals.md),
-[`step_sec_rals()`](step_sec_rals.md),
-[`step_sec_ri()`](step_sec_ri.md), [`step_sec_uv()`](step_sec_uv.md),
-[`step_sec_viscometer()`](step_sec_viscometer.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

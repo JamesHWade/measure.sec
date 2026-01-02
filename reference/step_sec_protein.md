@@ -191,23 +191,26 @@ biopharmaceutical characterization:
 **For More Control:** For advanced analysis or custom workflows, use the
 individual steps:
 
-- [`step_sec_baseline()`](step_sec_baseline.md) for baseline correction
+- [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+  for baseline correction
 
-- [`step_sec_uv()`](step_sec_uv.md) for UV signal processing
+- [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)
+  for UV signal processing
 
-- [`step_sec_aggregates()`](step_sec_aggregates.md) for
-  HMWS/monomer/LMWS
+- [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)
+  for HMWS/monomer/LMWS
 
-- [`step_sec_oligomer()`](step_sec_oligomer.md) for detailed species
-  analysis
+- [`step_sec_oligomer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.md)
+  for detailed species analysis
 
 ## See also
 
-[`step_sec_aggregates()`](step_sec_aggregates.md),
-[`step_sec_oligomer()`](step_sec_oligomer.md)
+[`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md),
+[`step_sec_oligomer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.md)
 
-Other sec-protein: [`step_sec_aggregates()`](step_sec_aggregates.md),
-[`step_sec_oligomer()`](step_sec_oligomer.md)
+Other sec-protein:
+[`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md),
+[`step_sec_oligomer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.md)
 
 ## Examples
 

@@ -2,7 +2,7 @@
 
 ## Authors
 
-- **James Wade**. Author, maintainer.
+- **[James Wade](https://github.com/JamesHWade)**. Author, maintainer.
   [](https://orcid.org/0000-0002-9740-1905)
 
 ## Citation

@@ -100,19 +100,24 @@ analysis:
 **Typical SEC Workflow:** 1 . Convert to measure format with
 [`step_measure_input_long`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
 2. Correct inter-detector delays with
-[`step_sec_detector_delay`](step_sec_detector_delay.md) 3. Apply
-baseline correction with [`step_sec_baseline`](step_sec_baseline.md) 4.
-Process detectors with [`step_sec_ri`](step_sec_ri.md) or
-[`step_sec_uv`](step_sec_uv.md) 5. Convert to concentration with
-[`step_sec_concentration`](step_sec_concentration.md) 6. Calculate MW
-averages with [`step_sec_mw_averages`](step_sec_mw_averages.md)
+[`step_sec_detector_delay`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+3. Apply baseline correction with
+[`step_sec_baseline`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+4. Process detectors with
+[`step_sec_ri`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)
+or
+[`step_sec_uv`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)
+5. Convert to concentration with
+[`step_sec_concentration`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)
+6. Calculate MW averages with
+[`step_sec_mw_averages`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
 
 ## See also
 
 Other sec-data:
-[`sec_calibration_standards`](sec_calibration_standards.md),
-[`sec_pmma_standards`](sec_pmma_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md)
 
 ## Examples
 

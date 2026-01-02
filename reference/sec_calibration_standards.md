@@ -103,8 +103,8 @@ This dataset enables several key calibration workflows:
 
 **Conventional Calibration:** Use `retention_time` (or
 `retention_volume`) and `log_mp` with
-[`step_sec_conventional_cal`](step_sec_conventional_cal.md) to build a
-calibration curve.
+[`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+to build a calibration curve.
 
 **Universal Calibration:** Use `log_hydrodynamic_vol` vs retention for
 polymer-independent calibration. The Mark-Houwink parameters (`k_value`,
@@ -128,21 +128,25 @@ Dispersity values confirm standards are suitably narrow.
 
 ## See also
 
-[`sec_ps_standards`](sec_ps_standards.md) for polystyrene-only subset
-[`sec_pmma_standards`](sec_pmma_standards.md) for PMMA-only subset
-[`step_sec_conventional_cal`](step_sec_conventional_cal.md) for
-conventional calibration
-[`step_sec_universal_cal`](step_sec_universal_cal.md) for universal
-calibration
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md)
+for polystyrene-only subset
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md)
+for PMMA-only subset
+[`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+for conventional calibration
+[`step_sec_universal_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+for universal calibration
 
-Other sec-data: [`sec_pmma_standards`](sec_pmma_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`sec_triple_detect`](sec_triple_detect.md)
+Other sec-data:
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
 
-Other sec-calibration: [`sec_pmma_standards`](sec_pmma_standards.md),
-[`sec_ps_standards`](sec_ps_standards.md),
-[`step_sec_conventional_cal()`](step_sec_conventional_cal.md),
-[`step_sec_universal_cal()`](step_sec_universal_cal.md)
+Other sec-calibration:
+[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

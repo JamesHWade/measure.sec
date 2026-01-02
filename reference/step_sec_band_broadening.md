@@ -126,8 +126,8 @@ Gaussian, which better handles asymmetric peak shapes caused by tailing.
 
 The spreading parameter sigma should be determined from a narrow
 molecular weight standard (e.g., polystyrene with PDI \< 1.05). Use
-[`estimate_sigma()`](estimate_sigma.md) to calculate sigma from such a
-standard.
+[`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
+to calculate sigma from such a standard.
 
 ## Note
 
@@ -146,14 +146,15 @@ Science, 10(3), 375-385.
 
 ## See also
 
-[`estimate_sigma()`](estimate_sigma.md) for determining the spreading
-parameter
+[`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
+for determining the spreading parameter
 
-Other sec-chromatography: [`step_sec_baseline()`](step_sec_baseline.md),
-[`step_sec_detector_delay()`](step_sec_detector_delay.md),
-[`step_sec_mw_averages()`](step_sec_mw_averages.md),
-[`step_sec_mw_distribution()`](step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](step_sec_mw_fractions.md)
+Other sec-chromatography:
+[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)
 
 ## Examples
 

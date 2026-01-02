@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">measure.sec</a>
 
@@ -18,7 +18,18 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/sec-analysis.html">Size Exclusion Chromatography Analysis with measure.sec</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting Started</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Workflows</h6></li>
+    <li><a class="dropdown-item" href="../articles/triple-detection.html">Multi-Detector SEC</a></li>
+    <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Quality Control</h6></li>
+    <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="../articles/sec-analysis.html">Comprehensive SEC Analysis</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -35,9 +46,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
 
-
+      <div class="section-desc"><p>Publication-ready plots for SEC/GPC results</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -46,150 +57,68 @@
 
       <dl><dt>
 
-          <code><a href="estimate_sigma.html">estimate_sigma()</a></code>
+          <code><a href="plot_sec.html">plot_sec()</a></code>
 
         </dt>
-        <dd>Estimate Spreading Parameter from Narrow Standard</dd>
+        <dd>Quick SEC Plot</dd>
 
         <dt>
 
-          <code><a href="measure_branching_index.html">measure_branching_index()</a></code>
+          <code><a href="plot_sec_chromatogram.html">plot_sec_chromatogram()</a></code>
 
         </dt>
-        <dd>Calculate Branching Index</dd>
+        <dd>Plot SEC Chromatogram</dd>
 
         <dt>
 
-          <code><a href="measure_conformation_data.html">measure_conformation_data()</a></code>
+          <code><a href="plot_sec_mwd.html">plot_sec_mwd()</a></code>
 
         </dt>
-        <dd>Create Conformation Plot Data</dd>
+        <dd>Plot Molecular Weight Distribution</dd>
 
         <dt>
 
-          <code><a href="measure_mh_parameters.html">measure_mh_parameters()</a></code>
+          <code><a href="plot_sec_multidetector.html">plot_sec_multidetector()</a></code>
 
         </dt>
-        <dd>Estimate Mark-Houwink Parameters</dd>
+        <dd>Plot Multi-Detector SEC Overlay</dd>
 
         <dt>
 
-          <code><a href="measure_sec_asymmetry.html">measure_sec_asymmetry()</a></code>
+          <code><a href="plot_sec_conformation.html">plot_sec_conformation()</a></code>
 
         </dt>
-        <dd>Calculate Peak Asymmetry Factor</dd>
+        <dd>Plot SEC Conformation Data</dd>
 
         <dt>
 
-          <code><a href="measure_sec_plate_count.html">measure_sec_plate_count()</a></code>
+          <code><a href="plot_sec_calibration.html">plot_sec_calibration()</a></code>
 
         </dt>
-        <dd>Calculate Theoretical Plate Count</dd>
+        <dd>Plot SEC Calibration Curve</dd>
+      </dl></div><div class="section level2">
+      <h2 id="detector-processing">Detector Processing<a class="anchor" aria-label="anchor" href="#detector-processing"></a></h2>
+
+      <div class="section-desc"><p>Recipe steps for SEC detector signal processing</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="step_sec_ri.html">step_sec_ri()</a></code>
+
+        </dt>
+        <dd>RI Detector Processing for SEC</dd>
 
         <dt>
 
-          <code><a href="measure_sec_recovery.html">measure_sec_recovery()</a></code>
+          <code><a href="step_sec_uv.html">step_sec_uv()</a></code>
 
         </dt>
-        <dd>Calculate Mass Recovery</dd>
-
-        <dt>
-
-          <code><a href="measure_sec_resolution.html">measure_sec_resolution()</a></code>
-
-        </dt>
-        <dd>Calculate Peak Resolution</dd>
-
-        <dt>
-
-          <code><a href="measure_sec_slice_table.html">measure_sec_slice_table()</a></code>
-
-        </dt>
-        <dd>Extract Slice-by-Slice SEC Data</dd>
-
-        <dt>
-
-          <code><a href="measure_sec_suitability.html">measure_sec_suitability()</a></code>
-
-        </dt>
-        <dd>System Suitability Test for SEC</dd>
-
-        <dt>
-
-          <code><a href="measure_sec_summary_table.html">measure_sec_summary_table()</a></code>
-
-        </dt>
-        <dd>Generate SEC Summary Table</dd>
-
-        <dt>
-
-          <code><a href="sec_calibration_standards.html">sec_calibration_standards</a></code>
-
-        </dt>
-        <dd>SEC Calibration Standards - Complete Dataset</dd>
-
-        <dt>
-
-          <code><a href="sec_pmma_standards.html">sec_pmma_standards</a></code>
-
-        </dt>
-        <dd>SEC PMMA Calibration Standards</dd>
-
-        <dt>
-
-          <code><a href="sec_ps_standards.html">sec_ps_standards</a></code>
-
-        </dt>
-        <dd>SEC Polystyrene Calibration Standards</dd>
-
-        <dt>
-
-          <code><a href="sec_triple_detect.html">sec_triple_detect</a></code>
-
-        </dt>
-        <dd>Multi-Detector SEC Data</dd>
-
-        <dt>
-
-          <code><a href="step_sec_aggregates.html">step_sec_aggregates()</a></code>
-
-        </dt>
-        <dd>Quantify Protein Aggregates and Fragments in SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_band_broadening.html">step_sec_band_broadening()</a></code>
-
-        </dt>
-        <dd>Band Broadening Correction for SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_baseline.html">step_sec_baseline()</a></code>
-
-        </dt>
-        <dd>SEC/GPC Baseline Correction</dd>
-
-        <dt>
-
-          <code><a href="step_sec_composition.html">step_sec_composition()</a></code>
-
-        </dt>
-        <dd>Calculate Copolymer Composition from Detector Signals</dd>
-
-        <dt>
-
-          <code><a href="step_sec_concentration.html">step_sec_concentration()</a></code>
-
-        </dt>
-        <dd>Convert Detector Signal to Concentration</dd>
-
-        <dt>
-
-          <code><a href="step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>
-
-        </dt>
-        <dd>Conventional Calibration for SEC Using Narrow Standards</dd>
+        <dd>UV Detector Processing for SEC</dd>
 
         <dt>
 
@@ -200,24 +129,10 @@
 
         <dt>
 
-          <code><a href="step_sec_detector_delay.html">step_sec_detector_delay()</a></code>
+          <code><a href="step_sec_mals.html">step_sec_mals()</a></code>
 
         </dt>
-        <dd>Correct Inter-Detector Volume Delays</dd>
-
-        <dt>
-
-          <code><a href="step_sec_dls.html">step_sec_dls()</a></code>
-
-        </dt>
-        <dd>Dynamic Light Scattering Processing for SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code>
-
-        </dt>
-        <dd>Calculate Intrinsic Viscosity for SEC</dd>
+        <dd>Multi-Angle Light Scattering Processing for SEC</dd>
 
         <dt>
 
@@ -228,12 +143,102 @@
 
         <dt>
 
-          <code><a href="step_sec_mals.html">step_sec_mals()</a></code>
+          <code><a href="step_sec_rals.html">step_sec_rals()</a></code>
 
         </dt>
-        <dd>Multi-Angle Light Scattering Processing for SEC</dd>
+        <dd>Right-Angle Light Scattering Processing for SEC</dd>
 
         <dt>
+
+          <code><a href="step_sec_dls.html">step_sec_dls()</a></code>
+
+        </dt>
+        <dd>Dynamic Light Scattering Processing for SEC</dd>
+
+        <dt>
+
+          <code><a href="step_sec_viscometer.html">step_sec_viscometer()</a></code>
+
+        </dt>
+        <dd>Differential Viscometer Processing for SEC</dd>
+
+        <dt>
+
+          <code><a href="step_sec_detector_delay.html">step_sec_detector_delay()</a></code>
+
+        </dt>
+        <dd>Correct Inter-Detector Volume Delays</dd>
+      </dl></div><div class="section level2">
+      <h2 id="signal-processing">Signal Processing<a class="anchor" aria-label="anchor" href="#signal-processing"></a></h2>
+
+      <div class="section-desc"><p>Baseline correction and signal enhancement</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="step_sec_baseline.html">step_sec_baseline()</a></code>
+
+        </dt>
+        <dd>SEC/GPC Baseline Correction</dd>
+
+        <dt>
+
+          <code><a href="step_sec_band_broadening.html">step_sec_band_broadening()</a></code>
+
+        </dt>
+        <dd>Band Broadening Correction for SEC</dd>
+
+        <dt>
+
+          <code><a href="step_sec_concentration.html">step_sec_concentration()</a></code>
+
+        </dt>
+        <dd>Convert Detector Signal to Concentration</dd>
+
+        <dt>
+
+          <code><a href="estimate_sigma.html">estimate_sigma()</a></code>
+
+        </dt>
+        <dd>Estimate Spreading Parameter from Narrow Standard</dd>
+      </dl></div><div class="section level2">
+      <h2 id="calibration">Calibration<a class="anchor" aria-label="anchor" href="#calibration"></a></h2>
+
+      <div class="section-desc"><p>Molecular weight calibration methods</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>
+
+        </dt>
+        <dd>Conventional Calibration for SEC Using Narrow Standards</dd>
+
+        <dt>
+
+          <code><a href="step_sec_universal_cal.html">step_sec_universal_cal()</a></code>
+
+        </dt>
+        <dd>Universal Calibration for SEC</dd>
+      </dl></div><div class="section level2">
+      <h2 id="molecular-weight-calculations">Molecular Weight Calculations<a class="anchor" aria-label="anchor" href="#molecular-weight-calculations"></a></h2>
+
+      <div class="section-desc"><p>MW averages, distributions, and fractions</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="step_sec_mw_averages.html">step_sec_mw_averages()</a></code>
 
@@ -253,48 +258,22 @@
 
         </dt>
         <dd>Calculate Molecular Weight Fractions for SEC/GPC</dd>
+      </dl></div><div class="section level2">
+      <h2 id="composition-analysis">Composition Analysis<a class="anchor" aria-label="anchor" href="#composition-analysis"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Copolymer and composition analysis</p></div>
 
-          <code><a href="step_sec_oligomer.html">step_sec_oligomer()</a></code>
+      <dl></dl></div><div class="section level2">
 
-        </dt>
-        <dd>Oligomeric Species Analysis for Protein SEC</dd>
 
-        <dt>
 
-          <code><a href="step_sec_protein.html">step_sec_protein()</a></code>
 
-        </dt>
-        <dd>Protein SEC Analysis Workflow</dd>
+      <dl><dt>
 
-        <dt>
-
-          <code><a href="step_sec_rals.html">step_sec_rals()</a></code>
+          <code><a href="step_sec_composition.html">step_sec_composition()</a></code>
 
         </dt>
-        <dd>Right-Angle Light Scattering Processing for SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_ri.html">step_sec_ri()</a></code>
-
-        </dt>
-        <dd>RI Detector Processing for SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_universal_cal.html">step_sec_universal_cal()</a></code>
-
-        </dt>
-        <dd>Universal Calibration for SEC</dd>
-
-        <dt>
-
-          <code><a href="step_sec_uv.html">step_sec_uv()</a></code>
-
-        </dt>
-        <dd>UV Detector Processing for SEC</dd>
+        <dd>Calculate Copolymer Composition from Detector Signals</dd>
 
         <dt>
 
@@ -305,16 +284,181 @@
 
         <dt>
 
-          <code><a href="step_sec_viscometer.html">step_sec_viscometer()</a></code>
+          <code><a href="step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code>
 
         </dt>
-        <dd>Differential Viscometer Processing for SEC</dd>
+        <dd>Calculate Intrinsic Viscosity for SEC</dd>
+      </dl></div><div class="section level2">
+      <h2 id="protein-sec">Protein SEC<a class="anchor" aria-label="anchor" href="#protein-sec"></a></h2>
+
+      <div class="section-desc"><p>Biopharmaceutical SEC analysis</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="step_sec_protein.html">step_sec_protein()</a></code>
+
+        </dt>
+        <dd>Protein SEC Analysis Workflow</dd>
+
+        <dt>
+
+          <code><a href="step_sec_aggregates.html">step_sec_aggregates()</a></code>
+
+        </dt>
+        <dd>Quantify Protein Aggregates and Fragments in SEC</dd>
+
+        <dt>
+
+          <code><a href="step_sec_oligomer.html">step_sec_oligomer()</a></code>
+
+        </dt>
+        <dd>Oligomeric Species Analysis for Protein SEC</dd>
+      </dl></div><div class="section level2">
+      <h2 id="quality-control-functions">Quality Control Functions<a class="anchor" aria-label="anchor" href="#quality-control-functions"></a></h2>
+
+      <div class="section-desc"><p>Functions for system suitability testing and QC</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="measure_sec_resolution.html">measure_sec_resolution()</a></code>
+
+        </dt>
+        <dd>Calculate Peak Resolution</dd>
+
+        <dt>
+
+          <code><a href="measure_sec_plate_count.html">measure_sec_plate_count()</a></code>
+
+        </dt>
+        <dd>Calculate Theoretical Plate Count</dd>
+
+        <dt>
+
+          <code><a href="measure_sec_asymmetry.html">measure_sec_asymmetry()</a></code>
+
+        </dt>
+        <dd>Calculate Peak Asymmetry Factor</dd>
+
+        <dt>
+
+          <code><a href="measure_sec_recovery.html">measure_sec_recovery()</a></code>
+
+        </dt>
+        <dd>Calculate Mass Recovery</dd>
+
+        <dt>
+
+          <code><a href="measure_sec_suitability.html">measure_sec_suitability()</a></code>
+
+        </dt>
+        <dd>System Suitability Test for SEC</dd>
+      </dl></div><div class="section level2">
+      <h2 id="polymer-analysis-functions">Polymer Analysis Functions<a class="anchor" aria-label="anchor" href="#polymer-analysis-functions"></a></h2>
+
+      <div class="section-desc"><p>Functions for polymer characterization</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="measure_mh_parameters.html">measure_mh_parameters()</a></code>
+
+        </dt>
+        <dd>Estimate Mark-Houwink Parameters</dd>
+
+        <dt>
+
+          <code><a href="measure_branching_index.html">measure_branching_index()</a></code>
+
+        </dt>
+        <dd>Calculate Branching Index</dd>
+
+        <dt>
+
+          <code><a href="measure_conformation_data.html">measure_conformation_data()</a></code>
+
+        </dt>
+        <dd>Create Conformation Plot Data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="export-functions">Export Functions<a class="anchor" aria-label="anchor" href="#export-functions"></a></h2>
+
+      <div class="section-desc"><p>Data extraction and export utilities</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="measure_sec_slice_table.html">measure_sec_slice_table()</a></code>
+
+        </dt>
+        <dd>Extract Slice-by-Slice SEC Data</dd>
+
+        <dt>
+
+          <code><a href="measure_sec_summary_table.html">measure_sec_summary_table()</a></code>
+
+        </dt>
+        <dd>Generate SEC Summary Table</dd>
+      </dl></div><div class="section level2">
+      <h2 id="datasets">Datasets<a class="anchor" aria-label="anchor" href="#datasets"></a></h2>
+
+      <div class="section-desc"><p>Example datasets for SEC analysis</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="sec_triple_detect.html">sec_triple_detect</a></code>
+
+        </dt>
+        <dd>Multi-Detector SEC Data</dd>
+
+        <dt>
+
+          <code><a href="sec_calibration_standards.html">sec_calibration_standards</a></code>
+
+        </dt>
+        <dd>SEC Calibration Standards - Complete Dataset</dd>
+
+        <dt>
+
+          <code><a href="sec_ps_standards.html">sec_ps_standards</a></code>
+
+        </dt>
+        <dd>SEC Polystyrene Calibration Standards</dd>
+
+        <dt>
+
+          <code><a href="sec_pmma_standards.html">sec_pmma_standards</a></code>
+
+        </dt>
+        <dd>SEC PMMA Calibration Standards</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by James Wade.</p>
+  <p>Developed by <a href="https://github.com/JamesHWade" class="external-link">James Wade</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
