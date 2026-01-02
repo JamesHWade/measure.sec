@@ -285,7 +285,7 @@ bd ready                              # Find available work
 bd show <id>                          # Review issue details
 
 # CREATE BRANCH FIRST - before any code changes!
-git checkout -b feat/<short-description>
+git checkout -b feat/<short-description>-<id>
 # or: git checkout -b fix/<short-description>
 
 bd update <id> --status=in_progress   # Now claim the work

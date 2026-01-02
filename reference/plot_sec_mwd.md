@@ -92,11 +92,14 @@ When `show_averages = TRUE`, vertical dashed lines are added for:
 ## See also
 
 Other sec-visualization:
+[`autoplot.sec_results()`](https://jameshwade.github.io/measure-sec/reference/autoplot.sec_results.md),
 [`plot_sec()`](https://jameshwade.github.io/measure-sec/reference/plot_sec.md),
 [`plot_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_calibration.md),
 [`plot_sec_chromatogram()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_chromatogram.md),
+[`plot_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_composition.md),
 [`plot_sec_conformation()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_conformation.md),
-[`plot_sec_multidetector()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_multidetector.md)
+[`plot_sec_multidetector()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_multidetector.md),
+[`sec_results()`](https://jameshwade.github.io/measure-sec/reference/sec_results.md)
 
 ## Examples
 

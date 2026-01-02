@@ -222,6 +222,10 @@ By contributing to this project, you agree to abide by its terms.
 
 Publication-ready plots for SEC/GPC results
 
+- [`sec_results()`](https://jameshwade.github.io/measure-sec/reference/sec_results.md)
+  : Create SEC Results Object
+- [`autoplot(`*`<sec_results>`*`)`](https://jameshwade.github.io/measure-sec/reference/autoplot.sec_results.md)
+  : Automatic Plot for SEC Results
 - [`plot_sec()`](https://jameshwade.github.io/measure-sec/reference/plot_sec.md)
   : Quick SEC Plot
 - [`plot_sec_chromatogram()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_chromatogram.md)
@@ -234,6 +238,8 @@ Publication-ready plots for SEC/GPC results
   : Plot SEC Conformation Data
 - [`plot_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_calibration.md)
   : Plot SEC Calibration Curve
+- [`plot_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_composition.md)
+  : Plot SEC Composition Distribution
 
 ## Detector Processing
 
