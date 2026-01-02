@@ -5,7 +5,7 @@
 \alias{sec_branched}
 \title{Branched Polymer SEC Data}
 \format{
-A tibble with 5,608 rows and 11 columns:
+A tibble with 5,608 rows and 10 columns:
 \describe{
 \item{sample_id}{Character. Sample identifier (e.g., "Linear-50K")}
 \item{elution_time}{Numeric. Elution time in minutes}

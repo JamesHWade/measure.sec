@@ -482,7 +482,7 @@
 #' star polymers, designed for demonstrating branching analysis using
 #' multi-detector SEC.
 #'
-#' @format A tibble with 5,608 rows and 11 columns:
+#' @format A tibble with 5,608 rows and 10 columns:
 #' \describe{
 #'   \item{sample_id}{Character. Sample identifier (e.g., "Linear-50K")}
 #'   \item{elution_time}{Numeric. Elution time in minutes}
