@@ -87,11 +87,13 @@ plot_sec_conformation(
 }
 \seealso{
 Other sec-visualization: 
+\code{\link{autoplot.sec_results}()},
 \code{\link{plot_sec}()},
 \code{\link{plot_sec_calibration}()},
 \code{\link{plot_sec_chromatogram}()},
 \code{\link{plot_sec_composition}()},
 \code{\link{plot_sec_multidetector}()},
-\code{\link{plot_sec_mwd}()}
+\code{\link{plot_sec_mwd}()},
+\code{\link{sec_results}()}
 }
 \concept{sec-visualization}
