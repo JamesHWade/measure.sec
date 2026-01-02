@@ -71,6 +71,7 @@ reference:
   desc: Molecular weight calibration methods
   contents:
   - step_sec_conventional_cal
+  - step_sec_broad_standard
   - step_sec_universal_cal
 
 - title: Molecular Weight Calculations
