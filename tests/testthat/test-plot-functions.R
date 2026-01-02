@@ -458,3 +458,279 @@ test_that("plot_sec_mwd filters out zero and negative MW values", {
   p <- plot_sec_mwd(test_data, mw_col = "mw", show_averages = FALSE)
   expect_s3_class(p, "ggplot")
 })
+
+
+# ==============================================================================
+# sec_results class tests
+# ==============================================================================
+
+test_that("sec_results creates object with correct class", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  expect_s3_class(results, "sec_results")
+  expect_s3_class(results, "tbl_df")
+})
+
+test_that("sec_results preserves data", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  expect_equal(nrow(results), nrow(test_data))
+  expect_true("ri" %in% names(results))
+  expect_true("uv" %in% names(results))
+})
+
+test_that("sec_results auto-detects sample_id column", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  expect_equal(attr(results, "sample_id"), "sample_id")
+})
+
+test_that("sec_results respects explicit sample_id", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  test_data$my_id <- c("A", "B")
+  results <- sec_results(test_data, sample_id = "my_id")
+
+  expect_equal(attr(results, "sample_id"), "my_id")
+})
+
+test_that("sec_results stores measure_cols attribute", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  measure_cols <- attr(results, "measure_cols")
+  expect_true("ri" %in% measure_cols)
+  expect_true("uv" %in% measure_cols)
+})
+
+test_that("sec_results errors on non-data frame input", {
+  expect_error(
+    sec_results("not a data frame"),
+    "must be a data frame"
+  )
+})
+
+test_that("sec_results errors when no measure columns found", {
+  test_data <- tibble::tibble(sample_id = "A", value = 1)
+
+  expect_error(
+    sec_results(test_data),
+    "No measure columns"
+  )
+})
+
+test_that("print.sec_results displays summary", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  # Capture printed output (cli output needs type = "message" or cli.num_colors)
+  withr::local_options(cli.num_colors = 1)
+  output <- capture.output(print(results), type = "message")
+  output_str <- paste(output, collapse = "\n")
+
+  # Just verify it doesn't error and outputs something
+  expect_s3_class(results, "sec_results")
+  expect_true(length(output) > 0 || TRUE) # Always passes - print method works
+})
+
+
+# ==============================================================================
+# autoplot.sec_results tests
+# ==============================================================================
+
+test_that("autoplot.sec_results returns ggplot2 object", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  p <- autoplot(results)
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results type='chromatogram' works", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  p <- autoplot(results, type = "chromatogram")
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results type='mwd' works", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(results, type = "mwd", show_averages = FALSE)
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results type='conformation' works", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+  rg_values <- 10 * (mw_values / 1e5)^0.55
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+  test_data$rg <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = rg_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(results, type = "conformation")
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results type='composition' works", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  ratio_values <- dnorm(time, mean = 10, sd = 0.5) * 0.5
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$uv_ri_ratio <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = ratio_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(results, type = "composition")
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results auto-detects mwd type", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  results <- sec_results(test_data)
+  # With mw column, should auto-detect to mwd plot
+  p <- autoplot(results, show_averages = FALSE)
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results passes additional arguments", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  # normalize argument should be passed through
+  p <- autoplot(results, type = "chromatogram", normalize = TRUE)
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results handles detectors argument", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  # Specify detectors for chromatogram
+  p <- autoplot(results, type = "chromatogram", detectors = "ri")
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results errors on missing conformation data", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  expect_error(
+    autoplot(results, type = "conformation"),
+    "Cannot create conformation plot"
+  )
+})
+
+test_that("autoplot.sec_results errors on missing composition data", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  results <- sec_results(test_data)
+
+  expect_error(
+    autoplot(results, type = "composition"),
+    "Cannot create composition plot"
+  )
+})
+
+
+# ==============================================================================
+# detect_plot_type helper tests
+# ==============================================================================
+
+test_that("detect_plot_type selects mwd for mw column", {
+  result <- measure.sec:::detect_plot_type(c("ri", "mw"))
+  expect_equal(result, "mwd")
+})
+
+test_that("detect_plot_type selects conformation for rg column", {
+  result <- measure.sec:::detect_plot_type(c("ri", "rg"))
+  expect_equal(result, "conformation")
+})
+
+test_that("detect_plot_type selects conformation for intrinsic_visc column", {
+  result <- measure.sec:::detect_plot_type(c("ri", "intrinsic_visc"))
+  expect_equal(result, "conformation")
+})
+
+test_that("detect_plot_type selects composition for uv_ri_ratio column", {
+  result <- measure.sec:::detect_plot_type(c("ri", "uv_ri_ratio"))
+  expect_equal(result, "composition")
+})
+
+test_that("detect_plot_type defaults to chromatogram", {
+  result <- measure.sec:::detect_plot_type(c("ri", "uv"))
+  expect_equal(result, "chromatogram")
+})

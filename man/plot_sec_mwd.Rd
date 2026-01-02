@@ -78,10 +78,12 @@ plot_sec_mwd(processed_data, show_averages = FALSE)
 }
 \seealso{
 Other sec-visualization: 
+\code{\link{autoplot.sec_results}()},
 \code{\link{plot_sec}()},
 \code{\link{plot_sec_calibration}()},
 \code{\link{plot_sec_chromatogram}()},
 \code{\link{plot_sec_conformation}()},
-\code{\link{plot_sec_multidetector}()}
+\code{\link{plot_sec_multidetector}()},
+\code{\link{sec_results}()}
 }
 \concept{sec-visualization}

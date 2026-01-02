@@ -18,6 +18,7 @@ Depends:
 Imports:
     cli,
     dplyr,
+    ggplot2,
     purrr,
     rlang,
     recipes,
@@ -25,11 +26,11 @@ Imports:
     tibble,
     tidyr
 Suggests:
-    ggplot2,
     knitr,
     patchwork,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8

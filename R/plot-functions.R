@@ -7,6 +7,395 @@
 #' @importFrom tidyr pivot_wider pivot_longer
 NULL
 
+
+# ==============================================================================
+# sec_results Class
+# ==============================================================================
+
+#' Create SEC Results Object
+#'
+#' Constructor for the `sec_results` class, which wraps processed SEC/GPC data
+#' and enables ggplot2's `autoplot()` functionality for automatic visualization.
+#'
+#' @param data A data frame containing processed SEC results with measure columns.
+#'   Typically the output from `bake()` on a prepped SEC recipe.
+#' @param sample_id Optional. Column name containing sample identifiers.
+#'   If `NULL`, auto-detection is attempted.
+#'
+#' @return An object of class `sec_results` (inherits from `tbl_df`).
+#'
+#' @details
+#' The `sec_results` class provides a unified interface for SEC/GPC data that
+#' enables:
+#' \itemize{
+#'   \item Automatic plot selection via `autoplot()`
+#'   \item Integration with ggplot2 theming
+#'   \item Summary statistics access
+#' }
+#'
+#' **Expected Data Structure:**
+#' The input data should contain measure columns (list columns with `location`
+#' and `value` components). Common measure columns include:
+#' \itemize{
+#'   \item `ri`, `uv`, `mals` - Detector signals
+#'   \item `mw` - Molecular weight from calibration
+#'   \item `concentration` - Concentration profile
+#'   \item `intrinsic_visc` - Intrinsic viscosity
+#'   \item `rg` - Radius of gyration
+#' }
+#'
+#' @family sec-visualization
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' library(recipes)
+#' library(measure)
+#' library(ggplot2)
+#'
+#' # Process SEC data
+#' processed <- recipe(~., data = sec_triple_detect) |>
+#'   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+#'   step_sec_baseline(measures = "ri") |>
+#'   step_sec_conventional_cal(standards = ps_standards) |>
+#'   prep() |>
+#'   bake(new_data = NULL)
+#'
+#' # Wrap as sec_results
+#' results <- sec_results(processed, sample_id = "sample_id")
+#'
+#' # Use autoplot for automatic visualization
+#' autoplot(results)
+#' autoplot(results, type = "mwd")
+#' autoplot(results, type = "chromatogram", normalize = TRUE)
+#' }
+sec_results <- function(data, sample_id = NULL) {
+  if (!is.data.frame(data)) {
+    cli::cli_abort("{.arg data} must be a data frame.")
+  }
+
+  # Validate that we have measure columns
+  measure_cols <- find_measure_cols(data)
+  if (length(measure_cols) == 0) {
+    cli::cli_abort(c(
+      "No measure columns found in {.arg data}.",
+      "i" = "SEC results should contain processed measure columns.",
+      "i" = "Use {.fn bake} on a prepped SEC recipe to create processed data."
+    ))
+  }
+
+  # Auto-detect sample_id if not provided
+  if (is.null(sample_id)) {
+    potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
+    for (col in potential_ids) {
+      if (col %in% names(data)) {
+        sample_id <- col
+        break
+      }
+    }
+  }
+
+  # Construct the object
+  new_sec_results(data, sample_id = sample_id, measure_cols = measure_cols)
+}
+
+#' Low-level constructor for sec_results
+#' @noRd
+new_sec_results <- function(
+  x,
+  sample_id = NULL,
+  measure_cols = character()
+) {
+  stopifnot(is.data.frame(x))
+
+  structure(
+    tibble::as_tibble(x),
+    class = c("sec_results", class(tibble::tibble())),
+    sample_id = sample_id,
+    measure_cols = measure_cols
+  )
+}
+
+#' @export
+print.sec_results <- function(x, ...) {
+  sample_id_col <- attr(x, "sample_id")
+  measure_cols <- attr(x, "measure_cols")
+
+  cli::cli_h1("SEC Analysis Results")
+  cli::cli_bullets(c(
+    "*" = "Samples: {nrow(x)}",
+    "*" = "Measure columns: {.val {measure_cols}}",
+    "*" = "Sample ID column: {.val {sample_id_col %||% 'none'}}"
+  ))
+  cli::cli_text("")
+
+  # Print as tibble
+  NextMethod()
+}
+
+
+# ==============================================================================
+# autoplot Method
+# ==============================================================================
+
+#' Automatic Plot for SEC Results
+#'
+#' Creates a ggplot2 visualization appropriate for SEC/GPC analysis results.
+#' Automatically selects the best plot type based on available data, or
+#' allows explicit selection via the `type` argument.
+#'
+#' @param object An `sec_results` object created by [sec_results()].
+#' @param type Type of plot to create. One of:
+#'   - `"auto"`: Automatically detect best plot type (default)
+#'   - `"chromatogram"`: Basic chromatogram (signal vs time)
+#'   - `"mwd"`: Molecular weight distribution
+#'   - `"conformation"`: Rg-MW or eta-MW scaling plot
+#'   - `"composition"`: UV/RI ratio or composition plot
+#' @param overlay_mw Logical. For chromatogram plots, overlay molecular weight
+#'   on secondary y-axis? Default is `TRUE` when MW data is available.
+#' @param detectors Character vector of detector columns to plot for
+#'   multi-detector overlays. Default is `c("ri", "uv", "mals")`.
+#' @param log_scale Character. Apply log scale to axes. Options:
+#'   - `"x"`: Log scale on x-axis (default for MWD plots)
+#'   - `"y"`: Log scale on y-axis
+#'   - `"both"`: Log scale on both axes
+#'   - `"none"`: No log scaling
+#' @param ... Additional arguments passed to the underlying plot function.
+#'
+#' @return A ggplot2 object.
+#'
+#' @details
+#' When `type = "auto"` (default), the plot type is selected based on
+#' available data:
+#' \enumerate{
+#'   \item If `mw` column present: MWD plot
+#'   \item If multiple detectors: Multi-detector overlay
+#'   \item Otherwise: Basic chromatogram
+#' }
+#'
+#' The resulting ggplot2 object can be further customized with standard
+
+#' ggplot2 functions like `+ theme_bw()` or `+ labs()`.
+#'
+#' @family sec-visualization
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' library(ggplot2)
+#'
+#' # Create sec_results object
+#' results <- sec_results(processed_sec_data)
+#'
+#' # Auto-detect best plot type
+#' autoplot(results)
+#'
+#' # Specific plot types
+#' autoplot(results, type = "chromatogram")
+#' autoplot(results, type = "mwd", show_averages = TRUE)
+#' autoplot(results, type = "conformation")
+#'
+#' # Customize with ggplot2
+#' autoplot(results, type = "mwd") +
+#'   theme_classic() +
+#'   labs(title = "Molecular Weight Distribution")
+#' }
+autoplot.sec_results <- function(
+  object,
+  type = c("auto", "chromatogram", "mwd", "conformation", "composition"),
+  overlay_mw = TRUE,
+  detectors = c("ri", "uv", "mals"),
+  log_scale = c("x", "none", "y", "both"),
+  ...
+) {
+  check_ggplot2_available()
+
+  type <- match.arg(type)
+  log_scale <- match.arg(log_scale)
+
+  # Get measure columns from attributes
+  measure_cols <- attr(object, "measure_cols")
+  sample_id <- attr(object, "sample_id")
+
+  if (is.null(measure_cols) || length(measure_cols) == 0) {
+    measure_cols <- find_measure_cols(object)
+  }
+
+  # Auto-detect plot type
+  if (type == "auto") {
+    type <- detect_plot_type(measure_cols)
+  }
+
+  # Dispatch to appropriate plot function
+  p <- switch(
+    type,
+    "chromatogram" = autoplot_chromatogram(
+      object,
+      sample_id = sample_id,
+      overlay_mw = overlay_mw,
+      detectors = detectors,
+      ...
+    ),
+    "mwd" = autoplot_mwd(
+      object,
+      sample_id = sample_id,
+      log_scale = log_scale,
+      ...
+    ),
+    "conformation" = autoplot_conformation(
+      object,
+      sample_id = sample_id,
+      ...
+    ),
+    "composition" = autoplot_composition(
+      object,
+      sample_id = sample_id,
+      ...
+    ),
+    cli::cli_abort("Unknown plot type: {.val {type}}")
+  )
+
+  p
+}
+
+#' Detect best plot type based on available measures
+#' @noRd
+detect_plot_type <- function(measure_cols) {
+  # Check for MW-related columns -> MWD plot
+  if ("mw" %in% measure_cols) {
+    return("mwd")
+  }
+
+  # Check for conformation data -> conformation plot
+  if ("rg" %in% measure_cols || "intrinsic_visc" %in% measure_cols) {
+    return("conformation")
+  }
+
+  # Check for composition data
+  if ("composition" %in% measure_cols || "uv_ri_ratio" %in% measure_cols) {
+    return("composition")
+  }
+
+  # Default to chromatogram
+  "chromatogram"
+}
+
+#' Internal: Chromatogram plot for autoplot
+#' @noRd
+autoplot_chromatogram <- function(
+  object,
+  sample_id = NULL,
+  overlay_mw = TRUE,
+  detectors = c("ri", "uv", "mals"),
+  ...
+) {
+  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+
+  # Find available detectors
+  available_detectors <- intersect(detectors, measure_cols)
+
+  if (length(available_detectors) == 0) {
+    # Use first available measure
+    available_detectors <- measure_cols[1]
+  }
+
+  if (length(available_detectors) > 1) {
+    # Multi-detector overlay
+    plot_sec_multidetector(
+      object,
+      detectors = available_detectors,
+      sample_id = sample_id,
+      ...
+    )
+  } else {
+    # Single detector chromatogram
+    plot_sec_chromatogram(
+      object,
+      measures = available_detectors,
+      sample_id = sample_id,
+      ...
+    )
+  }
+}
+
+#' Internal: MWD plot for autoplot
+#' @noRd
+autoplot_mwd <- function(object, sample_id = NULL, log_scale = "x", ...) {
+  # Use existing MWD plot function
+  p <- plot_sec_mwd(
+    object,
+    sample_id = sample_id,
+    log_mw = log_scale %in% c("x", "both"),
+    ...
+  )
+
+  # Apply y log scale if requested
+  if (log_scale %in% c("y", "both")) {
+    p <- p + ggplot2::scale_y_log10()
+  }
+
+  p
+}
+
+#' Internal: Conformation plot for autoplot
+#' @noRd
+autoplot_conformation <- function(object, sample_id = NULL, ...) {
+  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+
+  # Determine conformation plot type
+  if ("rg" %in% measure_cols && "mw" %in% measure_cols) {
+    type <- "rg_mw"
+  } else if ("intrinsic_visc" %in% measure_cols && "mw" %in% measure_cols) {
+    type <- "eta_mw"
+  } else if ("rh" %in% measure_cols && "mw" %in% measure_cols) {
+    type <- "rh_mw"
+  } else {
+    cli::cli_abort(c(
+      "Cannot create conformation plot.",
+      "i" = "Need both MW and conformation data (rg, intrinsic_visc, or rh).",
+      "i" = "Available measures: {.val {measure_cols}}"
+    ))
+  }
+
+  plot_sec_conformation(
+    object,
+    type = type,
+    sample_id = sample_id,
+    ...
+  )
+}
+
+#' Internal: Composition plot for autoplot
+#' @noRd
+autoplot_composition <- function(object, sample_id = NULL, ...) {
+  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+
+  # Check for composition column
+  comp_col <- NULL
+  if ("composition" %in% measure_cols) {
+    comp_col <- "composition"
+  } else if ("uv_ri_ratio" %in% measure_cols) {
+    comp_col <- "uv_ri_ratio"
+  }
+
+  if (is.null(comp_col)) {
+    cli::cli_abort(c(
+      "Cannot create composition plot.",
+      "i" = "Need composition or uv_ri_ratio measure column.",
+      "i" = "Available measures: {.val {measure_cols}}"
+    ))
+  }
+
+  # Use chromatogram plot for composition
+  plot_sec_chromatogram(
+    object,
+    measures = comp_col,
+    sample_id = sample_id,
+    y_label = if (comp_col == "composition") "Composition" else "UV/RI Ratio",
+    ...
+  )
+}
+
 #' Plot SEC Chromatogram
 #'
 #' Creates a chromatogram plot from SEC data showing detector signal vs
