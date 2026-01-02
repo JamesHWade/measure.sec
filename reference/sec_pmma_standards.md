@@ -95,8 +95,12 @@ for polystyrene standards
 for universal calibration
 
 Other sec-data:
+[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
 [`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
+[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
 [`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
 [`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
 
 Other sec-calibration:

@@ -370,6 +370,14 @@ Example datasets for SEC analysis
   : SEC Polystyrene Calibration Standards
 - [`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md)
   : SEC PMMA Calibration Standards
+- [`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md)
+  : Copolymer SEC Data for Composition Analysis
+- [`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md)
+  : Protein SEC Data with Aggregates
+- [`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md)
+  : Branched Polymer SEC Data
+- [`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md)
+  : System Suitability Test Data
 
 # Articles
 
