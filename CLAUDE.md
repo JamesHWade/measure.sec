@@ -2,12 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Worktree Requirement for Parallel Agents
+
+**Multiple agents MUST use separate git worktrees.** Working in the same directory causes file conflicts.
+
+```bash
+# BEFORE starting work, check if you're in a worktree or the main repo
+git rev-parse --show-toplevel
+
+# If another agent might be working, create your own worktree:
+git worktree add ../measure.sec-<issue-id> -b feat/<short-description>
+cd ../measure.sec-<issue-id>
+```
+
+**Why this matters**: Without worktrees, parallel agents modify the same files, causing:
+- Uncommitted changes from one agent appearing in another's work
+- Merge conflicts within the same working directory
+- Lost or mixed work between features
+
 ## ⚠️ CRITICAL: Feature Branch Workflow
 
 **NEVER commit directly to main.** Before starting ANY implementation work:
 
 ```bash
-# 1. ALWAYS create a feature branch FIRST
+# 1. ALWAYS create a feature branch FIRST (in a worktree if parallel)
 git checkout -b feat/<short-description>
 # or: git checkout -b fix/<short-description>
 
@@ -264,20 +282,28 @@ When in doubt, prefer beads—persistence you don't need beats lost context.
 
 ## Feature Branch + PR Workflow
 
-### 1. Find Work and Create Feature Branch
+### 1. Find Work and Create Worktree + Feature Branch
 
-**⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.**
+**⚠️ IMPORTANT: Create a worktree and feature branch BEFORE claiming the issue or writing any code.**
 
 ```bash
 bd ready                              # Find available work
 bd show <id>                          # Review issue details
 
-# CREATE BRANCH FIRST - before any code changes!
-git checkout -b feat/<short-description>-<id>
-# or: git checkout -b fix/<short-description>
+# CHECK: Is another agent working in this directory?
+git status                            # Any uncommitted changes = another agent!
+
+# CREATE WORKTREE (required for parallel work)
+git worktree add ../measure.sec-<id> -b feat/<short-description>
+cd ../measure.sec-<id>
+
+# OR if you're the only agent, just create a branch:
+git checkout -b feat/<short-description>
 
 bd update <id> --status=in_progress   # Now claim the work
 ```
+
+**Rule**: If `git status` shows ANY uncommitted changes you didn't make, STOP and create a worktree.
 
 ### 2. Work and Sync
 
@@ -360,6 +386,8 @@ git status  # Should show "up to date with origin"
 ### Critical Rules
 
 - **NEVER commit directly to main** - always use feature branches
+- **CHECK `git status` FIRST** - if you see uncommitted changes you didn't make, create a worktree
+- **Use worktrees for parallel work** - multiple agents = multiple worktrees
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing—that leaves work stranded locally
 - NEVER say "ready to push when you are"—YOU must push
@@ -367,21 +395,31 @@ git status  # Should show "up to date with origin"
 - Always run `bd sync` before ending session
 - Always include beads issue ID in commit messages
 
-## Parallel Sessions & Worktrees
+## Parallel Sessions & Worktrees (MANDATORY)
 
-This project is configured with `sync-branch: beads-sync`, enabling safe parallel work. The daemon commits beads changes to a dedicated branch, preventing conflicts when multiple Claude sessions run simultaneously.
+**Worktrees are REQUIRED when multiple agents work simultaneously.** This project uses `sync-branch: beads-sync` for beads, but code changes still conflict without worktrees.
 
-### Creating Worktrees for Parallel Features
+### Why Worktrees Are Required
+
+Without worktrees, parallel agents:
+- Share the same working directory files
+- See each other's uncommitted changes
+- Accidentally commit each other's work
+- Create merge conflicts locally (before even pushing)
+
+### Creating Worktrees for Each Feature
 
 ```bash
-# From main repo, create worktree for a feature
-git worktree add ../measure.sec-feature-x -b feat/feature-x
-cd ../measure.sec-feature-x
+# From main repo, create worktree for YOUR feature
+git worktree add ../measure.sec-<issue-id> -b feat/<short-description>
+cd ../measure.sec-<issue-id>
+
+# Verify you're in the worktree
+pwd  # Should show ../measure.sec-<issue-id>
 
 # Beads commands work normally - shared database, safe daemon
 bd ready
-bd create "Implement feature" -t task -p 2
-bd sync
+bd update <id> --status=in_progress
 ```
 
 All worktrees share the same `.beads` database in the main repo. Changes are immediately visible across sessions.
@@ -403,7 +441,7 @@ bd sync --merge
 ### Cleanup After PR Merged
 
 ```bash
-git worktree remove ../measure.sec-feature-x
+git worktree remove ../measure.sec-<issue-id>
 git worktree prune
 ```
 

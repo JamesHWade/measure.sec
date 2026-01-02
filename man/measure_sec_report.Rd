@@ -147,6 +147,7 @@ measure_sec_report(
 }
 \seealso{
 Other sec-export: 
+\code{\link{measure_sec_compare}()},
 \code{\link{measure_sec_slice_table}()},
 \code{\link{measure_sec_summary_table}()}
 }
