@@ -144,7 +144,7 @@ step_sec_oligomer <- function(
 
   # Warn if MW seems outside protein range
 
-if (monomer_mw < 10000 || monomer_mw > 1000000) {
+  if (monomer_mw < 10000 || monomer_mw > 1000000) {
     cli::cli_warn(
       c(
         "Monomer MW ({monomer_mw} Da) is outside typical protein range (10-1000 kDa).",
@@ -232,8 +232,10 @@ prep.step_sec_oligomer <- function(x, training, info = NULL, ...) {
   # Validate mw_column exists if provided
   if (!is.null(x$mw_column)) {
     measure_cols <- find_measure_cols(training)
-    if (!x$mw_column %in% names(training) &&
-        !x$mw_column %in% measure_cols) {
+    if (
+      !x$mw_column %in% names(training) &&
+        !x$mw_column %in% measure_cols
+    ) {
       cli::cli_warn(
         c(
           "MW column {.val {x$mw_column}} not found in data.",
@@ -290,16 +292,20 @@ prep.step_sec_oligomer <- function(x, training, info = NULL, ...) {
   peak_idx <- 1
 
   for (i in seq(2, n - 1)) {
-    if (value_smooth[i] > value_smooth[i - 1] &&
+    if (
+      value_smooth[i] > value_smooth[i - 1] &&
         value_smooth[i] > value_smooth[i + 1] &&
-        value_smooth[i] > min_height) {
+        value_smooth[i] > min_height
+    ) {
       # Found a local maximum, find boundaries
       # Find left boundary (valley or start)
       left <- i
       for (j in seq(i - 1, 1, -1)) {
-        if (j == 1 ||
+        if (
+          j == 1 ||
             value_smooth[j] < value_smooth[j + 1] &&
-            value_smooth[j] < value_smooth[j - 1]) {
+              value_smooth[j] < value_smooth[j - 1]
+        ) {
           left <- j
           break
         }
@@ -312,9 +318,11 @@ prep.step_sec_oligomer <- function(x, training, info = NULL, ...) {
       # Find right boundary (valley or end)
       right <- i
       for (j in seq(i + 1, n)) {
-        if (j == n ||
+        if (
+          j == n ||
             value_smooth[j] < value_smooth[j - 1] &&
-            value_smooth[j] < value_smooth[j + 1]) {
+              value_smooth[j] < value_smooth[j + 1]
+        ) {
           right <- j
           break
         }

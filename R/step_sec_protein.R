@@ -176,9 +176,11 @@ step_sec_protein <- function(
   }
 
   # Validate aggregate_threshold
-  if (!is.numeric(aggregate_threshold) ||
+  if (
+    !is.numeric(aggregate_threshold) ||
       aggregate_threshold < 0 ||
-      aggregate_threshold > 1) {
+      aggregate_threshold > 1
+  ) {
     cli::cli_abort("{.arg aggregate_threshold} must be between 0 and 1.")
   }
 

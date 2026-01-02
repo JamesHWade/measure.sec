@@ -277,7 +277,6 @@ prep.step_sec_band_broadening <- function(x, training, info = NULL, ...) {
 
 #' @export
 bake.step_sec_band_broadening <- function(object, new_data, ...) {
-
   sigma <- object$estimated_sigma
   tau <- object$estimated_tau
 
@@ -471,8 +470,10 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   if (left_idx < max_idx && left_idx > 1) {
     denom_left <- y[left_idx + 1] - y[left_idx]
     if (abs(denom_left) > .Machine$double.eps) {
-      x_left <- x[left_idx] + (half_max - y[left_idx]) /
-        denom_left * (x[left_idx + 1] - x[left_idx])
+      x_left <- x[left_idx] +
+        (half_max - y[left_idx]) /
+          denom_left *
+          (x[left_idx + 1] - x[left_idx])
     } else {
       x_left <- x[left_idx]
     }
@@ -491,8 +492,10 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   if (right_idx > max_idx && right_idx > 1) {
     denom_right <- y[right_idx] - y[right_idx - 1]
     if (abs(denom_right) > .Machine$double.eps) {
-      x_right <- x[right_idx - 1] + (half_max - y[right_idx - 1]) /
-        denom_right * (x[right_idx] - x[right_idx - 1])
+      x_right <- x[right_idx - 1] +
+        (half_max - y[right_idx - 1]) /
+          denom_right *
+          (x[right_idx] - x[right_idx - 1])
     } else {
       x_right <- x[right_idx]
     }

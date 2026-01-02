@@ -80,7 +80,6 @@ test_that("step_sec_band_broadening requires sigma or calibration_peak", {
   peak_data <- create_broadened_peak_data()
   test_data <- create_test_sec_data(peak_data)
 
-
   expect_error(
     recipes::recipe(~., data = test_data) |>
       step_sec_band_broadening(),
@@ -207,7 +206,7 @@ test_that("step_sec_band_broadening applies Tung correction", {
   # True narrow peak with sigma = 0.3
   true_signal <- dnorm(time, mean = 12, sd = 0.3)
   # Add broadening by smoothing
-  broadened <- stats::filter(true_signal, rep(1/15, 15), sides = 2)
+  broadened <- stats::filter(true_signal, rep(1 / 15, 15), sides = 2)
   broadened[is.na(broadened)] <- 0
   broadened <- as.numeric(broadened)
 
