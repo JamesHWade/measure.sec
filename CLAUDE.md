@@ -3,6 +3,23 @@
 This file provides guidance to Claude Code (claude.ai/code) when working
 with code in this repository.
 
+## ⚠️ CRITICAL: Feature Branch Workflow
+
+**NEVER commit directly to main.** Before starting ANY implementation
+work:
+
+``` bash
+# 1. ALWAYS create a feature branch FIRST
+git checkout -b feat/<short-description>
+# or: git checkout -b fix/<short-description>
+
+# 2. Then claim the issue and start work
+bd update <id> --status=in_progress
+```
+
+This is mandatory even for small changes. The only commits to main
+should be merge commits from PRs.
+
 ## Package Overview
 
 `measure.sec` is an R package that extends the `measure` package with
@@ -258,29 +275,30 @@ context.
 
 ## Feature Branch + PR Workflow
 
-### 1. Find and Claim Work
+### 1. Find Work and Create Feature Branch
+
+**⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or
+writing any code.**
 
 ``` bash
 bd ready                              # Find available work
 bd show <id>                          # Review issue details
-bd update <id> --status=in_progress   # Claim it
-```
 
-### 2. Create Feature Branch
-
-``` bash
+# CREATE BRANCH FIRST - before any code changes!
 git checkout -b feat/<short-description>
 # or: git checkout -b fix/<short-description>
+
+bd update <id> --status=in_progress   # Now claim the work
 ```
 
-### 3. Work and Sync
+### 2. Work and Sync
 
 ``` bash
 # Make changes...
 bd sync                               # Sync beads periodically
 ```
 
-### 4. Run Quality Gates
+### 3. Run Quality Gates
 
 ``` bash
 air format .                          # Format R files
@@ -289,29 +307,29 @@ R -e 'devtools::document()'           # Generate docs
 R -e 'devtools::check()'              # Full package check
 ```
 
-### 5. Create PR and Close Issue
+### 4. Create PR and Close Issue
 
 When code is complete and ready for review:
 
 ``` bash
 git add .
-git commit -m "feat: description"
+git commit -m "feat: description (measure.sec-xxx)"  # Include beads issue ID!
 bd close <id>                         # Close beads issue - work is done
 bd sync
 git push -u origin HEAD
-gh pr create --title "..." --body "Resolves beads-XXX"
+gh pr create --title "..." --body "Resolves measure.sec-xxx"
 ```
 
 **Important**: Close the beads issue when the *work* is complete, not
 when the PR is merged. The issue tracks your work; the PR tracks the
 review/merge process.
 
-### 6. Human Reviews and Merges PR
+### 5. Human Reviews and Merges PR
 
 Agents create PRs but **do not merge them**. Humans review and merge PRs
 to main.
 
-### 7. After PR Merged (Cleanup)
+### 6. After PR Merged (Cleanup)
 
 ``` bash
 git checkout main
@@ -324,37 +342,46 @@ git branch -d feat/<short-description>
 **CRITICAL**: Before ending a session, complete ALL steps. Work is NOT
 complete until `git push` succeeds.
 
-### Mandatory Checklist
+### Mandatory Checklist (Feature Branch Workflow)
 
 ``` bash
-# 1. File issues for remaining work
+# 1. Verify you're on a feature branch (NOT main!)
+git branch --show-current  # Should NOT be 'main'
+
+# 2. File issues for remaining work
 bd create "Follow-up task" --description="..." -t task -p 2
 
-# 2. Run quality gates (if code changed)
-air format . && jarl check . --fix
+# 3. Run quality gates (if code changed)
+air format .
+jarl check . --fix
 R -e 'devtools::check()'
 
-# 3. Update issue status
-bd close <completed-issues>
+# 4. Update issue status
+bd close <completed-issues>           # Include reason if helpful
 bd update <in-progress-issues> --status=open  # If not finished
 
-# 4. Commit and push
+# 5. Commit with beads issue ID
 git add .
-git commit -m "..."
+git commit -m "feat: description (measure.sec-xxx)"  # Always include issue ID!
 bd sync
-git push
+git push -u origin HEAD
 
-# 5. Verify
+# 6. Create PR (if not already created)
+gh pr create --title "..." --body "Resolves measure.sec-xxx"
+
+# 7. Verify
 git status  # Should show "up to date with origin"
 ```
 
 ### Critical Rules
 
+- **NEVER commit directly to main** - always use feature branches
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing—that leaves work stranded locally
 - NEVER say “ready to push when you are”—YOU must push
 - If push fails, resolve and retry until it succeeds
 - Always run `bd sync` before ending session
+- Always include beads issue ID in commit messages
 
 ## Parallel Sessions & Worktrees
 
