@@ -93,6 +93,14 @@ sec_results <- function(data, sample_id = NULL) {
         break
       }
     }
+  } else {
+    # Validate explicit sample_id exists
+    if (!sample_id %in% names(data)) {
+      cli::cli_abort(c(
+        "Column {.val {sample_id}} not found in {.arg data}.",
+        "i" = "Available columns: {.val {names(data)}}"
+      ))
+    }
   }
 
   # Construct the object
@@ -174,7 +182,6 @@ print.sec_results <- function(x, ...) {
 #' }
 #'
 #' The resulting ggplot2 object can be further customized with standard
-
 #' ggplot2 functions like `+ theme_bw()` or `+ labs()`.
 #'
 #' @family sec-visualization

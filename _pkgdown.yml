@@ -39,6 +39,8 @@ reference:
 - title: Visualization
   desc: Publication-ready plots for SEC/GPC results
   contents:
+  - sec_results
+  - autoplot.sec_results
   - plot_sec
   - plot_sec_chromatogram
   - plot_sec_mwd

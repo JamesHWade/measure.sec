@@ -705,6 +705,70 @@ test_that("autoplot.sec_results errors on missing composition data", {
   )
 })
 
+test_that("autoplot.sec_results handles log_scale='y'", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(results, type = "mwd", log_scale = "y", show_averages = FALSE)
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results handles log_scale='both'", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(
+    results,
+    type = "mwd",
+    log_scale = "both",
+    show_averages = FALSE
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("autoplot.sec_results handles log_scale='none'", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  results <- sec_results(test_data)
+  p <- autoplot(
+    results,
+    type = "mwd",
+    log_scale = "none",
+    show_averages = FALSE
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
 
 # ==============================================================================
 # detect_plot_type helper tests
