@@ -80,6 +80,7 @@ Other sec-visualization:
 \code{\link{plot_sec}()},
 \code{\link{plot_sec_calibration}()},
 \code{\link{plot_sec_chromatogram}()},
+\code{\link{plot_sec_composition}()},
 \code{\link{plot_sec_conformation}()},
 \code{\link{plot_sec_mwd}()}
 }
