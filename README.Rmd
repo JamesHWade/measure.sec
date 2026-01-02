@@ -37,6 +37,58 @@ knitr::opts_chunk$set(
 - **Quality control**: System suitability testing (resolution, plate count, asymmetry)
 - **Polymer analysis**: Branching indices and Mark-Houwink parameter estimation
 
+### Package Workflow
+
+```mermaid
+flowchart LR
+    subgraph Input["📥 Input"]
+        A[Raw Chromatogram]
+        B[Calibration Standards]
+    end
+
+    subgraph Preprocessing["⚙️ Preprocessing"]
+        C[step_measure_input_long]
+        D[step_sec_baseline]
+        E[step_sec_detector_delay]
+    end
+
+    subgraph Detectors["📊 Detector Processing"]
+        F[step_sec_ri]
+        G[step_sec_uv]
+        H[step_sec_mals]
+        I[step_sec_viscometer]
+    end
+
+    subgraph Calibration["📐 Calibration"]
+        J[step_sec_conventional_cal]
+        K[step_sec_universal_cal]
+    end
+
+    subgraph Analysis["🔬 Analysis"]
+        L[step_sec_mw_averages]
+        M[step_sec_composition]
+        N[step_sec_aggregates]
+    end
+
+    subgraph Output["📤 Output"]
+        O[MW Averages<br>Mn, Mw, Mz, PDI]
+        P[Distributions<br>& Plots]
+        Q[QC Metrics]
+    end
+
+    A --> C
+    C --> D
+    D --> E
+    E --> F & G & H & I
+    B --> J & K
+    F & G --> J
+    H --> L
+    J & K --> L & M
+    L --> O
+    M --> P
+    N --> Q
+```
+
 ## Installation
 
 You can install the development version of measure.sec from [GitHub](https://github.com/) with:

@@ -27,6 +27,24 @@ This vignette covers:
 3. A basic single-detector workflow
 4. Calculating molecular weight averages
 
+### Basic Workflow Overview
+
+```mermaid
+flowchart TD
+    A[Raw Chromatogram<br>RI, UV, MALS signals] --> B[step_measure_input_long<br>Convert to measure format]
+    B --> C[step_sec_baseline<br>Baseline correction]
+    C --> D[step_sec_ri / step_sec_uv<br>Detector processing]
+    D --> E{Calibration<br>method?}
+    E -->|Standards| F[step_sec_conventional_cal<br>Polynomial fit]
+    E -->|Absolute| G[step_sec_mals<br>Light scattering]
+    F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
+    G --> H
+    H --> I[Results<br>MW averages, distributions, plots]
+
+    style A fill:#e1f5fe
+    style I fill:#c8e6c9
+```
+
 ## Installation
 
 ```{r install, eval = FALSE}

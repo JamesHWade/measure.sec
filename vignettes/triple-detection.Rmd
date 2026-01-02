@@ -27,6 +27,55 @@ This vignette covers:
 3. Triple detection workflows (RI + UV + MALS)
 4. Calculating absolute molecular weight
 
+### Multi-Detector Workflow
+
+```mermaid
+flowchart TB
+    subgraph Input["Raw Multi-Detector Data"]
+        A1[RI Signal]
+        A2[UV Signal]
+        A3[MALS Signal]
+        A4[Viscometer]
+    end
+
+    subgraph Align["⏱️ Detector Alignment"]
+        B[step_sec_detector_delay<br>Correct inter-detector delays]
+    end
+
+    subgraph Process["📊 Signal Processing"]
+        C1[step_sec_ri<br>dn/dc normalization]
+        C2[step_sec_uv<br>ε normalization]
+        C3[step_sec_mals<br>Zimm/Debye fit]
+        C4[step_sec_viscometer<br>Intrinsic viscosity]
+    end
+
+    subgraph Calculate["🔬 Calculations"]
+        D1[Concentration<br>from RI or UV]
+        D2[Absolute MW<br>from MALS]
+        D3[Rg from<br>angular dependence]
+        D4[Intrinsic viscosity<br>from viscometer]
+    end
+
+    subgraph Results["📤 Results"]
+        E1[MW Averages<br>Mn, Mw, Mz]
+        E2[Conformation<br>Rg vs MW]
+        E3[Branching<br>g, g′ indices]
+    end
+
+    A1 & A2 & A3 & A4 --> B
+    B --> C1 & C2 & C3 & C4
+    C1 --> D1
+    C2 --> D1
+    C3 --> D2 & D3
+    C4 --> D4
+    D1 & D2 --> E1
+    D2 & D3 --> E2
+    D3 & D4 --> E3
+
+    style Input fill:#e3f2fd
+    style Results fill:#e8f5e9
+```
+
 ## Setup
 
 ```{r setup}
