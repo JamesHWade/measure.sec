@@ -28,20 +28,22 @@ output with measure columns (MW, concentration, etc.).}
 }
 Default includes all available metrics.}
 
-\item{plot}{Logical. Generate comparison plot? Default is \code{TRUE}.}
+\item{plot}{Logical. Generate MWD comparison plot? Default is \code{TRUE}.
+Note: Plot is only generated when \code{"mwd"} is included in \code{metrics}.}
 
 \item{reference}{Integer or character. Which sample to use as reference for
 percent differences. Default is \code{1} (first sample).}
 
 \item{digits}{Integer. Number of decimal places for numeric values.
-Default is \code{2}.}
+Default is \code{2}. Must be non-negative.}
 }
 \value{
 A list of class \code{sec_comparison} containing:
 \describe{
 \item{summary}{Tibble with comparison metrics for all samples}
 \item{differences}{Tibble with absolute and percent differences vs reference}
-\item{plot}{ggplot2 object (if \code{plot = TRUE})}
+\item{plot}{ggplot2 object (if \code{plot = TRUE} and \code{"mwd"} in \code{metrics}),
+otherwise \code{NULL}}
 \item{samples}{Character vector of sample names}
 \item{reference}{Name of reference sample}
 }
@@ -58,6 +60,16 @@ This function is useful for:
 \item Process optimization
 \item Quality control
 }
+
+\strong{Input Data Handling:}
+
+When input data frames contain multiple rows (e.g., multiple injections),
+numeric metrics are averaged across rows. For single-row data frames
+(typical for processed SEC results), values are used directly.
+
+The function recognizes molecular weight columns with either naming
+convention: prefixed (\code{mw_mn}, \code{mw_mw}, \code{mw_mz}, \code{mw_dispersity}) or
+standard (\code{Mn}, \code{Mw}, \code{Mz}, \code{dispersity}).
 
 \strong{Comparison Metrics:}
 

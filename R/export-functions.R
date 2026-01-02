@@ -380,17 +380,19 @@ print.sec_summary_table <- function(x, ...) {
 #'     \item `"branching"`: Branching metrics (if available)
 #'   }
 #'   Default includes all available metrics.
-#' @param plot Logical. Generate comparison plot? Default is `TRUE`.
+#' @param plot Logical. Generate MWD comparison plot? Default is `TRUE`.
+#'   Note: Plot is only generated when `"mwd"` is included in `metrics`.
 #' @param reference Integer or character. Which sample to use as reference for
 #'   percent differences. Default is `1` (first sample).
 #' @param digits Integer. Number of decimal places for numeric values.
-#'   Default is `2`.
+#'   Default is `2`. Must be non-negative.
 #'
 #' @return A list of class `sec_comparison` containing:
 #'   \describe{
 #'     \item{summary}{Tibble with comparison metrics for all samples}
 #'     \item{differences}{Tibble with absolute and percent differences vs reference}
-#'     \item{plot}{ggplot2 object (if `plot = TRUE`)}
+#'     \item{plot}{ggplot2 object (if `plot = TRUE` and `"mwd"` in `metrics`),
+#'       otherwise `NULL`}
 #'     \item{samples}{Character vector of sample names}
 #'     \item{reference}{Name of reference sample}
 #'   }
@@ -403,6 +405,16 @@ print.sec_summary_table <- function(x, ...) {
 #'   \item Process optimization
 #'   \item Quality control
 #' }
+#'
+#' **Input Data Handling:**
+#'
+#' When input data frames contain multiple rows (e.g., multiple injections),
+#' numeric metrics are averaged across rows. For single-row data frames
+#' (typical for processed SEC results), values are used directly.
+#'
+#' The function recognizes molecular weight columns with either naming
+#' convention: prefixed (`mw_mn`, `mw_mw`, `mw_mz`, `mw_dispersity`) or
+#' standard (`Mn`, `Mw`, `Mz`, `dispersity`).
 #'
 #' **Comparison Metrics:**
 #'
@@ -466,6 +478,34 @@ measure_sec_compare <- function(
         "All inputs must be data frames. Input {i} is not a data frame."
       )
     }
+  }
+
+  # Validate parameters
+  if (!is.logical(plot) || length(plot) != 1 || is.na(plot)) {
+    cli::cli_abort("{.arg plot} must be TRUE or FALSE.")
+  }
+
+  if (!is.numeric(digits) || length(digits) != 1 || digits < 0) {
+    cli::cli_abort("{.arg digits} must be a non-negative number.")
+  }
+  digits <- as.integer(digits)
+
+  # Validate metrics
+
+  valid_metrics <- c("mw_averages", "mwd", "branching")
+  invalid_metrics <- setdiff(metrics, valid_metrics)
+  if (length(invalid_metrics) > 0) {
+    cli::cli_warn(c(
+      "Unrecognized metrics ignored: {.val {invalid_metrics}}",
+      "i" = "Valid options: {.val {valid_metrics}}"
+    ))
+  }
+  metrics <- intersect(metrics, valid_metrics)
+  if (length(metrics) == 0) {
+    cli::cli_abort(c(
+      "No valid metrics specified.",
+      "i" = "Valid options: {.val {valid_metrics}}"
+    ))
   }
 
   # Generate sample names
@@ -629,6 +669,9 @@ create_comparison_plot <- function(data_list, samples) {
 
   # Combine data for plotting
   plot_data_list <- list()
+  skipped_no_mw <- character()
+  skipped_invalid_rows <- list()
+  filtered_non_positive <- list()
 
   for (i in seq_along(data_list)) {
     df <- data_list[[i]]
@@ -637,7 +680,7 @@ create_comparison_plot <- function(data_list, samples) {
     mw_col <- if ("mw" %in% names(df)) "mw" else NULL
 
     if (is.null(mw_col)) {
-      # Skip samples without MW data
+      skipped_no_mw <- c(skipped_no_mw, samples[i])
       next
     }
 
@@ -647,20 +690,65 @@ create_comparison_plot <- function(data_list, samples) {
         (is.list(df[[mw_col]]) && length(df[[mw_col]]) > 0)
     ) {
       # Handle measure_list format
+      invalid_rows <- 0
+      total_filtered <- 0
+
       for (j in seq_len(nrow(df))) {
         m <- df[[mw_col]][[j]]
-        if (!is.null(m) && !is.null(m$location) && !is.null(m$value)) {
-          slice_df <- tibble::tibble(
-            sample = samples[i],
-            location = m$location,
-            mw = m$value
-          )
-          # Filter positive MW values
-          slice_df <- slice_df[slice_df$mw > 0, ]
-          if (nrow(slice_df) > 0) {
-            plot_data_list <- c(plot_data_list, list(slice_df))
-          }
+        if (is.null(m) || is.null(m$location) || is.null(m$value)) {
+          invalid_rows <- invalid_rows + 1
+          next
         }
+
+        slice_df <- tibble::tibble(
+          sample = samples[i],
+          location = m$location,
+          mw = m$value
+        )
+
+        # Filter positive MW values and track count
+        original_rows <- nrow(slice_df)
+        slice_df <- slice_df[slice_df$mw > 0, ]
+        total_filtered <- total_filtered + (original_rows - nrow(slice_df))
+
+        if (nrow(slice_df) > 0) {
+          plot_data_list <- c(plot_data_list, list(slice_df))
+        }
+      }
+
+      if (invalid_rows > 0) {
+        skipped_invalid_rows[[samples[i]]] <- invalid_rows
+      }
+      if (total_filtered > 0) {
+        filtered_non_positive[[samples[i]]] <- total_filtered
+      }
+    }
+  }
+
+  # Report warnings for skipped/filtered data
+  if (length(skipped_no_mw) > 0) {
+    cli::cli_warn(c(
+      "Sample{?s} excluded from plot (no {.field mw} column): {.val {skipped_no_mw}}",
+      "i" = "MWD plot requires an {.field mw} measure column."
+    ))
+  }
+
+  if (length(skipped_invalid_rows) > 0) {
+    for (sample_name in names(skipped_invalid_rows)) {
+      cli::cli_warn(
+        "Sample {.val {sample_name}}: Skipped {skipped_invalid_rows[[sample_name]]} row{?s} with missing/invalid MW data."
+      )
+    }
+  }
+
+  if (length(filtered_non_positive) > 0) {
+    for (sample_name in names(filtered_non_positive)) {
+      n_filtered <- filtered_non_positive[[sample_name]]
+      if (n_filtered > 10) {
+        cli::cli_warn(c(
+          "Sample {.val {sample_name}}: {n_filtered} points with non-positive MW values excluded.",
+          "!" = "This may indicate calibration issues."
+        ))
       }
     }
   }

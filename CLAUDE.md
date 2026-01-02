@@ -441,7 +441,7 @@ bd sync --merge
 ### Cleanup After PR Merged
 
 ```bash
-git worktree remove ../measure.sec-feature-x
+git worktree remove ../measure.sec-<issue-id>
 git worktree prune
 ```
 
