@@ -103,6 +103,15 @@ LALS provides absolute MW using a low-angle detector (e.g., ~7 degrees).
 It assumes P(theta) ~ 1 for small particles and is most accurate when
 angular dependence is minimal.
 
+**When to use LALS vs MALS:**
+
+- **LALS**: Preferred for smaller molecules (Rg \< ~10 nm) or when
+  multi-angle data is not available. Single-angle measurement is faster
+  and simpler but cannot determine Rg.
+
+- **MALS**: Required for large molecules where angular dependence is
+  significant. Provides both Mw and Rg from extrapolation to zero angle.
+
 ## See also
 
 Other sec-detectors:
