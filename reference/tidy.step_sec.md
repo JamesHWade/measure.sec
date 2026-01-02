@@ -15,6 +15,9 @@ tidy(x, ...)
 # S3 method for class 'step_sec_baseline'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_broad_standard'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_composition'
 tidy(x, ...)
 

@@ -277,6 +277,8 @@ Molecular weight calibration methods
 
 - [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
   : Conventional Calibration for SEC Using Narrow Standards
+- [`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md)
+  : Broad Standard Calibration for SEC/GPC
 - [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
   : Universal Calibration for SEC
 

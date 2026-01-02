@@ -102,6 +102,7 @@ Other sec-data:
 Other sec-calibration:
 [`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
 [`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
+[`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md),
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md),
 [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
 

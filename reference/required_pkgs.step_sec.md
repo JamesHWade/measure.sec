@@ -14,6 +14,9 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_baseline'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_broad_standard'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_composition'
 required_pkgs(x, ...)
 
