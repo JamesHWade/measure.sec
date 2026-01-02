@@ -101,13 +101,15 @@ A **`measure_tbl`** is a tibble (data frame) representing a single chromatogram 
 
 Think of it as one line on a chromatogram plot. For example, an RI detector signal from one injection is stored as a `measure_tbl`.
 
-### measure_list: Multiple Chromatograms
+### measure_list: Multiple Chromatograms (Internal Format)
 
-A **`measure_list`** is a list column containing multiple `measure_tbl` objects. This is how you store chromatograms alongside sample metadata in a tidy format:
+A **`measure_list`** is a list column containing multiple `measure_tbl` objects. This is the **internal format** used by measure.sec recipe steps—you typically won't create this yourself. Instead, `step_measure_input_long()` converts your raw data into this format automatically.
+
+**After conversion**, your data will look like this:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  sample_id   known_mw   dn_dc       ri_signal               │
+│  sample_id   known_mw   dn_dc       ri                      │
 ├──────────────────────────────────────────────────────────────┤
 │  "PS-50K"    50000      0.185       <measure_list[1]>       │
 │  "PS-100K"   100000     0.185       <measure_list[1]>       │
@@ -128,31 +130,33 @@ This nested structure has several advantages:
 
 1. **Tidy organization**: Each row is one sample with all its metadata and chromatogram(s)
 2. **Batch processing**: Apply the same recipe to many samples at once
-3. **Multiple detectors**: Store RI, UV, and MALS signals as separate columns in the same data frame
+3. **Multiple detectors**: Store RI, UV, and MALS signals as separate nested columns
 4. **Metadata preservation**: Sample properties like `dn_dc` or `known_mw` travel with the chromatogram
 
 ## Example Dataset
 
-The package includes `sec_triple_detect`, a synthetic multi-detector SEC dataset. This is a good starting point for learning the workflow before analyzing your own data.
+The package includes `sec_triple_detect`, a synthetic multi-detector SEC dataset in **long format** (one row per time point). This is a good starting point for learning the workflow before analyzing your own data.
 
 ```{r data}
 # Load the example dataset
 data(sec_triple_detect, package = "measure.sec")
 
-# View the structure - notice the measure_list columns (ri_signal, uv_signal, etc.)
+# View the structure - this is LONG format data (one row per time point)
+# The signal columns (ri_signal, uv_signal, mals_signal) are numeric vectors
 glimpse(sec_triple_detect)
 ```
 
 The dataset contains:
 
 - **12 polymer samples**: polystyrene (PS), PMMA, PEG, and copolymers
-- **Three detector signals**: RI, UV, and MALS (stored as measure_list columns)
+- **~2,000 time points per sample**: giving 24,012 total rows
+- **Three detector signals**: RI, UV, and MALS (as numeric columns)
 - **Known molecular weights**: For validating your analysis
 - **Optical constants**: dn/dc and extinction coefficients (needed for quantitative analysis)
 
 ```{r samples}
-# View the sample types in the dataset
-# Each row represents one injection with a complete set of detector signals
+# View the unique samples in the dataset
+# Each sample_id represents one injection; the chromatogram spans many rows
 sec_triple_detect |>
   distinct(sample_id, sample_type, polymer_type) |>
   print(n = 12)
@@ -168,9 +172,10 @@ Let's walk through a complete analysis of a polystyrene sample using the RI dete
 ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-50K")
 
-# View the data structure - notice ri_signal is a measure_list
+# View sample info - note this is still long format (many rows per sample)
 ps_sample |>
-  select(sample_id, polymer_type, known_mw, ri_signal)
+  select(sample_id, polymer_type, known_mw, elution_time, ri_signal) |>
+  head()
 ```
 
 ### Step 1: Create a Recipe
@@ -205,8 +210,7 @@ rec <- recipe(~., data = ps_sample) |>
   # Second: correct the baseline (removes drift and offset)
   step_sec_baseline(measures = "ri") |>
   # Third: process RI signal using the sample's dn/dc value
-  # dn/dc converts refractive index change to concentration
-
+  # Dividing by dn/dc converts the RI signal to concentration-proportional units
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
 ```
 
@@ -240,30 +244,7 @@ The most common outputs from SEC analysis are **molecular weight averages**:
 - **Mz (z-average)**: Even more sensitive to high MW species
 - **Dispersity (Mw/Mn)**: Measures breadth of the MW distribution (1.0 = monodisperse)
 
-Use `step_sec_mw_averages()` to calculate these:
-
-```{r mw-averages, eval = FALSE}
-rec <- recipe(~., data = ps_sample) |>
-  step_measure_input_long(
-    ri_signal,
-    location = vars(elution_time),
-    col_name = "ri"
-  ) |>
-  step_sec_baseline(measures = "ri") |>
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  # Calculate MW averages
-  # mw_column tells the step where to find molecular weight values
-  # (from calibration or known standards)
-  step_sec_mw_averages(mw_column = "known_mw")
-
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
-
-# View molecular weight results
-# New columns are added with mw_ prefix
-result |>
-  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
-```
+Use `step_sec_mw_averages()` to calculate these. This step requires that the x-axis (location) values already represent log₁₀(MW)—which is what `step_sec_conventional_cal()` provides. See the Calibration section below for the complete workflow.
 
 ## Calibration Curves
 
@@ -318,16 +299,23 @@ rec <- recipe(~., data = ps_sample) |>
   ) |>
   step_sec_baseline(measures = "ri") |>
   # Apply conventional calibration using polystyrene standards
+  # This converts retention time to log10(MW) on the x-axis
   # fit_type options: "linear", "quadratic", "cubic" (most common)
   step_sec_conventional_cal(
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
-  # Now we can calculate MW averages using the calibrated MW values
-  step_sec_mw_averages(measures = "log_mw")
+  # Calculate MW averages from the calibrated chromatogram
+  # The calibration step converted location values to log10(MW)
+  step_sec_mw_averages()
 
 prepped <- prep(rec)
 result <- bake(prepped, new_data = NULL)
+
+# View molecular weight results
+# New columns are added with mw_ prefix
+result |>
+  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
 
 > **Important**: Conventional calibration assumes your sample has similar hydrodynamic behavior to your standards. Polystyrene standards work well for other flexible polymers in THF, but for proteins in aqueous SEC, use protein standards or light scattering.
