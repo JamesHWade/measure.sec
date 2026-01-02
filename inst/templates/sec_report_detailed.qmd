@@ -1,0 +1,256 @@
+---
+title: "`r params$title`"
+author: "`r params$author`"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-expand: 2
+    code-fold: true
+    embed-resources: true
+    theme: flatly
+    number-sections: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+  docx:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+params:
+  title: "SEC Analysis Report - Detailed"
+  author: ""
+  data: NULL
+  sample_id: NULL
+  include_plots: true
+  include_summary: true
+  include_slice_table: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(measure.sec)
+library(ggplot2)
+
+# Extract data from params
+data <- params$data
+sample_id <- params$sample_id
+```
+
+# Executive Summary
+
+This detailed report presents comprehensive Size Exclusion Chromatography (SEC) analysis results including molecular weight distributions, detector signals, and data quality metrics.
+
+```{r}
+#| label: sample-info
+#| results: asis
+
+n_samples <- nrow(data)
+measure_cols <- find_measure_cols(data)
+cat(sprintf("- **Samples analyzed:** %d\n", n_samples))
+cat(sprintf("- **Detector channels:** %d\n", length(measure_cols)))
+cat(sprintf("- **Available signals:** %s\n", paste(measure_cols, collapse = ", ")))
+```
+
+# Molecular Weight Results
+
+## Summary Table
+
+```{r}
+#| label: summary-table
+
+if (params$include_summary) {
+  summary_tbl <- measure_sec_summary_table(
+    data,
+    sample_id = sample_id
+  )
+
+  knitr::kable(
+    summary_tbl,
+    caption = "Molecular Weight Summary",
+    digits = 0,
+    format.args = list(big.mark = ",")
+  )
+}
+```
+
+## Molecular Weight Comparison
+
+```{r}
+#| label: mw-comparison
+#| fig-width: 10
+#| fig-height: 6
+
+if (params$include_summary && "Mn" %in% names(data) && "Mw" %in% names(data)) {
+  # Create comparison bar plot
+  mw_data <- data.frame(
+    sample = if (!is.null(sample_id) && sample_id %in% names(data)) {
+      data[[sample_id]]
+    } else {
+      paste("Sample", seq_len(nrow(data)))
+    },
+    Mn = data$Mn,
+    Mw = data$Mw
+  )
+
+  mw_long <- tidyr::pivot_longer(
+    mw_data,
+    cols = c("Mn", "Mw"),
+    names_to = "Average",
+    values_to = "MW"
+  )
+
+  ggplot(mw_long, aes(x = sample, y = MW, fill = Average)) +
+    geom_col(position = "dodge") +
+    scale_y_log10(labels = scales::label_scientific()) +
+    labs(
+      title = "Molecular Weight Comparison",
+      x = NULL,
+      y = "Molecular Weight (g/mol)"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+```
+
+# Chromatographic Data
+
+## Raw Chromatograms
+
+```{r}
+#| label: chromatogram
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "SEC Chromatogram overlay showing detector response vs. elution time."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_chromatogram(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Chromatogram plot not available.*\n")
+    }
+  )
+}
+```
+
+## Multi-Detector View
+
+```{r}
+#| label: multidetector
+#| fig-width: 10
+#| fig-height: 8
+#| fig-cap: "Multi-detector overlay showing all available detector signals."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_multidetector(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Multi-detector plot not available.*\n")
+    }
+  )
+}
+```
+
+# Molecular Weight Distribution
+
+## Distribution Curves
+
+```{r}
+#| label: mwd
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Molecular weight distribution showing the differential weight fraction."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_mwd(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Molecular weight distribution plot not available.*\n")
+    }
+  )
+}
+```
+
+## Conformation Plot
+
+```{r}
+#| label: conformation
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Conformation plot showing molecular size vs. molecular weight relationship."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_conformation(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Conformation plot not available. Requires MALS data.*\n")
+    }
+  )
+}
+```
+
+# Slice Data
+
+```{r}
+#| label: slice-table
+#| results: asis
+
+if (params$include_slice_table) {
+  slice_tbl <- measure_sec_slice_table(
+    data,
+    sample_id = sample_id,
+    pivot = TRUE
+  )
+
+  # Show first 100 rows as preview
+  preview <- head(slice_tbl, 100)
+
+  cat("## Data Preview (first 100 slices)\n\n")
+  knitr::kable(
+    preview,
+    caption = "Slice-by-slice SEC data",
+    digits = 4
+  )
+
+  cat(sprintf("\n\n*Showing %d of %d total data points.*\n", nrow(preview), nrow(slice_tbl)))
+} else {
+  cat("*Slice table not included. Set `include_slice_table = TRUE` to include.*\n")
+}
+```
+
+# Appendix
+
+## Analysis Parameters
+
+```{r}
+#| label: analysis-info
+#| results: asis
+
+cat("- **Report generated:** ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
+cat("- **measure.sec version:** ", as.character(packageVersion("measure.sec")), "\n")
+cat("- **R version:** ", R.version.string, "\n")
+```
+
+---
+
+*Report generated with measure.sec v`r packageVersion("measure.sec")`*
