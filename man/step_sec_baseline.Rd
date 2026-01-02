@@ -112,6 +112,7 @@ rec <- recipe(~., data = sec_triple_detect) |>
 correction, \code{\link[measure:step_measure_detrend]{measure::step_measure_detrend()}} for simple trend removal.
 
 Other sec-chromatography: 
+\code{\link{step_sec_band_broadening}()},
 \code{\link{step_sec_detector_delay}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},

@@ -70,6 +70,13 @@
     # Baseline correction
     list("step_sec_baseline", "baseline", "SEC-optimized baseline correction"),
 
+    # Band broadening correction
+    list(
+      "step_sec_band_broadening",
+      "signal-processing",
+      "Axial dispersion (band broadening) correction"
+    ),
+
     # Composition analysis
     list(
       "step_sec_uv_ri_ratio",

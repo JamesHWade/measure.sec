@@ -97,6 +97,7 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 \seealso{
 Other sec-chromatography: 
+\code{\link{step_sec_band_broadening}()},
 \code{\link{step_sec_baseline}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},
