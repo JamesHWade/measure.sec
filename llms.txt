@@ -363,6 +363,8 @@ Data extraction and export utilities
   : Extract Slice-by-Slice SEC Data
 - [`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md)
   : Generate SEC Summary Table
+- [`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md)
+  : Compare Multiple SEC Samples
 
 ## Datasets
 

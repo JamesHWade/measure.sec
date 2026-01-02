@@ -50,14 +50,25 @@
 
 <p>This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.</p>
 <div class="section level2">
+<h2 id="id_️-critical-worktree-requirement-for-parallel-agents">⚠️ CRITICAL: Worktree Requirement for Parallel Agents<a class="anchor" aria-label="anchor" href="#id_%EF%B8%8F-critical-worktree-requirement-for-parallel-agents"></a></h2>
+<p><strong>Multiple agents MUST use separate git worktrees.</strong> Working in the same directory causes file conflicts.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># BEFORE starting work, check if you're in a worktree or the main repo</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">git</span> rev-parse <span class="at">--show-toplevel</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># If another agent might be working, create your own worktree:</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">git</span> worktree add ../measure.sec-<span class="op">&lt;</span>issue-id<span class="op">&gt;</span> -b feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="bu">cd</span> ../measure.sec-<span class="op">&lt;</span>issue-id<span class="op">&gt;</span></span></code></pre></div>
+<p><strong>Why this matters</strong>: Without worktrees, parallel agents modify the same files, causing: - Uncommitted changes from one agent appearing in another’s work - Merge conflicts within the same working directory - Lost or mixed work between features</p>
+</div>
+<div class="section level2">
 <h2 id="id_️-critical-feature-branch-workflow">⚠️ CRITICAL: Feature Branch Workflow<a class="anchor" aria-label="anchor" href="#id_%EF%B8%8F-critical-feature-branch-workflow"></a></h2>
 <p><strong>NEVER commit directly to main.</strong> Before starting ANY implementation work:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># 1. ALWAYS create a feature branch FIRST</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># 2. Then claim the issue and start work</span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># 1. ALWAYS create a feature branch FIRST (in a worktree if parallel)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># 2. Then claim the issue and start work</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress</span></code></pre></div>
 <p>This is mandatory even for small changes. The only commits to main should be merge commits from PRs.</p>
 </div>
 <div class="section level2">
@@ -67,7 +78,7 @@
 </div>
 <div class="section level2">
 <h2 id="development-commands">Development Commands<a class="anchor" aria-label="anchor" href="#development-commands"></a></h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Generate documentation from roxygen2 comments</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -94,13 +105,13 @@
 <div class="section level3">
 <h3 id="recipe-step-pattern">Recipe Step Pattern<a class="anchor" aria-label="anchor" href="#recipe-step-pattern"></a></h3>
 <p>Every preprocessing step follows the recipes framework with three required methods:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Constructor function</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>step_sec_<span class="sc">*</span>() → calls recipes<span class="sc">::</span><span class="fu">add_step</span>()</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Three S3 methods required:</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>prep.step_sec_<span class="sc">*</span>()   <span class="co"># Learn parameters from training data</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>bake.step_sec_<span class="sc">*</span>()   <span class="co"># Apply transformation to new data</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>tidy.step_sec_<span class="sc">*</span>()   <span class="co"># Return step parameters as tibble</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Constructor function</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>step_sec_<span class="sc">*</span>() → calls recipes<span class="sc">::</span><span class="fu">add_step</span>()</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Three S3 methods required:</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>prep.step_sec_<span class="sc">*</span>()   <span class="co"># Learn parameters from training data</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>bake.step_sec_<span class="sc">*</span>()   <span class="co"># Apply transformation to new data</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>tidy.step_sec_<span class="sc">*</span>()   <span class="co"># Return step parameters as tibble</span></span></code></pre></div>
 <p>Step implementations are in <code>R/</code> with naming convention: <code>step_sec_{operation}.R</code></p>
 </div>
 <div class="section level3">
@@ -136,12 +147,12 @@
 <div class="section level2">
 <h2 id="linting--formatting">Linting &amp; Formatting<a class="anchor" aria-label="anchor" href="#linting--formatting"></a></h2>
 <p>The project uses two complementary code quality tools:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Linter - catches logic/efficiency issues</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">jarl</span> check .        <span class="co"># Check for issues</span></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span>  <span class="co"># Auto-fix issues</span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co"># Formatter - enforces consistent code style</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="ex">air</span> format .        <span class="co"># Format all R files</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Linter - catches logic/efficiency issues</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ex">jarl</span> check .        <span class="co"># Check for issues</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span>  <span class="co"># Auto-fix issues</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co"># Formatter - enforces consistent code style</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="ex">air</span> format .        <span class="co"># Format all R files</span></span></code></pre></div>
 <p><strong>jarl</strong> catches: - <code>vector_logic</code>: Using <code>|</code> instead of <code>||</code> in <code>if()</code> statements - Other potential bugs and inefficiencies</p>
 <p><strong>air</strong> enforces: - 2-space indentation in function signatures - One argument per line for long function calls - Closing parenthesis on own line for multi-line constructs - Consistent line length limits</p>
 <p>Run both before committing to pass CI checks.</p>
@@ -149,26 +160,26 @@
 <div class="section level2">
 <h2 id="pr-workflow">PR Workflow<a class="anchor" aria-label="anchor" href="#pr-workflow"></a></h2>
 <p>Before creating a pull request, run the following checks:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># 1. Format all R files (including tests)</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ex">air</span> format .</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co"># 2. Check for linting issues and auto-fix</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co"># 3. Generate/update documentation</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::document()'</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co"># 4. Run full package check (should pass with 0 errors, 0 warnings)</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co"># 5. Build pkgdown site to verify documentation renders correctly</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'pkgdown::build_site()'</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># 1. Format all R files (including tests)</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">air</span> format .</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co"># 2. Check for linting issues and auto-fix</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># 3. Generate/update documentation</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::document()'</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co"># 4. Run full package check (should pass with 0 errors, 0 warnings)</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co"># 5. Build pkgdown site to verify documentation renders correctly</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'pkgdown::build_site()'</span></span></code></pre></div>
 <p>When adding new exported functions, ensure they are included in <code>_pkgdown.yml</code> under the appropriate reference section.</p>
 </div>
 <div class="section level2">
 <h2 id="technique-pack-registration">Technique Pack Registration<a class="anchor" aria-label="anchor" href="#technique-pack-registration"></a></h2>
 <p>The package registers with <code>measure</code> in <code>R/zzz.R</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">.onLoad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">libname</span>, <span class="va">pkgname</span><span class="op">)</span> <span class="op">{</span></span>
 <span></span>
 <span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/register_measure_pack.html" class="external-link">register_measure_pack</a></span><span class="op">(</span></span>
@@ -179,7 +190,7 @@
 <span>  <span class="co"># ... register individual steps</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <p>Users can discover available steps with:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/measure_steps.html" class="external-link">measure_steps</a></span><span class="op">(</span>techniques <span class="op">=</span> <span class="st">"SEC/GPC"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -214,27 +225,27 @@
 </div>
 <div class="section level3">
 <h3 id="essential-commands">Essential Commands<a class="anchor" aria-label="anchor" href="#essential-commands"></a></h3>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Finding work</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Show issues ready to work (no blockers)</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="ex">bd</span> list <span class="at">--status</span><span class="op">=</span>open                 <span class="co"># All open issues</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Detailed issue view with dependencies</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co"># Working on issues</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Claim work</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Mark complete</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id1<span class="op">&gt;</span> <span class="op">&lt;</span>id2<span class="op">&gt;</span> ...              <span class="co"># Close multiple issues</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co"># Creating issues (always include description for context)</span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Fix bug"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"Details here"</span> <span class="at">-t</span> bug <span class="at">-p</span> 1</span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co"># Dependencies</span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="ex">bd</span> dep add <span class="op">&lt;</span>issue<span class="op">&gt;</span> <span class="op">&lt;</span>depends-on<span class="op">&gt;</span>       <span class="co"># Add dependency</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="ex">bd</span> blocked                            <span class="co"># Show blocked issues</span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="ex">bd</span> dep tree <span class="op">&lt;</span>id<span class="op">&gt;</span>                      <span class="co"># View dependency tree</span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co"># Sync</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync with git remote</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--status</span>                      <span class="co"># Check sync status</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Finding work</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Show issues ready to work (no blockers)</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="ex">bd</span> list <span class="at">--status</span><span class="op">=</span>open                 <span class="co"># All open issues</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Detailed issue view with dependencies</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co"># Working on issues</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Claim work</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Mark complete</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id1<span class="op">&gt;</span> <span class="op">&lt;</span>id2<span class="op">&gt;</span> ...              <span class="co"># Close multiple issues</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co"># Creating issues (always include description for context)</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Fix bug"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"Details here"</span> <span class="at">-t</span> bug <span class="at">-p</span> 1</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co"># Dependencies</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="ex">bd</span> dep add <span class="op">&lt;</span>issue<span class="op">&gt;</span> <span class="op">&lt;</span>depends-on<span class="op">&gt;</span>       <span class="co"># Add dependency</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="ex">bd</span> blocked                            <span class="co"># Show blocked issues</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="ex">bd</span> dep tree <span class="op">&lt;</span>id<span class="op">&gt;</span>                      <span class="co"># View dependency tree</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co"># Sync</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync with git remote</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--status</span>                      <span class="co"># Check sync status</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="when-to-use-beads-vs-todowrite">When to Use Beads vs TodoWrite<a class="anchor" aria-label="anchor" href="#when-to-use-beads-vs-todowrite"></a></h3>
@@ -254,38 +265,45 @@
 <div class="section level2">
 <h2 id="feature-branch--pr-workflow">Feature Branch + PR Workflow<a class="anchor" aria-label="anchor" href="#feature-branch--pr-workflow"></a></h2>
 <div class="section level3">
-<h3 id="id_1-find-work-and-create-feature-branch">1. Find Work and Create Feature Branch<a class="anchor" aria-label="anchor" href="#id_1-find-work-and-create-feature-branch"></a></h3>
-<p><strong>⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.</strong></p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Find available work</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Review issue details</span></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># CREATE BRANCH FIRST - before any code changes!</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span>-<span class="op">&lt;</span>id<span class="op">&gt;</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co"># or: git checkout -b fix/&lt;short-description&gt;</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Now claim the work</span></span></code></pre></div>
+<h3 id="id_1-find-work-and-create-worktree--feature-branch">1. Find Work and Create Worktree + Feature Branch<a class="anchor" aria-label="anchor" href="#id_1-find-work-and-create-worktree--feature-branch"></a></h3>
+<p><strong>⚠️ IMPORTANT: Create a worktree and feature branch BEFORE claiming the issue or writing any code.</strong></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="ex">bd</span> ready                              <span class="co"># Find available work</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="ex">bd</span> show <span class="op">&lt;</span>id<span class="op">&gt;</span>                          <span class="co"># Review issue details</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co"># CHECK: Is another agent working in this directory?</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">git</span> status                            <span class="co"># Any uncommitted changes = another agent!</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co"># CREATE WORKTREE (required for parallel work)</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="fu">git</span> worktree add ../measure.sec-<span class="op">&lt;</span>id<span class="op">&gt;</span> -b feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="bu">cd</span> ../measure.sec-<span class="op">&lt;</span>id<span class="op">&gt;</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co"># OR if you're the only agent, just create a branch:</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress   <span class="co"># Now claim the work</span></span></code></pre></div>
+<p><strong>Rule</strong>: If <code>git status</code> shows ANY uncommitted changes you didn’t make, STOP and create a worktree.</p>
 </div>
 <div class="section level3">
 <h3 id="id_2-work-and-sync">2. Work and Sync<a class="anchor" aria-label="anchor" href="#id_2-work-and-sync"></a></h3>
-<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Make changes...</span></span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync beads periodically</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Make changes...</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="ex">bd</span> sync                               <span class="co"># Sync beads periodically</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_3-run-quality-gates">3. Run Quality Gates<a class="anchor" aria-label="anchor" href="#id_3-run-quality-gates"></a></h3>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="ex">air</span> format .                          <span class="co"># Format R files</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span>                    <span class="co"># Lint and fix</span></span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::document()'</span>           <span class="co"># Generate docs</span></span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span>              <span class="co"># Full package check</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="ex">air</span> format .                          <span class="co"># Format R files</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span>                    <span class="co"># Lint and fix</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::document()'</span>           <span class="co"># Generate docs</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span>              <span class="co"># Full package check</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_4-create-pr-and-close-issue">4. Create PR and Close Issue<a class="anchor" aria-label="anchor" href="#id_4-create-pr-and-close-issue"></a></h3>
 <p>When code is complete and ready for review:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (measure.sec-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves measure.sec-xxx"</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (measure.sec-xxx)"</span>  <span class="co"># Include beads issue ID!</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>id<span class="op">&gt;</span>                         <span class="co"># Close beads issue - work is done</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="ex">bd</span> sync</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves measure.sec-xxx"</span></span></code></pre></div>
 <p><strong>Important</strong>: Close the beads issue when the <em>work</em> is complete, not when the PR is merged. The issue tracks your work; the PR tracks the review/merge process.</p>
 </div>
 <div class="section level3">
@@ -294,9 +312,9 @@
 </div>
 <div class="section level3">
 <h3 id="id_6-after-pr-merged-cleanup">6. After PR Merged (Cleanup)<a class="anchor" aria-label="anchor" href="#id_6-after-pr-merged-cleanup"></a></h3>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">git</span> pull</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="fu">git</span> pull</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -304,37 +322,41 @@
 <p><strong>CRITICAL</strong>: Before ending a session, complete ALL steps. Work is NOT complete until <code>git push</code> succeeds.</p>
 <div class="section level3">
 <h3 id="mandatory-checklist-feature-branch-workflow">Mandatory Checklist (Feature Branch Workflow)<a class="anchor" aria-label="anchor" href="#mandatory-checklist-feature-branch-workflow"></a></h3>
-<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># 1. Verify you're on a feature branch (NOT main!)</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="ex">air</span> format .</span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span></span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span></span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a></span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a></span>
-<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
-<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
-<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (measure.sec-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
-<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
-<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
-<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a></span>
-<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
-<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves measure.sec-xxx"</span></span>
-<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a></span>
-<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
-<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># 1. Verify you're on a feature branch (NOT main!)</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">--show-current</span>  <span class="co"># Should NOT be 'main'</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co"># 2. File issues for remaining work</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Follow-up task"</span> <span class="at">--description</span><span class="op">=</span><span class="st">"..."</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co"># 3. Run quality gates (if code changed)</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="ex">air</span> format .</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="ex">jarl</span> check . <span class="at">--fix</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co"># 4. Update issue status</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="ex">bd</span> close <span class="op">&lt;</span>completed-issues<span class="op">&gt;</span>           <span class="co"># Include reason if helpful</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>in-progress-issues<span class="op">&gt;</span> --status=open  <span class="co"># If not finished</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co"># 5. Commit with beads issue ID</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description (measure.sec-xxx)"</span>  <span class="co"># Always include issue ID!</span></span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="ex">bd</span> sync</span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="fu">git</span> push <span class="at">-u</span> origin HEAD</span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co"># 6. Create PR (if not already created)</span></span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--title</span> <span class="st">"..."</span> <span class="at">--body</span> <span class="st">"Resolves measure.sec-xxx"</span></span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a></span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co"># 7. Verify</span></span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="fu">git</span> status  <span class="co"># Should show "up to date with origin"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="critical-rules">Critical Rules<a class="anchor" aria-label="anchor" href="#critical-rules"></a></h3>
 <ul><li>
 <strong>NEVER commit directly to main</strong> - always use feature branches</li>
+<li>
+<strong>CHECK <code>git status</code> FIRST</strong> - if you see uncommitted changes you didn’t make, create a worktree</li>
+<li>
+<strong>Use worktrees for parallel work</strong> - multiple agents = multiple worktrees</li>
 <li>Work is NOT complete until <code>git push</code> succeeds</li>
 <li>NEVER stop before pushing—that leaves work stranded locally</li>
 <li>NEVER say “ready to push when you are”—YOU must push</li>
@@ -344,38 +366,44 @@
 </ul></div>
 </div>
 <div class="section level2">
-<h2 id="parallel-sessions--worktrees">Parallel Sessions &amp; Worktrees<a class="anchor" aria-label="anchor" href="#parallel-sessions--worktrees"></a></h2>
-<p>This project is configured with <code>sync-branch: beads-sync</code>, enabling safe parallel work. The daemon commits beads changes to a dedicated branch, preventing conflicts when multiple Claude sessions run simultaneously.</p>
+<h2 id="parallel-sessions--worktrees-mandatory">Parallel Sessions &amp; Worktrees (MANDATORY)<a class="anchor" aria-label="anchor" href="#parallel-sessions--worktrees-mandatory"></a></h2>
+<p><strong>Worktrees are REQUIRED when multiple agents work simultaneously.</strong> This project uses <code>sync-branch: beads-sync</code> for beads, but code changes still conflict without worktrees.</p>
 <div class="section level3">
-<h3 id="creating-worktrees-for-parallel-features">Creating Worktrees for Parallel Features<a class="anchor" aria-label="anchor" href="#creating-worktrees-for-parallel-features"></a></h3>
-<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># From main repo, create worktree for a feature</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="fu">git</span> worktree add ../measure.sec-feature-x <span class="at">-b</span> feat/feature-x</span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="bu">cd</span> ../measure.sec-feature-x</span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a></span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co"># Beads commands work normally - shared database, safe daemon</span></span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="ex">bd</span> ready</span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="ex">bd</span> create <span class="st">"Implement feature"</span> <span class="at">-t</span> task <span class="at">-p</span> 2</span>
-<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="ex">bd</span> sync</span></code></pre></div>
+<h3 id="why-worktrees-are-required">Why Worktrees Are Required<a class="anchor" aria-label="anchor" href="#why-worktrees-are-required"></a></h3>
+<p>Without worktrees, parallel agents: - Share the same working directory files - See each other’s uncommitted changes - Accidentally commit each other’s work - Create merge conflicts locally (before even pushing)</p>
+</div>
+<div class="section level3">
+<h3 id="creating-worktrees-for-each-feature">Creating Worktrees for Each Feature<a class="anchor" aria-label="anchor" href="#creating-worktrees-for-each-feature"></a></h3>
+<div class="sourceCode" id="cb16"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># From main repo, create worktree for YOUR feature</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="fu">git</span> worktree add ../measure.sec-<span class="op">&lt;</span>issue-id<span class="op">&gt;</span> -b feat/<span class="op">&lt;</span>short-description<span class="op">&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="bu">cd</span> ../measure.sec-<span class="op">&lt;</span>issue-id<span class="op">&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="co"># Verify you're in the worktree</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a><span class="bu">pwd</span>  <span class="co"># Should show ../measure.sec-&lt;issue-id&gt;</span></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co"># Beads commands work normally - shared database, safe daemon</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="ex">bd</span> ready</span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="ex">bd</span> update <span class="op">&lt;</span>id<span class="op">&gt;</span> --status=in_progress</span></code></pre></div>
 <p>All worktrees share the same <code>.beads</code> database in the main repo. Changes are immediately visible across sessions.</p>
 </div>
 <div class="section level3">
 <h3 id="merging-beads-sync-to-main">Merging Beads-Sync to Main<a class="anchor" aria-label="anchor" href="#merging-beads-sync-to-main"></a></h3>
 <p>Periodically merge the beads metadata to main via PR:</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">git</span> push origin beads-sync</span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--base</span> main <span class="at">--head</span> beads-sync <span class="at">--title</span> <span class="st">"Sync beads metadata"</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">git</span> push origin beads-sync</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="ex">gh</span> pr create <span class="at">--base</span> main <span class="at">--head</span> beads-sync <span class="at">--title</span> <span class="st">"Sync beads metadata"</span></span></code></pre></div>
 <p>Or direct merge if allowed:</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--merge</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="ex">bd</span> sync <span class="at">--merge</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="cleanup-after-pr-merged">Cleanup After PR Merged<a class="anchor" aria-label="anchor" href="#cleanup-after-pr-merged"></a></h3>
-<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="fu">git</span> worktree remove ../measure.sec-feature-x</span>
-<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="fu">git</span> worktree remove ../measure.sec-<span class="op">&lt;</span>issue-id<span class="op">&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="troubleshooting-branch-already-checked-out">Troubleshooting: “Branch already checked out”<a class="anchor" aria-label="anchor" href="#troubleshooting-branch-already-checked-out"></a></h3>
 <p>If git says a branch is checked out in a beads worktree:</p>
-<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> .git/beads-worktrees</span>
-<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> .git/beads-worktrees</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="fu">git</span> worktree prune</span></code></pre></div>
 </div>
 </div>
 </div>
