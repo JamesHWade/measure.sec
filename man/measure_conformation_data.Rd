@@ -42,7 +42,10 @@ plot_data <- measure_conformation_data(mw, iv, y_type = "iv")
 }
 \seealso{
 Other sec-polymer: 
+\code{\link{measure_branching_frequency}()},
 \code{\link{measure_branching_index}()},
-\code{\link{measure_mh_parameters}()}
+\code{\link{measure_branching_model_comparison}()},
+\code{\link{measure_mh_parameters}()},
+\code{\link{measure_rg_mw_scaling}()}
 }
 \concept{sec-polymer}

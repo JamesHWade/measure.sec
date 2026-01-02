@@ -58,6 +58,7 @@ measure_sec_asymmetry(
 }
 \seealso{
 Other sec-qc: 
+\code{\link{measure_sec_column_performance}()},
 \code{\link{measure_sec_plate_count}()},
 \code{\link{measure_sec_recovery}()},
 \code{\link{measure_sec_resolution}()},

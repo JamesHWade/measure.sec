@@ -102,12 +102,16 @@ reference:
   - measure_sec_asymmetry
   - measure_sec_recovery
   - measure_sec_suitability
+  - measure_sec_column_performance
 
 - title: Polymer Analysis Functions
   desc: Functions for polymer characterization
   contents:
   - measure_mh_parameters
   - measure_branching_index
+  - measure_branching_frequency
+  - measure_branching_model_comparison
+  - measure_rg_mw_scaling
   - measure_conformation_data
 
 - title: Export Functions

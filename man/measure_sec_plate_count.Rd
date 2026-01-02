@@ -70,6 +70,7 @@ measure_sec_plate_count(
 \seealso{
 Other sec-qc: 
 \code{\link{measure_sec_asymmetry}()},
+\code{\link{measure_sec_column_performance}()},
 \code{\link{measure_sec_recovery}()},
 \code{\link{measure_sec_resolution}()},
 \code{\link{measure_sec_suitability}()}
