@@ -89,11 +89,75 @@ information without calibration standards.</p>
 <li>Triple detection workflows (RI + UV + MALS)</li>
 <li>Calculating absolute molecular weight</li>
 </ol>
+<div class="section level3">
+<h3 id="multi-detector-workflow">Multi-Detector Workflow<a class="anchor" aria-label="anchor" href="#multi-detector-workflow"></a>
+</h3>
+<p>In multi-detector SEC (“triple detection”), signals from
+concentration detectors (RI, UV) and molecular weight detectors (MALS)
+are processed together. First, inter-detector delays are corrected to
+align peaks. Then each detector signal is processed: RI/UV for
+concentration, MALS for absolute MW via angular extrapolation, and
+viscometer for intrinsic viscosity. The concentration data feeds into
+MALS calculations to determine absolute molecular weight and radius of
+gyration.</p>
+<pre class="mermaid"><code>flowchart TB
+    subgraph Input["Raw Multi-Detector Data"]
+        A1[RI Signal]
+        A2[UV Signal]
+        A3[MALS Signal]
+        A4[Viscometer Signal]
+    end
+
+    subgraph Align["⏱️ Detector Alignment"]
+        B[step_sec_detector_delay&lt;br&gt;Correct inter-detector delays]
+    end
+
+    subgraph Process["📊 Signal Processing"]
+        C1[step_sec_ri&lt;br&gt;dn/dc normalization]
+        C2[step_sec_uv&lt;br&gt;ε normalization]
+        C3[step_sec_mals&lt;br&gt;Zimm/Debye/Berry fit]
+        C4[step_sec_viscometer&lt;br&gt;Differential pressure processing]
+    end
+
+    subgraph Concentration["📏 Concentration"]
+        D0[step_sec_concentration&lt;br&gt;Convert to mass concentration]
+    end
+
+    subgraph Calculate["🔬 Calculations"]
+        D2[Absolute MW&lt;br&gt;from MALS + concentration]
+        D3[Rg from&lt;br&gt;angular dependence]
+        D4[step_sec_intrinsic_visc&lt;br&gt;η from viscometer + concentration]
+    end
+
+    subgraph Results["📤 Results"]
+        E1[MW Averages&lt;br&gt;Mn, Mw, Mz]
+        E2[Conformation&lt;br&gt;Rg vs MW]
+        E3[Branching&lt;br&gt;g, g′ indices]
+    end
+
+    A1 &amp; A2 &amp; A3 &amp; A4 --&gt; B
+    B --&gt; C1 &amp; C2 &amp; C3 &amp; C4
+    C1 &amp; C2 --&gt; D0
+    D0 --&gt; C3
+    D0 --&gt; D4
+    C3 --&gt; D2 &amp; D3
+    C4 --&gt; D4
+    D2 --&gt; E1
+    D2 &amp; D3 --&gt; E2
+    D3 &amp; D4 --&gt; E3
+
+    style Input fill:#e3f2fd
+    style Results fill:#e8f5e9</code></pre>
+<p><em>Note: MALS requires concentration data to calculate absolute
+molecular weight. The viscometer outputs differential pressure, which is
+combined with concentration in <code><a href="../reference/step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code> to
+calculate intrinsic viscosity [η].</em></p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h2>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: recipes</span></span>
 <span><span class="co">#&gt; Loading required package: dplyr</span></span>
@@ -206,7 +270,7 @@ information without calibration standards.</p>
 <div class="section level2">
 <h2 id="example-dataset">Example Dataset<a class="anchor" aria-label="anchor" href="#example-dataset"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Select samples with all three detectors</span></span>
@@ -237,7 +301,7 @@ delay. Proper alignment is critical:</p>
 <p><img src="triple-detection_files/figure-html/detector-delay-concept-1.png" class="r-plt" alt="" width="672"></p>
 <p>Use <code><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay()</a></code> to correct for these
 delays:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">samples</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Convert all detector signals to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -273,7 +337,7 @@ flow_rate</li>
 <h2 id="triple-detection-workflow">Triple Detection Workflow<a class="anchor" aria-label="anchor" href="#triple-detection-workflow"></a>
 </h2>
 <p>A complete triple detection recipe:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">samples</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Step 1: Convert signals to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -315,7 +379,7 @@ flow_rate</li>
 </h3>
 <p>MALS provides absolute molecular weight by measuring scattering at
 multiple angles:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process MALS data</span></span>
 <span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">samples</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">mals_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"mals"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -342,7 +406,7 @@ analysis</li>
 <h3 id="lals-low-angle-light-scattering">LALS: Low-Angle Light Scattering<a class="anchor" aria-label="anchor" href="#lals-low-angle-light-scattering"></a>
 </h3>
 <p>For samples where angular extrapolation is problematic:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/step_sec_lals.html">step_sec_lals</a></span><span class="op">(</span></span>
 <span>  measures <span class="op">=</span> <span class="st">"lals"</span>,</span>
 <span>  dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span>,</span>
@@ -353,7 +417,7 @@ analysis</li>
 <h3 id="rals-right-angle-light-scattering">RALS: Right-Angle Light Scattering<a class="anchor" aria-label="anchor" href="#rals-right-angle-light-scattering"></a>
 </h3>
 <p>Cost-effective alternative for routine MW screening:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/step_sec_rals.html">step_sec_rals</a></span><span class="op">(</span></span>
 <span>  measures <span class="op">=</span> <span class="st">"rals"</span>,</span>
 <span>  dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span></span>
@@ -364,7 +428,7 @@ analysis</li>
 <h2 id="viscometer-detection">Viscometer Detection<a class="anchor" aria-label="anchor" href="#viscometer-detection"></a>
 </h2>
 <p>Add intrinsic viscosity for Mark-Houwink analysis:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">samples</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">visc_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"visc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"visc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -379,7 +443,7 @@ analysis</li>
 </h2>
 <p>With viscometry data, you can apply universal calibration across
 polymer types:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Mark-Houwink parameters for different polymers</span></span>
 <span><span class="co"># [η] = K × M^a</span></span>
 <span></span>
@@ -396,7 +460,7 @@ polymer types:</p>
 <h2 id="complete-quadruple-detection-example">Complete Quadruple Detection Example<a class="anchor" aria-label="anchor" href="#complete-quadruple-detection-example"></a>
 </h2>
 <p>Full workflow with RI, UV, MALS, and viscometer:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">samples</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Input all four detectors</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -485,7 +549,7 @@ polymer types:</p>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
