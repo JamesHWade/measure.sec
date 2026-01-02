@@ -150,6 +150,12 @@ step_sec_band_broadening <- function(
     cli::cli_abort("{.arg damping} must be between 0 and 1.")
   }
 
+  if (!is.null(tau)) {
+    if (!is.numeric(tau) || length(tau) != 1 || tau <= 0) {
+      cli::cli_abort("{.arg tau} must be a positive numeric value.")
+    }
+  }
+
   recipes::add_step(
     recipe,
     step_sec_band_broadening_new(
@@ -273,9 +279,29 @@ prep.step_sec_band_broadening <- function(x, training, info = NULL, ...) {
 bake.step_sec_band_broadening <- function(object, new_data, ...) {
   sigma <- object$estimated_sigma
   tau <- object$estimated_tau
+
   method <- object$method
   iterations <- object$iterations
   damping <- object$damping
+
+  # Validate sigma is available and valid
+  if (is.null(sigma) || is.na(sigma)) {
+    cli::cli_abort(
+      c(
+        "Band broadening correction failed: sigma not available.",
+        "i" = "This indicates a problem during prep(). Check calibration peak data."
+      )
+    )
+  }
+
+  if (!is.numeric(sigma) || sigma <= 0) {
+    cli::cli_abort(
+      c(
+        "Invalid sigma value: {sigma}",
+        "i" = "Sigma must be a positive number."
+      )
+    )
+  }
 
   for (col in object$measures) {
     new_data[[col]] <- new_measure_list(
@@ -442,8 +468,15 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   }
   # Interpolate for more accurate position
   if (left_idx < max_idx && left_idx > 1) {
-    x_left <- x[left_idx] + (half_max - y[left_idx]) /
-      (y[left_idx + 1] - y[left_idx]) * (x[left_idx + 1] - x[left_idx])
+    denom_left <- y[left_idx + 1] - y[left_idx]
+    if (abs(denom_left) > .Machine$double.eps) {
+      x_left <- x[left_idx] +
+        (half_max - y[left_idx]) /
+          denom_left *
+          (x[left_idx + 1] - x[left_idx])
+    } else {
+      x_left <- x[left_idx]
+    }
   } else {
     x_left <- x[left_idx]
   }
@@ -457,8 +490,15 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   }
   # Interpolate
   if (right_idx > max_idx && right_idx > 1) {
-    x_right <- x[right_idx - 1] + (half_max - y[right_idx - 1]) /
-      (y[right_idx] - y[right_idx - 1]) * (x[right_idx] - x[right_idx - 1])
+    denom_right <- y[right_idx] - y[right_idx - 1]
+    if (abs(denom_right) > .Machine$double.eps) {
+      x_right <- x[right_idx - 1] +
+        (half_max - y[right_idx - 1]) /
+          denom_right *
+          (x[right_idx] - x[right_idx - 1])
+    } else {
+      x_right <- x[right_idx]
+    }
   } else {
     x_right <- x[right_idx]
   }
@@ -578,6 +618,16 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   # Calculate spacing (assume uniform)
   dx <- mean(diff(location), na.rm = TRUE)
 
+  if (is.na(dx) || !is.finite(dx) || dx <= 0) {
+    cli::cli_warn(
+      c(
+        "Invalid location spacing (dx = {dx}).",
+        "i" = "Skipping band broadening correction."
+      )
+    )
+    return(value)
+  }
+
   if (method == "tung") {
     corrected <- .tung_correction(value, sigma, dx, iterations, damping)
   } else if (method == "emg") {
@@ -593,6 +643,18 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
   }
 
   # Ensure non-negative (physical constraint for concentration)
+  n_negative <- sum(corrected < 0, na.rm = TRUE)
+  if (n_negative > 0) {
+    pct_negative <- round(100 * n_negative / length(corrected), 1)
+    if (pct_negative > 5) {
+      cli::cli_warn(
+        c(
+          "Clipped {n_negative} negative values ({pct_negative}% of points).",
+          "i" = "This may indicate over-correction. Consider reducing sigma or damping."
+        )
+      )
+    }
+  }
   corrected[corrected < 0] <- 0
 
   corrected
@@ -634,6 +696,12 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
 .emg_correction <- function(value, sigma, tau, dx, iterations, damping) {
   # If tau is not available or very small, fall back to Tung's method
   if (is.null(tau) || is.na(tau) || tau < sigma * 0.1) {
+    cli::cli_warn(
+      c(
+        "EMG method requested but tau is unavailable or too small.",
+        "i" = "Falling back to Tung's method for band broadening correction."
+      )
+    )
     return(.tung_correction(value, sigma, dx, iterations, damping))
   }
 
@@ -667,7 +735,27 @@ estimate_sigma <- function(peak, method = c("gaussian", "fwhm", "moments")) {
 
     # Trim to original length
     start_idx <- floor(length(reconvolved) / 2) - floor(n / 2) + 1
-    reconvolved <- reconvolved[start_idx:(start_idx + n - 1)]
+    end_idx <- start_idx + n - 1
+
+    # Bounds check to prevent index errors
+    start_idx <- max(1, start_idx)
+    end_idx <- min(length(reconvolved), end_idx)
+
+    if (end_idx - start_idx + 1 != n) {
+      # If we can't extract the right length, pad with edge values
+      extracted <- reconvolved[start_idx:end_idx]
+      if (length(extracted) < n) {
+        pad_length <- n - length(extracted)
+        extracted <- c(
+          rep(extracted[1], floor(pad_length / 2)),
+          extracted,
+          rep(extracted[length(extracted)], ceiling(pad_length / 2))
+        )
+      }
+      reconvolved <- extracted[seq_len(n)]
+    } else {
+      reconvolved <- reconvolved[start_idx:end_idx]
+    }
 
     # Update estimate with damping
     ratio <- value / pmax(reconvolved, .Machine$double.eps)

@@ -80,7 +80,6 @@ test_that("step_sec_band_broadening requires sigma or calibration_peak", {
   peak_data <- create_broadened_peak_data()
   test_data <- create_test_sec_data(peak_data)
 
-
   expect_error(
     recipes::recipe(~., data = test_data) |>
       step_sec_band_broadening(),
@@ -207,7 +206,7 @@ test_that("step_sec_band_broadening applies Tung correction", {
   # True narrow peak with sigma = 0.3
   true_signal <- dnorm(time, mean = 12, sd = 0.3)
   # Add broadening by smoothing
-  broadened <- stats::filter(true_signal, rep(1/15, 15), sides = 2)
+  broadened <- stats::filter(true_signal, rep(1 / 15, 15), sides = 2)
   broadened[is.na(broadened)] <- 0
   broadened <- as.numeric(broadened)
 
@@ -416,4 +415,89 @@ test_that("step_sec_band_broadening tidy method returns expected structure", {
   expect_equal(tidy_result$method, "tung")
   expect_equal(tidy_result$sigma, 0.1)
   expect_equal(tidy_result$damping, 0.6)
+})
+
+# -- Edge case tests ----------------------------------------------------------
+
+test_that("step_sec_band_broadening reduces peak width (sharpening)", {
+  skip_if_not_installed("measure")
+
+  # Create test data with known broadening
+  time <- seq(5, 20, length.out = 300)
+  # True narrow peak with sigma = 0.3
+  true_signal <- dnorm(time, mean = 12, sd = 0.3)
+  # Add broadening by smoothing
+  broadened <- stats::filter(true_signal, rep(1 / 15, 15), sides = 2)
+  broadened[is.na(broadened)] <- 0
+  broadened <- as.numeric(broadened)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = broadened))
+  )
+
+  # Apply correction with appropriate sigma
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_band_broadening(
+      sigma = 0.15,
+      method = "tung",
+      damping = 0.8,
+      iterations = 2
+    )
+
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  # Estimate FWHM before and after
+  original_fwhm <- .test_estimate_fwhm(time, broadened)
+  corrected_fwhm <- .test_estimate_fwhm(time, result$ri[[1]]$value)
+
+  # Corrected peak should be narrower (smaller FWHM)
+  expect_lt(corrected_fwhm, original_fwhm)
+})
+
+test_that("step_sec_band_broadening handles short chromatograms gracefully", {
+  skip_if_not_installed("measure")
+
+  # Create very short chromatogram (< 10 points)
+  time <- seq(10, 12, length.out = 8)
+  signal <- dnorm(time, mean = 11, sd = 0.3)
+
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = signal))
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_band_broadening(sigma = 0.1, method = "tung")
+
+  # Should warn about short chromatogram during prep (baking happens during prep)
+  expect_warning(
+    prepped <- recipes::prep(rec),
+    "fewer than 10"
+  )
+
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  # Values should be unchanged
+  expect_equal(result$ri[[1]]$value, signal)
+})
+
+test_that("step_sec_band_broadening validates tau parameter", {
+  skip_if_not_installed("measure")
+
+  peak_data <- create_broadened_peak_data()
+  test_data <- create_test_sec_data(peak_data)
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_band_broadening(sigma = 0.1, tau = -0.1),
+    "positive"
+  )
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_band_broadening(sigma = 0.1, tau = 0),
+    "positive"
+  )
 })
