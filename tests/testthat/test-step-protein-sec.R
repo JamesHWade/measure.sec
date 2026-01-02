@@ -389,3 +389,189 @@ test_that("step_sec_protein handles type argument", {
   prepped_denat <- recipes::prep(rec_denat)
   expect_equal(prepped_denat$steps[[1]]$type, "denaturing")
 })
+
+# ==============================================================================
+# Additional tests for mw_column, manual peaks, spline baseline, and warnings
+# ==============================================================================
+
+#' Create test data with MW column for MW-based species assignment
+create_test_protein_tibble_with_mw <- function(sec_data) {
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$uv <- measure::new_measure_list(
+    list(measure::new_measure_tbl(
+      location = sec_data$time,
+      value = sec_data$signal
+    ))
+  )
+  # Add simulated MW column (decreasing with time, as in SEC)
+  # Monomer at 150 kDa, dimer at 300 kDa, HMW at 450+ kDa
+  mw_values <- 1000000 * exp(-0.15 * sec_data$time)
+  test_data$mw_mals <- measure::new_measure_list(
+    list(measure::new_measure_tbl(
+      location = sec_data$time,
+      value = mw_values
+    ))
+  )
+  test_data
+}
+
+test_that("step_sec_oligomer uses mw_column for species assignment", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data(
+    monomer_pct = 90,
+    dimer_pct = 5,
+    hmw_pct = 3,
+    lmw_pct = 2
+  )
+  test_data <- create_test_protein_tibble_with_mw(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_oligomer(monomer_mw = 150000, mw_column = "mw_mals")
+
+  prepped <- recipes::prep(rec)
+
+  # Should not warn about RT fallback when mw_column is provided
+  expect_no_warning(
+    result <- recipes::bake(prepped, new_data = NULL)
+  )
+
+  # Should have MW columns in output
+  expect_true("oligo_monomer_mw" %in% names(result))
+})
+
+test_that("step_sec_oligomer warns when mw_column not found", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data()
+  test_data <- create_test_protein_tibble(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_oligomer(monomer_mw = 150000, mw_column = "nonexistent_col")
+
+  expect_warning(
+    recipes::prep(rec),
+    "not found"
+  )
+})
+
+test_that("step_sec_oligomer warns about RT fallback", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data(
+    monomer_pct = 90,
+    dimer_pct = 5,
+    hmw_pct = 3,
+    lmw_pct = 2
+  )
+  test_data <- create_test_protein_tibble(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_oligomer(monomer_mw = 150000)
+
+  # Warning is emitted during prep (when training data is baked)
+  expect_warning(
+    recipes::prep(rec),
+    "retention time patterns"
+  )
+})
+
+test_that("step_sec_oligomer works with manual peak detection", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data()
+  test_data <- create_test_protein_tibble(sec_data)
+
+  # Define manual peaks matching the simulated data
+  manual_peaks <- data.frame(
+    start = c(10, 12, 14, 17),
+    end = c(12, 14, 16, 19)
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_oligomer(
+      monomer_mw = 150000,
+      peak_detection = "manual",
+      peaks = manual_peaks
+    )
+
+  prepped <- recipes::prep(rec)
+  result <- suppressWarnings(recipes::bake(prepped, new_data = NULL))
+
+  # Should detect the manually defined peaks
+  expect_gt(result$oligo_species_count[1], 0)
+  expect_true("oligo_monomer_pct" %in% names(result))
+})
+
+test_that("step_sec_oligomer requires peaks for manual mode", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data()
+  test_data <- create_test_protein_tibble(sec_data)
+
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_oligomer(monomer_mw = 150000, peak_detection = "manual"),
+    "peaks"
+  )
+})
+
+test_that("step_sec_protein uses spline baseline", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data()
+  test_data <- create_test_protein_tibble(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_protein(
+      include_oligomer = FALSE,
+      baseline_method = "spline"
+    )
+
+  # Should work without error
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("protein_monomer_pct" %in% names(result))
+  expect_gt(result$protein_monomer_pct[1], 0)
+})
+
+test_that("step_sec_protein warns for spline with few points", {
+  skip_if_not_installed("measure")
+
+  # Create data with only 8 points (< 10)
+  sec_data <- create_protein_sec_data(n_points = 8)
+  test_data <- create_test_protein_tibble(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_protein(
+      include_oligomer = FALSE,
+      baseline_method = "spline"
+    )
+
+  # Warning is emitted during prep (when training data is baked)
+  expect_warning(
+    recipes::prep(rec),
+    "linear interpolation"
+  )
+})
+
+test_that("step_sec_protein type='denaturing' works correctly", {
+  skip_if_not_installed("measure")
+
+  sec_data <- create_protein_sec_data()
+  test_data <- create_test_protein_tibble(sec_data)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_protein(type = "denaturing", include_oligomer = FALSE)
+
+  # Should run without error and produce valid results
+  prepped <- recipes::prep(rec)
+  result <- recipes::bake(prepped, new_data = NULL)
+
+  expect_true("protein_monomer_pct" %in% names(result))
+  expect_gt(result$protein_monomer_pct[1], 0)
+
+  # Verify type is stored correctly
+  expect_equal(prepped$steps[[1]]$type, "denaturing")
+})

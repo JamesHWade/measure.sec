@@ -102,10 +102,11 @@ analysis in a single step.
 \details{
 This step provides a convenient "one-stop" workflow for protein SEC analysis,
 suitable for biopharmaceutical characterization. It combines:
-
-1
-2. \strong{Aggregate quantitation}: HMWS/monomer/LMWS percentages
-3. \strong{Oligomer analysis} (optional): Detailed species identification
+\enumerate{
+\item \strong{Baseline correction}: SEC-optimized linear or median baseline
+\item \strong{Aggregate quantitation}: HMWS/monomer/LMWS percentages
+\item \strong{Oligomer analysis} (optional): Detailed species identification
+}
 
 \strong{Native vs Denaturing:}
 \itemize{

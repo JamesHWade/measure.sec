@@ -64,8 +64,7 @@
 #' This step provides a convenient "one-stop" workflow for protein SEC analysis,
 #' suitable for biopharmaceutical characterization. It combines:
 #'
-#' 1
-#. **Baseline correction**: SEC-optimized linear or median baseline
+#' 1. **Baseline correction**: SEC-optimized linear or median baseline
 #' 2. **Aggregate quantitation**: HMWS/monomer/LMWS percentages
 #' 3. **Oligomer analysis** (optional): Detailed species identification
 #'
@@ -292,8 +291,29 @@ bake.step_sec_protein <- function(object, new_data, ...) {
   include_oligomer <- object$include_oligomer
   output_prefix <- object$output_prefix
 
+  # Validate measures is not empty
+  if (length(measures) == 0) {
+    cli::cli_abort(
+      c(
+        "No measure columns available for protein SEC analysis.",
+        "i" = "Ensure your recipe includes step_measure_input_*() before this step."
+      )
+    )
+  }
+
   n_rows <- nrow(new_data)
   measure_col <- measures[1]
+
+  # Inform user about analysis type
+  if (type == "denaturing") {
+    cli::cli_inform(
+      c(
+        "i" = "Running denaturing SEC analysis.",
+        "*" = "HMW species represent covalent aggregates (non-reducible).",
+        "*" = "Native oligomers are disrupted under these conditions."
+      )
+    )
+  }
 
   # Initialize output columns
   hmws_pct <- numeric(n_rows)
@@ -355,8 +375,18 @@ bake.step_sec_protein <- function(object, new_data, ...) {
         mw_tolerance = 0.15
       )
 
+      if (isTRUE(oligo_result$analysis_failed)) {
+        cli::cli_warn(
+          c(
+            "Oligomer analysis failed for row {i}.",
+            "i" = "No peaks detected or zero signal area.",
+            "i" = "Check chromatogram quality for this sample."
+          )
+        )
+      }
+
       for (sp in oligo_species) {
-        oligo_pct[[sp]][i] <- oligo_result[[paste0(sp, "_pct")]] %||% 0
+        oligo_pct[[sp]][i] <- oligo_result[[paste0(sp, "_pct")]] %||% NA_real_
       }
       species_count[i] <- oligo_result$species_count
     }
@@ -418,8 +448,23 @@ bake.step_sec_protein <- function(object, new_data, ...) {
     # Use spline through baseline regions
     baseline_x <- c(location[left_idx], location[right_idx])
     baseline_y <- c(value[left_idx], value[right_idx])
-    spline_fit <- stats::smooth.spline(baseline_x, baseline_y, df = 4)
-    baseline <- stats::predict(spline_fit, location)$y
+    spline_fit <- tryCatch(
+      stats::smooth.spline(baseline_x, baseline_y, df = 4),
+      error = function(e) NULL
+    )
+    if (is.null(spline_fit)) {
+      cli::cli_warn(
+        "Spline baseline fit failed; using linear interpolation."
+      )
+      baseline <- seq(left_val, right_val, length.out = n)
+    } else {
+      baseline <- stats::predict(spline_fit, location)$y
+    }
+  } else if (method == "spline" && n <= 10) {
+    cli::cli_warn(
+      "Spline baseline requires > 10 points; using linear interpolation."
+    )
+    baseline <- seq(left_val, right_val, length.out = n)
   } else {
     # Linear interpolation
     baseline <- seq(left_val, right_val, length.out = n)
@@ -510,24 +555,26 @@ bake.step_sec_protein <- function(object, new_data, ...) {
 
   if (length(peaks) == 0) {
     return(list(
-      monomer_pct = 0,
-      dimer_pct = 0,
-      trimer_pct = 0,
-      hmw_pct = 0,
-      lmw_pct = 0,
-      species_count = 0
+      monomer_pct = NA_real_,
+      dimer_pct = NA_real_,
+      trimer_pct = NA_real_,
+      hmw_pct = NA_real_,
+      lmw_pct = NA_real_,
+      species_count = 0,
+      analysis_failed = TRUE
     ))
   }
 
   total_area <- .peak_area(location, value, 1, length(value))
   if (total_area <= 0) {
     return(list(
-      monomer_pct = 0,
-      dimer_pct = 0,
-      trimer_pct = 0,
-      hmw_pct = 0,
-      lmw_pct = 0,
-      species_count = 0
+      monomer_pct = NA_real_,
+      dimer_pct = NA_real_,
+      trimer_pct = NA_real_,
+      hmw_pct = NA_real_,
+      lmw_pct = NA_real_,
+      species_count = 0,
+      analysis_failed = TRUE
     ))
   }
 
@@ -566,6 +613,7 @@ bake.step_sec_protein <- function(object, new_data, ...) {
   }
 
   species_pct$species_count <- length(peaks)
+  species_pct$analysis_failed <- FALSE
 
   species_pct
 }

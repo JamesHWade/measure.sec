@@ -404,6 +404,16 @@ bake.step_sec_oligomer <- function(object, new_data, ...) {
   min_area_pct <- object$min_area_pct
   output_prefix <- object$output_prefix
 
+  # Validate measures are available
+  if (length(measures) == 0) {
+    cli::cli_abort(
+      c(
+        "No measure columns available for oligomer analysis.",
+        "i" = "Ensure your recipe includes step_measure_input_*() before this step."
+      )
+    )
+  }
+
   n_rows <- nrow(new_data)
 
   # Initialize output columns for each species
@@ -454,6 +464,12 @@ bake.step_sec_oligomer <- function(object, new_data, ...) {
     }
 
     if (length(peaks) == 0) {
+      cli::cli_warn(
+        c(
+          "No peaks detected for row {i}.",
+          "i" = "Check chromatogram signal quality."
+        )
+      )
       species_count[i] <- 0
       next
     }
@@ -461,6 +477,12 @@ bake.step_sec_oligomer <- function(object, new_data, ...) {
     # Calculate total area
     total_area <- .peak_area(location, value, 1, length(value))
     if (total_area <= 0) {
+      cli::cli_warn(
+        c(
+          "Zero signal area for row {i}.",
+          "i" = "Check baseline correction and signal intensity."
+        )
+      )
       species_count[i] <- 0
       next
     }
@@ -496,6 +518,18 @@ bake.step_sec_oligomer <- function(object, new_data, ...) {
     # If no MW data, assign species by retention time
     # (largest peak = monomer, earlier = HMW, later = LMW)
     if (!has_mw && length(peak_data) > 0) {
+      # Warn user about RT-based assignment (only once per bake)
+      if (i == 1) {
+        cli::cli_warn(
+          c(
+            "No MW column available; using retention time patterns for species assignment.",
+            "i" = "Largest peak assumed to be monomer.",
+            "i" = "Earlier-eluting peaks assigned as HMW, later as LMW.",
+            "i" = "For accurate assignment, provide {.arg mw_column} from MALS/LALS."
+          )
+        )
+      }
+
       # Find largest peak (assume monomer)
       areas <- sapply(peak_data, function(p) p$area)
       monomer_idx <- which.max(areas)
