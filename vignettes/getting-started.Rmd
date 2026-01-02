@@ -27,6 +27,29 @@ This vignette covers:
 3. A basic single-detector workflow
 4. Calculating molecular weight averages
 
+### Basic Workflow Overview
+
+A typical SEC analysis starts with raw detector signals, converts them to the measure format, applies baseline correction, processes detector signals with appropriate normalization factors, then either applies calibration from standards (conventional) or uses light scattering for absolute molecular weight (MALS).
+
+```mermaid
+flowchart TD
+    A[Raw Chromatogram<br>RI, UV, MALS signals] --> B[step_measure_input_long<br>Convert to measure format]
+    B --> C[step_sec_baseline<br>Baseline correction]
+    C --> D[step_sec_ri / step_sec_uv<br>Detector processing with dn/dc or ε]
+    D --> E{Calibration<br>method?}
+    E -->|"Standards available<br>(same polymer type)"| F[step_sec_conventional_cal<br>Polynomial fit to standards]
+    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Angular extrapolation<br>Zimm/Debye/Berry]
+    F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
+    G --> I[Absolute MW & Rg<br>directly from MALS]
+    H --> J[Results<br>MW averages, distributions, plots]
+    I --> J
+
+    style A fill:#e1f5fe
+    style J fill:#c8e6c9
+```
+
+*Choose **conventional calibration** when you have narrow MW standards of the same polymer type. Choose **MALS** when you need absolute MW without polymer-specific standards or when analyzing unknown polymers.*
+
 ## Installation
 
 ```{r install, eval = FALSE}

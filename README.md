@@ -36,6 +36,69 @@ and Gel Permeation Chromatography (GPC) data.
 - **Polymer analysis**: Branching indices and Mark-Houwink parameter
   estimation
 
+### Package Workflow
+
+The typical SEC analysis workflow processes raw chromatogram data
+through preprocessing, detector-specific signal processing, calibration,
+and molecular weight calculations. Concentration detectors (RI, UV)
+require calibration curves from standards, while light scattering
+detectors (MALS) provide absolute molecular weight directly.
+
+``` mermaid
+flowchart LR
+    subgraph Input["📥 Input"]
+        A[Raw Chromatogram]
+    end
+
+    subgraph Preprocessing["⚙️ Preprocessing"]
+        C[step_measure_input_long]
+        D[step_sec_baseline]
+        E[step_sec_detector_delay<br>multi-detector only]
+    end
+
+    subgraph Detectors["📊 Detector Processing"]
+        F[step_sec_ri<br>dn/dc normalization]
+        G[step_sec_uv<br>ε normalization]
+        H[step_sec_mals<br>Zimm/Debye/Berry]
+        I[step_sec_viscometer]
+    end
+
+    subgraph Concentration["📏 Concentration"]
+        F2[step_sec_concentration]
+    end
+
+    subgraph Calibration["📐 Calibration"]
+        J[step_sec_conventional_cal<br>from standards]
+        K[step_sec_universal_cal<br>Mark-Houwink]
+    end
+
+    subgraph Analysis["🔬 MW Calculation"]
+        L[step_sec_mw_averages]
+        M[step_sec_composition]
+    end
+
+    subgraph Output["📤 Output"]
+        O[MW Averages<br>Mn, Mw, Mz, PDI]
+        P[Absolute MW & Rg<br>from MALS]
+        Q[Composition<br>& Branching]
+    end
+
+    A --> C --> D --> E
+    E --> F & G & H & I
+    F & G --> F2
+    F2 --> J & K
+    F2 --> H
+    H --> P
+    J & K --> L
+    L --> O
+    I --> Q
+    M --> Q
+```
+
+*Note: Calibration standards are passed as parameters to
+`step_sec_conventional_cal()`, not as a separate data input. MALS
+provides absolute MW without requiring calibration standards.*
+
 ## Installation
 
 You can install the development version of measure.sec from
@@ -112,12 +175,13 @@ result <- bake(prepped, new_data = NULL)
 
 ### Molecular Weight
 
-| Step                         | Description                                |
-|------------------------------|--------------------------------------------|
-| `step_sec_mw_averages()`     | Calculate Mn, Mw, Mz, dispersity           |
-| `step_sec_mw_fractions()`    | Calculate MW fractions above/below cutoffs |
-| `step_sec_mw_distribution()` | Generate differential/cumulative MWD       |
-| `step_sec_universal_cal()`   | Universal calibration with Mark-Houwink    |
+| Step | Description |
+|----|----|
+| `step_sec_mw_averages()` | Calculate Mn, Mw, Mz, dispersity |
+| `step_sec_mw_fractions()` | Calculate MW fractions above/below cutoffs |
+| `step_sec_mw_distribution()` | Generate differential/cumulative MWD |
+| `step_sec_conventional_cal()` | Narrow standard calibration (polynomial fits) |
+| `step_sec_universal_cal()` | Universal calibration with Mark-Houwink |
 
 ### Composition Analysis
 
@@ -128,9 +192,11 @@ result <- bake(prepped, new_data = NULL)
 
 ### Protein SEC
 
-| Step                    | Description                    |
-|-------------------------|--------------------------------|
+| Step | Description |
+|----|----|
+| `step_sec_protein()` | Complete protein SEC workflow (baseline + aggregates + oligomers) |
 | `step_sec_aggregates()` | HMWS/monomer/LMWS quantitation |
+| `step_sec_oligomer()` | Detailed oligomer species analysis |
 
 ## Quality Control Functions
 
@@ -217,6 +283,26 @@ library(measure.sec)
 # View registered SEC steps
 measure_steps(techniques = "SEC/GPC")
 ```
+
+## Learn More
+
+For detailed workflows and examples, see the package vignettes:
+
+- **[Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.html)**:
+  Basic concepts and your first SEC analysis
+- **[Multi-Detector
+  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.html)**:
+  Triple detection with RI, UV, and MALS
+- **[Protein
+  SEC](https://jameshwade.github.io/measure-sec/articles/protein-sec.html)**:
+  Aggregate and oligomer analysis for biopharmaceuticals
+- **[Copolymer
+  Analysis](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.html)**:
+  Composition from UV/RI ratio
+- **[System
+  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.html)**:
+  QC functions and SST testing
 
 ## Getting Help
 

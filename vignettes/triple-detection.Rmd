@@ -27,6 +27,63 @@ This vignette covers:
 3. Triple detection workflows (RI + UV + MALS)
 4. Calculating absolute molecular weight
 
+### Multi-Detector Workflow
+
+In multi-detector SEC ("triple detection"), signals from concentration detectors (RI, UV) and molecular weight detectors (MALS) are processed together. First, inter-detector delays are corrected to align peaks. Then each detector signal is processed: RI/UV for concentration, MALS for absolute MW via angular extrapolation, and viscometer for intrinsic viscosity. The concentration data feeds into MALS calculations to determine absolute molecular weight and radius of gyration.
+
+```mermaid
+flowchart TB
+    subgraph Input["Raw Multi-Detector Data"]
+        A1[RI Signal]
+        A2[UV Signal]
+        A3[MALS Signal]
+        A4[Viscometer Signal]
+    end
+
+    subgraph Align["⏱️ Detector Alignment"]
+        B[step_sec_detector_delay<br>Correct inter-detector delays]
+    end
+
+    subgraph Process["📊 Signal Processing"]
+        C1[step_sec_ri<br>dn/dc normalization]
+        C2[step_sec_uv<br>ε normalization]
+        C3[step_sec_mals<br>Zimm/Debye/Berry fit]
+        C4[step_sec_viscometer<br>Differential pressure processing]
+    end
+
+    subgraph Concentration["📏 Concentration"]
+        D0[step_sec_concentration<br>Convert to mass concentration]
+    end
+
+    subgraph Calculate["🔬 Calculations"]
+        D2[Absolute MW<br>from MALS + concentration]
+        D3[Rg from<br>angular dependence]
+        D4[step_sec_intrinsic_visc<br>η from viscometer + concentration]
+    end
+
+    subgraph Results["📤 Results"]
+        E1[MW Averages<br>Mn, Mw, Mz]
+        E2[Conformation<br>Rg vs MW]
+        E3[Branching<br>g, g′ indices]
+    end
+
+    A1 & A2 & A3 & A4 --> B
+    B --> C1 & C2 & C3 & C4
+    C1 & C2 --> D0
+    D0 --> C3
+    D0 --> D4
+    C3 --> D2 & D3
+    C4 --> D4
+    D2 --> E1
+    D2 & D3 --> E2
+    D3 & D4 --> E3
+
+    style Input fill:#e3f2fd
+    style Results fill:#e8f5e9
+```
+
+*Note: MALS requires concentration data to calculate absolute molecular weight. The viscometer outputs differential pressure, which is combined with concentration in `step_sec_intrinsic_visc()` to calculate intrinsic viscosity [η].*
+
 ## Setup
 
 ```{r setup}
