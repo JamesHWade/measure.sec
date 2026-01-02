@@ -9,6 +9,9 @@ returns a tibble with information about the step parameters.
 # S3 method for class 'step_sec_aggregates'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_band_broadening'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_baseline'
 tidy(x, ...)
 

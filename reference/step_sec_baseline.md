@@ -129,6 +129,7 @@ for general-purpose baseline correction,
 for simple trend removal.
 
 Other sec-chromatography:
+[`step_sec_band_broadening()`](step_sec_band_broadening.md),
 [`step_sec_detector_delay()`](step_sec_detector_delay.md),
 [`step_sec_mw_averages()`](step_sec_mw_averages.md),
 [`step_sec_mw_distribution()`](step_sec_mw_distribution.md),

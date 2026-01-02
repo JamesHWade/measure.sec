@@ -2,6 +2,8 @@
 
 ## All functions
 
+- [`estimate_sigma()`](estimate_sigma.md) : Estimate Spreading Parameter
+  from Narrow Standard
 - [`measure_branching_index()`](measure_branching_index.md) : Calculate
   Branching Index
 - [`measure_conformation_data()`](measure_conformation_data.md) : Create
@@ -31,6 +33,8 @@
 - [`sec_triple_detect`](sec_triple_detect.md) : Multi-Detector SEC Data
 - [`step_sec_aggregates()`](step_sec_aggregates.md) : Quantify Protein
   Aggregates and Fragments in SEC
+- [`step_sec_band_broadening()`](step_sec_band_broadening.md) : Band
+  Broadening Correction for SEC
 - [`step_sec_baseline()`](step_sec_baseline.md) : SEC/GPC Baseline
   Correction
 - [`step_sec_composition()`](step_sec_composition.md) : Calculate

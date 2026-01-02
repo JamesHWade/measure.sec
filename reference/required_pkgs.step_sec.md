@@ -8,6 +8,9 @@ Returns the packages required to use the step.
 # S3 method for class 'step_sec_aggregates'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_band_broadening'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_baseline'
 required_pkgs(x, ...)
 

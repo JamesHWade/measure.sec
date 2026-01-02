@@ -104,7 +104,9 @@ detection, response factors may need to be applied first.
 
 ## See also
 
-Other sec-chromatography: [`step_sec_baseline()`](step_sec_baseline.md),
+Other sec-chromatography:
+[`step_sec_band_broadening()`](step_sec_band_broadening.md),
+[`step_sec_baseline()`](step_sec_baseline.md),
 [`step_sec_detector_delay()`](step_sec_detector_delay.md),
 [`step_sec_mw_distribution()`](step_sec_mw_distribution.md),
 [`step_sec_mw_fractions()`](step_sec_mw_fractions.md)
