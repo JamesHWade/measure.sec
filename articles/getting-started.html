@@ -84,11 +84,75 @@ data analysis. It extends the <a href="https://github.com/JamesHWade/measure" cl
 the <a href="https://recipes.tidymodels.org/" class="external-link">recipes</a> framework.</p>
 <p>This vignette covers:</p>
 <ol style="list-style-type: decimal">
+<li>What SEC/GPC is and why it matters</li>
 <li>Installation and setup</li>
 <li>Understanding the data model</li>
 <li>A basic single-detector workflow</li>
 <li>Calculating molecular weight averages</li>
+<li>Troubleshooting common issues</li>
 </ol>
+</div>
+<div class="section level2">
+<h2 id="what-is-secgpc">What is SEC/GPC?<a class="anchor" aria-label="anchor" href="#what-is-secgpc"></a>
+</h2>
+<p><strong>Size Exclusion Chromatography (SEC)</strong>, also known as
+<strong>Gel Permeation Chromatography (GPC)</strong>, is a liquid
+chromatography technique that separates molecules by their hydrodynamic
+size (how large they appear in solution). Unlike other chromatography
+methods that separate by chemical interactions, SEC uses porous
+particles in the column that act like a molecular sieve—smaller
+molecules can enter the pores and take longer to travel through the
+column, while larger molecules are excluded from the pores and elute
+faster.</p>
+<p>This “size-based separation” makes SEC invaluable for characterizing
+polymers, proteins, and other macromolecules. With SEC, you can
+determine <strong>molecular weight averages</strong> (Mn, Mw, Mz),
+<strong>dispersity</strong> (how broad the molecular weight distribution
+is), and detect <strong>aggregates</strong> or <strong>degradation
+products</strong>. Pharmaceutical companies rely on SEC to ensure
+protein therapeutics meet purity specifications, while polymer
+scientists use it to understand how synthesis conditions affect material
+properties.</p>
+<p>The data from SEC analysis consists of
+<strong>chromatograms</strong>—plots of detector response versus elution
+time (or volume). Different detectors provide complementary information:
+<strong>refractive index (RI)</strong> detectors measure concentration,
+<strong>UV detectors</strong> track chromophore-containing species, and
+<strong>light scattering detectors</strong> provide absolute molecular
+weight without calibration standards. This package helps you process all
+these detector signals and extract meaningful molecular weight
+information.</p>
+</div>
+<div class="section level2">
+<h2 id="workflow-overview">Workflow Overview<a class="anchor" aria-label="anchor" href="#workflow-overview"></a>
+</h2>
+<p>The typical SEC analysis workflow follows these steps:</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────┐
+│                        SEC Analysis Workflow                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+  │   Raw Data   │────▶│ Preprocess   │────▶│  Calibrate   │
+  │ (CSV/Export) │     │  Signals     │     │   MW Scale   │
+  └──────────────┘     └──────────────┘     └──────────────┘
+         │                    │                    │
+         │                    │                    │
+         ▼                    ▼                    ▼
+   • Detector signals   • Baseline correct  • Apply standards
+   • Elution times      • Align detectors   • Or use MALS for
+   • Sample metadata    • Convert units       absolute MW
+                                                   │
+                                                   ▼
+                        ┌──────────────────────────────────────┐
+                        │          Calculate Results           │
+                        │  • MW averages (Mn, Mw, Mz)         │
+                        │  • Dispersity                        │
+                        │  • MW distribution                   │
+                        │  • Aggregate/fragment %              │
+                        └──────────────────────────────────────┘</code></pre>
+<p>In measure.sec, each box becomes one or more <strong>recipe
+steps</strong>. You chain these steps together into a reproducible
+analysis pipeline.</p>
 <div class="section level3">
 <h3 id="basic-workflow-overview">Basic Workflow Overview<a class="anchor" aria-label="anchor" href="#basic-workflow-overview"></a>
 </h3>
@@ -120,7 +184,7 @@ standards or when analyzing unknown polymers.</em></p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install from GitHub</span></span>
 <span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/measure"</span><span class="op">)</span></span>
@@ -129,7 +193,7 @@ standards or when analyzing unknown polymers.</em></p>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: recipes</span></span>
 <span><span class="co">#&gt; Loading required package: dplyr</span></span>
@@ -155,28 +219,82 @@ standards or when analyzing unknown polymers.</em></p>
 <h2 id="the-data-model">The Data Model<a class="anchor" aria-label="anchor" href="#the-data-model"></a>
 </h2>
 <p>SEC data in measure.sec uses the <strong>measure</strong> package’s
-nested tibble structure:</p>
+nested tibble structure. Understanding this structure is key to working
+effectively with the package.</p>
+<div class="section level3">
+<h3 id="measure_tbl-a-single-chromatogram">measure_tbl: A Single Chromatogram<a class="anchor" aria-label="anchor" href="#measure_tbl-a-single-chromatogram"></a>
+</h3>
+<p>A <strong><code>measure_tbl</code></strong> is a tibble (data frame)
+representing a single chromatogram with two required columns:</p>
 <ul>
 <li>
-<strong><code>measure_tbl</code></strong>: A single chromatogram
-with <code>location</code> (elution time/volume) and <code>value</code>
-(detector response)</li>
+<strong><code>location</code></strong>: The x-axis values—typically
+elution time (minutes) or elution volume (mL)</li>
 <li>
-<strong><code>measure_list</code></strong>: A list column containing
-multiple <code>measure_tbl</code> objects</li>
+<strong><code>value</code></strong>: The y-axis values—detector
+response (mV, AU, or processed units)</li>
 </ul>
-<p>This structure allows you to store complete chromatograms alongside
-sample metadata.</p>
+<p>Think of it as one line on a chromatogram plot. For example, an RI
+detector signal from one injection is stored as a
+<code>measure_tbl</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="measure_list-multiple-chromatograms-internal-format">measure_list: Multiple Chromatograms (Internal Format)<a class="anchor" aria-label="anchor" href="#measure_list-multiple-chromatograms-internal-format"></a>
+</h3>
+<p>A <strong><code>measure_list</code></strong> is a list column
+containing multiple <code>measure_tbl</code> objects. This is the
+<strong>internal format</strong> used by measure.sec recipe steps—you
+typically won’t create this yourself. Instead,
+<code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> converts your raw data into this
+format automatically.</p>
+<p><strong>After conversion</strong>, your data will look like this:</p>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│  sample_id   known_mw   dn_dc       ri                      │
+├──────────────────────────────────────────────────────────────┤
+│  "PS-50K"    50000      0.185       &lt;measure_list[1]&gt;       │
+│  "PS-100K"   100000     0.185       &lt;measure_list[1]&gt;       │
+│  "PMMA-75K"  75000      0.084       &lt;measure_list[1]&gt;       │
+└──────────────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+                            Each entry contains a measure_tbl:
+                              location │ value
+                              ─────────┼────────
+                              5.0      │ 0.002
+                              5.1      │ 0.015
+                              5.2      │ 0.089
+                              ...      │ ...</code></pre>
+<p>This nested structure has several advantages:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Tidy organization</strong>: Each row is one sample with all
+its metadata and chromatogram(s)</li>
+<li>
+<strong>Batch processing</strong>: Apply the same recipe to many
+samples at once</li>
+<li>
+<strong>Multiple detectors</strong>: Store RI, UV, and MALS signals
+as separate nested columns</li>
+<li>
+<strong>Metadata preservation</strong>: Sample properties like
+<code>dn_dc</code> or <code>known_mw</code> travel with the
+chromatogram</li>
+</ol>
+</div>
 </div>
 <div class="section level2">
 <h2 id="example-dataset">Example Dataset<a class="anchor" aria-label="anchor" href="#example-dataset"></a>
 </h2>
 <p>The package includes <code>sec_triple_detect</code>, a synthetic
-multi-detector SEC dataset:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
+multi-detector SEC dataset in <strong>long format</strong> (one row per
+time point). This is a good starting point for learning the workflow
+before analyzing your own data.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Load the example dataset</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Overview</span></span>
+<span><span class="co"># View the structure - this is LONG format data (one row per time point)</span></span>
+<span><span class="co"># The signal columns (ri_signal, uv_signal, mals_signal) are numeric vectors</span></span>
 <span><span class="fu"><a href="https://pillar.r-lib.org/reference/glimpse.html" class="external-link">glimpse</a></span><span class="op">(</span><span class="va">sec_triple_detect</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Rows: 24,012</span></span>
 <span><span class="co">#&gt; Columns: 11</span></span>
@@ -193,14 +311,25 @@ multi-detector SEC dataset:</p>
 <span><span class="co">#&gt; $ extinction_coef  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> 1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2<span style="color: #949494;">, </span>1.2…</span></span></code></pre></div>
 <p>The dataset contains:</p>
 <ul>
-<li>12 polymer samples (polystyrene, PMMA, PEG, copolymers)</li>
-<li>RI, UV, and MALS detector signals</li>
-<li>Known molecular weights and dispersities</li>
-<li>Sample-specific optical constants (dn/dc, extinction
-coefficients)</li>
+<li>
+<strong>12 polymer samples</strong>: polystyrene (PS), PMMA, PEG,
+and copolymers</li>
+<li>
+<strong>~2,000 time points per sample</strong>: giving 24,012 total
+rows</li>
+<li>
+<strong>Three detector signals</strong>: RI, UV, and MALS (as
+numeric columns)</li>
+<li>
+<strong>Known molecular weights</strong>: For validating your
+analysis</li>
+<li>
+<strong>Optical constants</strong>: dn/dc and extinction
+coefficients (needed for quantitative analysis)</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Sample types</span></span>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># View the unique samples in the dataset</span></span>
+<span><span class="co"># Each sample_id represents one injection; the chromatogram spans many rows</span></span>
 <span><span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">sample_type</span>, <span class="va">polymer_type</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
@@ -223,37 +352,41 @@ coefficients)</li>
 <div class="section level2">
 <h2 id="basic-workflow-ri-detector-analysis">Basic Workflow: RI Detector Analysis<a class="anchor" aria-label="anchor" href="#basic-workflow-ri-detector-analysis"></a>
 </h2>
-<p>Let’s analyze a polystyrene sample using the RI detector:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Select a single polystyrene standard</span></span>
+<p>Let’s walk through a complete analysis of a polystyrene sample using
+the RI detector. This demonstrates the core pattern you’ll use for all
+SEC analysis.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Select a single polystyrene standard for this example</span></span>
+<span><span class="co"># In practice, you'd often process many samples at once</span></span>
 <span><span class="va">ps_sample</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"PS-50K"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View the data structure</span></span>
+<span><span class="co"># View sample info - note this is still long format (many rows per sample)</span></span>
 <span><span class="va">ps_sample</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">polymer_type</span>, <span class="va">known_mw</span>, <span class="va">ri_signal</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2,001 × 4</span></span></span>
-<span><span class="co">#&gt;    sample_id polymer_type known_mw ri_signal</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0        </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0.000<span style="text-decoration: underline;">279</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0        </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0        </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0.000<span style="text-decoration: underline;">842</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0.000<span style="text-decoration: underline;">483</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0.000<span style="text-decoration: underline;">032</span>5</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0        </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0        </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000 0.000<span style="text-decoration: underline;">828</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 1,991 more rows</span></span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">polymer_type</span>, <span class="va">known_mw</span>, <span class="va">elution_time</span>, <span class="va">ri_signal</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id polymer_type known_mw elution_time ri_signal</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5     0       </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5.01  0.000<span style="text-decoration: underline;">279</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5.02  0       </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5.03  0       </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5.04  0.000<span style="text-decoration: underline;">842</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> PS-50K    polystyrene     <span style="text-decoration: underline;">50</span>000         5.05  0.000<span style="text-decoration: underline;">483</span></span></span></code></pre></div>
 <div class="section level3">
 <h3 id="step-1-create-a-recipe">Step 1: Create a Recipe<a class="anchor" aria-label="anchor" href="#step-1-create-a-recipe"></a>
 </h3>
-<p>Recipes define a sequence of preprocessing steps. Start by converting
-raw signal columns to the measure format:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Convert RI signal to measure format</span></span>
+<p><strong>Recipes</strong> define a sequence of preprocessing steps.
+Think of a recipe as a blueprint for your analysis—it describes
+<em>what</em> to do, but doesn’t do it yet. This separation lets you
+define the workflow once and apply it to many samples.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Start a recipe with your data</span></span>
+<span><span class="co"># The formula ~. means "use all columns"</span></span>
+<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="co"># Convert the ri_signal column to measure format</span></span>
+<span>  <span class="co"># This step tells recipes how to interpret your chromatogram data</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">ri_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
@@ -263,66 +396,87 @@ raw signal columns to the measure format:</p>
 <div class="section level3">
 <h3 id="step-2-add-preprocessing-steps">Step 2: Add Preprocessing Steps<a class="anchor" aria-label="anchor" href="#step-2-add-preprocessing-steps"></a>
 </h3>
-<p>Add baseline correction and RI processing:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<p>Chain additional steps using the pipe (<code>|&gt;</code>). Each step
+transforms the data in sequence:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="co"># First: convert raw signal to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">ri_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
 <span>    col_name <span class="op">=</span> <span class="st">"ri"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Baseline correction</span></span>
+<span>  <span class="co"># Second: correct the baseline (removes drift and offset)</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># RI detector processing with dn/dc</span></span>
+<span>  <span class="co"># Third: process RI signal using the sample's dn/dc value</span></span>
+<span>  <span class="co"># Dividing by dn/dc converts the RI signal to concentration-proportional units</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-3-prep-and-bake">Step 3: Prep and Bake<a class="anchor" aria-label="anchor" href="#step-3-prep-and-bake"></a>
 </h3>
-<p><code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code> learns parameters from the training data,
-<code><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake()</a></code> applies the transformations:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
+<p>Two functions execute your recipe:</p>
+<ul>
+<li>
+<strong><code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code></strong>: Learns any required parameters
+from the training data (like baseline fit coefficients)</li>
+<li>
+<strong><code><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake()</a></code></strong>: Applies the transformations to
+produce results</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Prep: Learn parameters from the data</span></span>
+<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Bake: Apply transformations (new_data = NULL means use the training data)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View the processed data</span></span>
+<span><span class="co"># View the processed data - ri now contains the baseline-corrected,</span></span>
+<span><span class="co"># concentration-converted chromatogram</span></span>
 <span><span class="va">result</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p><strong>Why two steps?</strong> This design lets you prep once on
+training data (like calibration standards), then bake on new samples
+without re-learning parameters. It also makes your analysis
+reproducible.</p>
+</blockquote>
 </div>
 </div>
 <div class="section level2">
 <h2 id="molecular-weight-averages">Molecular Weight Averages<a class="anchor" aria-label="anchor" href="#molecular-weight-averages"></a>
 </h2>
-<p>Calculate Mn, Mw, Mz, and dispersity using
-<code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">ri_signal</span>,</span>
-<span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
-<span>    col_name <span class="op">=</span> <span class="st">"ri"</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Calculate MW averages using known MW values</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>mw_column <span class="op">=</span> <span class="st">"known_mw"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># View molecular weight results</span></span>
-<span><span class="va">result</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span></code></pre></div>
+<p>The most common outputs from SEC analysis are <strong>molecular
+weight averages</strong>: - <strong>Mn (number-average)</strong>:
+Emphasizes lower MW species - <strong>Mw (weight-average)</strong>:
+Emphasizes higher MW species - <strong>Mz (z-average)</strong>: Even
+more sensitive to high MW species - <strong>Dispersity (Mw/Mn)</strong>:
+Measures breadth of the MW distribution (1.0 = monodisperse)</p>
+<p>Use <code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code> to calculate these. This step
+requires that the x-axis (location) values already represent
+log₁₀(MW)—which is what <code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>
+provides. See the Calibration section below for the complete
+workflow.</p>
 </div>
 <div class="section level2">
 <h2 id="calibration-curves">Calibration Curves<a class="anchor" aria-label="anchor" href="#calibration-curves"></a>
 </h2>
-<p>For samples without absolute MW data, use calibration standards:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load polystyrene standards</span></span>
+<p>Most SEC analysis requires <strong>calibration</strong> to convert
+retention time to molecular weight. The most common approach uses
+<strong>narrow standards</strong>—polymers with known molecular weights
+and low dispersity—to build a calibration curve.</p>
+<blockquote>
+<p><strong>Note</strong>: If you have a light scattering detector
+(MALS), you can determine absolute molecular weights without
+calibration. See <code><a href="../articles/triple-detection.html">vignette("triple-detection")</a></code> for
+details.</p>
+</blockquote>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Load polystyrene narrow standards</span></span>
+<span><span class="co"># These are well-characterized polymers used to build the calibration curve</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_ps_standards</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View the standards</span></span>
+<span><span class="co"># View the standards - each has a known peak molecular weight (Mp)</span></span>
 <span><span class="va">sec_ps_standards</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">standard_name</span>, <span class="va">mp</span>, <span class="va">log_mp</span>, <span class="va">retention_time</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
@@ -339,7 +493,9 @@ raw signal columns to the measure format:</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> PS-67500        <span style="text-decoration: underline;">67</span>500   4.83           15.0</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 8 more rows</span></span></span>
 <span></span>
-<span><span class="co"># Visualize calibration curve</span></span>
+<span><span class="co"># Visualize the calibration curve</span></span>
+<span><span class="co"># The relationship between log(MW) and retention time is typically linear</span></span>
+<span><span class="co"># or slightly curved, so we fit a polynomial</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">sec_ps_standards</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">retention_time</span>, <span class="va">log_mp</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">3</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_smooth.html" class="external-link">geom_smooth</a></span><span class="op">(</span></span>
@@ -357,10 +513,11 @@ raw signal columns to the measure format:</p>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/calibration-1.png" class="r-plt" alt="" width="672"></p>
-<p>Apply conventional calibration with
+<p>Apply the calibration using
 <code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Prepare standards for calibration</span></span>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Prepare standards in the format expected by the calibration step</span></span>
+<span><span class="co"># Needs columns: retention (time/volume) and log_mw</span></span>
 <span><span class="va">ps_cal</span> <span class="op">&lt;-</span> <span class="va">sec_ps_standards</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span>retention <span class="op">=</span> <span class="va">retention_time</span>, log_mw <span class="op">=</span> <span class="va">log_mp</span><span class="op">)</span></span>
 <span></span>
@@ -371,23 +528,48 @@ raw signal columns to the measure format:</p>
 <span>    col_name <span class="op">=</span> <span class="st">"ri"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Apply calibration</span></span>
+<span>  <span class="co"># Apply conventional calibration using polystyrene standards</span></span>
+<span>  <span class="co"># This converts retention time to log10(MW) on the x-axis</span></span>
+<span>  <span class="co"># fit_type options: "linear", "quadratic", "cubic" (most common)</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal</a></span><span class="op">(</span></span>
 <span>    standards <span class="op">=</span> <span class="va">ps_cal</span>,</span>
 <span>    fit_type <span class="op">=</span> <span class="st">"cubic"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"log_mw"</span><span class="op">)</span></span>
+<span>  <span class="co"># Calculate MW averages from the calibrated chromatogram</span></span>
+<span>  <span class="co"># The calibration step converted location values to log10(MW)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># View molecular weight results</span></span>
+<span><span class="co"># New columns are added with mw_ prefix</span></span>
+<span><span class="va">result</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p><strong>Important</strong>: Conventional calibration assumes your
+sample has similar hydrodynamic behavior to your standards. Polystyrene
+standards work well for other flexible polymers in THF, but for proteins
+in aqueous SEC, use protein standards or light scattering.</p>
+</blockquote>
 </div>
 <div class="section level2">
 <h2 id="available-steps">Available Steps<a class="anchor" aria-label="anchor" href="#available-steps"></a>
 </h2>
-<p>The package provides steps for: ### Preprocessing -
-<code><a href="../reference/step_sec_baseline.html">step_sec_baseline()</a></code>: SEC-optimized baseline correction -
+<p>The package provides a comprehensive set of recipe steps. Here’s a
+quick reference organized by function:</p>
+<div class="section level3">
+<h3 id="preprocessing">Preprocessing<a class="anchor" aria-label="anchor" href="#preprocessing"></a>
+</h3>
+<ul>
+<li>
+<code><a href="../reference/step_sec_baseline.html">step_sec_baseline()</a></code>: SEC-optimized baseline
+correction</li>
+<li>
 <code><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay()</a></code>: Correct inter-detector
-delays</p>
+delays</li>
+</ul>
+</div>
 <div class="section level3">
 <h3 id="detector-processing">Detector Processing<a class="anchor" aria-label="anchor" href="#detector-processing"></a>
 </h3>
@@ -443,29 +625,132 @@ quantitation</li>
 </div>
 </div>
 <div class="section level2">
+<h2 id="troubleshooting-common-issues">Troubleshooting Common Issues<a class="anchor" aria-label="anchor" href="#troubleshooting-common-issues"></a>
+</h2>
+<div class="section level3">
+<h3 id="column-not-found-or-column-does-not-exist">“Column not found” or “Column does not exist”<a class="anchor" aria-label="anchor" href="#column-not-found-or-column-does-not-exist"></a>
+</h3>
+<p>This usually means the step can’t find the column you specified.
+Check:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># List all columns in your data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">your_data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check if a column is a measure_list</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">your_data</span><span class="op">$</span><span class="va">ri_signal</span><span class="op">)</span>  <span class="co"># Should include "measure_list"</span></span></code></pre></div>
+<p><strong>Common fixes:</strong> - Ensure column names match exactly
+(case-sensitive) - Make sure you’ve run
+<code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> before steps that need measure
+columns - Check that the data actually contains the expected columns</p>
+</div>
+<div class="section level3">
+<h3 id="no-measure-columns-found">“No measure columns found”<a class="anchor" aria-label="anchor" href="#no-measure-columns-found"></a>
+</h3>
+<p>This happens when a step expects measure columns but can’t find
+any:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check what measure columns exist after prep</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/find_measure_cols.html" class="external-link">find_measure_cols</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Common fixes:</strong> - Add
+<code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> at the start of your recipe -
+Verify your input data has the expected chromatogram columns</p>
+</div>
+<div class="section level3">
+<h3 id="unexpected-na-values-in-results">Unexpected NA values in results<a class="anchor" aria-label="anchor" href="#unexpected-na-values-in-results"></a>
+</h3>
+<p>If MW calculations return NA:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Check for zero or negative values</strong> in your
+chromatogram—these can cause calculation issues</li>
+<li>
+<strong>Verify calibration range</strong>—MW outside the calibration
+range may be extrapolated poorly</li>
+<li>
+<strong>Check integration limits</strong>—ensure baseline correction
+didn’t remove your peak</li>
+</ol>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Inspect the chromatogram data</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="recipe-wont-prep">Recipe won’t prep<a class="anchor" aria-label="anchor" href="#recipe-wont-prep"></a>
+</h3>
+<p>If <code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code> fails:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check each step individually by prepping with fewer steps</span></span>
+<span><span class="va">rec_partial</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">your_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Does this work?</span></span>
+<span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_partial</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add steps one at a time to find which one fails</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="performance-is-slow">Performance is slow<a class="anchor" aria-label="anchor" href="#performance-is-slow"></a>
+</h3>
+<p>For large datasets:</p>
+<ul>
+<li>Process samples in batches using <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> +
+<code><a href="https://dplyr.tidyverse.org/reference/group_map.html" class="external-link">dplyr::group_map()</a></code>
+</li>
+<li>Consider using fewer chromatogram points if high resolution isn’t
+needed</li>
+<li>Pre-filter to your region of interest before building the
+recipe</li>
+</ul>
+</div>
+</div>
+<div class="section level2">
 <h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
 </h2>
-<p>For more detailed workflows, see:</p>
-<ul>
-<li>
-<code><a href="../articles/triple-detection.html">vignette("triple-detection")</a></code>: Multi-detector SEC with
-MALS</li>
-<li>
-<code><a href="../articles/protein-sec.html">vignette("protein-sec")</a></code>: Protein aggregate
-analysis</li>
-<li>
-<code><a href="../articles/copolymer-analysis.html">vignette("copolymer-analysis")</a></code>: Composition
-analysis</li>
-<li>
-<code><a href="../articles/system-suitability.html">vignette("system-suitability")</a></code>: QC and SST testing</li>
-<li>
-<code><a href="../articles/sec-analysis.html">vignette("sec-analysis")</a></code>: Comprehensive reference</li>
-</ul>
+<p>Now that you understand the basics, explore these vignettes for
+specialized workflows:</p>
+<table class="table">
+<colgroup>
+<col width="29%">
+<col width="70%">
+</colgroup>
+<thead><tr class="header">
+<th>Vignette</th>
+<th>Use when you need to…</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../articles/triple-detection.html">vignette("triple-detection")</a></code></td>
+<td>Use MALS for absolute MW (no calibration needed)</td>
+</tr>
+<tr class="even">
+<td><code><a href="../articles/protein-sec.html">vignette("protein-sec")</a></code></td>
+<td>Analyze protein aggregates (HMWS/monomer/LMWS)</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../articles/copolymer-analysis.html">vignette("copolymer-analysis")</a></code></td>
+<td>Determine composition of multi-component samples</td>
+</tr>
+<tr class="even">
+<td><code><a href="../articles/system-suitability.html">vignette("system-suitability")</a></code></td>
+<td>Set up QC checks and system suitability tests</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../articles/sec-analysis.html">vignette("sec-analysis")</a></code></td>
+<td>See comprehensive examples and advanced options</td>
+</tr>
+</tbody>
+</table>
+<p>You can also browse all available functions with:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># See all SEC/GPC steps registered with measure</span></span>
+<span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/measure_steps.html" class="external-link">measure_steps</a></span><span class="op">(</span>techniques <span class="op">=</span> <span class="st">"SEC/GPC"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>

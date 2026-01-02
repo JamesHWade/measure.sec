@@ -10,10 +10,72 @@ analysis. It extends the
 
 This vignette covers:
 
-1.  Installation and setup
-2.  Understanding the data model
-3.  A basic single-detector workflow
-4.  Calculating molecular weight averages
+1.  What SEC/GPC is and why it matters
+2.  Installation and setup
+3.  Understanding the data model
+4.  A basic single-detector workflow
+5.  Calculating molecular weight averages
+6.  Troubleshooting common issues
+
+## What is SEC/GPC?
+
+**Size Exclusion Chromatography (SEC)**, also known as **Gel Permeation
+Chromatography (GPC)**, is a liquid chromatography technique that
+separates molecules by their hydrodynamic size (how large they appear in
+solution). Unlike other chromatography methods that separate by chemical
+interactions, SEC uses porous particles in the column that act like a
+molecular sieve—smaller molecules can enter the pores and take longer to
+travel through the column, while larger molecules are excluded from the
+pores and elute faster.
+
+This “size-based separation” makes SEC invaluable for characterizing
+polymers, proteins, and other macromolecules. With SEC, you can
+determine **molecular weight averages** (Mn, Mw, Mz), **dispersity**
+(how broad the molecular weight distribution is), and detect
+**aggregates** or **degradation products**. Pharmaceutical companies
+rely on SEC to ensure protein therapeutics meet purity specifications,
+while polymer scientists use it to understand how synthesis conditions
+affect material properties.
+
+The data from SEC analysis consists of **chromatograms**—plots of
+detector response versus elution time (or volume). Different detectors
+provide complementary information: **refractive index (RI)** detectors
+measure concentration, **UV detectors** track chromophore-containing
+species, and **light scattering detectors** provide absolute molecular
+weight without calibration standards. This package helps you process all
+these detector signals and extract meaningful molecular weight
+information.
+
+## Workflow Overview
+
+The typical SEC analysis workflow follows these steps:
+
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                        SEC Analysis Workflow                            │
+    └─────────────────────────────────────────────────────────────────────────┘
+
+      ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+      │   Raw Data   │────▶│ Preprocess   │────▶│  Calibrate   │
+      │ (CSV/Export) │     │  Signals     │     │   MW Scale   │
+      └──────────────┘     └──────────────┘     └──────────────┘
+             │                    │                    │
+             │                    │                    │
+             ▼                    ▼                    ▼
+       • Detector signals   • Baseline correct  • Apply standards
+       • Elution times      • Align detectors   • Or use MALS for
+       • Sample metadata    • Convert units       absolute MW
+                                                       │
+                                                       ▼
+                            ┌──────────────────────────────────────┐
+                            │          Calculate Results           │
+                            │  • MW averages (Mn, Mw, Mz)         │
+                            │  • Dispersity                        │
+                            │  • MW distribution                   │
+                            │  • Aggregate/fragment %              │
+                            └──────────────────────────────────────┘
+
+In measure.sec, each box becomes one or more **recipe steps**. You chain
+these steps together into a reproducible analysis pipeline.
 
 ### Basic Workflow Overview
 
@@ -81,25 +143,71 @@ library(ggplot2)
 ## The Data Model
 
 SEC data in measure.sec uses the **measure** package’s nested tibble
-structure:
+structure. Understanding this structure is key to working effectively
+with the package.
 
-- **`measure_tbl`**: A single chromatogram with `location` (elution
-  time/volume) and `value` (detector response)
-- **`measure_list`**: A list column containing multiple `measure_tbl`
-  objects
+### measure_tbl: A Single Chromatogram
 
-This structure allows you to store complete chromatograms alongside
-sample metadata.
+A **`measure_tbl`** is a tibble (data frame) representing a single
+chromatogram with two required columns:
+
+- **`location`**: The x-axis values—typically elution time (minutes) or
+  elution volume (mL)
+- **`value`**: The y-axis values—detector response (mV, AU, or processed
+  units)
+
+Think of it as one line on a chromatogram plot. For example, an RI
+detector signal from one injection is stored as a `measure_tbl`.
+
+### measure_list: Multiple Chromatograms (Internal Format)
+
+A **`measure_list`** is a list column containing multiple `measure_tbl`
+objects. This is the **internal format** used by measure.sec recipe
+steps—you typically won’t create this yourself. Instead,
+[`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
+converts your raw data into this format automatically.
+
+**After conversion**, your data will look like this:
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │  sample_id   known_mw   dn_dc       ri                      │
+    ├──────────────────────────────────────────────────────────────┤
+    │  "PS-50K"    50000      0.185       <measure_list[1]>       │
+    │  "PS-100K"   100000     0.185       <measure_list[1]>       │
+    │  "PMMA-75K"  75000      0.084       <measure_list[1]>       │
+    └──────────────────────────────────────────────────────────────┘
+                                               │
+                                               ▼
+                                Each entry contains a measure_tbl:
+                                  location │ value
+                                  ─────────┼────────
+                                  5.0      │ 0.002
+                                  5.1      │ 0.015
+                                  5.2      │ 0.089
+                                  ...      │ ...
+
+This nested structure has several advantages:
+
+1.  **Tidy organization**: Each row is one sample with all its metadata
+    and chromatogram(s)
+2.  **Batch processing**: Apply the same recipe to many samples at once
+3.  **Multiple detectors**: Store RI, UV, and MALS signals as separate
+    nested columns
+4.  **Metadata preservation**: Sample properties like `dn_dc` or
+    `known_mw` travel with the chromatogram
 
 ## Example Dataset
 
 The package includes `sec_triple_detect`, a synthetic multi-detector SEC
-dataset:
+dataset in **long format** (one row per time point). This is a good
+starting point for learning the workflow before analyzing your own data.
 
 ``` r
+# Load the example dataset
 data(sec_triple_detect, package = "measure.sec")
 
-# Overview
+# View the structure - this is LONG format data (one row per time point)
+# The signal columns (ri_signal, uv_signal, mals_signal) are numeric vectors
 glimpse(sec_triple_detect)
 #> Rows: 24,012
 #> Columns: 11
@@ -118,13 +226,16 @@ glimpse(sec_triple_detect)
 
 The dataset contains:
 
-- 12 polymer samples (polystyrene, PMMA, PEG, copolymers)
-- RI, UV, and MALS detector signals
-- Known molecular weights and dispersities
-- Sample-specific optical constants (dn/dc, extinction coefficients)
+- **12 polymer samples**: polystyrene (PS), PMMA, PEG, and copolymers
+- **~2,000 time points per sample**: giving 24,012 total rows
+- **Three detector signals**: RI, UV, and MALS (as numeric columns)
+- **Known molecular weights**: For validating your analysis
+- **Optical constants**: dn/dc and extinction coefficients (needed for
+  quantitative analysis)
 
 ``` r
-# Sample types
+# View the unique samples in the dataset
+# Each sample_id represents one injection; the chromatogram spans many rows
 sec_triple_detect |>
   distinct(sample_id, sample_type, polymer_type) |>
   print(n = 12)
@@ -147,40 +258,44 @@ sec_triple_detect |>
 
 ## Basic Workflow: RI Detector Analysis
 
-Let’s analyze a polystyrene sample using the RI detector:
+Let’s walk through a complete analysis of a polystyrene sample using the
+RI detector. This demonstrates the core pattern you’ll use for all SEC
+analysis.
 
 ``` r
-# Select a single polystyrene standard
+# Select a single polystyrene standard for this example
+# In practice, you'd often process many samples at once
 ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-50K")
 
-# View the data structure
+# View sample info - note this is still long format (many rows per sample)
 ps_sample |>
-  select(sample_id, polymer_type, known_mw, ri_signal)
-#> # A tibble: 2,001 × 4
-#>    sample_id polymer_type known_mw ri_signal
-#>    <chr>     <chr>           <dbl>     <dbl>
-#>  1 PS-50K    polystyrene     50000 0        
-#>  2 PS-50K    polystyrene     50000 0.000279 
-#>  3 PS-50K    polystyrene     50000 0        
-#>  4 PS-50K    polystyrene     50000 0        
-#>  5 PS-50K    polystyrene     50000 0.000842 
-#>  6 PS-50K    polystyrene     50000 0.000483 
-#>  7 PS-50K    polystyrene     50000 0.0000325
-#>  8 PS-50K    polystyrene     50000 0        
-#>  9 PS-50K    polystyrene     50000 0        
-#> 10 PS-50K    polystyrene     50000 0.000828 
-#> # ℹ 1,991 more rows
+  select(sample_id, polymer_type, known_mw, elution_time, ri_signal) |>
+  head()
+#> # A tibble: 6 × 5
+#>   sample_id polymer_type known_mw elution_time ri_signal
+#>   <chr>     <chr>           <dbl>        <dbl>     <dbl>
+#> 1 PS-50K    polystyrene     50000         5     0       
+#> 2 PS-50K    polystyrene     50000         5.01  0.000279
+#> 3 PS-50K    polystyrene     50000         5.02  0       
+#> 4 PS-50K    polystyrene     50000         5.03  0       
+#> 5 PS-50K    polystyrene     50000         5.04  0.000842
+#> 6 PS-50K    polystyrene     50000         5.05  0.000483
 ```
 
 ### Step 1: Create a Recipe
 
-Recipes define a sequence of preprocessing steps. Start by converting
-raw signal columns to the measure format:
+**Recipes** define a sequence of preprocessing steps. Think of a recipe
+as a blueprint for your analysis—it describes *what* to do, but doesn’t
+do it yet. This separation lets you define the workflow once and apply
+it to many samples.
 
 ``` r
+# Start a recipe with your data
+# The formula ~. means "use all columns"
 rec <- recipe(~., data = ps_sample) |>
-  # Convert RI signal to measure format
+  # Convert the ri_signal column to measure format
+  # This step tells recipes how to interpret your chromatogram data
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -190,71 +305,84 @@ rec <- recipe(~., data = ps_sample) |>
 
 ### Step 2: Add Preprocessing Steps
 
-Add baseline correction and RI processing:
+Chain additional steps using the pipe (`|>`). Each step transforms the
+data in sequence:
 
 ``` r
 rec <- recipe(~., data = ps_sample) |>
+  # First: convert raw signal to measure format
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
     col_name = "ri"
   ) |>
-  # Baseline correction
+  # Second: correct the baseline (removes drift and offset)
   step_sec_baseline(measures = "ri") |>
-  # RI detector processing with dn/dc
+  # Third: process RI signal using the sample's dn/dc value
+  # Dividing by dn/dc converts the RI signal to concentration-proportional units
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
 ```
 
 ### Step 3: Prep and Bake
 
-[`prep()`](https://recipes.tidymodels.org/reference/prep.html) learns
-parameters from the training data,
-[`bake()`](https://recipes.tidymodels.org/reference/bake.html) applies
-the transformations:
+Two functions execute your recipe:
+
+- **[`prep()`](https://recipes.tidymodels.org/reference/prep.html)**:
+  Learns any required parameters from the training data (like baseline
+  fit coefficients)
+- **[`bake()`](https://recipes.tidymodels.org/reference/bake.html)**:
+  Applies the transformations to produce results
 
 ``` r
+# Prep: Learn parameters from the data
 prepped <- prep(rec)
+
+# Bake: Apply transformations (new_data = NULL means use the training data)
 result <- bake(prepped, new_data = NULL)
 
-# View the processed data
+# View the processed data - ri now contains the baseline-corrected,
+# concentration-converted chromatogram
 result |>
   select(sample_id, ri)
 ```
 
+> **Why two steps?** This design lets you prep once on training data
+> (like calibration standards), then bake on new samples without
+> re-learning parameters. It also makes your analysis reproducible.
+
 ## Molecular Weight Averages
 
-Calculate Mn, Mw, Mz, and dispersity using
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md):
+The most common outputs from SEC analysis are **molecular weight
+averages**: - **Mn (number-average)**: Emphasizes lower MW species -
+**Mw (weight-average)**: Emphasizes higher MW species - **Mz
+(z-average)**: Even more sensitive to high MW species - **Dispersity
+(Mw/Mn)**: Measures breadth of the MW distribution (1.0 = monodisperse)
 
-``` r
-rec <- recipe(~., data = ps_sample) |>
-  step_measure_input_long(
-    ri_signal,
-    location = vars(elution_time),
-    col_name = "ri"
-  ) |>
-  step_sec_baseline(measures = "ri") |>
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  # Calculate MW averages using known MW values
-  step_sec_mw_averages(mw_column = "known_mw")
-
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
-
-# View molecular weight results
-result |>
-  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
-```
+Use
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+to calculate these. This step requires that the x-axis (location) values
+already represent log₁₀(MW)—which is what
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+provides. See the Calibration section below for the complete workflow.
 
 ## Calibration Curves
 
-For samples without absolute MW data, use calibration standards:
+Most SEC analysis requires **calibration** to convert retention time to
+molecular weight. The most common approach uses **narrow
+standards**—polymers with known molecular weights and low dispersity—to
+build a calibration curve.
+
+> **Note**: If you have a light scattering detector (MALS), you can
+> determine absolute molecular weights without calibration. See
+> [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)
+> for details.
 
 ``` r
-# Load polystyrene standards
+# Load polystyrene narrow standards
+# These are well-characterized polymers used to build the calibration curve
 data(sec_ps_standards, package = "measure.sec")
 
-# View the standards
+# View the standards - each has a known peak molecular weight (Mp)
 sec_ps_standards |>
   select(standard_name, mp, log_mp, retention_time) |>
   print(n = 8)
@@ -271,7 +399,9 @@ sec_ps_standards |>
 #> 8 PS-67500        67500   4.83           15.0
 #> # ℹ 8 more rows
 
-# Visualize calibration curve
+# Visualize the calibration curve
+# The relationship between log(MW) and retention time is typically linear
+# or slightly curved, so we fit a polynomial
 ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
   geom_point(size = 3, color = "#2E86AB") +
   geom_smooth(
@@ -292,11 +422,12 @@ ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
 
 ![](getting-started_files/figure-html/calibration-1.png)
 
-Apply conventional calibration with
+Apply the calibration using
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md):
 
 ``` r
-# Prepare standards for calibration
+# Prepare standards in the format expected by the calibration step
+# Needs columns: retention (time/volume) and log_mw
 ps_cal <- sec_ps_standards |>
   select(retention = retention_time, log_mw = log_mp)
 
@@ -307,24 +438,42 @@ rec <- recipe(~., data = ps_sample) |>
     col_name = "ri"
   ) |>
   step_sec_baseline(measures = "ri") |>
-  # Apply calibration
+  # Apply conventional calibration using polystyrene standards
+  # This converts retention time to log10(MW) on the x-axis
+  # fit_type options: "linear", "quadratic", "cubic" (most common)
   step_sec_conventional_cal(
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
-  step_sec_mw_averages(measures = "log_mw")
+  # Calculate MW averages from the calibrated chromatogram
+  # The calibration step converted location values to log10(MW)
+  step_sec_mw_averages()
 
 prepped <- prep(rec)
 result <- bake(prepped, new_data = NULL)
+
+# View molecular weight results
+# New columns are added with mw_ prefix
+result |>
+  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
+
+> **Important**: Conventional calibration assumes your sample has
+> similar hydrodynamic behavior to your standards. Polystyrene standards
+> work well for other flexible polymers in THF, but for proteins in
+> aqueous SEC, use protein standards or light scattering.
 
 ## Available Steps
 
-The package provides steps for: \### Preprocessing -
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md):
-SEC-optimized baseline correction -
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md):
-Correct inter-detector delays
+The package provides a comprehensive set of recipe steps. Here’s a quick
+reference organized by function:
+
+### Preprocessing
+
+- [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md):
+  SEC-optimized baseline correction
+- [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md):
+  Correct inter-detector delays
 
 ### Detector Processing
 
@@ -365,20 +514,103 @@ Correct inter-detector delays
 - [`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md):
   Complete protein SEC workflow
 
+## Troubleshooting Common Issues
+
+### “Column not found” or “Column does not exist”
+
+This usually means the step can’t find the column you specified. Check:
+
+``` r
+# List all columns in your data
+names(your_data)
+
+# Check if a column is a measure_list
+class(your_data$ri_signal)  # Should include "measure_list"
+```
+
+**Common fixes:** - Ensure column names match exactly (case-sensitive) -
+Make sure you’ve run
+[`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
+before steps that need measure columns - Check that the data actually
+contains the expected columns
+
+### “No measure columns found”
+
+This happens when a step expects measure columns but can’t find any:
+
+``` r
+# Check what measure columns exist after prep
+result <- bake(prepped, new_data = NULL)
+measure::find_measure_cols(result)
+```
+
+**Common fixes:** - Add
+[`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
+at the start of your recipe - Verify your input data has the expected
+chromatogram columns
+
+### Unexpected NA values in results
+
+If MW calculations return NA:
+
+1.  **Check for zero or negative values** in your chromatogram—these can
+    cause calculation issues
+2.  **Verify calibration range**—MW outside the calibration range may be
+    extrapolated poorly
+3.  **Check integration limits**—ensure baseline correction didn’t
+    remove your peak
+
+``` r
+# Inspect the chromatogram data
+result$ri[[1]] |>
+  summary()
+```
+
+### Recipe won’t prep
+
+If [`prep()`](https://recipes.tidymodels.org/reference/prep.html) fails:
+
+``` r
+# Check each step individually by prepping with fewer steps
+rec_partial <- recipe(~., data = your_data) |>
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri")
+
+# Does this work?
+prep(rec_partial)
+
+# Add steps one at a time to find which one fails
+```
+
+### Performance is slow
+
+For large datasets:
+
+- Process samples in batches using
+  [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) +
+  [`dplyr::group_map()`](https://dplyr.tidyverse.org/reference/group_map.html)
+- Consider using fewer chromatogram points if high resolution isn’t
+  needed
+- Pre-filter to your region of interest before building the recipe
+
 ## Next Steps
 
-For more detailed workflows, see:
+Now that you understand the basics, explore these vignettes for
+specialized workflows:
 
-- [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md):
-  Multi-detector SEC with MALS
-- [`vignette("protein-sec")`](https://jameshwade.github.io/measure-sec/articles/protein-sec.md):
-  Protein aggregate analysis
-- [`vignette("copolymer-analysis")`](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md):
-  Composition analysis
-- [`vignette("system-suitability")`](https://jameshwade.github.io/measure-sec/articles/system-suitability.md):
-  QC and SST testing
-- [`vignette("sec-analysis")`](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md):
-  Comprehensive reference
+| Vignette                                                                                                    | Use when you need to…                            |
+|-------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)     | Use MALS for absolute MW (no calibration needed) |
+| [`vignette("protein-sec")`](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)               | Analyze protein aggregates (HMWS/monomer/LMWS)   |
+| [`vignette("copolymer-analysis")`](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md) | Determine composition of multi-component samples |
+| [`vignette("system-suitability")`](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) | Set up QC checks and system suitability tests    |
+| [`vignette("sec-analysis")`](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md)             | See comprehensive examples and advanced options  |
+
+You can also browse all available functions with:
+
+``` r
+# See all SEC/GPC steps registered with measure
+measure::measure_steps(techniques = "SEC/GPC")
+```
 
 ## Session Info
 
