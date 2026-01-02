@@ -30,8 +30,9 @@ If \code{NULL}, uses all measure columns.}
 
 \item{broad_standard}{A data frame containing the broad standard chromatogram:
 \itemize{
-\item \code{location} (or \code{time}, \code{volume}, \code{retention}): Elution position
-\item \code{value} (or \code{signal}, \code{response}): Detector response
+\item \code{location} (or \code{time}, \code{volume}, \code{retention}, \code{elution_time},
+\code{elution_volume}): Elution position
+\item \code{value} (or \code{signal}, \code{response}, \code{intensity}, \code{ri}, \code{uv}): Detector response
 }}
 
 \item{known_mn}{Known number-average molecular weight (Mn) in Daltons.}
@@ -47,8 +48,7 @@ If \code{NULL}, uses all measure columns.}
 \item{method}{Calibration method:
 \itemize{
 \item \code{"hamielec"} (default): Optimize to match Mn and Mw
-\item \code{"integral"}: Use integral MWD matching (not yet implemented
-)
+\item \code{"integral"}: Use integral MWD matching (not yet implemented)
 }}
 
 \item{integration_range}{Optional numeric vector \code{c(min, max)} specifying
@@ -90,17 +90,15 @@ instead of multiple narrow standards.
 
 \strong{Hamielec Method:}
 
-Based on Balke, Hamielec, LeClair, and Pearce (1969), this method assumes
-a linear calibration relationship:
+Based on Balke, Hamielec, LeClair, and Pearce (1969). The original method
+assumes a linear calibration relationship, though this implementation also
+supports a quadratic extension for better fit over wide MW ranges:
 
 \deqn{\log_{10}(M) = C_1 + C_2 \cdot V}
 
-The algorithm exploits the fact that dispersity (Mw/Mn) depends only on the
-slope C2, while absolute MW values depend on both coefficients:
-\enumerate{
-\item Optimize C2 to reproduce the known dispersity
-\item Then optimize C1 to reproduce the known Mw
-}
+The algorithm simultaneously optimizes coefficients C1 and C2 (and C3 for
+quadratic fits) using Nelder-Mead optimization to minimize the squared
+relative errors between calculated and known Mn and Mw values.
 
 \strong{When to Use Broad Standard Calibration:}
 \itemize{
@@ -122,6 +120,8 @@ slope C2, while absolute MW values depend on both coefficients:
 library(recipes)
 library(measure)
 
+data(sec_triple_detect)
+
 # Create broad standard chromatogram data
 broad_std <- data.frame(
   time = seq(10, 20, by = 0.1),
@@ -129,8 +129,12 @@ broad_std <- data.frame(
 )
 
 # Apply broad standard calibration
-rec <- recipe(~., data = polymer_data) |>
-  step_measure_input_long(ri, location = vars(time), col_name = "ri") |>
+rec <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
   step_sec_baseline() |>
   step_sec_broad_standard(
     broad_standard = broad_std,

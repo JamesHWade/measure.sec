@@ -14,8 +14,9 @@
 #' @param measures Character vector of measure columns to apply calibration to.
 #'   If `NULL`, uses all measure columns.
 #' @param broad_standard A data frame containing the broad standard chromatogram:
-#'   - `location` (or `time`, `volume`, `retention`): Elution position
-#'   - `value` (or `signal`, `response`): Detector response
+#'   - `location` (or `time`, `volume`, `retention`, `elution_time`,
+#'     `elution_volume`): Elution position
+#'   - `value` (or `signal`, `response`, `intensity`, `ri`, `uv`): Detector response
 #' @param known_mn Known number-average molecular weight (Mn) in Daltons.
 #' @param known_mw Known weight-average molecular weight (Mw) in Daltons.
 #' @param fit_type Type of calibration curve:
@@ -23,8 +24,7 @@
 #'   - `"quadratic"`: log10(M) = C1 + C2*V + C3*V^2
 #' @param method Calibration method:
 #'   - `"hamielec"` (default): Optimize to match Mn and Mw
-#'   - `"integral"`: Use integral MWD matching (not yet implemented
-#' )
+#'   - `"integral"`: Use integral MWD matching (not yet implemented)
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
 #'   the elution range to use for the broad standard. If `NULL`, auto-detects
 #'   peak region.
@@ -49,16 +49,15 @@
 #'
 #' **Hamielec Method:**
 #'
-#' Based on Balke, Hamielec, LeClair, and Pearce (1969), this method assumes
-#' a linear calibration relationship:
+#' Based on Balke, Hamielec, LeClair, and Pearce (1969). The original method
+#' assumes a linear calibration relationship, though this implementation also
+#' supports a quadratic extension for better fit over wide MW ranges:
 #'
 #' \deqn{\log_{10}(M) = C_1 + C_2 \cdot V}
 #'
-#' The algorithm exploits the fact that dispersity (Mw/Mn) depends only on the
-#' slope C2, while absolute MW values depend on both coefficients:
-#'
-#' 1. Optimize C2 to reproduce the known dispersity
-#' 2. Then optimize C1 to reproduce the known Mw
+#' The algorithm simultaneously optimizes coefficients C1 and C2 (and C3 for
+#' quadratic fits) using Nelder-Mead optimization to minimize the squared
+#' relative errors between calculated and known Mn and Mw values.
 #'
 #' **When to Use Broad Standard Calibration:**
 #'
@@ -87,6 +86,8 @@
 #' library(recipes)
 #' library(measure)
 #'
+#' data(sec_triple_detect)
+#'
 #' # Create broad standard chromatogram data
 #' broad_std <- data.frame(
 #'   time = seq(10, 20, by = 0.1),
@@ -94,8 +95,12 @@
 #' )
 #'
 #' # Apply broad standard calibration
-#' rec <- recipe(~., data = polymer_data) |>
-#'   step_measure_input_long(ri, location = vars(time), col_name = "ri") |>
+#' rec <- recipe(~., data = sec_triple_detect) |>
+#'   step_measure_input_long(
+#'     ri_signal,
+#'     location = vars(elution_time),
+#'     col_name = "ri"
+#'   ) |>
 #'   step_sec_baseline() |>
 #'   step_sec_broad_standard(
 #'     broad_standard = broad_std,
@@ -405,7 +410,8 @@ step_sec_broad_standard_new <- function(
 
   if (fit_type == "linear") {
     # log10(M) = C1 + C2*V
-    # At v_mid, log10(MW) should be roughly log10((Mn + Mw)/2)
+    # At v_mid, estimate log10(MW) as average of log10(Mn) and log10(Mw)
+    # This equals log10(geometric_mean(Mn, Mw)), not log10(arithmetic_mean)
     avg_log_mw <- (known_log_mn + known_log_mw) / 2
 
     # Slope is typically negative (higher MW elutes first)

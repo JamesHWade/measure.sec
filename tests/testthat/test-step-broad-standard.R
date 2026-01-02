@@ -344,7 +344,7 @@ test_that("step_sec_broad_standard warns for out-of-range data", {
       extrapolation = "warn"
     )
 
-  # Warning is emitted during bake
+  # Warning is emitted during prep (when it internally bakes training data)
   expect_warning(
     recipes::prep(rec),
     "outside calibration range"
@@ -591,4 +591,76 @@ test_that("step_sec_broad_standard warns for unimplemented integral method", {
       ),
     "not yet implemented"
   )
+})
+
+# -- Additional coverage tests -------------------------------------------------
+
+test_that("step_sec_broad_standard errors on insufficient data points", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+
+  # Create standard with only 5 points (need at least 10)
+  sparse_std <- data.frame(
+    time = seq(14, 16, by = 0.5),
+    signal = dnorm(seq(14, 16, by = 0.5), mean = 15, sd = 0.5)
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_broad_standard(
+      broad_standard = sparse_std,
+      known_mn = 50000,
+      known_mw = 150000
+    )
+
+  expect_error(
+    recipes::prep(rec),
+    "Insufficient data points"
+  )
+})
+
+test_that("step_sec_broad_standard respects integration_range", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  broad_std <- create_broad_standard(mn = 50000, mw = 150000)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_broad_standard(
+      broad_standard = broad_std,
+      known_mn = 50000,
+      known_mw = 150000,
+      integration_range = c(13, 17),
+      extrapolation = "none"
+    )
+
+  suppressWarnings(prepped <- recipes::prep(rec))
+
+  # Calibration range should match integration_range
+  cal_range <- prepped$steps[[1]]$calibration_range
+  expect_equal(cal_range[1], 13, tolerance = 0.1)
+  expect_equal(cal_range[2], 17, tolerance = 0.1)
+})
+
+test_that("step_sec_broad_standard reports convergence diagnostics", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  broad_std <- create_broad_standard(mn = 50000, mw = 150000)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_broad_standard(
+      broad_standard = broad_std,
+      known_mn = 50000,
+      known_mw = 150000,
+      extrapolation = "none"
+    )
+
+  suppressWarnings(prepped <- recipes::prep(rec))
+
+  # Convergence should be 0 for successful optimization
+  diag <- prepped$steps[[1]]$calibration_diagnostics
+  expect_equal(diag$convergence, 0)
+  expect_true(!is.null(diag$iterations))
+  expect_true(!is.null(diag$final_objective))
 })
