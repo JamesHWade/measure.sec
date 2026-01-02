@@ -1,4 +1,150 @@
-url: ~
+url: https://jameshwade.github.io/measure-sec/
+
 template:
   bootstrap: 5
+  bootswatch: flatly
 
+home:
+  title: measure.sec
+  description: SEC/GPC Analysis Extensions for the Measure Package
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Getting Started
+        href: articles/getting-started.html
+      - text: "---"
+      - text: Workflows
+      - text: Multi-Detector SEC
+        href: articles/triple-detection.html
+      - text: Protein SEC Analysis
+        href: articles/protein-sec.html
+      - text: Copolymer Composition
+        href: articles/copolymer-analysis.html
+      - text: "---"
+      - text: Quality Control
+      - text: System Suitability
+        href: articles/system-suitability.html
+      - text: "---"
+      - text: Reference
+      - text: Comprehensive SEC Analysis
+        href: articles/sec-analysis.html
+
+reference:
+- title: Visualization
+  desc: Publication-ready plots for SEC/GPC results
+  contents:
+  - plot_sec
+  - plot_sec_chromatogram
+  - plot_sec_mwd
+  - plot_sec_multidetector
+  - plot_sec_conformation
+  - plot_sec_calibration
+
+- title: Detector Processing
+  desc: Recipe steps for SEC detector signal processing
+  contents:
+  - step_sec_ri
+  - step_sec_uv
+  - step_sec_dad
+  - step_sec_mals
+  - step_sec_lals
+  - step_sec_rals
+  - step_sec_dls
+  - step_sec_viscometer
+  - step_sec_detector_delay
+
+- title: Signal Processing
+  desc: Baseline correction and signal enhancement
+  contents:
+  - step_sec_baseline
+  - step_sec_band_broadening
+  - step_sec_concentration
+
+- title: Calibration
+  desc: Molecular weight calibration methods
+  contents:
+  - step_sec_conventional_cal
+  - step_sec_universal_cal
+
+- title: Molecular Weight Calculations
+  desc: MW averages, distributions, and fractions
+  contents:
+  - step_sec_mw_averages
+  - step_sec_mw_distribution
+  - step_sec_mw_fractions
+
+- title: Composition Analysis
+  desc: Copolymer and composition analysis
+  contents:
+  - step_sec_composition
+  - step_sec_uv_ri_ratio
+  - step_sec_intrinsic_visc
+
+- title: Protein SEC
+  desc: Biopharmaceutical SEC analysis
+  contents:
+  - step_sec_protein
+  - step_sec_aggregates
+  - step_sec_oligomer
+
+- title: Quality Control Functions
+  desc: Functions for system suitability testing and QC
+  contents:
+  - measure_sec_resolution
+  - measure_sec_plate_count
+  - measure_sec_asymmetry
+  - measure_sec_recovery
+  - measure_sec_suitability
+
+- title: Polymer Analysis Functions
+  desc: Functions for polymer characterization
+  contents:
+  - measure_mh_parameters
+  - measure_branching_index
+
+- title: Export Functions
+  desc: Data extraction and export utilities
+  contents:
+  - measure_sec_slice_table
+  - measure_sec_summary_table
+
+- title: Datasets
+  desc: Example datasets for SEC analysis
+  contents:
+  - sec_triple_detect
+  - sec_calibration_standards
+  - sec_ps_standards
+  - sec_pmma_standards
+
+articles:
+- title: Getting Started
+  navbar: ~
+  contents:
+  - getting-started
+
+- title: Workflows
+  desc: Detailed workflows for specific applications
+  contents:
+  - triple-detection
+  - protein-sec
+  - copolymer-analysis
+
+- title: Quality Control
+  desc: System suitability and quality assurance
+  contents:
+  - system-suitability
+
+- title: Reference
+  desc: Comprehensive reference documentation
+  contents:
+  - sec-analysis
+
+authors:
+  James Wade:
+    href: https://github.com/JamesHWade
