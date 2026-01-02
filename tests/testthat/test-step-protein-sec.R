@@ -432,9 +432,8 @@ test_that("step_sec_oligomer uses mw_column for species assignment", {
   prepped <- recipes::prep(rec)
 
   # Should not warn about RT fallback when mw_column is provided
-  expect_no_warning(
-    result <- recipes::bake(prepped, new_data = NULL)
-  )
+  expect_no_warning(recipes::bake(prepped, new_data = NULL))
+  result <- recipes::bake(prepped, new_data = NULL)
 
   # Should have MW columns in output
   expect_true("oligo_monomer_mw" %in% names(result))

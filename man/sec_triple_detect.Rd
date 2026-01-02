@@ -96,9 +96,13 @@ rec <- recipe(~ ., data = sec_triple_detect) |>
 }
 \seealso{
 Other sec-data: 
+\code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
+\code{\link{sec_copolymer}},
 \code{\link{sec_pmma_standards}},
-\code{\link{sec_ps_standards}}
+\code{\link{sec_protein}},
+\code{\link{sec_ps_standards}},
+\code{\link{sec_system_suitability}}
 }
 \concept{sec-data}
 \keyword{datasets}

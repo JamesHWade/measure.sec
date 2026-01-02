@@ -338,3 +338,285 @@
 #'
 #' @source Synthetic data based on typical commercial narrow PMMA standards.
 "sec_pmma_standards"
+
+
+# ==============================================================================
+# Additional Example Datasets
+# ==============================================================================
+
+#' Copolymer SEC Data for Composition Analysis
+#'
+#' A synthetic dataset containing SEC chromatograms of styrene-acrylate
+#' copolymers with varying compositions, designed for demonstrating UV/RI
+#' ratio analysis for composition determination.
+#'
+#' @format A tibble with 4,206 rows and 8 columns:
+#' \describe{
+#'   \item{sample_id}{Character. Sample identifier (e.g., "Copoly-20S")}
+#'   \item{elution_time}{Numeric. Elution time in minutes}
+#'   \item{ri_signal}{Numeric. Refractive index detector signal}
+#'   \item{uv_254_signal}{Numeric. UV detector signal at 254 nm}
+#'   \item{styrene_fraction}{Numeric. Styrene content (0-1)}
+#'   \item{mw}{Numeric. Weight-average molecular weight in Da}
+#'   \item{dispersity}{Numeric. Polydispersity index (Mw/Mn)}
+#'   \item{description}{Character. Sample description}
+#' }
+#'
+#' @details
+#' The dataset includes 6 samples spanning the full composition range:
+#' \itemize{
+#'   \item Pure polyacrylate (0% styrene) - no UV absorption
+#'   \item 20%, 40%, 60%, 80% styrene copolymers
+#'   \item Pure polystyrene (100% styrene) - strong UV absorption
+#' }
+#'
+#' **UV/RI Ratio Analysis:**
+#' The UV signal at 254 nm is selective for styrene units, while the RI signal
+#' responds to total mass. The UV/RI ratio across the chromatogram reveals
+#' composition as a function of molecular weight, enabling detection of
+#' compositional drift.
+#'
+#' **Typical Workflow:**
+#' 1. Load data and convert to measure format
+#' 2. Apply \code{\link{step_sec_uv_ri_ratio}} to calculate ratios
+#' 3. Calibrate ratio to composition using homopolymer standards
+#' 4. Plot composition vs molecular weight
+#'
+#' @family sec-data
+#'
+#' @examples
+#' data(sec_copolymer)
+#'
+#' # View composition range
+#' unique(sec_copolymer[, c("sample_id", "styrene_fraction")])
+#'
+#' # Plot RI vs UV for different compositions
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   ggplot(sec_copolymer, aes(elution_time)) +
+#'     geom_line(aes(y = ri_signal, color = "RI")) +
+#'     geom_line(aes(y = uv_254_signal, color = "UV 254nm")) +
+#'     facet_wrap(~sample_id) +
+#'     labs(x = "Elution Time (min)", y = "Signal", color = "Detector") +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package testing and examples.
+"sec_copolymer"
+
+
+#' Protein SEC Data with Aggregates
+#'
+#' A synthetic dataset containing SEC chromatograms of a monoclonal antibody
+#' (mAb) under various stress conditions, showing monomer, dimer, higher-order
+#' aggregates, and fragments.
+#'
+#' @format A tibble with 6,255 rows and 9 columns:
+#' \describe{
+#'   \item{sample_id}{Character. Sample identifier (e.g., "mAb-Reference")}
+#'   \item{elution_time}{Numeric. Elution time in minutes}
+#'   \item{uv_280_signal}{Numeric. UV detector signal at 280 nm}
+#'   \item{uv_214_signal}{Numeric. UV detector signal at 214 nm}
+#'   \item{description}{Character. Sample treatment description}
+#'   \item{monomer_pct}{Numeric. Known monomer percentage}
+#'   \item{dimer_pct}{Numeric. Known dimer percentage}
+#'   \item{hmw_pct}{Numeric. Known high molecular weight aggregate percentage}
+#'   \item{fragment_pct}{Numeric. Known fragment percentage}
+#' }
+#'
+#' @details
+#' The dataset simulates a typical mAb (~150 kDa) under various conditions:
+#' \itemize{
+#'   \item Reference standard (>98% monomer)
+#'   \item Heat-stressed samples (40°C for 1-2 weeks)
+#'   \item Aged sample (12-month stability)
+#'   \item Freeze-thaw stressed sample
+#' }
+#'
+#' **Species Present:**
+#' \itemize{
+#'   \item High molecular weight (HMW) aggregates (~600 kDa)
+#'   \item Dimer (~300 kDa)
+#'   \item Monomer (~150 kDa)
+#'   \item Fragments (~50 kDa, Fab-like)
+#' }
+#'
+#' **Typical Workflow:**
+#' 1. Load data and apply baseline correction
+#' 2. Use \code{\link{step_sec_aggregates}} to identify and quantify species
+#' 3. Calculate percent area for each species
+#' 4. Compare to acceptance criteria
+#'
+#' @family sec-data
+#'
+#' @examples
+#' data(sec_protein)
+#'
+#' # View sample conditions
+#' unique(sec_protein[, c("sample_id", "description", "monomer_pct")])
+#'
+#' # Plot stressed vs reference
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   library(dplyr)
+#'
+#'   sec_protein |>
+#'     filter(sample_id %in% c("mAb-Reference", "mAb-Stressed-2")) |>
+#'     ggplot(aes(elution_time, uv_280_signal, color = sample_id)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Elution Time (min)",
+#'       y = "UV 280 nm Signal",
+#'       title = "Protein SEC: Reference vs Stressed"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package testing and examples.
+"sec_protein"
+
+
+#' Branched Polymer SEC Data
+#'
+#' A synthetic dataset containing SEC chromatograms of linear, branched, and
+#' star polymers, designed for demonstrating branching analysis using
+#' multi-detector SEC.
+#'
+#' @format A tibble with 5,608 rows and 11 columns:
+#' \describe{
+#'   \item{sample_id}{Character. Sample identifier (e.g., "Linear-50K")}
+#'   \item{elution_time}{Numeric. Elution time in minutes}
+#'   \item{ri_signal}{Numeric. Refractive index detector signal}
+#'   \item{visc_signal}{Numeric. Viscometer detector signal}
+#'   \item{mals_signal}{Numeric. Multi-angle light scattering signal}
+#'   \item{topology}{Character. Polymer topology: "linear", "branched", or "star"}
+#'   \item{mw}{Numeric. Weight-average molecular weight in Da}
+#'   \item{branching_index}{Numeric. Branching index g' (1.0 for linear)}
+#'   \item{intrinsic_visc}{Numeric. Intrinsic viscosity in mL/g}
+#'   \item{rg}{Numeric. Radius of gyration in nm}
+#' }
+#'
+#' @details
+#' The dataset includes polyethylene-like samples with three topologies:
+#' \itemize{
+#'   \item Linear polymers (g' = 1.0) at 50K, 100K, 200K MW
+#'   \item Branched polymers (g' = 0.55-0.75) at same MW range
+#'   \item Star polymers (g' = 0.50-0.60) at 50K, 100K MW
+#' }
+#'
+#' **Key Observation:**
+#' At the same molecular weight, branched polymers have smaller hydrodynamic
+#' volume and elute LATER than their linear counterparts. This is the basis
+#' for branching analysis by comparing SEC retention to absolute MW from MALS.
+#'
+#' **Branching Index (g'):**
+#' g' = \eqn{[\eta]_{branched}} / \eqn{[\eta]_{linear}} at same MW
+#'
+#' Values less than 1.0 indicate branching. Lower values mean more compact
+#' (more branched) structures.
+#'
+#' **Typical Workflow:**
+#' 1. Apply \code{\link{step_sec_mals}} for absolute MW
+#' 2. Apply \code{\link{step_sec_viscometer}} for intrinsic viscosity
+#' 3. Use \code{\link{measure_branching_index}} to calculate g'
+#' 4. Plot Mark-Houwink relationship to compare topologies
+#'
+#' @family sec-data
+#'
+#' @examples
+#' data(sec_branched)
+#'
+#' # Compare topologies
+#' unique(sec_branched[, c("sample_id", "topology", "mw", "branching_index")])
+#'
+#' # Plot linear vs branched at same MW
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   library(dplyr)
+#'
+#'   sec_branched |>
+#'     filter(mw == 100000) |>
+#'     ggplot(aes(elution_time, ri_signal, color = topology)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Elution Time (min)",
+#'       y = "RI Signal",
+#'       title = "100K MW: Linear vs Branched vs Star",
+#'       subtitle = "Branched polymers elute later (smaller Vh)"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package testing and examples.
+"sec_branched"
+
+
+#' System Suitability Test Data
+#'
+#' A synthetic dataset containing SEC system suitability test (SST) runs
+#' showing column degradation over time, useful for QC testing and
+#' demonstrating column performance metrics.
+#'
+#' @format A tibble with 10,005 rows and 7 columns:
+#' \describe{
+#'   \item{run_id}{Character. Run identifier (e.g., "SST-Day0")}
+#'   \item{elution_time}{Numeric. Elution time in minutes}
+#'   \item{ri_signal}{Numeric. Refractive index detector signal}
+#'   \item{column_age_days}{Numeric. Column age in days}
+#'   \item{expected_plate_count}{Numeric. Expected theoretical plate count}
+#'   \item{expected_asymmetry}{Numeric. Expected peak asymmetry factor}
+#'   \item{expected_resolution}{Numeric. Expected resolution between peaks}
+#' }
+#'
+#' @details
+#' The dataset simulates SST runs using two polystyrene standards (50K and
+#' 100K MW) measured at different column ages (0, 30, 60, 90, 120 days).
+#'
+#' **Column Degradation Effects:**
+#' As the column ages, typical degradation patterns include:
+#' \itemize{
+#'   \item Decreased plate count (broader peaks)
+#'   \item Increased asymmetry (more tailing)
+#'   \item Decreased resolution between peaks
+#' }
+#'
+#' **QC Metrics Available:**
+#' Use the QC functions to calculate and verify:
+#' \itemize{
+#'   \item \code{\link{measure_sec_plate_count}} - Theoretical plates
+#'   \item \code{\link{measure_sec_asymmetry}} - Peak asymmetry
+#'   \item \code{\link{measure_sec_resolution}} - Peak resolution
+#'   \item \code{\link{measure_sec_suitability}} - Combined SST check
+#' }
+#'
+#' **Typical Workflow:**
+#' 1. Load daily SST run
+#' 2. Calculate QC metrics
+#' 3. Compare to specifications
+#' 4. Track trends over time
+#'
+#' @family sec-data
+#'
+#' @examples
+#' data(sec_system_suitability)
+#'
+#' # View column age progression
+#' unique(sec_system_suitability[,
+#'   c("run_id", "column_age_days", "expected_plate_count")])
+#'
+#' # Plot degradation over time
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'
+#'   ggplot(sec_system_suitability, aes(elution_time, ri_signal, color = run_id)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Elution Time (min)",
+#'       y = "RI Signal",
+#'       title = "System Suitability: Column Degradation Over Time"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package testing and examples.
+"sec_system_suitability"
