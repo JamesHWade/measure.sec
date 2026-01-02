@@ -47,6 +47,7 @@ reference:
   - plot_sec_multidetector
   - plot_sec_conformation
   - plot_sec_calibration
+  - plot_sec_composition
 
 - title: Detector Processing
   desc: Recipe steps for SEC detector signal processing

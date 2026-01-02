@@ -461,6 +461,177 @@ test_that("plot_sec_mwd filters out zero and negative MW values", {
 
 
 # ==============================================================================
+# plot_sec_composition tests
+# ==============================================================================
+
+# Helper to create test composition data
+create_test_composition_data <- function() {
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  # Simulate composition values (0-1 range)
+  composition <- dnorm(time, mean = 10, sd = 2)
+  composition <- (composition - min(composition)) /
+    (max(composition) - min(composition))
+
+  test_data <- tibble::tibble(
+    sample_id = c("sample1", "sample2")
+  )
+
+  test_data$composition_a <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = composition),
+    measure::new_measure_tbl(location = time, value = composition * 0.8)
+  ))
+
+  test_data
+}
+
+test_that("plot_sec_composition returns ggplot2 object", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  # Use retention time (no MW column)
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "retention"
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("plot_sec_composition handles MW x-axis", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  time <- seq(5, 15, by = 0.1)
+  composition <- rep(0.5, length(time))
+  mw_values <- 10^(7 - 0.3 * time)
+
+  test_data <- tibble::tibble(sample_id = "sample1")
+  test_data$composition_a <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = composition)
+  ))
+  test_data$mw <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = time, value = mw_values)
+  ))
+
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "mw"
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("plot_sec_composition shows average line", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "retention",
+    show_average = TRUE
+  )
+
+  expect_s3_class(p, "ggplot")
+  # Check that geom_hline was added (average line)
+  layer_classes <- sapply(p$layers, function(l) class(l$geom)[1])
+  expect_true("GeomHline" %in% layer_classes)
+})
+
+test_that("plot_sec_composition handles custom component names", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "retention",
+    component_names = c(a = "Styrene", b = "Acrylate")
+  )
+
+  expect_s3_class(p, "ggplot")
+  # Check y-axis label contains component name
+  expect_true(grepl("Styrene", p$labels$y, fixed = TRUE))
+})
+
+test_that("plot_sec_composition errors on missing composition column", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+
+  expect_error(
+    plot_sec_composition(test_data, composition_col = "composition_a"),
+    "not found"
+  )
+})
+
+test_that("plot_sec_composition falls back to retention when MW missing", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  # Request MW axis but no MW column - should warn and use retention
+  expect_warning(
+    p <- plot_sec_composition(
+      test_data,
+      composition_col = "composition_a",
+      x_axis = "mw"
+    ),
+    "not found"
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("plot_sec_composition handles show_points option", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "retention",
+    show_points = TRUE
+  )
+
+  expect_s3_class(p, "ggplot")
+  # Check that geom_point was added
+  layer_classes <- sapply(p$layers, function(l) class(l$geom)[1])
+  expect_true("GeomPoint" %in% layer_classes)
+})
+
+test_that("plot_sec_composition respects y_limits", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_composition_data()
+
+  p <- plot_sec_composition(
+    test_data,
+    composition_col = "composition_a",
+    x_axis = "retention",
+    y_limits = c(0, 0.8)
+  )
+
+  expect_s3_class(p, "ggplot")
+})
+
+
+# ==============================================================================
 # sec_results class tests
 # ==============================================================================
 
@@ -528,6 +699,17 @@ test_that("sec_results errors when no measure columns found", {
   expect_error(
     sec_results(test_data),
     "No measure columns"
+  )
+})
+
+test_that("sec_results errors on invalid sample_id column", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+
+  expect_error(
+    sec_results(test_data, sample_id = "nonexistent"),
+    "not found"
   )
 })
 
