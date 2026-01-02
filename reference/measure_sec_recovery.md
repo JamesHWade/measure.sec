@@ -60,6 +60,7 @@ the injected sample:
 
 Other sec-qc:
 [`measure_sec_asymmetry()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_asymmetry.md),
+[`measure_sec_column_performance()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_column_performance.md),
 [`measure_sec_plate_count()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_plate_count.md),
 [`measure_sec_resolution()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_resolution.md),
 [`measure_sec_suitability()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md)

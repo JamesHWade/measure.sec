@@ -98,8 +98,11 @@ The parameters K and a depend on:
 ## See also
 
 Other sec-polymer:
+[`measure_branching_frequency()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.md),
 [`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md),
-[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md)
+[`measure_branching_model_comparison()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_model_comparison.md),
+[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md),
+[`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure-sec/reference/measure_rg_mw_scaling.md)
 
 ## Examples
 

@@ -80,6 +80,7 @@ t_1)}{W\_{0.5h,1} + W\_{0.5h,2}}\$\$
 
 Other sec-qc:
 [`measure_sec_asymmetry()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_asymmetry.md),
+[`measure_sec_column_performance()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_column_performance.md),
 [`measure_sec_plate_count()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_plate_count.md),
 [`measure_sec_recovery()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_recovery.md),
 [`measure_sec_suitability()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md)

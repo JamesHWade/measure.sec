@@ -327,6 +327,8 @@ Functions for system suitability testing and QC
   : Calculate Mass Recovery
 - [`measure_sec_suitability()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md)
   : System Suitability Test for SEC
+- [`measure_sec_column_performance()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_column_performance.md)
+  : Column Performance Metrics for SEC
 
 ## Polymer Analysis Functions
 
@@ -336,6 +338,12 @@ Functions for polymer characterization
   : Estimate Mark-Houwink Parameters
 - [`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md)
   : Calculate Branching Index
+- [`measure_branching_frequency()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.md)
+  : Calculate Branching Frequency from Zimm-Stockmayer Theory
+- [`measure_branching_model_comparison()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_model_comparison.md)
+  : Compare Branching Models
+- [`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure-sec/reference/measure_rg_mw_scaling.md)
+  : Fit Rg-MW Scaling Relationship
 - [`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md)
   : Create Conformation Plot Data
 
