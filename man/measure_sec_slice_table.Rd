@@ -91,6 +91,7 @@ write.csv(slices, "sec_slices.csv", row.names = FALSE)
 \seealso{
 Other sec-export: 
 \code{\link{measure_sec_compare}()},
+\code{\link{measure_sec_report}()},
 \code{\link{measure_sec_summary_table}()}
 }
 \concept{sec-export}

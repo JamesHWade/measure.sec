@@ -84,6 +84,7 @@ writexl::write_xlsx(summary_tbl, "sec_summary.xlsx")
 \seealso{
 Other sec-export: 
 \code{\link{measure_sec_compare}()},
+\code{\link{measure_sec_report}()},
 \code{\link{measure_sec_slice_table}()}
 }
 \concept{sec-export}

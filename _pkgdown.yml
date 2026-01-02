@@ -124,6 +124,9 @@ reference:
   - measure_sec_slice_table
   - measure_sec_summary_table
   - measure_sec_compare
+  - measure_sec_report
+  - get_sec_template
+  - list_sec_templates
 
 - title: Datasets
   desc: Example datasets for SEC analysis
