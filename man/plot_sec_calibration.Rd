@@ -51,6 +51,7 @@ plot_sec_calibration(sec_ps_standards, show_residuals = TRUE)
 Other sec-visualization: 
 \code{\link{plot_sec}()},
 \code{\link{plot_sec_chromatogram}()},
+\code{\link{plot_sec_composition}()},
 \code{\link{plot_sec_conformation}()},
 \code{\link{plot_sec_multidetector}()},
 \code{\link{plot_sec_mwd}()}

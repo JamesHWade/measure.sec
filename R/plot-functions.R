@@ -958,6 +958,279 @@ plot_sec <- function(
 }
 
 
+#' Plot SEC Composition Distribution
+#'
+#' Creates a composition plot showing copolymer or blend composition as a
+#' function of molecular weight or elution time.
+#'
+#' @param data A data frame containing SEC results with composition data,
+#'   typically from [step_sec_composition()].
+#' @param composition_col Name of the composition measure column. Default is
+#'   `"composition_a"`. Should contain values from 0 to 1.
+#' @param x_axis Variable for x-axis: `"mw"` (molecular weight, default) or
+#'   `"retention"` (elution time).
+#' @param mw_col Name of molecular weight column. Default is `"mw"`.
+#' @param sample_id Column name containing sample identifiers.
+#' @param show_average Logical. Show average composition line? Default is `TRUE`.
+#' @param component_names Named character vector with component labels.
+#'   E.g., `c(a = "Styrene", b = "Acrylate")`. Default shows "Component A" and
+#'   "Component B".
+#' @param show_distribution Logical. Show composition distribution as lines?
+#'   Default is `TRUE`.
+#' @param show_points Logical. Show individual data points? Default is `FALSE`.
+#' @param y_limits Numeric vector of length 2 for y-axis limits. Default is
+#'   `c(0, 1)` for fraction scale.
+#' @param log_mw Logical. Use log scale for MW on x-axis? Default is `TRUE`
+#'   when `x_axis = "mw"`.
+#' @param ... Additional arguments passed to [ggplot2::geom_line()].
+#'
+#' @return A ggplot2 object.
+#'
+#' @details
+#' Composition plots are essential for characterizing copolymers and blends:
+#'
+#' **Uniform copolymers:** Horizontal line across all MW values indicates
+#' consistent composition throughout the distribution.
+#'
+#' **Compositional drift:** Slope indicates composition varies with chain length,
+#' common in batch polymerization where monomer ratios change over time.
+#'
+#' **Blend separation:** Multiple distinct compositions indicate blend separation
+#' or block copolymer structure.
+#'
+#' The plot works with output from [step_sec_composition()] which calculates
+#' weight fraction from UV/RI detector signals and known response factors.
+#'
+#' @family sec-visualization
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' library(recipes)
+#' library(measure)
+#' library(ggplot2)
+#'
+#' # Process copolymer data with composition calculation
+#' processed <- recipe(~., data = sec_copolymer) |>
+#'   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+#'   step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
+#'   step_sec_baseline() |>
+#'   step_sec_composition(
+#'     uv_col = "uv",
+#'     ri_col = "ri",
+#'     component_a_uv = 1.0,
+#'     component_a_ri = 0.185,
+#'     component_b_uv = 0.01,
+#'     component_b_ri = 0.084,
+#'     output_col = "styrene_frac"
+#'   ) |>
+#'   step_sec_conventional_cal(standards = ps_standards) |>
+#'   prep() |>
+#'   bake(new_data = NULL)
+#'
+#' # Basic composition plot vs MW
+#' plot_sec_composition(
+#'   processed,
+#'   composition_col = "styrene_frac"
+#' )
+#'
+#' # Composition vs retention time with custom component names
+#' plot_sec_composition(
+#'   processed,
+#'   composition_col = "styrene_frac",
+#'   x_axis = "retention",
+#'   component_names = c(a = "Styrene", b = "Acrylate")
+#' )
+#'
+#' # Customize appearance
+#' plot_sec_composition(processed, composition_col = "styrene_frac") +
+#'   theme_bw() +
+#'   labs(title = "Styrene-Acrylate Copolymer Composition")
+#' }
+plot_sec_composition <- function(
+  data,
+  composition_col = "composition_a",
+  x_axis = c("mw", "retention"),
+  mw_col = "mw",
+  sample_id = NULL,
+  show_average = TRUE,
+  component_names = NULL,
+  show_distribution = TRUE,
+  show_points = FALSE,
+  y_limits = c(0, 1),
+  log_mw = TRUE,
+  ...
+) {
+  check_ggplot2_available()
+
+  x_axis <- match.arg(x_axis)
+
+  # Get measure columns
+  measure_cols <- find_measure_cols(data)
+
+  # Check composition column exists
+  if (!composition_col %in% measure_cols) {
+    cli::cli_abort(c(
+      "Composition column {.val {composition_col}} not found.",
+      "i" = "Available measure columns: {.val {measure_cols}}",
+      "i" = "Use {.fn step_sec_composition} to calculate composition first."
+    ))
+  }
+
+  # Check MW column if needed
+  if (x_axis == "mw" && !mw_col %in% measure_cols) {
+    cli::cli_warn(c(
+      "MW column {.val {mw_col}} not found. Using retention time instead.",
+      "i" = "Apply calibration with {.fn step_sec_conventional_cal} for MW axis."
+    ))
+    x_axis <- "retention"
+  }
+
+  # Set up component names
+  if (is.null(component_names)) {
+    component_names <- c(a = "Component A", b = "Component B")
+  }
+
+  # Auto-detect sample_id column
+  if (is.null(sample_id)) {
+    potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
+    for (col in potential_ids) {
+      if (col %in% names(data)) {
+        sample_id <- col
+        break
+      }
+    }
+  }
+
+  # Prepare slice data for composition
+  slice_data <- prepare_plot_data(
+    data,
+    measures = composition_col,
+    sample_id = sample_id
+  )
+
+  if (nrow(slice_data) == 0) {
+    cli::cli_abort("No composition data to plot.")
+  }
+
+  # Add MW data if needed
+  if (x_axis == "mw") {
+    mw_data <- prepare_plot_data(
+      data,
+      measures = mw_col,
+      sample_id = sample_id
+    )
+    # Merge MW values by location and sample
+    slice_data <- dplyr::left_join(
+      slice_data,
+      mw_data |>
+        dplyr::select("sample_id", "location", mw_value = "value"),
+      by = c("sample_id", "location")
+    )
+    # Filter out invalid MW values (0, negative, or NA)
+    slice_data <- slice_data |>
+      dplyr::filter(.data$mw_value > 0, !is.na(.data$mw_value))
+    x_var <- "mw_value"
+    x_label <- expression(M[w] ~ "(g/mol)")
+  } else {
+    x_var <- "location"
+    x_label <- "Elution Time (min)"
+  }
+
+  # Filter out NA composition values
+  slice_data <- slice_data |>
+    dplyr::filter(!is.na(.data$value))
+
+  if (nrow(slice_data) == 0) {
+    cli::cli_abort("No valid composition data after filtering.")
+  }
+
+  # Calculate average composition per sample
+  avg_comp <- slice_data |>
+    dplyr::group_by(.data$sample_id) |>
+    dplyr::summarize(
+      avg_composition = mean(.data$value, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  # Build y-axis label
+  y_label <- paste0(component_names["a"], " Weight Fraction")
+
+  # Build the plot
+  p <- ggplot2::ggplot(
+    slice_data,
+    ggplot2::aes(
+      x = .data[[x_var]],
+      y = .data$value,
+      color = .data$sample_id,
+      group = .data$sample_id
+    )
+  )
+
+  # Add distribution ribbon if requested
+  if (show_distribution) {
+    p <- p + ggplot2::geom_line(alpha = 0.8, ...)
+  }
+
+  # Add points if requested
+  if (show_points) {
+    p <- p + ggplot2::geom_point(alpha = 0.5, size = 1)
+  }
+
+  # Add average composition lines if requested
+  if (show_average) {
+    p <- p +
+      ggplot2::geom_hline(
+        data = avg_comp,
+        ggplot2::aes(
+          yintercept = .data$avg_composition,
+          color = .data$sample_id
+        ),
+        linetype = "dashed",
+        alpha = 0.7
+      )
+  }
+
+  # Apply scales and labels
+  p <- p +
+    ggplot2::labs(
+      x = x_label,
+      y = y_label,
+      color = "Sample"
+    ) +
+    ggplot2::theme_minimal()
+
+  # Apply log scale for MW if requested
+  if (x_axis == "mw" && log_mw) {
+    if (rlang::is_installed("scales")) {
+      p <- p +
+        ggplot2::scale_x_log10(
+          labels = scales::label_scientific()
+        )
+    } else {
+      p <- p + ggplot2::scale_x_log10()
+    }
+  }
+
+  # Add y-axis with secondary axis for component B
+  component_b_label <- component_names["b"]
+  if (!is.null(component_b_label)) {
+    p <- p +
+      ggplot2::scale_y_continuous(
+        limits = y_limits,
+        sec.axis = ggplot2::sec_axis(
+          ~ 1 - .,
+          name = paste0(component_b_label, " Weight Fraction")
+        )
+      )
+  } else if (!is.null(y_limits)) {
+    p <- p + ggplot2::scale_y_continuous(limits = y_limits)
+  }
+
+  p
+}
+
+
 # ==============================================================================
 # Helper Functions
 # ==============================================================================
