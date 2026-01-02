@@ -127,4 +127,9 @@ rec <- recipe(~., data = mab_data) |>
   prep()
 }
 }
+\seealso{
+Other sec-protein: 
+\code{\link{step_sec_oligomer}()},
+\code{\link{step_sec_protein}()}
+}
 \concept{sec-protein}

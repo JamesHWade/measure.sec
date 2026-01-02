@@ -108,6 +108,16 @@
       "protein",
       "Aggregate and fragment quantitation"
     ),
+    list(
+      "step_sec_oligomer",
+      "protein",
+      "Detailed oligomeric species analysis"
+    ),
+    list(
+      "step_sec_protein",
+      "protein",
+      "Protein SEC workflow (baseline + aggregates + oligomer)"
+    ),
 
     # Calibration
     list(
