@@ -118,6 +118,7 @@ triple-detection data.
 ## See also
 
 Other sec-export:
+[`measure_sec_report()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_report.md),
 [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md),
 [`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md)
 

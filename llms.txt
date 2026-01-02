@@ -365,6 +365,12 @@ Data extraction and export utilities
   : Generate SEC Summary Table
 - [`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md)
   : Compare Multiple SEC Samples
+- [`measure_sec_report()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_report.md)
+  : Generate SEC Analysis Report
+- [`get_sec_template()`](https://jameshwade.github.io/measure-sec/reference/get_sec_template.md)
+  : Get Path to SEC Report Template
+- [`list_sec_templates()`](https://jameshwade.github.io/measure-sec/reference/list_sec_templates.md)
+  : List Available SEC Report Templates
 
 ## Datasets
 
