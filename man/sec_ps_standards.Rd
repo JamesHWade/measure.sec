@@ -90,6 +90,7 @@ Other sec-data:
 Other sec-calibration: 
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_pmma_standards}},
+\code{\link{step_sec_broad_standard}()},
 \code{\link{step_sec_conventional_cal}()},
 \code{\link{step_sec_universal_cal}()}
 }
