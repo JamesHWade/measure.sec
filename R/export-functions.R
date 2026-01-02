@@ -113,12 +113,17 @@ measure_sec_slice_table <- function(
 
   # Extract slice data for each sample and measure
   slice_list <- list()
+  null_warnings <- character()
 
   for (i in seq_len(nrow(data))) {
     for (measure_col in measures) {
       m <- data[[measure_col]][[i]]
 
       if (is.null(m)) {
+        null_warnings <- c(
+          null_warnings,
+          sprintf("row %d, measure '%s'", i, measure_col)
+        )
         next
       }
 
@@ -145,6 +150,14 @@ measure_sec_slice_table <- function(
 
       slice_list <- c(slice_list, list(slice_df))
     }
+  }
+
+  # Warn about NULL measures if any were found
+  if (length(null_warnings) > 0) {
+    cli::cli_warn(c(
+      "Skipped {length(null_warnings)} NULL measure value{?s}:",
+      "i" = "Affected: {.val {null_warnings}}"
+    ))
   }
 
   result <- dplyr::bind_rows(slice_list)
@@ -319,8 +332,23 @@ measure_sec_summary_table <- function(
 }
 
 
+#' Validate sec_summary_table structure
+#' @noRd
+validate_sec_summary_table <- function(x) {
+  if (!inherits(x, "tbl_df")) {
+    cli::cli_warn("Invalid sec_summary_table: not a tibble.")
+    return(FALSE)
+  }
+  if (!"sample_id" %in% names(x)) {
+    cli::cli_warn("Invalid sec_summary_table: missing sample_id column.")
+    return(FALSE)
+  }
+  TRUE
+}
+
 #' @export
 print.sec_summary_table <- function(x, ...) {
+  validate_sec_summary_table(x)
   cat("SEC Analysis Summary\n")
   cat(strrep("=", 60), "\n")
   cat("Samples:", nrow(x), "\n\n")

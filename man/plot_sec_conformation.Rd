@@ -63,11 +63,11 @@ Branched polymers show reduced Rg at same MW compared to linear.
 }
 
 \strong{eta-MW (Mark-Houwink):}
-The relationship [eta] = K * M^a where:
+The relationship \verb{[eta] = K * M^a} where:
 \itemize{
 \item K and a are Mark-Houwink parameters
-\item a ≈ 0.5-0.8 for typical polymers
-\item Branched polymers show lower [eta] at same MW
+\item a is approximately 0.5-0.8 for typical polymers
+\item Branched polymers show lower \verb{[eta]} at same MW
 }
 }
 \examples{

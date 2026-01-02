@@ -132,13 +132,11 @@ result |>
 
 ### Automatic Peak Detection
 
-Let the algorithm find the monomer peak:
-
+Let the algorithm find the tallest peak as the monomer:
 ```{r aggregates-auto, eval = FALSE}
 step_sec_aggregates(
   measures = "uv",
-  method = "auto",
-  min_peak_height = 0.01
+  method = "tallest"  # Uses tallest peak as monomer reference
 )
 ```
 
@@ -320,12 +318,19 @@ The oligomer step identifies species based on expected MW:
 ## Example: Stability Study Analysis
 
 ```{r stability-example, eval = FALSE}
-# Simulate stability data
+# Stability data structure example
+# In practice, chrom1-4 and time would be your actual chromatogram data vectors
+# For example:
+#   time <- seq(5, 20, by = 0.05)
+#   chrom1 <- your_uv_signal_at_T0
+#   chrom2 <- your_uv_signal_at_T1M
+#   etc.
+
 stability_data <- tibble(
   sample_id = c("T0", "T1M", "T3M", "T6M"),
   timepoint = c(0, 1, 3, 6),
-  uv_signal = list(chrom1, chrom2, chrom3, chrom4),
-  elution_time = list(time, time, time, time)
+  uv_signal = list(chrom1, chrom2, chrom3, chrom4),  # Your chromatogram vectors
+  elution_time = list(time, time, time, time)        # Shared time axis
 )
 
 # Analyze all timepoints

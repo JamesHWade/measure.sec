@@ -4,6 +4,9 @@
 # Publication-ready plots for SEC/GPC analysis results
 # ==============================================================================
 
+#' @importFrom tidyr pivot_wider pivot_longer
+NULL
+
 #' Plot SEC Chromatogram
 #'
 #' Creates a chromatogram plot from SEC data showing detector signal vs
@@ -97,7 +100,9 @@ plot_sec_chromatogram <- function(
       dplyr::group_by(.data$sample_id, .data$measure) |>
       dplyr::mutate(
         value = (.data$value - min(.data$value, na.rm = TRUE)) /
-          (max(.data$value, na.rm = TRUE) - min(.data$value, na.rm = TRUE))
+          (max(.data$value, na.rm = TRUE) -
+            min(.data$value, na.rm = TRUE) +
+            1e-10)
       ) |>
       dplyr::ungroup()
     y_label <- paste0(y_label, " (normalized)")
@@ -533,10 +538,10 @@ plot_sec_multidetector <- function(
 #' Branched polymers show reduced Rg at same MW compared to linear.
 #'
 #' **eta-MW (Mark-Houwink):**
-#' The relationship \[eta\] = K * M^a where:
+#' The relationship `[eta] = K * M^a` where:
 #' - K and a are Mark-Houwink parameters
-#' - a ≈ 0.5-0.8 for typical polymers
-#' - Branched polymers show lower \[eta\] at same MW
+#' - a is approximately 0.5-0.8 for typical polymers
+#' - Branched polymers show lower `[eta]` at same MW
 #'
 #' @family sec-visualization
 #' @export
@@ -685,17 +690,19 @@ plot_sec_conformation <- function(
 
     # Add exponent annotation
     if (show_exponent) {
-      # Calculate slope for annotation
+      # Calculate slope for annotation with error handling
       fit_data <- slice_data |>
         dplyr::group_by(.data$sample_id) |>
         dplyr::summarise(
-          slope = stats::coef(
-            stats::lm(.data$log_y ~ .data$log_mw)
-          )[2],
+          slope = tryCatch(
+            stats::coef(stats::lm(.data$log_y ~ .data$log_mw))[2],
+            error = function(e) NA_real_
+          ),
           max_x = max(.data$log_mw, na.rm = TRUE),
           max_y = max(.data$log_y, na.rm = TRUE),
           .groups = "drop"
-        )
+        ) |>
+        dplyr::filter(!is.na(.data$slope))
 
       p <- p +
         ggplot2::geom_text(
@@ -737,8 +744,6 @@ plot_sec_conformation <- function(
 #'   Default is `"retention_time"`.
 #' @param mw_col Name of log MW column. Default is `"log_mp"`.
 #' @param show_residuals Logical. Show residual plot below? Default is `FALSE`.
-#' @param show_equation Logical. Show calibration equation on plot?
-#'   Default is `TRUE`.
 #' @param show_r_squared Logical. Show R-squared value? Default is `TRUE`.
 #' @param ... Additional arguments passed to [ggplot2::geom_point()].
 #'
@@ -760,7 +765,6 @@ plot_sec_calibration <- function(
   retention_col = "retention_time",
   mw_col = "log_mp",
   show_residuals = FALSE,
-  show_equation = TRUE,
   show_r_squared = TRUE,
   ...
 ) {
@@ -779,6 +783,16 @@ plot_sec_calibration <- function(
   }
   if (!mw_col %in% names(data)) {
     cli::cli_abort("MW column {.val {mw_col}} not found.")
+  }
+
+  # Validate sufficient data points for polynomial fit
+  n_standards <- nrow(data)
+  if (n_standards < 4) {
+    cli::cli_abort(c(
+      "Insufficient data for calibration curve.",
+      "x" = "Found {n_standards} standard{?s}, need at least 4 for cubic fit.",
+      "i" = "Provide more calibration standards or use a lower polynomial."
+    ))
   }
 
   # Fit calibration
@@ -848,20 +862,18 @@ plot_sec_calibration <- function(
     if (requireNamespace("patchwork", quietly = TRUE)) {
       return(p_main / p_resid + patchwork::plot_layout(heights = c(3, 1)))
     } else {
-      cli::cli_warn(
-        "Install {.pkg patchwork} for combined residual plots. ",
-        "Returning main plot only."
-      )
+      cli::cli_warn(c(
+        "Install {.pkg patchwork} for combined residual plots.",
+        "i" = "Returning main plot only.",
+        "i" = "Install with {.code install.packages(\"patchwork\")}"
+      ))
+      return(p_main)
     }
   }
 
   p_main
 }
 
-
-# ==============================================================================
-# Convenience Plot Function
-# ==============================================================================
 
 #' Quick SEC Plot
 #'
@@ -965,11 +977,18 @@ check_ggplot2_available <- function() {
 
 #' Find measure columns in a data frame
 #' @noRd
-find_measure_cols <- function(data) {
+detect_measure_cols <- function(data) {
   # Use measure package function if available
   if (requireNamespace("measure", quietly = TRUE)) {
     return(measure::find_measure_cols(data))
   }
+
+  # Warn about fallback behavior
+  cli::cli_warn(c(
+    "Package {.pkg measure} is not available.",
+    "i" = "Using fallback detection which may produce different results.",
+    "i" = "Install {.pkg measure} with {.code install.packages(\"measure\")}"
+  ))
 
   # Fallback: look for list columns with specific structure
   list_cols <- names(data)[vapply(data, is.list, logical(1))]
@@ -977,7 +996,13 @@ find_measure_cols <- function(data) {
   # Check each list column for measure_tbl structure
   measure_cols <- character()
   for (col in list_cols) {
+    if (length(data[[col]]) == 0) {
+      next
+    }
     first_elem <- data[[col]][[1]]
+    if (is.null(first_elem)) {
+      next
+    }
     if (
       is.list(first_elem) &&
         all(c("location", "value") %in% names(first_elem))
@@ -988,6 +1013,9 @@ find_measure_cols <- function(data) {
 
   measure_cols
 }
+
+# Alias for backwards compatibility within package
+find_measure_cols <- detect_measure_cols
 
 #' Prepare data for plotting
 #'
@@ -1021,6 +1049,10 @@ add_mw_average_lines <- function(p, data, sample_id, log_mw) {
   available <- intersect(mw_cols, names(data))
 
   if (length(available) == 0) {
+    cli::cli_warn(c(
+      "Cannot add MW average lines.",
+      "i" = "No MW average columns found. Expected one of: {.val {mw_cols}}"
+    ))
     return(p)
   }
 

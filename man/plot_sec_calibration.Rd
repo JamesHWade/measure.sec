@@ -9,7 +9,6 @@ plot_sec_calibration(
   retention_col = "retention_time",
   mw_col = "log_mp",
   show_residuals = FALSE,
-  show_equation = TRUE,
   show_r_squared = TRUE,
   ...
 )
@@ -27,9 +26,6 @@ Default is \code{"retention_time"}.}
 \item{mw_col}{Name of log MW column. Default is \code{"log_mp"}.}
 
 \item{show_residuals}{Logical. Show residual plot below? Default is \code{FALSE}.}
-
-\item{show_equation}{Logical. Show calibration equation on plot?
-Default is \code{TRUE}.}
 
 \item{show_r_squared}{Logical. Show R-squared value? Default is \code{TRUE}.}
 
