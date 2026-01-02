@@ -577,20 +577,30 @@ measure_branching_frequency <- function(
           "{.arg arms} is required for {.val star_f} architecture."
         )
       }
+      if (!is.numeric(arms) || length(arms) != 1 || arms < 3) {
+        cli::cli_abort(
+          "{.arg arms} must be a single numeric value >= 3."
+        )
+      }
       # General star: g = (3f - 2) / f^2
-      # Solve for f from g: f^2 * g = 3f - 2
-      # g*f^2 - 3f + 2 = 0
-      # f = (3 +/- sqrt(9 - 8g)) / (2g)
+      # For f-arm star with specified arms, check if g is consistent
+      # All star polymers have exactly 1 branch point (the central junction)
+      g_theoretical <- (3 * arms - 2) / arms^2
       sapply(g, function(gi) {
         if (gi >= 1 || gi <= 0) {
           return(0)
         }
-        discriminant <- 9 - 8 * gi
-        if (discriminant < 0) {
-          return(NA)
+        # If g is close to theoretical value for this star, return 1 branch point
+        if (abs(gi - g_theoretical) < 0.1) {
+          return(1)
         }
-        f_calc <- (3 - sqrt(discriminant)) / (2 * gi)
-        max(0, f_calc - 2) # Branch points = arms - 2 for star
+        # If g is higher (closer to 1), essentially linear
+        if (gi > g_theoretical + 0.1) {
+          return(0)
+        }
+        # If g is lower, could indicate multiple stars or more complex architecture
+        # Still report 1 for star architecture interpretation
+        1
       })
     },
     "comb" = {
@@ -604,6 +614,16 @@ measure_branching_frequency <- function(
       })
     }
   )
+
+  # Warn about impossible configurations
+  na_count <- sum(is.na(branches))
+  if (na_count > 0) {
+    cli::cli_warn(c(
+      "!" = "{na_count} g value{?s} could not be converted to branch counts.",
+      "i" = "These may represent physically impossible configurations for the {.val {architecture}} architecture.",
+      "i" = "NA values returned for these entries."
+    ))
+  }
 
   # Build result
 
@@ -897,9 +917,31 @@ measure_sec_column_performance <- function(
   particle_size = NULL,
   dead_volume = NULL
 ) {
-  # Validate and standardize column names
+  # Validate inputs
   if (!is.data.frame(calibration_data)) {
     cli::cli_abort("{.arg calibration_data} must be a data frame.")
+  }
+
+  if (
+    !is.numeric(column_length) ||
+      length(column_length) != 1 ||
+      column_length <= 0
+  ) {
+    cli::cli_abort(
+      "{.arg column_length} must be a single positive numeric value."
+    )
+  }
+
+  if (!is.null(particle_size)) {
+    if (
+      !is.numeric(particle_size) ||
+        length(particle_size) != 1 ||
+        particle_size <= 0
+    ) {
+      cli::cli_abort(
+        "{.arg particle_size} must be a single positive numeric value."
+      )
+    }
   }
 
   # Find retention column
@@ -1194,6 +1236,7 @@ measure_branching_model_comparison <- function(
 
   # Fit each model
   model_fits <- list()
+  failed_models <- character(0)
 
   if ("random" %in% models) {
     fit_random <- tryCatch(
@@ -1221,6 +1264,8 @@ measure_branching_model_comparison <- function(
         prediction = pred_random,
         fit = fit_random
       )
+    } else {
+      failed_models <- c(failed_models, "random")
     }
   }
 
@@ -1250,6 +1295,8 @@ measure_branching_model_comparison <- function(
         prediction = pred_star,
         fit = fit_star
       )
+    } else {
+      failed_models <- c(failed_models, "star")
     }
   }
 
@@ -1279,6 +1326,8 @@ measure_branching_model_comparison <- function(
         prediction = pred_comb,
         fit = fit_comb
       )
+    } else {
+      failed_models <- c(failed_models, "comb")
     }
   }
 
@@ -1311,7 +1360,18 @@ measure_branching_model_comparison <- function(
         prediction = pred_hyper,
         fit = fit_hyper
       )
+    } else {
+      failed_models <- c(failed_models, "hyperbranched")
     }
+  }
+
+  # Warn about failed models
+  if (length(failed_models) > 0) {
+    cli::cli_warn(c(
+      "!" = "Some models failed to fit and were excluded from comparison:",
+      "i" = "Failed models: {.val {failed_models}}",
+      "i" = "This may indicate the data is not suitable for these architectures."
+    ))
   }
 
   # Build comparison summary
