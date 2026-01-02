@@ -224,10 +224,8 @@ measure_sec_report <- function(
       )
 
       # Move output to final destination
-      rendered_file <- file.path(
-        output_dir,
-        paste0("sec_report_", template, ".", output_format)
-      )
+      # Quarto renders to basename(output_file) in output_dir
+      rendered_file <- file.path(output_dir, basename(output_file))
 
       if (!file.exists(rendered_file)) {
         cli::cli_abort(c(
