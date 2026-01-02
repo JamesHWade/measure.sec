@@ -51,6 +51,12 @@ tidy(x, ...)
 # S3 method for class 'step_sec_mw_fractions'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_oligomer'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_protein'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_rals'
 tidy(x, ...)
 

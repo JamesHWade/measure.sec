@@ -143,6 +143,11 @@ For accurate results:
 
 - Use UV detection at 280 nm (or 214 nm for higher sensitivity)
 
+## See also
+
+Other sec-protein: [`step_sec_oligomer()`](step_sec_oligomer.md),
+[`step_sec_protein()`](step_sec_protein.md)
+
 ## Examples
 
 ``` r

@@ -61,6 +61,10 @@
   Molecular Weight Distribution Curve
 - [`step_sec_mw_fractions()`](step_sec_mw_fractions.md) : Calculate
   Molecular Weight Fractions for SEC/GPC
+- [`step_sec_oligomer()`](step_sec_oligomer.md) : Oligomeric Species
+  Analysis for Protein SEC
+- [`step_sec_protein()`](step_sec_protein.md) : Protein SEC Analysis
+  Workflow
 - [`step_sec_rals()`](step_sec_rals.md) : Right-Angle Light Scattering
   Processing for SEC
 - [`step_sec_ri()`](step_sec_ri.md) : RI Detector Processing for SEC

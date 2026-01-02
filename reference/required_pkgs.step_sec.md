@@ -50,6 +50,12 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_mw_fractions'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_oligomer'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_protein'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_rals'
 required_pkgs(x, ...)
 
