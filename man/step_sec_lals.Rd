@@ -69,6 +69,15 @@ low-angle light scattering (LALS) signals for absolute molecular weight.
 LALS provides absolute MW using a low-angle detector (e.g., ~7 degrees).
 It assumes P(theta) ~ 1 for small particles and is most accurate when
 angular dependence is minimal.
+
+\strong{When to use LALS vs MALS:}
+\itemize{
+\item \strong{LALS}: Preferred for smaller molecules (Rg < ~10 nm) or when
+multi-angle data is not available. Single-angle measurement is faster
+and simpler but cannot determine Rg.
+\item \strong{MALS}: Required for large molecules where angular dependence is
+significant. Provides both Mw and Rg from extrapolation to zero angle.
+}
 }
 \examples{
 \dontrun{
