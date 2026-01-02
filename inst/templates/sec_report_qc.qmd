@@ -80,17 +80,9 @@ cat(":::\n\n")
 
 tryCatch(
   {
-    # Check if we have the necessary data for plate count
-    measure_cols <- find_measure_cols(data)
-    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
-
-    if (!is.na(ri_col)) {
-      m <- data[[ri_col]][[1]]
-      plate_count <- measure_sec_plate_count(
-        time = m$location,
-        signal = m$value
-      )
-
+    # Check if plate count is pre-calculated in data
+    if ("plate_count" %in% names(data)) {
+      plate_count <- data$plate_count[1]
       status <- if (plate_count >= specs$plate_count_min) "PASS" else "FAIL"
       status_color <- if (status == "PASS") "green" else "red"
 
@@ -98,11 +90,19 @@ tryCatch(
       cat(sprintf("**Specification:** >= %s plates\n\n", format(specs$plate_count_min, big.mark = ",")))
       cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
     } else {
-      cat("*Plate count calculation requires RI detector data.*\n")
+      cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n\n")
+      cat("*Plate count requires pre-calculated peak parameters.*\n\n")
+      cat("To calculate plate count, use `measure_sec_plate_count()` with:\n\n")
+      cat("- `retention`: Peak retention time\n")
+      cat("- `width`: Peak width at half height\n")
     }
   },
   error = function(e) {
-    cat("*Plate count could not be calculated.*\n")
+    cat("**Plate count calculation failed.**\n\n")
+    cat("```\n")
+    cat("Error: ", conditionMessage(e), "\n")
+    cat("```\n\n")
+    cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n")
   }
 )
 ```
@@ -115,16 +115,9 @@ tryCatch(
 
 tryCatch(
   {
-    measure_cols <- find_measure_cols(data)
-    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
-
-    if (!is.na(ri_col)) {
-      m <- data[[ri_col]][[1]]
-      asymmetry <- measure_sec_asymmetry(
-        time = m$location,
-        signal = m$value
-      )
-
+    # Check if asymmetry is pre-calculated in data
+    if ("asymmetry" %in% names(data)) {
+      asymmetry <- data$asymmetry[1]
       in_range <- asymmetry >= specs$asymmetry_min && asymmetry <= specs$asymmetry_max
       status <- if (in_range) "PASS" else "FAIL"
       status_color <- if (status == "PASS") "green" else "red"
@@ -133,11 +126,19 @@ tryCatch(
       cat(sprintf("**Specification:** %.1f - %.1f\n\n", specs$asymmetry_min, specs$asymmetry_max))
       cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
     } else {
-      cat("*Asymmetry calculation requires RI detector data.*\n")
+      cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n\n")
+      cat("*Asymmetry requires pre-calculated peak parameters.*\n\n")
+      cat("To calculate asymmetry, use `measure_sec_asymmetry()` with:\n\n")
+      cat("- `leading`: Peak width from leading edge to apex\n")
+      cat("- `tailing`: Peak width from apex to trailing edge\n")
     }
   },
   error = function(e) {
-    cat("*Peak asymmetry could not be calculated.*\n")
+    cat("**Asymmetry calculation failed.**\n\n")
+    cat("```\n")
+    cat("Error: ", conditionMessage(e), "\n")
+    cat("```\n\n")
+    cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n")
   }
 )
 ```
@@ -150,20 +151,9 @@ tryCatch(
 
 tryCatch(
   {
-    measure_cols <- find_measure_cols(data)
-    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
-
-    if (!is.na(ri_col) && nrow(data) >= 2) {
-      m1 <- data[[ri_col]][[1]]
-      m2 <- data[[ri_col]][[2]]
-
-      resolution <- measure_sec_resolution(
-        time1 = m1$location,
-        signal1 = m1$value,
-        time2 = m2$location,
-        signal2 = m2$value
-      )
-
+    # Check if resolution is pre-calculated in data
+    if ("resolution" %in% names(data)) {
+      resolution <- data$resolution[1]
       status <- if (resolution >= specs$resolution_min) "PASS" else "FAIL"
       status_color <- if (status == "PASS") "green" else "red"
 
@@ -171,11 +161,19 @@ tryCatch(
       cat(sprintf("**Specification:** >= %.1f\n\n", specs$resolution_min))
       cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
     } else {
-      cat("*Resolution calculation requires at least 2 samples.*\n")
+      cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n\n")
+      cat("*Resolution requires pre-calculated peak parameters for two adjacent peaks.*\n\n")
+      cat("To calculate resolution, use `measure_sec_resolution()` with:\n\n")
+      cat("- `retention_1`, `retention_2`: Peak retention times\n")
+      cat("- `width_1`, `width_2`: Peak widths\n")
     }
   },
   error = function(e) {
-    cat("*Resolution could not be calculated.*\n")
+    cat("**Resolution calculation failed.**\n\n")
+    cat("```\n")
+    cat("Error: ", conditionMessage(e), "\n")
+    cat("```\n\n")
+    cat("**Status:** [NOT EVALUATED]{style='color: orange; font-weight: bold;'}\n")
   }
 )
 ```
@@ -195,7 +193,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Chromatogram plot not available.*\n")
+      cat("**Chromatogram plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Check that data contains valid measure columns with detector signals.*\n")
     }
   )
 }
@@ -216,7 +218,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Calibration plot not available. Ensure calibration has been applied.*\n")
+      cat("**Calibration plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Ensure calibration has been applied with step_sec_conventional_cal().*\n")
     }
   )
 }

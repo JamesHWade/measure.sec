@@ -138,7 +138,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Chromatogram plot not available.*\n")
+      cat("**Chromatogram plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Check that data contains valid measure columns with detector signals.*\n")
     }
   )
 }
@@ -159,7 +163,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Multi-detector plot not available.*\n")
+      cat("**Multi-detector plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Check that multiple detector columns are present in the data.*\n")
     }
   )
 }
@@ -182,7 +190,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Molecular weight distribution plot not available.*\n")
+      cat("**Molecular weight distribution plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Ensure calibration has been applied with step_sec_conventional_cal().*\n")
     }
   )
 }
@@ -203,7 +215,11 @@ if (params$include_plots) {
       print(p + theme_minimal())
     },
     error = function(e) {
-      cat("*Conformation plot not available. Requires MALS data.*\n")
+      cat("**Conformation plot not available.**\n\n")
+      cat("```\n")
+      cat("Error: ", conditionMessage(e), "\n")
+      cat("```\n\n")
+      cat("*Conformation plots require MALS data with radius of gyration (Rg) values.*\n")
     }
   )
 }

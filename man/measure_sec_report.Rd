@@ -74,7 +74,7 @@ Three report templates are available:
 \itemize{
 \item All content from standard template
 \item Multi-detector overlay
-\item Conformation plot (if MALS data available
+\item Conformation plot (if MALS data available)
 \item Optional slice data table
 \item Analysis metadata
 }
@@ -139,7 +139,7 @@ measure_sec_report(
 
 # Generate QC report with custom specifications
 measure_sec_report(
-  suitability_data,
+  sec_system_suitability,
   template = "qc",
   specs = list(plate_count_min = 15000)
 )

@@ -44,7 +44,7 @@
 #' **`"detailed"`**:
 #' - All content from standard template
 #' - Multi-detector overlay
-#' - Conformation plot (if MALS data available
+#' - Conformation plot (if MALS data available)
 #' - Optional slice data table
 #' - Analysis metadata
 #'
@@ -105,7 +105,7 @@
 #'
 #' # Generate QC report with custom specifications
 #' measure_sec_report(
-#'   suitability_data,
+#'   sec_system_suitability,
 #'   template = "qc",
 #'   specs = list(plate_count_min = 15000)
 #' )
@@ -167,7 +167,14 @@ measure_sec_report <- function(
 
   # Copy template to temp directory for rendering
   temp_qmd <- file.path(output_dir, paste0("sec_report_", template, ".qmd"))
-  file.copy(template_file, temp_qmd, overwrite = TRUE)
+  if (!file.copy(template_file, temp_qmd, overwrite = TRUE)) {
+    cli::cli_abort(c(
+      "Failed to copy template to temporary directory.",
+      "i" = "Template: {.file {template_file}}",
+      "i" = "Destination: {.file {temp_qmd}}",
+      "i" = "Check disk space and permissions."
+    ))
+  }
 
   # Determine output file name
   if (is.null(output_file)) {
@@ -222,10 +229,23 @@ measure_sec_report <- function(
         paste0("sec_report_", template, ".", output_format)
       )
 
-      if (file.exists(rendered_file)) {
-        file.copy(rendered_file, output_file, overwrite = TRUE)
-        unlink(rendered_file)
+      if (!file.exists(rendered_file)) {
+        cli::cli_abort(c(
+          "Report rendering succeeded but output file not found.",
+          "i" = "Expected file: {.file {rendered_file}}",
+          "i" = "This may indicate a Quarto version incompatibility."
+        ))
       }
+
+      if (!file.copy(rendered_file, output_file, overwrite = TRUE)) {
+        cli::cli_abort(c(
+          "Failed to copy rendered report to final destination.",
+          "i" = "Source: {.file {rendered_file}}",
+          "i" = "Destination: {.file {output_file}}",
+          "i" = "Check disk space and permissions."
+        ))
+      }
+      unlink(rendered_file)
     },
     error = function(e) {
       cli::cli_abort(c(
