@@ -975,7 +975,7 @@ plot_sec <- function(
 #' @param component_names Named character vector with component labels.
 #'   E.g., `c(a = "Styrene", b = "Acrylate")`. Default shows "Component A" and
 #'   "Component B".
-#' @param show_distribution Logical. Show composition distribution as ribbon?
+#' @param show_distribution Logical. Show composition distribution as lines?
 #'   Default is `TRUE`.
 #' @param show_points Logical. Show individual data points? Default is `FALSE`.
 #' @param y_limits Numeric vector of length 2 for y-axis limits. Default is
@@ -1212,12 +1212,7 @@ plot_sec_composition <- function(
     }
   }
 
-  # Apply y-axis limits
-  if (!is.null(y_limits)) {
-    p <- p + ggplot2::coord_cartesian(ylim = y_limits)
-  }
-
-  # Add secondary y-axis for component B
+  # Add y-axis with secondary axis for component B
   component_b_label <- component_names["b"]
   if (!is.null(component_b_label)) {
     p <- p +
@@ -1228,6 +1223,8 @@ plot_sec_composition <- function(
           name = paste0(component_b_label, " Weight Fraction")
         )
       )
+  } else if (!is.null(y_limits)) {
+    p <- p + ggplot2::scale_y_continuous(limits = y_limits)
   }
 
   p

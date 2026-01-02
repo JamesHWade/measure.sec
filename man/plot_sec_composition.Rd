@@ -39,7 +39,7 @@ typically from \code{\link[=step_sec_composition]{step_sec_composition()}}.}
 E.g., \code{c(a = "Styrene", b = "Acrylate")}. Default shows "Component A" and
 "Component B".}
 
-\item{show_distribution}{Logical. Show composition distribution as ribbon?
+\item{show_distribution}{Logical. Show composition distribution as lines?
 Default is \code{TRUE}.}
 
 \item{show_points}{Logical. Show individual data points? Default is \code{FALSE}.}

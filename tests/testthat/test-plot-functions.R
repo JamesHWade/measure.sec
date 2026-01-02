@@ -561,7 +561,7 @@ test_that("plot_sec_composition handles custom component names", {
 
   expect_s3_class(p, "ggplot")
   # Check y-axis label contains component name
-  expect_true(grepl("Styrene", p$labels$y))
+  expect_true(grepl("Styrene", p$labels$y, fixed = TRUE))
 })
 
 test_that("plot_sec_composition errors on missing composition column", {
