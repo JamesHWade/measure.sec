@@ -1,0 +1,250 @@
+---
+title: "`r params$title`"
+author: "`r params$author`"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    embed-resources: true
+    theme: flatly
+  pdf:
+    toc: true
+    toc-depth: 2
+  docx:
+    toc: true
+    toc-depth: 2
+params:
+  title: "SEC System Suitability Report"
+  author: ""
+  data: NULL
+  sample_id: NULL
+  include_plots: true
+  specs: NULL
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(measure.sec)
+library(ggplot2)
+
+# Extract data from params
+data <- params$data
+sample_id <- params$sample_id
+specs <- params$specs
+
+# Default specifications if not provided
+if (is.null(specs)) {
+  specs <- list(
+    plate_count_min = 10000,
+    asymmetry_min = 0.8,
+    asymmetry_max = 1.5,
+    resolution_min = 1.5,
+    recovery_min = 95,
+    recovery_max = 105
+  )
+}
+```
+
+# System Suitability Summary
+
+This report evaluates the SEC system performance against acceptance criteria.
+
+```{r}
+#| label: overall-status
+#| results: asis
+
+# Determine overall pass/fail status
+overall_pass <- TRUE
+status_items <- list()
+
+cat("::: {.callout-note}\n")
+cat("## Test Date: ", format(Sys.Date(), "%B %d, %Y"), "\n")
+cat(":::\n\n")
+```
+
+# QC Metrics
+
+## Plate Count (Column Efficiency)
+
+```{r}
+#| label: plate-count
+#| results: asis
+
+tryCatch(
+  {
+    # Check if we have the necessary data for plate count
+    measure_cols <- find_measure_cols(data)
+    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
+
+    if (!is.na(ri_col)) {
+      m <- data[[ri_col]][[1]]
+      plate_count <- measure_sec_plate_count(
+        time = m$location,
+        signal = m$value
+      )
+
+      status <- if (plate_count >= specs$plate_count_min) "PASS" else "FAIL"
+      status_color <- if (status == "PASS") "green" else "red"
+
+      cat(sprintf("**Result:** %s plates\n\n", format(round(plate_count), big.mark = ",")))
+      cat(sprintf("**Specification:** >= %s plates\n\n", format(specs$plate_count_min, big.mark = ",")))
+      cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
+    } else {
+      cat("*Plate count calculation requires RI detector data.*\n")
+    }
+  },
+  error = function(e) {
+    cat("*Plate count could not be calculated.*\n")
+  }
+)
+```
+
+## Peak Asymmetry
+
+```{r}
+#| label: asymmetry
+#| results: asis
+
+tryCatch(
+  {
+    measure_cols <- find_measure_cols(data)
+    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
+
+    if (!is.na(ri_col)) {
+      m <- data[[ri_col]][[1]]
+      asymmetry <- measure_sec_asymmetry(
+        time = m$location,
+        signal = m$value
+      )
+
+      in_range <- asymmetry >= specs$asymmetry_min && asymmetry <= specs$asymmetry_max
+      status <- if (in_range) "PASS" else "FAIL"
+      status_color <- if (status == "PASS") "green" else "red"
+
+      cat(sprintf("**Result:** %.3f\n\n", asymmetry))
+      cat(sprintf("**Specification:** %.1f - %.1f\n\n", specs$asymmetry_min, specs$asymmetry_max))
+      cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
+    } else {
+      cat("*Asymmetry calculation requires RI detector data.*\n")
+    }
+  },
+  error = function(e) {
+    cat("*Peak asymmetry could not be calculated.*\n")
+  }
+)
+```
+
+## Resolution
+
+```{r}
+#| label: resolution
+#| results: asis
+
+tryCatch(
+  {
+    measure_cols <- find_measure_cols(data)
+    ri_col <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)][1]
+
+    if (!is.na(ri_col) && nrow(data) >= 2) {
+      m1 <- data[[ri_col]][[1]]
+      m2 <- data[[ri_col]][[2]]
+
+      resolution <- measure_sec_resolution(
+        time1 = m1$location,
+        signal1 = m1$value,
+        time2 = m2$location,
+        signal2 = m2$value
+      )
+
+      status <- if (resolution >= specs$resolution_min) "PASS" else "FAIL"
+      status_color <- if (status == "PASS") "green" else "red"
+
+      cat(sprintf("**Result:** %.2f\n\n", resolution))
+      cat(sprintf("**Specification:** >= %.1f\n\n", specs$resolution_min))
+      cat(sprintf("**Status:** [%s]{style='color: %s; font-weight: bold;'}\n\n", status, status_color))
+    } else {
+      cat("*Resolution calculation requires at least 2 samples.*\n")
+    }
+  },
+  error = function(e) {
+    cat("*Resolution could not be calculated.*\n")
+  }
+)
+```
+
+# Chromatogram Review
+
+```{r}
+#| label: qc-chromatogram
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "System suitability chromatogram for visual inspection."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_chromatogram(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Chromatogram plot not available.*\n")
+    }
+  )
+}
+```
+
+# Calibration Verification
+
+```{r}
+#| label: calibration
+#| fig-width: 10
+#| fig-height: 6
+#| fig-cap: "Calibration curve showing molecular weight vs. retention time relationship."
+
+if (params$include_plots) {
+  tryCatch(
+    {
+      p <- plot_sec_calibration(data, sample_id = sample_id)
+      print(p + theme_minimal())
+    },
+    error = function(e) {
+      cat("*Calibration plot not available. Ensure calibration has been applied.*\n")
+    }
+  )
+}
+```
+
+# Summary
+
+## Overall System Status
+
+```{r}
+#| label: overall-summary
+#| results: asis
+
+cat("::: {.callout-important}\n")
+cat("## System Suitability\n\n")
+cat("Review all QC metrics above to determine overall system status.\n\n")
+cat("All tests must pass for the system to be considered suitable for analysis.\n")
+cat(":::\n")
+```
+
+## Acceptance Criteria
+
+| Parameter | Specification |
+|-----------|--------------|
+| Plate Count | >= `r format(specs$plate_count_min, big.mark = ",")` |
+| Asymmetry | `r specs$asymmetry_min` - `r specs$asymmetry_max` |
+| Resolution | >= `r specs$resolution_min` |
+| Recovery | `r specs$recovery_min`% - `r specs$recovery_max`% |
+
+---
+*QC Report generated with measure.sec v`r packageVersion("measure.sec")`*

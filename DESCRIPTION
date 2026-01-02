@@ -28,6 +28,7 @@ Imports:
 Suggests:
     knitr,
     patchwork,
+    quarto,
     rmarkdown,
     scales,
     testthat (>= 3.0.0),
