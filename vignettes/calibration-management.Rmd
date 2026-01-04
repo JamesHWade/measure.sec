@@ -1,0 +1,288 @@
+---
+title: "Calibration Management"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Calibration Management}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+This guide shows you how to save, load, and reuse SEC calibrations with measure.sec. Key tasks covered:
+
+1. Save a calibration from a prepped recipe
+2. Load and reuse a saved calibration
+3. Inspect calibration quality
+4. Compare calibrations over time
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## How to Create and Save a Calibration
+
+### Step 1: Fit a Calibration
+
+First, create a recipe with calibration standards and prep it to fit the calibration:
+
+```{r create-calibration}
+# Load polystyrene standards
+data(sec_ps_standards)
+
+# View the standards
+sec_ps_standards |>
+  select(standard_name, mp, log_mp, retention_time) |>
+  head(8)
+```
+
+```{r fit-calibration}
+# Prepare standards with required column names
+# The step expects 'retention' and 'log_mw' columns
+ps_cal_standards <- sec_ps_standards |>
+  select(retention = retention_time, log_mw = log_mp)
+
+# Create a simple data frame for the recipe
+# (In practice, this would be your chromatogram data)
+sample_data <- tibble(
+  sample_id = "test",
+  elution_time = seq(10, 20, by = 0.01),
+  ri_signal = dnorm(seq(10, 20, by = 0.01), mean = 14, sd = 1)
+)
+
+# Create and prep a recipe with conventional calibration
+rec <- recipe(~ ., data = sample_data) |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_conventional_cal(
+    standards = ps_cal_standards,
+    fit_type = "cubic"
+  )
+
+# Prep the recipe (this fits the calibration)
+prepped <- prep(rec)
+```
+
+### Step 2: Save the Calibration
+
+Use `save_sec_calibration()` to extract and save the calibration for reuse:
+
+```{r save-calibration}
+# Create a temporary file for this example
+cal_file <- tempfile(fileext = ".rds")
+
+# Save with metadata for traceability
+save_sec_calibration(
+ prepped,
+  cal_file,
+  metadata = list(
+    column = "PLgel 5um Mixed-C",
+    instrument = "Agilent 1260",
+    analyst = "JW",
+    notes = "Monthly calibration - January 2024"
+  )
+)
+```
+
+### Format Options
+
+Two formats are supported:
+
+| Format | Extension | Best For |
+|--------|-----------|----------|
+| RDS | `.rds` | Default. Preserves all R objects exactly |
+| YAML | `.yaml` | Human-readable, good for version control |
+
+```{r save-yaml, eval=FALSE}
+# Save as YAML for human readability
+save_sec_calibration(prepped, "calibration.yaml")
+```
+
+## How to Load and Reuse a Calibration
+
+### Load a Saved Calibration
+
+```{r load-calibration}
+# Load the calibration
+cal <- load_sec_calibration(cal_file)
+
+# View calibration details
+print(cal)
+```
+
+### Use in a New Recipe
+
+Pass the loaded calibration to `step_sec_conventional_cal()` to skip fitting:
+
+```{r reuse-calibration}
+# New sample data
+new_samples <- tibble(
+  sample_id = "unknown_polymer",
+  elution_time = seq(10, 20, by = 0.01),
+  ri_signal = dnorm(seq(10, 20, by = 0.01), mean = 15, sd = 0.8)
+)
+
+# Create recipe using saved calibration (no fitting needed)
+rec_new <- recipe(~ ., data = new_samples) |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_conventional_cal(calibration = cal)
+
+# Prep and bake
+prepped_new <- prep(rec_new)
+result <- bake(prepped_new, new_data = NULL)
+```
+
+## How to Inspect Calibration Quality
+
+### View Fit Diagnostics
+
+```{r inspect-diagnostics}
+# Summary shows per-standard results
+summary(cal)
+```
+
+### Key Quality Metrics
+
+| Metric | Good Value | Meaning |
+|--------|------------|---------|
+| R² | > 0.999 | Fit explains variance |
+| RMSE (log MW) | < 0.05 | Prediction error in log units |
+| Max % deviation | < 5% | Worst individual standard |
+
+### Visualize the Calibration Curve
+
+```{r plot-calibration, fig.height=4}
+# Plot calibration curve from standards data
+plot_sec_calibration(sec_ps_standards)
+```
+
+```{r plot-with-residuals, fig.height=6}
+# With residuals panel to check for systematic errors
+plot_sec_calibration(sec_ps_standards, show_residuals = TRUE)
+```
+
+## When to Recalibrate vs. Reuse
+
+### Reuse Existing Calibration When:
+
+- Same column and mobile phase
+- Column performance is stable (check plate count)
+- Within your lab's validated timeframe (typically 1-4 weeks)
+- Running routine samples
+
+### Recalibrate When:
+
+- New column installed
+- Mobile phase composition changed
+- Column performance has degraded
+- Significant time has passed
+- Method validation requires fresh calibration
+- Results seem inconsistent
+
+## Best Practices
+
+### Naming Conventions
+
+Use descriptive, consistent file names:
+
+```r
+# Good: includes key information
+"ps_plgel-mixed-c_2024-01-15.rds"
+"pmma_superose6_instrument2_2024-01.yaml"
+
+# Avoid: ambiguous names
+"calibration.rds"
+"cal_new.rds"
+```
+
+### Include Metadata
+
+Always add metadata for traceability:
+
+```{r metadata-example, eval=FALSE}
+save_sec_calibration(
+  prepped,
+  "ps_calibration.rds",
+  metadata = list(
+    column = "PLgel 5um Mixed-C, S/N ABC123",
+    instrument = "Agilent 1260 #2",
+    analyst = "Jane Doe",
+    date = Sys.Date(),
+    mobile_phase = "THF + 0.1% BHT",
+    flow_rate = "1.0 mL/min",
+    temperature = "35C",
+    notes = "Monthly recalibration after column flush"
+  )
+)
+```
+
+### Version Control (YAML Format)
+
+For labs using git or similar version control:
+
+```{r yaml-vc, eval=FALSE}
+# YAML format is diff-friendly
+save_sec_calibration(prepped, "calibrations/ps_current.yaml")
+
+# Git will show meaningful diffs when calibration changes
+```
+
+### Lab Workflow Integration
+
+A typical workflow:
+
+1. **Monthly**: Run calibration standards, save new calibration with date
+2. **Daily**: Load current calibration for sample analysis
+3. **Archive**: Keep old calibrations for historical reference
+4. **Compare**: Periodically compare calibrations to detect drift
+
+```{r workflow-example, eval=FALSE}
+# Monthly calibration routine
+monthly_cal <- prep(calibration_recipe)
+save_sec_calibration(
+  monthly_cal,
+  sprintf("calibrations/ps_%s.rds", format(Sys.Date(), "%Y-%m")),
+  metadata = list(analyst = Sys.info()["user"])
+)
+
+# Daily sample analysis
+cal <- load_sec_calibration("calibrations/ps_2024-01.rds")
+samples_recipe <- recipe(...) |>
+  step_sec_conventional_cal(calibration = cal) |>
+  prep()
+```
+
+## Cleanup
+
+```{r cleanup}
+# Remove temporary file
+unlink(cal_file)
+```
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
