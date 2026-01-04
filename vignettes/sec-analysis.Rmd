@@ -327,6 +327,7 @@ ggplot(combined, aes(retention_time, log_mp, color = polymer, shape = polymer)) 
 
 For more accurate molecular weight determination, multi-detector SEC uses RI for concentration and MALS for absolute molecular weight:
 
+<!-- Blocked by https://github.com/JamesHWade/measure/issues/69 - 3+ signal inputs fail -->
 ```{r multi-detector, eval = FALSE}
 # Multi-detector SEC workflow for absolute molecular weight
 # Note: MALS processing requires additional detector configuration
@@ -375,7 +376,7 @@ result_multi <- bake(prepped_multi, new_data = NULL)
 
 The UV/RI ratio can reveal compositional heterogeneity across the molecular weight distribution:
 
-```{r composition, eval = FALSE}
+```{r composition}
 # Filter to copolymer samples
 copolymers <- sec_triple_detect |>
   filter(polymer_type == "copolymer")
@@ -412,11 +413,12 @@ result_comp <- bake(prepped_comp, new_data = NULL)
 
 For protein therapeutics, SEC is used to quantify high molecular weight species (HMWS/aggregates) and low molecular weight species (LMWS/fragments):
 
-```{r protein-sec, eval = FALSE}
+```{r protein-sec}
 # Create protein-like data (using UV at 280 nm)
+# Filter to a single sample for demonstration
 protein_data <- sec_triple_detect |>
   filter(sample_type == "sample") |>
-  head(1)
+  filter(sample_id == first(sample_id))
 
 rec_protein <- recipe(
   uv_signal + elution_time ~ sample_id,
@@ -447,7 +449,8 @@ result_protein |>
 ## Molecular Weight Distribution
 
 Generate differential and cumulative molecular weight distributions:
-```{r mwd, eval = FALSE}
+
+```{r mwd}
 rec_mwd <- recipe(
   ri_signal + elution_time + dn_dc + known_mw ~ sample_id,
   data = sec_triple_detect
@@ -458,9 +461,9 @@ rec_mwd <- recipe(
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   # Add MW distribution curves
   step_sec_mw_distribution(
-    signal_col = "ri",
-    mw_column = "known_mw",
-    output_type = "both"  # "differential", "cumulative", or "both"
+    measures = "ri",
+    type = "both",  # "differential", "cumulative", or "both"
+    calibration = NULL  # Assumes x-axis is already log10(MW)
   )
 
 prepped_mwd <- prep(rec_mwd)
@@ -539,7 +542,7 @@ print(mh)
 
 Calculate branching indices for branched polymers:
 
-```{r branching, eval = FALSE}
+```{r branching}
 # Compare branched polymer to linear reference
 mw <- c(100000, 200000, 500000)
 rg_branched <- c(10, 15, 25)
@@ -591,6 +594,7 @@ print(summary)
 
 Here's a complete workflow for analyzing polymer standards:
 
+<!-- Blocked by https://github.com/JamesHWade/measure/issues/69 - 3+ signal inputs fail -->
 ```{r complete-workflow, eval = FALSE}
 library(measure)
 library(measure.sec)
