@@ -1,0 +1,573 @@
+---
+title: "Tutorial: Conventional Calibration from Raw Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial: Conventional Calibration from Raw Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## What You'll Learn
+
+This tutorial walks through a **realistic SEC/GPC analysis workflow** from raw instrument data to final molecular weight results. By the end, you will be able to:
+
+1. **Process raw standard chromatograms** with noise and baseline drift
+2. **Build and validate** a conventional calibration curve
+3. **Save calibrations** for reuse in future sessions
+4. **Analyze unknown samples** using your saved calibration
+5. **Validate results** against known values
+
+**Time to complete**: ~30 minutes
+
+## Prerequisites
+
+- Basic R knowledge (data frames, pipes)
+- Completed the [Getting Started](getting-started.html) tutorial
+- Understanding of what SEC/GPC does (separates polymers by size)
+
+## The Lab Scenario
+
+Imagine you're in a polymer analysis lab:
+
+**Day 1 (Today):**
+
+- Run 12 polystyrene narrow standards on your SEC system
+- Process the raw data and build a calibration curve
+- Validate the calibration quality
+- Save the calibration for future use
+
+**Day 2 (Tomorrow):**
+
+- Run unknown polymer samples
+- Apply yesterday's calibration
+- Calculate molecular weight averages
+- Compare to expected values
+
+Let's get started!
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+---
+
+# Day 1: Building the Calibration
+
+## Load Raw Standard Data
+
+The package includes `sec_raw_standards`, which contains realistic raw chromatogram data for 12 polystyrene narrow standards. This data mimics what you'd export from an SEC instrument—complete with noise, baseline drift, and injection artifacts.
+
+```{r load-standards}
+data(sec_raw_standards)
+
+# View the structure - this is raw detector output
+glimpse(sec_raw_standards)
+
+# View the available standards
+sec_raw_standards |>
+  distinct(standard_name, mp, log_mp, dispersity) |>
+  arrange(desc(mp)) |>
+  print(n = 12)
+```
+
+```{r plot-raw-standards, fig.height=6}
+# Plot all raw chromatograms overlaid
+# Note the noise and baseline variation - this is realistic data!
+ggplot(sec_raw_standards, aes(time_min, ri_mv, color = standard_name)) +
+  geom_line(alpha = 0.7) +
+  scale_color_viridis_d(option = "turbo") +
+  labs(
+    x = "Time (min)",
+    y = "RI Signal (mV)",
+    title = "Raw Polystyrene Standards",
+    subtitle = "12 narrow standards from 580 Da to 930K Da",
+    color = "Standard"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+Notice that:
+
+- Higher MW standards elute earlier (larger molecules excluded from pores)
+- Lower MW standards elute later (smaller molecules enter pores)
+- There's visible noise and baseline variation—this is normal for raw data
+
+## Process the Standards
+
+Before building a calibration curve, we need to:
+
+1. Baseline correct each chromatogram
+2. Find the peak retention time for each standard
+
+```{r process-standards}
+# Process each standard separately and find peak retention times
+process_standard <- function(std_data) {
+  std_name <- unique(std_data$standard_name)
+  mp <- unique(std_data$mp)
+
+  # Create recipe for baseline correction
+  rec <- recipe(ri_mv + time_min ~ standard_name, data = std_data) |>
+    update_role(standard_name, new_role = "id") |>
+    step_measure_input_long(
+      ri_mv,
+      location = vars(time_min),
+      col_name = "ri"
+    ) |>
+    step_sec_baseline(measures = "ri")
+
+  # Process
+  processed <- prep(rec) |> bake(new_data = NULL)
+
+  # Extract chromatogram data
+  chrom <- processed$ri[[1]]
+
+  # Find peak (maximum signal after baseline correction)
+  peak_idx <- which.max(chrom$value)
+  peak_time <- chrom$location[peak_idx]
+  peak_height <- chrom$value[peak_idx]
+
+  tibble(
+    standard_name = std_name,
+    mp = mp,
+    log_mp = log10(mp),
+    retention_time = peak_time,
+    peak_height = peak_height
+  )
+}
+
+# Process all standards
+peak_data <- sec_raw_standards |>
+  group_by(standard_name, mp) |>
+  group_split() |>
+  purrr::map(process_standard) |>
+  bind_rows() |>
+  arrange(desc(mp))
+
+print(peak_data)
+```
+
+## Build the Calibration Curve
+
+Now we fit a polynomial relationship between retention time and log(MW):
+
+```{r build-calibration, fig.height=5}
+# Prepare calibration data in the required format
+cal_data <- peak_data |>
+  select(retention = retention_time, log_mw = log_mp)
+
+# Fit a cubic polynomial (most common for SEC)
+cal_fit <- lm(log_mw ~ poly(retention, 3, raw = TRUE), data = cal_data)
+
+# View fit summary
+summary(cal_fit)
+
+# Calculate R-squared
+cat("\nCalibration R² =", round(summary(cal_fit)$r.squared, 5), "\n")
+```
+
+```{r plot-calibration, fig.height=5}
+# Visualize calibration with confidence intervals
+cal_pred <- cal_data |>
+  mutate(
+    fitted = predict(cal_fit),
+    residual = log_mw - fitted
+  )
+
+# Add prediction interval for new observations
+pred_int <- predict(cal_fit, newdata = cal_data, interval = "prediction", level = 0.95)
+cal_pred <- cal_pred |>
+  mutate(
+    lwr = pred_int[, "lwr"],
+    upr = pred_int[, "upr"]
+  )
+
+ggplot(cal_pred, aes(retention, log_mw)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), fill = "#A23B72", alpha = 0.2) +
+  geom_smooth(
+    method = "lm", formula = y ~ poly(x, 3, raw = TRUE),
+    se = TRUE, color = "#A23B72", fill = "#A23B72", alpha = 0.3, linewidth = 1
+  ) +
+  geom_point(size = 3, color = "#2E86AB") +
+  labs(
+    x = "Retention Time (min)",
+    y = expression(log[10](M[p])),
+    title = "Polystyrene Calibration Curve",
+    subtitle = paste("Cubic fit, R² =", round(summary(cal_fit)$r.squared, 5))
+  ) +
+  theme_minimal()
+```
+
+## Validate Calibration Quality
+
+A good calibration should have:
+
+- R² > 0.999 (ideally > 0.9999)
+- Random residual pattern (no systematic bias)
+- Small relative deviations (< 5% for most standards)
+
+```{r validate-calibration, fig.height=4}
+# Calculate % deviation for each standard
+cal_pred <- cal_pred |>
+  left_join(peak_data |> select(retention = retention_time, standard_name, mp), by = "retention") |>
+  mutate(
+    predicted_mp = 10^fitted,
+    pct_deviation = (predicted_mp - mp) / mp * 100
+  )
+
+# Residual plot
+p1 <- ggplot(cal_pred, aes(retention, residual)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_point(size = 3, color = "#2E86AB") +
+  geom_segment(aes(xend = retention, yend = 0), alpha = 0.5) +
+  labs(
+    x = "Retention Time (min)",
+    y = "Residual (log₁₀ MW)",
+    title = "Calibration Residuals"
+  ) +
+  theme_minimal()
+
+# Percent deviation bar chart
+p2 <- ggplot(cal_pred, aes(reorder(standard_name, mp), pct_deviation)) +
+  geom_col(fill = ifelse(abs(cal_pred$pct_deviation) > 5, "#E74C3C", "#2E86AB")) +
+  geom_hline(yintercept = c(-5, 5), linetype = "dashed", color = "gray50") +
+  coord_flip() +
+  labs(
+    x = "",
+    y = "% Deviation from Certificate",
+    title = "Standard Deviation Analysis",
+    subtitle = "Red bars exceed ±5% threshold"
+  ) +
+  theme_minimal()
+
+# Display plots
+p1
+p2
+```
+
+```{r calibration-summary}
+# Calibration quality summary
+cat("=== Calibration Quality Summary ===\n\n")
+cat("R-squared:        ", round(summary(cal_fit)$r.squared, 6), "\n")
+cat("Residual Std Err: ", round(summary(cal_fit)$sigma, 4), "log₁₀ MW\n")
+cat("Max |% Deviation|:", round(max(abs(cal_pred$pct_deviation)), 2), "%\n")
+cat("Mean |% Deviation|:", round(mean(abs(cal_pred$pct_deviation)), 2), "%\n")
+cat("\nCalibration Range:\n")
+cat("  MW:        ", format(min(peak_data$mp), big.mark = ","), "to",
+    format(max(peak_data$mp), big.mark = ","), "Da\n")
+cat("  Retention: ", round(min(cal_data$retention), 2), "to",
+    round(max(cal_data$retention), 2), "min\n")
+```
+
+## Save the Calibration
+
+Save your calibration so you can reuse it tomorrow (and beyond):
+
+```{r save-calibration, eval=FALSE}
+# Save calibration to a file
+save_sec_calibration(
+  calibration = cal_data,
+  fit_type = "cubic",
+  file = "ps_calibration_2026-01-04.rds",
+  metadata = list(
+    date = Sys.Date(),
+    column = "PLgel Mixed-C",
+    solvent = "THF",
+    flow_rate = 1.0,
+    temperature = 35,
+    standards = "PS EasiVial kit"
+  )
+)
+
+cat("Calibration saved successfully!\n")
+```
+
+> **Tip**: Include the date in your calibration filename. Calibrations can drift over time as columns age, so it's good practice to rebuild periodically.
+
+---
+
+# Day 2: Analyzing Unknown Samples
+
+## Load Saved Calibration
+
+```{r load-calibration, eval=FALSE}
+# Load yesterday's calibration
+cal_saved <- load_sec_calibration("ps_calibration_2026-01-04.rds")
+
+# View the metadata
+cat("Calibration from:", as.character(cal_saved$metadata$date), "\n")
+cat("Column:", cal_saved$metadata$column, "\n")
+cat("Fit type:", cal_saved$fit_type, "\n")
+```
+
+For this tutorial, we'll use the calibration we just built:
+
+```{r use-calibration}
+# Use the calibration data we prepared
+# (In practice, you'd load from file)
+ps_cal <- cal_data
+```
+
+## Load Unknown Samples
+
+The package includes `sec_raw_unknowns` with realistic unknown samples that have known "true" MW values for validation:
+
+```{r load-unknowns}
+data(sec_raw_unknowns)
+
+# View the samples
+sec_raw_unknowns |>
+  distinct(sample_id, description, true_mw, true_mn, true_dispersity) |>
+  print()
+```
+
+```{r plot-unknowns, fig.height=5}
+# Plot raw unknown chromatograms
+ggplot(sec_raw_unknowns, aes(time_min, ri_mv, color = sample_id)) +
+  geom_line() +
+  facet_wrap(~sample_id, scales = "free_y") +
+  labs(
+    x = "Time (min)",
+    y = "RI Signal (mV)",
+    title = "Raw Unknown Sample Chromatograms"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+## Analyze Unknowns with Calibration
+
+Now we apply our calibration to calculate molecular weights:
+
+```{r analyze-unknowns}
+# Process all unknowns at once
+# First, let's work with one sample to show the workflow
+unknown_a <- sec_raw_unknowns |>
+  filter(sample_id == "Unknown-A")
+
+# Build the analysis recipe
+rec_unknown <- recipe(ri_mv + time_min ~ sample_id, data = unknown_a) |>
+  update_role(sample_id, new_role = "id") |>
+  step_measure_input_long(
+    ri_mv,
+    location = vars(time_min),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri") |>
+  step_sec_conventional_cal(
+    standards = ps_cal,
+    fit_type = "cubic"
+  ) |>
+  step_sec_mw_averages()
+
+# Process
+result_a <- prep(rec_unknown) |> bake(new_data = NULL)
+
+# View results
+result_a |>
+  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+```
+
+## Process All Unknowns
+
+Let's analyze all unknown samples and compare to their true values:
+
+```{r analyze-all-unknowns}
+analyze_unknown <- function(sample_data) {
+  sample_id <- unique(sample_data$sample_id)
+
+  rec <- recipe(ri_mv + time_min ~ sample_id, data = sample_data) |>
+    update_role(sample_id, new_role = "id") |>
+    step_measure_input_long(
+      ri_mv,
+      location = vars(time_min),
+      col_name = "ri"
+    ) |>
+    step_sec_baseline(measures = "ri") |>
+    step_sec_conventional_cal(
+      standards = ps_cal,
+      fit_type = "cubic"
+    ) |>
+    step_sec_mw_averages()
+
+  result <- prep(rec) |> bake(new_data = NULL)
+
+  result |>
+    select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+}
+
+# Analyze all unknowns (excluding bimodal for now - needs special handling)
+all_results <- sec_raw_unknowns |>
+  filter(sample_id != "Unknown-Bimodal") |>  # Skip bimodal for standard analysis
+  group_by(sample_id) |>
+  group_split() |>
+  purrr::map(analyze_unknown) |>
+  bind_rows()
+
+print(all_results)
+```
+
+## Validate Against True Values
+
+Compare calculated MW values to the known "true" values:
+
+```{r validate-results, fig.height=5}
+# Join with true values
+validation <- all_results |>
+  left_join(
+    sec_raw_unknowns |>
+      distinct(sample_id, true_mw, true_mn, true_dispersity),
+    by = "sample_id"
+  ) |>
+  filter(!is.na(true_mw)) |>
+  mutate(
+    mw_error_pct = (mw_mw - true_mw) / true_mw * 100,
+    mn_error_pct = (mw_mn - true_mn) / true_mn * 100,
+    disp_error_pct = (mw_dispersity - true_dispersity) / true_dispersity * 100
+  )
+
+# Summary table
+validation |>
+  select(
+    sample_id,
+    `Calc Mw` = mw_mw,
+    `True Mw` = true_mw,
+    `Mw Error %` = mw_error_pct,
+    `Calc Đ` = mw_dispersity,
+    `True Đ` = true_dispersity
+  ) |>
+  mutate(
+    `Calc Mw` = round(`Calc Mw`),
+    `Mw Error %` = round(`Mw Error %`, 1),
+    `Calc Đ` = round(`Calc Đ`, 2)
+  )
+```
+
+```{r validation-plot, fig.height=4}
+# Parity plot: calculated vs true
+ggplot(validation, aes(true_mw, mw_mw)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
+  geom_point(size = 4, color = "#2E86AB") +
+  geom_text(aes(label = sample_id), hjust = -0.2, vjust = 0.5, size = 3) +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(
+    x = "True Mw (Da)",
+    y = "Calculated Mw (Da)",
+    title = "Validation: Calculated vs True Molecular Weight",
+    subtitle = "Points on the dashed line indicate perfect agreement"
+  ) +
+  coord_fixed() +
+  theme_minimal()
+```
+
+## Handling Special Cases
+
+### Bimodal Distributions
+
+The Unknown-Bimodal sample has two distinct peaks. Standard MW averages still work, but you may want to analyze each peak separately:
+
+```{r bimodal, fig.height=4}
+# Process bimodal sample
+bimodal <- sec_raw_unknowns |>
+  filter(sample_id == "Unknown-Bimodal")
+
+rec_bimodal <- recipe(ri_mv + time_min ~ sample_id, data = bimodal) |>
+  update_role(sample_id, new_role = "id") |>
+  step_measure_input_long(
+    ri_mv,
+    location = vars(time_min),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri") |>
+  step_sec_conventional_cal(
+    standards = ps_cal,
+    fit_type = "cubic"
+  ) |>
+  step_sec_mw_averages()
+
+result_bimodal <- prep(rec_bimodal) |> bake(new_data = NULL)
+
+cat("Bimodal Sample Results:\n")
+cat("  Mn =", round(result_bimodal$mw_mn), "Da\n")
+cat("  Mw =", round(result_bimodal$mw_mw), "Da\n")
+cat("  Dispersity =", round(result_bimodal$mw_dispersity, 2), "\n")
+cat("\nNote: High dispersity indicates the bimodal nature!\n")
+
+# Plot the bimodal chromatogram with MW scale
+bimodal_chrom <- result_bimodal$ri[[1]]
+ggplot(bimodal_chrom, aes(10^location, value)) +
+  geom_line(color = "#2E86AB", linewidth = 1) +
+  geom_vline(xintercept = c(50000, 200000), linetype = "dashed", color = "#A23B72") +
+  annotate("text", x = 50000, y = max(bimodal_chrom$value) * 0.8,
+           label = "50K", hjust = 1.2, color = "#A23B72") +
+  annotate("text", x = 200000, y = max(bimodal_chrom$value) * 0.8,
+           label = "200K", hjust = -0.2, color = "#A23B72") +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(
+    x = "Molecular Weight (Da)",
+    y = "RI Signal (processed)",
+    title = "Bimodal Distribution",
+    subtitle = "Mixture of 50K and 200K components"
+  ) +
+  theme_minimal()
+```
+
+## Common Issues and Troubleshooting
+
+| Problem | Possible Cause | Solution |
+|---------|---------------|----------|
+| MW values all NA | Retention times outside calibration range | Check your integration limits; extend calibration range |
+| Very high error for HMW samples | Extrapolation beyond highest standard | Use higher MW standards or MALS for very high MW |
+| Dispersity > 3 | Multiple peaks or aggregates | Check chromatogram; may need peak deconvolution |
+| Negative MW values | Severe baseline issues | Improve baseline correction; check for air bubbles |
+| Inconsistent results day-to-day | Calibration drift | Rebuild calibration; check column condition |
+
+## Summary
+
+You've completed a realistic SEC analysis workflow:
+
+1. **Processed raw standards** with baseline correction
+2. **Built a calibration curve** with quality validation (R² > 0.999)
+3. **Saved the calibration** for future use
+4. **Analyzed unknown samples** and calculated MW averages
+5. **Validated results** against known true values
+
+### Key Takeaways
+
+- **Start with good standards**: Use narrow dispersity standards that bracket your sample MW range
+- **Validate your calibration**: Check R², residuals, and % deviation before using
+- **Watch for extrapolation**: MW values outside your calibration range are unreliable
+- **Save calibrations with metadata**: Include date, column, conditions for traceability
+- **Re-calibrate periodically**: Columns degrade; rebuild calibration monthly or when QC fails
+
+## Next Steps
+
+| Task | Resource |
+|------|----------|
+| Multi-detector analysis | [Triple Detection Tutorial](triple-detection.html) |
+| Absolute MW without standards | [MALS Detection Guide](mals-detection.html) |
+| Save/load calibrations | [Calibration Management](calibration-management.html) |
+| Set up QC checks | [System Suitability](system-suitability.html) |
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```

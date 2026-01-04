@@ -620,3 +620,248 @@
 #'
 #' @source Synthetic data generated for package testing and examples.
 "sec_system_suitability"
+
+
+# ==============================================================================
+# Raw Chromatogram Datasets for Tutorials
+# ==============================================================================
+
+#' Raw SEC Calibration Standards
+#'
+#' A dataset containing raw SEC chromatograms of polystyrene narrow standards
+#' with realistic noise, baseline drift, and injection artifacts. Designed to
+#' mimic data exported directly from SEC instruments for tutorial purposes.
+#'
+#' @format A tibble with approximately 130,000 rows and 6 columns:
+#' \describe{
+#'   \item{standard_name}{Character. Standard identifier (e.g., "PS-67500")}
+#'   \item{mp}{Numeric. Peak molecular weight in Da from certificate}
+#'   \item{log_mp}{Numeric. log10(Mp) for calibration curve fitting}
+#'   \item{dispersity}{Numeric. Polydispersity index from certificate}
+#'   \item{time_min}{Numeric. Elution time in minutes}
+#'   \item{ri_mv}{Numeric. RI detector signal in millivolts (raw, unprocessed)}
+#' }
+#'
+#' @details
+#' This dataset represents "raw" data as it would come from an SEC instrument,
+#' before any processing. Key characteristics include:
+#'
+#' **Realistic Signal Features:**
+#' \itemize{
+#'   \item Gaussian noise on detector signal
+#'   \item Slow baseline drift from temperature fluctuations
+#'   \item Injection artifacts at start of run
+#'   \item Peak tailing typical of SEC columns
+#' }
+#'
+#' **Standards Included:**
+#' 12 polystyrene narrow standards spanning 580 Da to 930,000 Da, covering
+#' the typical analytical SEC range. Standards are based on commercial kit
+#' values.
+#'
+#' **Typical Tutorial Workflow:**
+#' 1. Load raw data and inspect for quality
+#' 2. Apply baseline correction with \code{\link{step_sec_baseline}}
+#' 3. Identify peak retention times
+#' 4. Build calibration curve with \code{\link{step_sec_conventional_cal}}
+#'
+#' @seealso
+#' \code{\link{sec_raw_unknowns}} for unknown samples to analyze
+#' \code{\link{sec_ps_standards}} for pre-processed calibration data
+#' \code{\link{step_sec_conventional_cal}} for calibration step
+#'
+#' @family sec-data
+#' @family sec-raw
+#'
+#' @examples
+#' data(sec_raw_standards)
+#'
+#' # View available standards
+#' unique(sec_raw_standards[, c("standard_name", "mp", "dispersity")])
+#'
+#' # Plot a single standard (shows noise and baseline)
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   library(dplyr)
+#'
+#'   sec_raw_standards |>
+#'     filter(standard_name == "PS-67500") |>
+#'     ggplot(aes(time_min, ri_mv)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Time (min)",
+#'       y = "RI Signal (mV)",
+#'       title = "Raw PS-67500 Standard",
+#'       subtitle = "Note baseline drift and noise"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package tutorials.
+"sec_raw_standards"
+
+
+#' Raw SEC Unknown Samples with Known Molecular Weights
+#'
+#' A dataset containing raw SEC chromatograms of polymer samples with known
+#' true molecular weight values for validation. Includes challenging cases
+#' like bimodal distributions and high molecular weight aggregates.
+#'
+#' @format A tibble with approximately 65,000 rows and 8 columns:
+#' \describe{
+#'   \item{sample_id}{Character. Sample identifier}
+#'   \item{description}{Character. Sample description and type}
+#'   \item{true_mw}{Numeric. Known weight-average MW in Da (NA for bimodal)}
+#'   \item{true_mn}{Numeric. Known number-average MW in Da}
+#'   \item{true_mz}{Numeric. Known z-average MW in Da}
+#'   \item{true_dispersity}{Numeric. Known dispersity (Mw/Mn)}
+#'   \item{time_min}{Numeric. Elution time in minutes}
+#'   \item{ri_mv}{Numeric. RI detector signal in millivolts (raw)}
+#' }
+#'
+#' @details
+#' This dataset provides unknown samples with known "true" MW values, enabling
+#' validation of the complete SEC workflow from raw data to final results.
+#'
+#' **Sample Types:**
+#' \itemize{
+#'   \item \strong{Unknown-A}: Broad distribution (dispersity ~2.0)
+#'   \item \strong{Unknown-B}: Medium dispersity (~1.3)
+#'   \item \strong{Unknown-C}: Narrow distribution (~1.1) for accuracy check
+#'   \item \strong{Unknown-Bimodal}: Two-peak mixture (50K + 200K)
+#'   \item \strong{Unknown-HMW}: Very high MW (~1.5M) with aggregate shoulder
+#'   \item \strong{Unknown-LMW}: Low MW oligomers (~3.5K)
+#' }
+#'
+#' **Educational Value:**
+#' Students can compare their calculated MW values against the true values
+#' to validate their analysis workflow and understand sources of error.
+#'
+#' @seealso
+#' \code{\link{sec_raw_standards}} for calibration standards
+#' \code{\link{step_sec_mw_averages}} for MW calculation
+#'
+#' @family sec-data
+#' @family sec-raw
+#'
+#' @examples
+#' data(sec_raw_unknowns)
+#'
+#' # View sample information
+#' unique(sec_raw_unknowns[,
+#'   c("sample_id", "description", "true_mw", "true_dispersity")])
+#'
+#' # Plot the bimodal sample
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   library(dplyr)
+#'
+#'   sec_raw_unknowns |>
+#'     filter(sample_id == "Unknown-Bimodal") |>
+#'     ggplot(aes(time_min, ri_mv)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Time (min)",
+#'       y = "RI Signal (mV)",
+#'       title = "Bimodal Distribution",
+#'       subtitle = "Mixture of 50K and 200K components"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package tutorials.
+"sec_raw_unknowns"
+
+
+#' Raw Multi-Detector SEC Data
+#'
+#' A dataset containing raw SEC chromatograms with RI, UV, and MALS detector
+#' signals that have NOT been corrected for inter-detector delay. Designed
+#' for teaching triple detection workflows from raw data.
+#'
+#' @format A tibble with approximately 48,000 rows and 12 columns:
+#' \describe{
+#'   \item{sample_id}{Character. Sample identifier}
+#'   \item{description}{Character. Sample description}
+#'   \item{mw}{Numeric. Known weight-average MW in Da}
+#'   \item{dispersity}{Numeric. Known dispersity}
+#'   \item{dn_dc}{Numeric. Refractive index increment in mL/g}
+#'   \item{ext_coef}{Numeric. UV extinction coefficient}
+#'   \item{time_min}{Numeric. Elution time in minutes}
+#'   \item{ri_mv}{Numeric. RI detector signal in millivolts}
+#'   \item{uv_au}{Numeric. UV detector signal in absorbance units}
+#'   \item{mals_mv}{Numeric. MALS detector signal in millivolts}
+#'   \item{delay_uv_ml}{Numeric. True UV detector delay in mL (negative = before RI)}
+#'   \item{delay_mals_ml}{Numeric. True MALS detector delay in mL (positive = after RI)}
+#' }
+#'
+#' @details
+#' This dataset simulates raw multi-detector SEC data before inter-detector
+#' delay correction. The detectors are physically separated in the flow path,
+#' so peaks appear at different times in each detector.
+#'
+#' **Detector Configuration:**
+#' \itemize{
+#'   \item UV detector is 0.08 mL BEFORE RI (peaks appear earlier)
+#'   \item MALS detector is 0.18 mL AFTER RI (peaks appear later)
+#'   \item RI is the reference detector (delay = 0)
+#' }
+#'
+#' **Samples Included:**
+#' \itemize{
+#'   \item \strong{PS-DelayStd}: Narrow PS standard for determining delays
+#'   \item \strong{Sample-1}: PS sample with strong UV absorption
+#'   \item \strong{Sample-2}: PMMA sample with weak UV
+#'   \item \strong{Sample-3}: Copolymer sample
+#' }
+#'
+#' **Tutorial Workflow:**
+#' 1. Load raw multi-detector data
+#' 2. Use delay standard to determine inter-detector offsets
+#' 3. Apply \code{\link{step_sec_detector_delay}} to align signals
+#' 4. Process with \code{\link{step_sec_mals}} for absolute MW
+#'
+#' @seealso
+#' \code{\link{step_sec_detector_delay}} for delay correction
+#' \code{\link{step_sec_mals}} for MALS processing
+#' \code{\link{sec_triple_detect}} for pre-processed multi-detector data
+#'
+#' @family sec-data
+#' @family sec-raw
+#'
+#' @examples
+#' data(sec_raw_multidetector)
+#'
+#' # View sample information
+#' unique(sec_raw_multidetector[, c("sample_id", "description", "mw")])
+#'
+#' # Plot delay standard showing detector offset (peaks not aligned)
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   library(dplyr)
+#'   library(tidyr)
+#'
+#'   sec_raw_multidetector |>
+#'     filter(sample_id == "PS-DelayStd") |>
+#'     select(time_min, ri_mv, uv_au, mals_mv) |>
+#'     # Normalize for comparison
+#'     mutate(
+#'       ri_norm = ri_mv / max(ri_mv),
+#'       uv_norm = uv_au / max(uv_au),
+#'       mals_norm = mals_mv / max(mals_mv)
+#'     ) |>
+#'     select(time_min, RI = ri_norm, UV = uv_norm, MALS = mals_norm) |>
+#'     pivot_longer(-time_min, names_to = "detector", values_to = "signal") |>
+#'     ggplot(aes(time_min, signal, color = detector)) +
+#'     geom_line() +
+#'     labs(
+#'       x = "Time (min)",
+#'       y = "Normalized Signal",
+#'       title = "Raw Multi-Detector Data (Before Delay Correction)",
+#'       subtitle = "Note: Peaks are NOT aligned - UV leads, MALS lags"
+#'     ) +
+#'     theme_minimal()
+#' }
+#'
+#' @source Synthetic data generated for package tutorials.
+"sec_raw_multidetector"

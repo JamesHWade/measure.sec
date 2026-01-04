@@ -150,12 +150,20 @@ reference:
   - sec_branched
   - sec_system_suitability
 
+- title: Raw Tutorial Datasets
+  desc: Realistic raw chromatogram data for tutorials
+  contents:
+  - sec_raw_standards
+  - sec_raw_unknowns
+  - sec_raw_multidetector
+
 articles:
 - title: Tutorials
   navbar: ~
   desc: Learning-oriented guides to get you started
   contents:
   - getting-started
+  - tutorial-conventional-calibration
 
 - title: How-to Guides
   desc: Task-oriented guides for specific applications

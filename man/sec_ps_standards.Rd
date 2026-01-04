@@ -88,6 +88,9 @@ Other sec-data:
 \code{\link{sec_copolymer}},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_protein}},
+\code{\link{sec_raw_multidetector}},
+\code{\link{sec_raw_standards}},
+\code{\link{sec_raw_unknowns}},
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
