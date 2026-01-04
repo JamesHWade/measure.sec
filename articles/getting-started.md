@@ -1,5 +1,22 @@
 # Getting Started with measure.sec
 
+## What You’ll Learn
+
+By the end of this tutorial, you will be able to:
+
+1.  **Load and convert** SEC chromatogram data into the measure format
+2.  **Build a recipe** that processes your detector signals
+3.  **Apply calibration** to convert retention time to molecular weight
+4.  **Calculate MW averages** (Mn, Mw, Mz, dispersity)
+
+**Time to complete**: ~15 minutes
+
+## Prerequisites
+
+Before starting, you should have: - Basic R knowledge (data frames,
+pipes, functions) - R and RStudio installed - No prior SEC/GPC knowledge
+required (we’ll cover the basics)
+
 ## Overview
 
 **measure.sec** provides preprocessing steps for Size Exclusion
@@ -8,43 +25,18 @@ analysis. It extends the
 [measure](https://github.com/JamesHWade/measure) package using the
 [recipes](https://recipes.tidymodels.org/) framework.
 
-This vignette covers:
-
-1.  What SEC/GPC is and why it matters
-2.  Installation and setup
-3.  Understanding the data model
-4.  A basic single-detector workflow
-5.  Calculating molecular weight averages
-6.  Troubleshooting common issues
-
 ## What is SEC/GPC?
 
 **Size Exclusion Chromatography (SEC)**, also known as **Gel Permeation
-Chromatography (GPC)**, is a liquid chromatography technique that
-separates molecules by their hydrodynamic size (how large they appear in
-solution). Unlike other chromatography methods that separate by chemical
-interactions, SEC uses porous particles in the column that act like a
-molecular sieve—smaller molecules can enter the pores and take longer to
-travel through the column, while larger molecules are excluded from the
-pores and elute faster.
+Chromatography (GPC)**, separates molecules by size. Larger molecules
+elute faster (excluded from pores), smaller molecules elute slower
+(enter pores). This lets you determine **molecular weight averages**
+(Mn, Mw, Mz) and **dispersity** (distribution breadth).
 
-This “size-based separation” makes SEC invaluable for characterizing
-polymers, proteins, and other macromolecules. With SEC, you can
-determine **molecular weight averages** (Mn, Mw, Mz), **dispersity**
-(how broad the molecular weight distribution is), and detect
-**aggregates** or **degradation products**. Pharmaceutical companies
-rely on SEC to ensure protein therapeutics meet purity specifications,
-while polymer scientists use it to understand how synthesis conditions
-affect material properties.
-
-The data from SEC analysis consists of **chromatograms**—plots of
-detector response versus elution time (or volume). Different detectors
-provide complementary information: **refractive index (RI)** detectors
-measure concentration, **UV detectors** track chromophore-containing
-species, and **light scattering detectors** provide absolute molecular
-weight without calibration standards. This package helps you process all
-these detector signals and extract meaningful molecular weight
-information.
+SEC data consists of **chromatograms** (detector response vs. elution
+time). Common detectors include **RI** (concentration), **UV**
+(chromophores), and **light scattering** (absolute MW). This package
+processes these signals to extract molecular weight information.
 
 ## Workflow Overview
 
@@ -363,6 +355,14 @@ result |>
 > (like calibration standards), then bake on new samples without
 > re-learning parameters. It also makes your analysis reproducible.
 
+------------------------------------------------------------------------
+
+**✓ Checkpoint**: You’ve successfully converted raw detector data into
+the measure format and applied baseline correction. Your `result` tibble
+now contains a processed `ri` column ready for calibration.
+
+------------------------------------------------------------------------
+
 ## Molecular Weight Averages
 
 The most common outputs from SEC analysis are **molecular weight
@@ -488,6 +488,15 @@ result_cal |>
 > work well for other flexible polymers in THF, but for proteins in
 > aqueous SEC, use protein standards or light scattering.
 
+------------------------------------------------------------------------
+
+**✓ Checkpoint**: You’ve completed a full SEC analysis! Your
+`result_cal` tibble contains molecular weight averages (Mn, Mw, Mz) and
+dispersity calculated from your chromatogram using conventional
+calibration.
+
+------------------------------------------------------------------------
+
 ## Available Steps
 
 The package provides a comprehensive set of recipe steps. Here’s a quick
@@ -539,98 +548,39 @@ reference organized by function:
 - [`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md):
   Complete protein SEC workflow
 
-## Troubleshooting Common Issues
+## Troubleshooting
 
-### “Column not found” or “Column does not exist”
+**Common issues and quick fixes:**
 
-This usually means the step can’t find the column you specified. Check:
-
-``` r
-# List all columns in your data
-names(your_data)
-
-# Check if a column is a measure_list
-class(your_data$ri_signal)  # Should include "measure_list"
-```
-
-**Common fixes:** - Ensure column names match exactly (case-sensitive) -
-Make sure you’ve run
-[`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
-before steps that need measure columns - Check that the data actually
-contains the expected columns
-
-### “No measure columns found”
-
-This happens when a step expects measure columns but can’t find any:
+| Problem                    | Solution                                                                                                                                   |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| “Column not found”         | Check column names match exactly (case-sensitive)                                                                                          |
+| “No measure columns found” | Add [`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html) at the start of your recipe |
+| NA values in MW results    | Check calibration range covers your retention times                                                                                        |
+| Recipe won’t prep          | Try prepping with fewer steps to isolate the issue                                                                                         |
 
 ``` r
-# Check what measure columns exist after prep
-result <- bake(prepped, new_data = NULL)
-measure::find_measure_cols(result)
+# Debugging tips:
+names(your_data)                    # Check column names
+measure::find_measure_cols(result)  # Find measure columns after bake
+result$ri[[1]] |> summary()         # Inspect chromatogram data
 ```
-
-**Common fixes:** - Add
-[`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
-at the start of your recipe - Verify your input data has the expected
-chromatogram columns
-
-### Unexpected NA values in results
-
-If MW calculations return NA:
-
-1.  **Check for zero or negative values** in your chromatogram—these can
-    cause calculation issues
-2.  **Verify calibration range**—MW outside the calibration range may be
-    extrapolated poorly
-3.  **Check integration limits**—ensure baseline correction didn’t
-    remove your peak
-
-``` r
-# Inspect the chromatogram data
-result$ri[[1]] |>
-  summary()
-```
-
-### Recipe won’t prep
-
-If [`prep()`](https://recipes.tidymodels.org/reference/prep.html) fails:
-
-``` r
-# Check each step individually by prepping with fewer steps
-rec_partial <- recipe(~., data = your_data) |>
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri")
-
-# Does this work?
-prep(rec_partial)
-
-# Add steps one at a time to find which one fails
-```
-
-### Performance is slow
-
-For large datasets:
-
-- Process samples in batches using
-  [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) +
-  [`dplyr::group_map()`](https://dplyr.tidyverse.org/reference/group_map.html)
-- Consider using fewer chromatogram points if high resolution isn’t
-  needed
-- Pre-filter to your region of interest before building the recipe
 
 ## Next Steps
 
 Now that you understand the basics, explore these vignettes for
 specialized workflows:
 
-| Vignette                                                                                                            | Use when you need to…                            |
-|---------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)             | Use MALS for absolute MW (no calibration needed) |
-| [`vignette("protein-sec")`](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)                       | Analyze protein aggregates (HMWS/monomer/LMWS)   |
-| [`vignette("copolymer-analysis")`](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md)         | Determine composition of multi-component samples |
-| [`vignette("calibration-management")`](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) | Save, load, and reuse calibrations               |
-| [`vignette("system-suitability")`](https://jameshwade.github.io/measure-sec/articles/system-suitability.md)         | Set up QC checks and system suitability tests    |
-| [`vignette("exporting-results")`](https://jameshwade.github.io/measure-sec/articles/exporting-results.md)           | Export summary tables and generate reports       |
-| [`vignette("sec-analysis")`](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md)                     | See comprehensive examples and advanced options  |
+| Vignette                                                                                              | Use when you need to…                       |
+|-------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| [Multi-Detector SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)           | Integrate multiple detectors (RI + UV + LS) |
+| [MALS Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md)                 | Get absolute MW and radius of gyration      |
+| [LALS/RALS Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md)       | Use single-angle light scattering           |
+| [Protein SEC](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)                       | Analyze aggregates (HMWS/monomer/LMWS)      |
+| [Copolymer Composition](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md)      | Determine composition via UV/RI ratio       |
+| [Calibration Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) | Save, load, and reuse calibrations          |
+| [System Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md)         | Set up QC checks and column monitoring      |
+| [Exporting Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md)           | Generate summary tables and reports         |
 
 You can also browse all available functions with:
 

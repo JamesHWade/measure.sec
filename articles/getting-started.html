@@ -77,52 +77,53 @@
     
     
 <div class="section level2">
+<h2 id="what-youll-learn">What You’ll Learn<a class="anchor" aria-label="anchor" href="#what-youll-learn"></a>
+</h2>
+<p>By the end of this tutorial, you will be able to:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Load and convert</strong> SEC chromatogram data into the
+measure format</li>
+<li>
+<strong>Build a recipe</strong> that processes your detector
+signals</li>
+<li>
+<strong>Apply calibration</strong> to convert retention time to
+molecular weight</li>
+<li>
+<strong>Calculate MW averages</strong> (Mn, Mw, Mz, dispersity)</li>
+</ol>
+<p><strong>Time to complete</strong>: ~15 minutes</p>
+</div>
+<div class="section level2">
+<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
+</h2>
+<p>Before starting, you should have: - Basic R knowledge (data frames,
+pipes, functions) - R and RStudio installed - No prior SEC/GPC knowledge
+required (we’ll cover the basics)</p>
+</div>
+<div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p><strong>measure.sec</strong> provides preprocessing steps for Size
 Exclusion Chromatography (SEC) and Gel Permeation Chromatography (GPC)
 data analysis. It extends the <a href="https://github.com/JamesHWade/measure" class="external-link">measure</a> package using
 the <a href="https://recipes.tidymodels.org/" class="external-link">recipes</a> framework.</p>
-<p>This vignette covers:</p>
-<ol style="list-style-type: decimal">
-<li>What SEC/GPC is and why it matters</li>
-<li>Installation and setup</li>
-<li>Understanding the data model</li>
-<li>A basic single-detector workflow</li>
-<li>Calculating molecular weight averages</li>
-<li>Troubleshooting common issues</li>
-</ol>
 </div>
 <div class="section level2">
 <h2 id="what-is-secgpc">What is SEC/GPC?<a class="anchor" aria-label="anchor" href="#what-is-secgpc"></a>
 </h2>
 <p><strong>Size Exclusion Chromatography (SEC)</strong>, also known as
-<strong>Gel Permeation Chromatography (GPC)</strong>, is a liquid
-chromatography technique that separates molecules by their hydrodynamic
-size (how large they appear in solution). Unlike other chromatography
-methods that separate by chemical interactions, SEC uses porous
-particles in the column that act like a molecular sieve—smaller
-molecules can enter the pores and take longer to travel through the
-column, while larger molecules are excluded from the pores and elute
-faster.</p>
-<p>This “size-based separation” makes SEC invaluable for characterizing
-polymers, proteins, and other macromolecules. With SEC, you can
-determine <strong>molecular weight averages</strong> (Mn, Mw, Mz),
-<strong>dispersity</strong> (how broad the molecular weight distribution
-is), and detect <strong>aggregates</strong> or <strong>degradation
-products</strong>. Pharmaceutical companies rely on SEC to ensure
-protein therapeutics meet purity specifications, while polymer
-scientists use it to understand how synthesis conditions affect material
-properties.</p>
-<p>The data from SEC analysis consists of
-<strong>chromatograms</strong>—plots of detector response versus elution
-time (or volume). Different detectors provide complementary information:
-<strong>refractive index (RI)</strong> detectors measure concentration,
-<strong>UV detectors</strong> track chromophore-containing species, and
-<strong>light scattering detectors</strong> provide absolute molecular
-weight without calibration standards. This package helps you process all
-these detector signals and extract meaningful molecular weight
-information.</p>
+<strong>Gel Permeation Chromatography (GPC)</strong>, separates
+molecules by size. Larger molecules elute faster (excluded from pores),
+smaller molecules elute slower (enter pores). This lets you determine
+<strong>molecular weight averages</strong> (Mn, Mw, Mz) and
+<strong>dispersity</strong> (distribution breadth).</p>
+<p>SEC data consists of <strong>chromatograms</strong> (detector
+response vs. elution time). Common detectors include <strong>RI</strong>
+(concentration), <strong>UV</strong> (chromophores), and <strong>light
+scattering</strong> (absolute MW). This package processes these signals
+to extract molecular weight information.</p>
 </div>
 <div class="section level2">
 <h2 id="workflow-overview">Workflow Overview<a class="anchor" aria-label="anchor" href="#workflow-overview"></a>
@@ -455,6 +456,12 @@ training data (like calibration standards), then bake on new samples
 without re-learning parameters. It also makes your analysis
 reproducible.</p>
 </blockquote>
+<hr>
+<p><strong>✓ Checkpoint</strong>: You’ve successfully converted raw
+detector data into the measure format and applied baseline correction.
+Your <code>result</code> tibble now contains a processed <code>ri</code>
+column ready for calibration.</p>
+<hr>
 </div>
 </div>
 <div class="section level2">
@@ -578,6 +585,12 @@ sample has similar hydrodynamic behavior to your standards. Polystyrene
 standards work well for other flexible polymers in THF, but for proteins
 in aqueous SEC, use protein standards or light scattering.</p>
 </blockquote>
+<hr>
+<p><strong>✓ Checkpoint</strong>: You’ve completed a full SEC analysis!
+Your <code>result_cal</code> tibble contains molecular weight averages
+(Mn, Mw, Mz) and dispersity calculated from your chromatogram using
+conventional calibration.</p>
+<hr>
 </div>
 <div class="section level2">
 <h2 id="available-steps">Available Steps<a class="anchor" aria-label="anchor" href="#available-steps"></a>
@@ -651,85 +664,43 @@ quantitation</li>
 </div>
 </div>
 <div class="section level2">
-<h2 id="troubleshooting-common-issues">Troubleshooting Common Issues<a class="anchor" aria-label="anchor" href="#troubleshooting-common-issues"></a>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
 </h2>
-<div class="section level3">
-<h3 id="column-not-found-or-column-does-not-exist">“Column not found” or “Column does not exist”<a class="anchor" aria-label="anchor" href="#column-not-found-or-column-does-not-exist"></a>
-</h3>
-<p>This usually means the step can’t find the column you specified.
-Check:</p>
+<p><strong>Common issues and quick fixes:</strong></p>
+<table class="table">
+<colgroup>
+<col width="47%">
+<col width="52%">
+</colgroup>
+<thead><tr class="header">
+<th>Problem</th>
+<th>Solution</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>“Column not found”</td>
+<td>Check column names match exactly (case-sensitive)</td>
+</tr>
+<tr class="even">
+<td>“No measure columns found”</td>
+<td>Add <code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> at the start of your
+recipe</td>
+</tr>
+<tr class="odd">
+<td>NA values in MW results</td>
+<td>Check calibration range covers your retention times</td>
+</tr>
+<tr class="even">
+<td>Recipe won’t prep</td>
+<td>Try prepping with fewer steps to isolate the issue</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># List all columns in your data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">your_data</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check if a column is a measure_list</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">your_data</span><span class="op">$</span><span class="va">ri_signal</span><span class="op">)</span>  <span class="co"># Should include "measure_list"</span></span></code></pre></div>
-<p><strong>Common fixes:</strong> - Ensure column names match exactly
-(case-sensitive) - Make sure you’ve run
-<code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> before steps that need measure
-columns - Check that the data actually contains the expected columns</p>
-</div>
-<div class="section level3">
-<h3 id="no-measure-columns-found">“No measure columns found”<a class="anchor" aria-label="anchor" href="#no-measure-columns-found"></a>
-</h3>
-<p>This happens when a step expects measure columns but can’t find
-any:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check what measure columns exist after prep</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/find_measure_cols.html" class="external-link">find_measure_cols</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Common fixes:</strong> - Add
-<code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long()</a></code> at the start of your recipe -
-Verify your input data has the expected chromatogram columns</p>
-</div>
-<div class="section level3">
-<h3 id="unexpected-na-values-in-results">Unexpected NA values in results<a class="anchor" aria-label="anchor" href="#unexpected-na-values-in-results"></a>
-</h3>
-<p>If MW calculations return NA:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Check for zero or negative values</strong> in your
-chromatogram—these can cause calculation issues</li>
-<li>
-<strong>Verify calibration range</strong>—MW outside the calibration
-range may be extrapolated poorly</li>
-<li>
-<strong>Check integration limits</strong>—ensure baseline correction
-didn’t remove your peak</li>
-</ol>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Inspect the chromatogram data</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="recipe-wont-prep">Recipe won’t prep<a class="anchor" aria-label="anchor" href="#recipe-wont-prep"></a>
-</h3>
-<p>If <code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code> fails:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check each step individually by prepping with fewer steps</span></span>
-<span><span class="va">rec_partial</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">your_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Does this work?</span></span>
-<span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_partial</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Add steps one at a time to find which one fails</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="performance-is-slow">Performance is slow<a class="anchor" aria-label="anchor" href="#performance-is-slow"></a>
-</h3>
-<p>For large datasets:</p>
-<ul>
-<li>Process samples in batches using <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> +
-<code><a href="https://dplyr.tidyverse.org/reference/group_map.html" class="external-link">dplyr::group_map()</a></code>
-</li>
-<li>Consider using fewer chromatogram points if high resolution isn’t
-needed</li>
-<li>Pre-filter to your region of interest before building the
-recipe</li>
-</ul>
-</div>
+<code class="sourceCode R"><span><span class="co"># Debugging tips:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">your_data</span><span class="op">)</span>                    <span class="co"># Check column names</span></span>
+<span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/find_measure_cols.html" class="external-link">find_measure_cols</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>  <span class="co"># Find measure columns after bake</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="op">)</span>         <span class="co"># Inspect chromatogram data</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
@@ -747,44 +718,49 @@ specialized workflows:</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="../articles/triple-detection.html">vignette("triple-detection")</a></code></td>
-<td>Use MALS for absolute MW (no calibration needed)</td>
+<td><a href="triple-detection.html">Multi-Detector SEC</a></td>
+<td>Integrate multiple detectors (RI + UV + LS)</td>
 </tr>
 <tr class="even">
-<td><code><a href="../articles/protein-sec.html">vignette("protein-sec")</a></code></td>
-<td>Analyze protein aggregates (HMWS/monomer/LMWS)</td>
+<td><a href="mals-detection.html">MALS Detection</a></td>
+<td>Get absolute MW and radius of gyration</td>
 </tr>
 <tr class="odd">
-<td><code><a href="../articles/copolymer-analysis.html">vignette("copolymer-analysis")</a></code></td>
-<td>Determine composition of multi-component samples</td>
+<td><a href="lals-rals-detection.html">LALS/RALS Detection</a></td>
+<td>Use single-angle light scattering</td>
 </tr>
 <tr class="even">
-<td><code><a href="../articles/calibration-management.html">vignette("calibration-management")</a></code></td>
+<td><a href="protein-sec.html">Protein SEC</a></td>
+<td>Analyze aggregates (HMWS/monomer/LMWS)</td>
+</tr>
+<tr class="odd">
+<td><a href="copolymer-analysis.html">Copolymer Composition</a></td>
+<td>Determine composition via UV/RI ratio</td>
+</tr>
+<tr class="even">
+<td><a href="calibration-management.html">Calibration
+Management</a></td>
 <td>Save, load, and reuse calibrations</td>
 </tr>
 <tr class="odd">
-<td><code><a href="../articles/system-suitability.html">vignette("system-suitability")</a></code></td>
-<td>Set up QC checks and system suitability tests</td>
+<td><a href="system-suitability.html">System Suitability</a></td>
+<td>Set up QC checks and column monitoring</td>
 </tr>
 <tr class="even">
-<td><code><a href="../articles/exporting-results.html">vignette("exporting-results")</a></code></td>
-<td>Export summary tables and generate reports</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../articles/sec-analysis.html">vignette("sec-analysis")</a></code></td>
-<td>See comprehensive examples and advanced options</td>
+<td><a href="exporting-results.html">Exporting Results</a></td>
+<td>Generate summary tables and reports</td>
 </tr>
 </tbody>
 </table>
 <p>You can also browse all available functions with:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># See all SEC/GPC steps registered with measure</span></span>
 <span><span class="fu">measure</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/measure_steps.html" class="external-link">measure_steps</a></span><span class="op">(</span>techniques <span class="op">=</span> <span class="st">"SEC/GPC"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
