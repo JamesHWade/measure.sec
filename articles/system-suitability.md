@@ -269,6 +269,7 @@ sst <- measure_sec_suitability(
   column_length = 30  # cm
 )
 
+# View results with pass/fail status
 print(sst)
 #> SEC System Suitability Test
 #> ================================================== 
@@ -283,18 +284,22 @@ print(sst)
 #> --------------------------------------------------
 ```
 
+The output shows each metric with its value, acceptance criterion, and
+pass/fail status. A summary at the end indicates overall system
+suitability.
+
 ### SST with Custom (Stricter) Criteria
 
-For validated biopharmaceutical methods:
+For validated biopharmaceutical methods, you may need tighter criteria:
 
 ``` r
 strict_criteria <- list(
-  resolution_min = 2.0,
-  plate_count_min = 8000,
-  tailing_min = 0.9,
-  tailing_max = 1.3,
-  recovery_min = 97,
-  recovery_max = 103,
+  resolution_min = 2.0,       # Higher than default 1.5
+  plate_count_min = 8000,     # Higher than default 5000
+  tailing_min = 0.9,          # Tighter than default 0.8
+  tailing_max = 1.3,          # Tighter than default 1.5
+  recovery_min = 97,          # Tighter than default 95%
+  recovery_max = 103,         # Tighter than default 105%
   retention_rsd_max = 0.5,    # Tighter precision
   area_rsd_max = 1.0
 )
@@ -317,6 +322,12 @@ print(sst_strict)
 #> plate count         : 3462.0 (>= 8000) [FAIL] 
 #> --------------------------------------------------
 ```
+
+**Tip:** Document your acceptance criteria in your method validation
+protocol. The defaults in
+[`measure_sec_suitability()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md)
+are typical starting points but should be verified for your specific
+application.
 
 ### SST with Replicate Injections
 
@@ -355,6 +366,20 @@ summary(sst_reps)
 #> 
 #> Overall: FAILED
 ```
+
+### What to Do When SST Fails
+
+| Failure     | Immediate Action             | If Problem Persists            |
+|-------------|------------------------------|--------------------------------|
+| Resolution  | Re-inject standard           | Check mobile phase, column age |
+| Plate count | Check flow rate, temperature | Column may need replacement    |
+| Tailing     | Inspect fittings for leaks   | Column may have void           |
+| Recovery    | Re-integrate, check baseline | Sample may be adsorbing        |
+| RSD         | Check autosampler, re-run    | Investigate system precision   |
+
+**Decision tree:** 1. Single failure → Re-inject and re-evaluate 2.
+Repeated failure → Investigate root cause (see Troubleshooting) 3.
+Multiple metrics fail → Do not proceed with sample analysis
 
 ## Tracking Column Performance Over Time
 
@@ -434,6 +459,63 @@ if (!is.na(first_failure)) {
 }
 #> Column still within specifications
 ```
+
+## Column Qualification
+
+When installing a new column, perform a full qualification using
+calibration standards. This provides baseline metrics to track over the
+column’s lifetime.
+
+``` r
+# Calibration data from polymer standards
+cal_standards <- data.frame(
+  retention = c(5.2, 6.1, 7.0, 8.2, 9.5, 10.8),
+  mw = c(1200000, 400000, 100000, 30000, 5000, 580),
+  width = c(0.40, 0.35, 0.30, 0.28, 0.25, 0.30)
+)
+
+# Evaluate column performance
+col_perf <- measure_sec_column_performance(
+  cal_standards,
+  column_length = 30,    # cm
+  particle_size = 5      # µm
+)
+
+print(col_perf)
+#> SEC Column Performance
+#> ================================================== 
+#> 
+#> Separation Range:
+#>   Exclusion limit: 1200000 Da
+#>   Total permeation: 580 Da
+#>   Log MW range: 3.32 decades
+#> 
+#> Calibration:
+#>   Selectivity: 0.5801 log(MW)/unit
+#>   R-squared: 0.9956
+#> 
+#> Column Efficiency:
+#>   HETP: 0.070 mm (70.4 um)
+#>   Plates/meter: 14203
+#>   Reduced HETP (h): 14.08
+#>   Average plates (N): 4261
+#> 
+#> Resolution:
+#>   Peak capacity: 12.9
+#>   Resolution/decade: 15.99
+#> 
+#> Column: 300 x 7.8 mm
+#> Standards used: 6
+```
+
+**Key qualification metrics:**
+
+| Metric        | Typical Spec | What It Indicates            |
+|---------------|--------------|------------------------------|
+| HETP          | \< 50 µm     | Packing quality              |
+| Reduced HETP  | 2-5          | Optimal flow vs efficiency   |
+| Plates/meter  | \> 20,000    | Column efficiency            |
+| Peak capacity | \> 10        | Separation power in MW range |
 
 ## Troubleshooting Guide
 

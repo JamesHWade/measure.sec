@@ -412,6 +412,7 @@ complete SST evaluation.</p>
 <span>  column_length <span class="op">=</span> <span class="fl">30</span>  <span class="co"># cm</span></span>
 <span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># View results with pass/fail status</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">sst</span><span class="op">)</span></span>
 <span><span class="co">#&gt; SEC System Suitability Test</span></span>
 <span><span class="co">#&gt; ================================================== </span></span>
@@ -424,19 +425,23 @@ complete SST evaluation.</p>
 <span><span class="co">#&gt; plate count         : 3462.0 (&gt;= 5000) [FAIL]</span></span>
 <span><span class="co">#&gt; plates per meter    : 11542.0 (informational) [INFO] </span></span>
 <span><span class="co">#&gt; --------------------------------------------------</span></span></code></pre></div>
+<p>The output shows each metric with its value, acceptance criterion,
+and pass/fail status. A summary at the end indicates overall system
+suitability.</p>
 </div>
 <div class="section level3">
 <h3 id="sst-with-custom-stricter-criteria">SST with Custom (Stricter) Criteria<a class="anchor" aria-label="anchor" href="#sst-with-custom-stricter-criteria"></a>
 </h3>
-<p>For validated biopharmaceutical methods:</p>
+<p>For validated biopharmaceutical methods, you may need tighter
+criteria:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">strict_criteria</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  resolution_min <span class="op">=</span> <span class="fl">2.0</span>,</span>
-<span>  plate_count_min <span class="op">=</span> <span class="fl">8000</span>,</span>
-<span>  tailing_min <span class="op">=</span> <span class="fl">0.9</span>,</span>
-<span>  tailing_max <span class="op">=</span> <span class="fl">1.3</span>,</span>
-<span>  recovery_min <span class="op">=</span> <span class="fl">97</span>,</span>
-<span>  recovery_max <span class="op">=</span> <span class="fl">103</span>,</span>
+<span>  resolution_min <span class="op">=</span> <span class="fl">2.0</span>,       <span class="co"># Higher than default 1.5</span></span>
+<span>  plate_count_min <span class="op">=</span> <span class="fl">8000</span>,     <span class="co"># Higher than default 5000</span></span>
+<span>  tailing_min <span class="op">=</span> <span class="fl">0.9</span>,          <span class="co"># Tighter than default 0.8</span></span>
+<span>  tailing_max <span class="op">=</span> <span class="fl">1.3</span>,          <span class="co"># Tighter than default 1.5</span></span>
+<span>  recovery_min <span class="op">=</span> <span class="fl">97</span>,          <span class="co"># Tighter than default 95%</span></span>
+<span>  recovery_max <span class="op">=</span> <span class="fl">103</span>,         <span class="co"># Tighter than default 105%</span></span>
 <span>  retention_rsd_max <span class="op">=</span> <span class="fl">0.5</span>,    <span class="co"># Tighter precision</span></span>
 <span>  area_rsd_max <span class="op">=</span> <span class="fl">1.0</span></span>
 <span><span class="op">)</span></span>
@@ -458,6 +463,10 @@ complete SST evaluation.</p>
 <span><span class="co">#&gt; resolution          : 6.571429 (&gt;= 2) [PASS]</span></span>
 <span><span class="co">#&gt; plate count         : 3462.0 (&gt;= 8000) [FAIL] </span></span>
 <span><span class="co">#&gt; --------------------------------------------------</span></span></code></pre></div>
+<p><strong>Tip:</strong> Document your acceptance criteria in your
+method validation protocol. The defaults in
+<code><a href="../reference/measure_sec_suitability.html">measure_sec_suitability()</a></code> are typical starting points but
+should be verified for your specific application.</p>
 </div>
 <div class="section level3">
 <h3 id="sst-with-replicate-injections">SST with Replicate Injections<a class="anchor" aria-label="anchor" href="#sst-with-replicate-injections"></a>
@@ -496,6 +505,53 @@ injections:</p>
 <span><span class="co">#&gt;   Failed: 1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Overall: FAILED</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="what-to-do-when-sst-fails">What to Do When SST Fails<a class="anchor" aria-label="anchor" href="#what-to-do-when-sst-fails"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="18%">
+<col width="37%">
+<col width="43%">
+</colgroup>
+<thead><tr class="header">
+<th>Failure</th>
+<th>Immediate Action</th>
+<th>If Problem Persists</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Resolution</td>
+<td>Re-inject standard</td>
+<td>Check mobile phase, column age</td>
+</tr>
+<tr class="even">
+<td>Plate count</td>
+<td>Check flow rate, temperature</td>
+<td>Column may need replacement</td>
+</tr>
+<tr class="odd">
+<td>Tailing</td>
+<td>Inspect fittings for leaks</td>
+<td>Column may have void</td>
+</tr>
+<tr class="even">
+<td>Recovery</td>
+<td>Re-integrate, check baseline</td>
+<td>Sample may be adsorbing</td>
+</tr>
+<tr class="odd">
+<td>RSD</td>
+<td>Check autosampler, re-run</td>
+<td>Investigate system precision</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision tree:</strong> 1. Single failure → Re-inject and
+re-evaluate 2. Repeated failure → Investigate root cause (see
+Troubleshooting) 3. Multiple metrics fail → Do not proceed with sample
+analysis</p>
 </div>
 </div>
 <div class="section level2">
@@ -576,6 +632,83 @@ injections:</p>
 <span><span class="op">}</span></span>
 <span><span class="co">#&gt; Column still within specifications</span></span></code></pre></div>
 </div>
+</div>
+<div class="section level2">
+<h2 id="column-qualification">Column Qualification<a class="anchor" aria-label="anchor" href="#column-qualification"></a>
+</h2>
+<p>When installing a new column, perform a full qualification using
+calibration standards. This provides baseline metrics to track over the
+column’s lifetime.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Calibration data from polymer standards</span></span>
+<span><span class="va">cal_standards</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  retention <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5.2</span>, <span class="fl">6.1</span>, <span class="fl">7.0</span>, <span class="fl">8.2</span>, <span class="fl">9.5</span>, <span class="fl">10.8</span><span class="op">)</span>,</span>
+<span>  mw <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1200000</span>, <span class="fl">400000</span>, <span class="fl">100000</span>, <span class="fl">30000</span>, <span class="fl">5000</span>, <span class="fl">580</span><span class="op">)</span>,</span>
+<span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.40</span>, <span class="fl">0.35</span>, <span class="fl">0.30</span>, <span class="fl">0.28</span>, <span class="fl">0.25</span>, <span class="fl">0.30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Evaluate column performance</span></span>
+<span><span class="va">col_perf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_column_performance.html">measure_sec_column_performance</a></span><span class="op">(</span></span>
+<span>  <span class="va">cal_standards</span>,</span>
+<span>  column_length <span class="op">=</span> <span class="fl">30</span>,    <span class="co"># cm</span></span>
+<span>  particle_size <span class="op">=</span> <span class="fl">5</span>      <span class="co"># µm</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">col_perf</span><span class="op">)</span></span>
+<span><span class="co">#&gt; SEC Column Performance</span></span>
+<span><span class="co">#&gt; ================================================== </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Separation Range:</span></span>
+<span><span class="co">#&gt;   Exclusion limit: 1200000 Da</span></span>
+<span><span class="co">#&gt;   Total permeation: 580 Da</span></span>
+<span><span class="co">#&gt;   Log MW range: 3.32 decades</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Calibration:</span></span>
+<span><span class="co">#&gt;   Selectivity: 0.5801 log(MW)/unit</span></span>
+<span><span class="co">#&gt;   R-squared: 0.9956</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Column Efficiency:</span></span>
+<span><span class="co">#&gt;   HETP: 0.070 mm (70.4 um)</span></span>
+<span><span class="co">#&gt;   Plates/meter: 14203</span></span>
+<span><span class="co">#&gt;   Reduced HETP (h): 14.08</span></span>
+<span><span class="co">#&gt;   Average plates (N): 4261</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Resolution:</span></span>
+<span><span class="co">#&gt;   Peak capacity: 12.9</span></span>
+<span><span class="co">#&gt;   Resolution/decade: 15.99</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Column: 300 x 7.8 mm</span></span>
+<span><span class="co">#&gt; Standards used: 6</span></span></code></pre></div>
+<p><strong>Key qualification metrics:</strong></p>
+<table class="table">
+<thead><tr class="header">
+<th>Metric</th>
+<th>Typical Spec</th>
+<th>What It Indicates</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>HETP</td>
+<td>&lt; 50 µm</td>
+<td>Packing quality</td>
+</tr>
+<tr class="even">
+<td>Reduced HETP</td>
+<td>2-5</td>
+<td>Optimal flow vs efficiency</td>
+</tr>
+<tr class="odd">
+<td>Plates/meter</td>
+<td>&gt; 20,000</td>
+<td>Column efficiency</td>
+</tr>
+<tr class="even">
+<td>Peak capacity</td>
+<td>&gt; 10</td>
+<td>Separation power in MW range</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="troubleshooting-guide">Troubleshooting Guide<a class="anchor" aria-label="anchor" href="#troubleshooting-guide"></a>
@@ -792,7 +925,7 @@ and data export</li>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
