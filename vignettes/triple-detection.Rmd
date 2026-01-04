@@ -1,8 +1,8 @@
 ---
-title: "Multi-Detector SEC Analysis"
+title: "Multi-Detector SEC: Detector Integration and Workflows"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Multi-Detector SEC Analysis}
+  %\VignetteIndexEntry{Multi-Detector SEC: Detector Integration and Workflows}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -18,25 +18,41 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-Multi-detector SEC (also called "triple detection") combines concentration detectors (RI, UV) with molecular weight detectors (MALS) and/or viscometers to provide absolute molecular weight and structural information without calibration standards.
+Multi-detector SEC combines concentration detectors (RI, UV) with molecular weight detectors (light scattering) and/or viscometers to provide absolute molecular weight and structural information. This vignette focuses on **integrating multiple detectors** into a unified workflow.
 
 This vignette covers:
 
-1. Detector configurations and their purposes
-2. Inter-detector delay correction
-3. Triple detection workflows (RI + UV + MALS)
-4. Calculating absolute molecular weight
+1. Detector types and their roles
+2. Inter-detector delay correction (critical!)
+3. Building multi-detector recipes
+4. Viscometer integration and intrinsic viscosity
+5. Universal calibration
 
-### Multi-Detector Workflow
+For detailed information on specific light scattering detectors, see:
 
-In multi-detector SEC ("triple detection"), signals from concentration detectors (RI, UV) and molecular weight detectors (MALS) are processed together. First, inter-detector delays are corrected to align peaks. Then each detector signal is processed: RI/UV for concentration, MALS for absolute MW via angular extrapolation, and viscometer for intrinsic viscosity. The concentration data feeds into MALS calculations to determine absolute molecular weight and radius of gyration.
+- [MALS Detection](mals-detection.html) - Multi-angle analysis for Rg and large molecules
+- [LALS/RALS Detection](lals-rals-detection.html) - Single-angle alternatives
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## Multi-Detector Workflow
+
+The key to multi-detector SEC is proper orchestration of signals. Each detector provides different information, and they must be aligned before calculations.
 
 ```mermaid
 flowchart TB
     subgraph Input["Raw Multi-Detector Data"]
         A1[RI Signal]
         A2[UV Signal]
-        A3[MALS Signal]
+        A3[Light Scattering<br>MALS/LALS/RALS]
         A4[Viscometer Signal]
     end
 
@@ -47,8 +63,8 @@ flowchart TB
     subgraph Process["📊 Signal Processing"]
         C1[step_sec_ri<br>dn/dc normalization]
         C2[step_sec_uv<br>ε normalization]
-        C3[step_sec_mals<br>Zimm/Debye/Berry fit]
-        C4[step_sec_viscometer<br>Differential pressure processing]
+        C3[step_sec_mals/lals/rals<br>Light scattering processing]
+        C4[step_sec_viscometer<br>Differential pressure]
     end
 
     subgraph Concentration["📏 Concentration"]
@@ -56,15 +72,13 @@ flowchart TB
     end
 
     subgraph Calculate["🔬 Calculations"]
-        D2[Absolute MW<br>from MALS + concentration]
-        D3[Rg from<br>angular dependence]
+        D2[Absolute MW<br>from LS + concentration]
         D4[step_sec_intrinsic_visc<br>η from viscometer + concentration]
     end
 
     subgraph Results["📤 Results"]
         E1[MW Averages<br>Mn, Mw, Mz]
-        E2[Conformation<br>Rg vs MW]
-        E3[Branching<br>g, g′ indices]
+        E3[Mark-Houwink<br>Universal Calibration]
     end
 
     A1 & A2 & A3 & A4 --> B
@@ -72,26 +86,13 @@ flowchart TB
     C1 & C2 --> D0
     D0 --> C3
     D0 --> D4
-    C3 --> D2 & D3
+    C3 --> D2
     C4 --> D4
     D2 --> E1
-    D2 & D3 --> E2
-    D3 & D4 --> E3
+    D4 --> E3
 
     style Input fill:#e3f2fd
     style Results fill:#e8f5e9
-```
-
-*Note: MALS requires concentration data to calculate absolute molecular weight. The viscometer outputs differential pressure, which is combined with concentration in `step_sec_intrinsic_visc()` to calculate intrinsic viscosity [η].*
-
-## Setup
-
-```{r setup}
-library(measure)
-library(measure.sec)
-library(recipes)
-library(dplyr)
-library(ggplot2)
 ```
 
 ## Detector Types
@@ -106,18 +107,18 @@ library(ggplot2)
 
 ### Molecular Weight Detectors
 
-| Detector | Signal | Output |
-|----------|--------|--------|
-| **MALS** | Multi-angle scattering | Absolute Mw, Rg |
-| **LALS** | Low-angle (7-15°) | Absolute Mw |
-| **RALS** | Right-angle (90°) | Relative Mw |
+| Detector | When to Use | See Also |
+|----------|-------------|----------|
+| **MALS** | Large molecules, need Rg | [MALS Detection](mals-detection.html) |
+| **LALS** | Medium molecules, no Rg needed | [LALS/RALS Detection](lals-rals-detection.html) |
+| **RALS** | Small molecules, QC screening | [LALS/RALS Detection](lals-rals-detection.html) |
 
 ### Hydrodynamic Detectors
 
 | Detector | Signal | Output |
 |----------|--------|--------|
-| **Viscometer** | Differential pressure | Intrinsic viscosity, [η] |
-| **DLS** | Dynamic scattering | Hydrodynamic radius, Rh |
+| **Viscometer** | Differential pressure | Intrinsic viscosity [η] |
+| **DLS** | Dynamic scattering | Hydrodynamic radius Rh |
 
 ## Example Dataset
 
@@ -133,22 +134,27 @@ glimpse(samples)
 
 ## Inter-Detector Delay Correction
 
-When detectors are connected in series, each experiences a different delay. Proper alignment is critical:
+**This is the most critical step in multi-detector SEC.** When detectors are connected in series, each experiences a different delay. If not corrected, MW calculations will be wrong.
 
 ```{r detector-delay-concept, echo = FALSE, fig.width=7, fig.height=4}
 # Simulate detector delay visualization
 time <- seq(5, 15, by = 0.1)
 n_points <- length(time)
 
-# Create signals for each detector
+# Create signals for each detector with different delays
 ri_signal <- dnorm(time, mean = 10, sd = 0.5)
-uv_signal <- dnorm(time, mean = 9.9, sd = 0.5)   # UV slightly before (earlier peak)
-mals_signal <- dnorm(time, mean = 10.2, sd = 0.5) # MALS after (later peak)
+uv_signal <- dnorm(time, mean = 9.9, sd = 0.5)   # UV before RI
+ls_signal <- dnorm(time, mean = 10.2, sd = 0.5)  # LS after RI
+visc_signal <- dnorm(time, mean = 10.4, sd = 0.5) # Visc last
 
 delay_data <- tibble(
-  time = rep(time, 3),
-  signal = c(ri_signal, uv_signal, mals_signal),
-  detector = rep(c("RI (reference)", "UV (before)", "MALS (after)"), each = n_points)
+  time = rep(time, 4),
+  signal = c(ri_signal, uv_signal, ls_signal, visc_signal),
+  detector = factor(
+    rep(c("RI (reference)", "UV (before)", "LS (after)", "Viscometer (last)"),
+    each = n_points),
+    levels = c("UV (before)", "RI (reference)", "LS (after)", "Viscometer (last)")
+  )
 )
 
 ggplot(delay_data, aes(time, signal, color = detector)) +
@@ -157,13 +163,16 @@ ggplot(delay_data, aes(time, signal, color = detector)) +
     x = "Elution Time (min)",
     y = "Signal (normalized)",
     title = "Inter-Detector Delay",
-    subtitle = "Signals must be aligned before calculations"
+    subtitle = "All signals must be aligned to the same elution time before calculations"
   ) +
+  scale_color_manual(values = c("#E8751A", "#2E86AB", "#A23B72", "#1A936F")) +
   theme_minimal() +
   theme(legend.position = "bottom")
 ```
 
-Use `step_sec_detector_delay()` to correct for these delays:
+### Correcting Delays
+
+Use `step_sec_detector_delay()` to align all detectors:
 
 ```{r detector-delay}
 rec <- recipe(
@@ -188,14 +197,16 @@ rec <- recipe(
 
 Delay volumes should be determined experimentally:
 
-1. **Inject a narrow standard** (e.g., low MW polymer)
+1. **Inject a narrow standard** (e.g., low MW polymer or toluene)
 2. **Measure peak apex times** on each detector
-3. **Calculate delays** relative to reference detector
-4. **Convert time to volume**: delay_volume = delay_time × flow_rate
+3. **Calculate delays** relative to reference detector (usually RI)
+4. **Convert time to volume**: `delay_volume = delay_time × flow_rate`
+
+**Tip**: Re-calibrate delays after column changes or major maintenance.
 
 ## Triple Detection Workflow
 
-A complete triple detection recipe:
+A complete "triple detection" recipe with RI, UV, and light scattering:
 
 ```{r triple-workflow}
 # Complete triple detection recipe
@@ -218,18 +229,20 @@ rec_triple <- recipe(
   # Step 3: Baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
 
-  # Step 4: Process each detector
+  # Step 4: Process concentration detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
-  # Step 5: Convert to concentration
+  # Step 5: Convert to concentration (MUST come before MALS)
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,       # µL
     sample_concentration = 2.0    # mg/mL
-  )
+  ) |>
+
+  # Step 6: Process MALS (requires concentration for absolute MW)
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
 
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)
@@ -240,111 +253,166 @@ result_triple |>
   select(sample_id, starts_with("mw_"))
 ```
 
-## Light Scattering Detectors
+## Viscometer Integration
 
-### MALS: Multi-Angle Light Scattering
+The viscometer measures differential pressure across a capillary, which relates to solution viscosity. Combined with concentration, this gives **intrinsic viscosity [η]**—a key parameter for polymer characterization.
 
-MALS provides absolute molecular weight by measuring scattering at multiple angles:
+### Why Intrinsic Viscosity Matters
 
-```{r mals, eval = FALSE}
-# Process MALS data
-# Note: MALS processing requires specific detector configuration
-rec_mals <- recipe(
-  mals_signal + elution_time + dn_dc ~ sample_id,
-  data = samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
-  step_sec_baseline(measures = "mals") |>
-  step_sec_mals(
-    mals_col = "mals",
-    dn_dc_column = "dn_dc",
-    wavelength = 658,  # Laser wavelength in nm
-    angles = c(35, 50, 75, 90, 105, 120, 145)  # Detector angles
-  )
-```
+```{r viscosity-concept, echo = FALSE, fig.width=7, fig.height=4}
+# Show relationship between [η], MW, and structure
+mw_range <- seq(1000, 1000000, length.out = 100)
 
-Key MALS parameters:
+# Mark-Houwink equation: [η] = K × M^a
+# Different K and a values for different polymers
+eta_linear <- 1.14e-4 * mw_range^0.716  # Linear PS
+eta_branched <- 0.8e-4 * mw_range^0.5   # Branched polymer
 
-- **dn/dc**: Refractive index increment (mL/g)
-- **Wavelength**: Laser wavelength (typically 658 or 690 nm)
-- **Angles**: Detector positions for Zimm/Debye analysis
-
-### LALS: Low-Angle Light Scattering
-
-For samples where angular extrapolation is problematic:
-
-```{r lals, eval = FALSE}
-step_sec_lals(
-  measures = "lals",
-  dn_dc_column = "dn_dc",
-  angle = 7  # Low angle (degrees)
+viscosity_data <- tibble(
+  mw = rep(mw_range, 2),
+  eta = c(eta_linear, eta_branched),
+  structure = rep(c("Linear polymer", "Branched polymer"), each = length(mw_range))
 )
+
+ggplot(viscosity_data, aes(mw / 1000, eta, color = structure)) +
+  geom_line(linewidth = 1.2) +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    x = "Molecular Weight (kDa)",
+    y = "Intrinsic Viscosity [η] (dL/g)",
+    title = "Mark-Houwink Relationship",
+    subtitle = "[η] = K × M^a — structure affects the relationship",
+    color = NULL
+  ) +
+  scale_color_manual(values = c("#2E86AB", "#A23B72")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
-### RALS: Right-Angle Light Scattering
-
-Cost-effective alternative for routine MW screening:
-
-```{r rals, eval = FALSE}
-step_sec_rals(
-  measures = "rals",
-  dn_dc_column = "dn_dc"
-)
-```
-
-## Viscometer Detection
-
-Add intrinsic viscosity for Mark-Houwink analysis:
+### Viscometer Workflow
 
 ```{r viscometer, eval = FALSE}
-# Note: This requires viscometer data (visc_signal) and pre-calculated concentration
+# Viscometer integration
+# Note: Requires viscometer data (visc_signal)
+
 rec_visc <- recipe(
-  visc_signal + elution_time ~ sample_id,
-  data = samples
+  ri_signal + visc_signal + elution_time + dn_dc ~ sample_id,
+  data = visc_samples
 ) |>
   update_role(sample_id, new_role = "id") |>
+  # Input signals
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
-  step_sec_baseline(measures = "visc") |>
+  # Delay correction (viscometer typically last in line)
+  step_sec_detector_delay(
+    reference = "ri",
+    delay_volumes = c(visc = 0.25)
+  ) |>
+  # Process detectors
+  step_sec_baseline(measures = c("ri", "visc")) |>
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_viscometer(measures = "visc") |>
+  # Get concentration
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,
+    sample_concentration = 2.0
+  ) |>
+  # Calculate intrinsic viscosity
   step_sec_intrinsic_visc(
     visc_col = "visc",
     conc_col = "concentration"
   )
 ```
 
+### Intrinsic Viscosity Output
+
+The `step_sec_intrinsic_visc()` step calculates [η] at each elution slice:
+
+| Output | Description |
+|--------|-------------|
+| `intrinsic_visc` | Intrinsic viscosity [η] at each slice |
+
+This can be combined with MW data for Mark-Houwink analysis or branching calculations.
+
 ## Universal Calibration
 
-With viscometry data, you can apply universal calibration across polymer types:
+Universal calibration uses the principle that **hydrodynamic volume** (not molecular weight) determines elution time. The hydrodynamic volume is proportional to [η] × M.
+
+### The Universal Calibration Principle
+
+$$\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}$$
+
+This allows you to determine MW for any polymer type using standards of a different polymer (typically polystyrene).
+
+```{r universal-cal-concept, echo = FALSE, fig.width=7, fig.height=4}
+# Universal calibration curve
+elution_vol <- seq(12, 22, by = 0.5)
+
+# Simulated log(η*M) vs elution volume (same for all polymers)
+log_eta_m <- 7 - 0.3 * elution_vol
+
+universal_data <- tibble(
+  elution_vol = elution_vol,
+  log_eta_m = log_eta_m
+)
+
+ggplot(universal_data, aes(elution_vol, log_eta_m)) +
+  geom_line(linewidth = 1.2, color = "#2E86AB") +
+  labs(
+    x = "Elution Volume (mL)",
+    y = "log([η] × M)",
+    title = "Universal Calibration Curve",
+    subtitle = "Same curve applies to all polymers regardless of structure"
+  ) +
+  theme_minimal()
+```
+
+### Applying Universal Calibration
 
 ```{r universal-cal, eval = FALSE}
-# Mark-Houwink parameters for different polymers
-# [η] = K × M^a
+# Universal calibration with Mark-Houwink parameters
+# Convert PS calibration to another polymer type
 
-# Apply universal calibration
 step_sec_universal_cal(
   visc_col = "intrinsic_visc",
-  reference_k = 1.14e-4,  # PS in THF
+  # PS reference parameters (from calibration standards)
+  reference_k = 1.14e-4,
   reference_a = 0.716,
-  sample_k = 6.0e-5,      # PMMA in THF
+  # Sample parameters (from literature or measurement)
+  sample_k = 6.0e-5,      # e.g., PMMA in THF
   sample_a = 0.73
 )
 ```
 
-## Complete Quadruple Detection Example
+### Mark-Houwink Parameters
 
-Full workflow with RI, UV, MALS, and viscometer:
+Common Mark-Houwink parameters ([η] = K × M^a):
+
+| Polymer | Solvent | K (dL/g) | a |
+|---------|---------|----------|---|
+| PS | THF | 1.14 × 10⁻⁴ | 0.716 |
+| PMMA | THF | 6.0 × 10⁻⁵ | 0.73 |
+| PEG | Water | 1.25 × 10⁻⁴ | 0.78 |
+| PVP | Water | 2.8 × 10⁻⁵ | 0.64 |
+
+**Note**: Values are temperature and solvent dependent. Use literature values for your specific conditions.
+
+## Complete Quadruple Detection
+
+Full workflow combining RI, UV, light scattering, and viscometer:
 
 ```{r quad-detection, eval = FALSE}
-# Complete quadruple detection example
-# Note: This requires viscometer data (visc_signal) which is not in sec_triple_detect
-# The pattern shows the complete workflow for quad detection setups
+# Complete quadruple detection workflow
 rec_quad <- recipe(
-  ri_signal + uv_signal + mals_signal + visc_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = samples
+  ri_signal + uv_signal + mals_signal + visc_signal +
+    elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = quad_samples
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Input all four detectors
+  # Input all detectors
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
@@ -359,36 +427,35 @@ rec_quad <- recipe(
   # Baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals", "visc")) |>
 
-  # Process detectors
+  # Process concentration detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
-  step_sec_viscometer(measures = "visc") |>
 
-  # Concentration
+  # Get concentration
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
-    injection_volume = 100,       # µL
-    sample_concentration = 2.0    # mg/mL
+    injection_volume = 100,
+    sample_concentration = 2.0
   ) |>
 
-  # Intrinsic viscosity
-  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
+  # Process MW detector (choose appropriate step)
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
-prepped_quad <- prep(rec_quad)
-result_quad <- bake(prepped_quad, new_data = NULL)
+  # Process viscometer
+  step_sec_viscometer(measures = "visc") |>
+  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
 ```
 
 ## Comparing Conventional vs Absolute MW
 
 ```{r comparison, echo = FALSE, fig.width=7, fig.height=5}
-# Simulated comparison
+# Simulated comparison showing bias from conventional calibration
 comparison <- tibble(
-  method = rep(c("Conventional (PS standards)", "Absolute (MALS)"), each = 4),
+  method = rep(c("Conventional (PS standards)", "Absolute (Light Scattering)"), each = 4),
   polymer = rep(c("PS", "PMMA", "PEG", "Branched PE"), 2),
   mw = c(
-    # Conventional (relative to PS)
+    # Conventional (relative to PS - biased for non-PS)
     50000, 65000, 42000, 55000,
     # Absolute (true values)
     50000, 50000, 50000, 50000
@@ -401,9 +468,10 @@ ggplot(comparison, aes(polymer, mw / 1000, fill = method)) +
     x = "Polymer",
     y = "Molecular Weight (kDa)",
     title = "Conventional vs Absolute MW Determination",
-    subtitle = "Samples have identical true MW; conventional calibration introduces polymer-specific bias"
+    subtitle = "Samples have identical true MW; conventional calibration introduces polymer-specific bias",
+    fill = NULL
   ) +
-  scale_fill_manual(values = c("Conventional (PS standards)" = "#A23B72", "Absolute (MALS)" = "#2E86AB")) +
+  scale_fill_manual(values = c("Conventional (PS standards)" = "#A23B72", "Absolute (Light Scattering)" = "#2E86AB")) +
   theme_minimal() +
   theme(legend.position = "bottom")
 ```
@@ -412,29 +480,26 @@ ggplot(comparison, aes(polymer, mw / 1000, fill = method)) +
 
 ### Common Issues
 
-1. **Poor signal-to-noise on MALS**
-   - Increase sample concentration
-   - Check laser power and alignment
-   - Filter mobile phase
+| Problem | Likely Cause | Solution |
+|---------|--------------|----------|
+| MW varies with injection | Delay values incorrect | Recalibrate with narrow standard |
+| Noisy viscometer signal | Air bubbles | Degas mobile phase, check connections |
+| RI baseline drift | Temperature variation | Improve thermal control |
+| LS signal too weak | Low concentration | Increase injection mass |
 
-2. **Inconsistent dn/dc values**
-   - Use offline refractometer for accurate dn/dc
-   - Account for wavelength and temperature
+### Detector-Specific Troubleshooting
 
-3. **Detector delay drift**
-   - Re-calibrate delays with each column change
-   - Check flow rate stability
-
-4. **High baseline noise on viscometer**
-   - Check for air bubbles
-   - Verify temperature equilibration
+For light scattering issues, see:
+- [MALS Detection](mals-detection.html) - MALS-specific troubleshooting
+- [LALS/RALS Detection](lals-rals-detection.html) - Single-angle troubleshooting
 
 ## See Also
 
-- [Getting Started](getting-started.html) - Basic SEC workflow and concepts
+- [MALS Detection](mals-detection.html) - Multi-angle light scattering for Rg
+- [LALS/RALS Detection](lals-rals-detection.html) - Single-angle alternatives
+- [Getting Started](getting-started.html) - Basic SEC workflow
 - [Calibration Management](calibration-management.html) - Save and reuse calibrations
 - [Copolymer Composition](copolymer-analysis.html) - Multi-detector composition analysis
-- [System Suitability](system-suitability.html) - QC metrics and column performance
 
 ## Session Info
 
