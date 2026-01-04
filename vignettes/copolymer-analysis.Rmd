@@ -91,25 +91,32 @@ ggplot(copolymer_data, aes(time, ratio, color = type)) +
 
 ## Example Dataset
 
+The package includes `sec_copolymer`, a dataset of styrene-acrylate copolymers with varying compositions:
+
 ```{r data}
-data(sec_triple_detect, package = "measure.sec")
+data(sec_copolymer, package = "measure.sec")
 
-# Select copolymer samples
-copolymers <- sec_triple_detect |>
-  filter(polymer_type == "copolymer")
+# View the dataset structure
+glimpse(sec_copolymer)
 
-glimpse(copolymers)
+# Available samples
+sec_copolymer |>
+  distinct(sample_id, styrene_fraction, description)
 ```
 
 ## UV/RI Ratio Analysis
 
 ### Basic Workflow
 
-```{r uv-ri-ratio, eval = FALSE}
+```{r uv-ri-ratio}
+# Analyze a single copolymer sample
+copoly_40 <- sec_copolymer |>
+  filter(sample_id == "Copoly-40S")
+
 # UV/RI ratio analysis for compositional heterogeneity
 rec_ratio <- recipe(
-  ri_signal + uv_signal + elution_time ~ sample_id,
-  data = copolymers
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copoly_40
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Convert signals to measure format
@@ -119,7 +126,7 @@ rec_ratio <- recipe(
     col_name = "ri"
   ) |>
   step_measure_input_long(
-    uv_signal,
+    uv_254_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
@@ -129,33 +136,33 @@ rec_ratio <- recipe(
   step_sec_uv_ri_ratio(
     uv_col = "uv",
     ri_col = "ri",
-    smooth = TRUE,          # Apply smoothing for noise reduction
-    smooth_span = 0.1,      # Smoothing window (fraction of data)
-    min_signal = 0.01       # Minimum signal threshold
+    smooth = TRUE          # Apply smoothing for noise reduction
   )
 
 prepped_ratio <- prep(rec_ratio)
 result_ratio <- bake(prepped_ratio, new_data = NULL)
 
-# The result contains a uv_ri_ratio column with the ratio curve
+# View result columns
+names(result_ratio)
 ```
 
 ### Extracting the Ratio Curve
 
-```{r extract-ratio, eval = FALSE}
-# Get the ratio values at each elution time
+```{r extract-ratio}
+# The uv_ri_ratio column contains a measure_list
+# Extract the ratio values at each elution time
 ratio_data <- result_ratio |>
   select(sample_id, uv_ri_ratio) |>
   tidyr::unnest(uv_ri_ratio)
 
 # Plot ratio vs elution time
 ggplot(ratio_data, aes(location, value)) +
-  geom_line() +
-  facet_wrap(~sample_id) +
+  geom_line(color = "#A23B72") +
   labs(
     x = "Elution Time (min)",
     y = "UV/RI Ratio",
-    title = "Compositional Profile"
+    title = "UV/RI Ratio Profile for 40% Styrene Copolymer",
+    subtitle = "Flat ratio indicates uniform composition across MW"
   ) +
   theme_minimal()
 ```
@@ -166,34 +173,34 @@ ggplot(ratio_data, aes(location, value)) +
 
 When you know the response factors for each monomer, calculate actual composition:
 
-```{r composition, eval = FALSE}
-# Composition calculation with known response factors
+```{r composition}
+# Composition calculation with known response factors for styrene-acrylate
 rec_comp <- recipe(
-  ri_signal + uv_signal + elution_time ~ sample_id,
-  data = copolymers
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copoly_40
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
   # Calculate composition from UV/RI
   step_sec_composition(
     uv_col = "uv",
     ri_col = "ri",
-    # Response factors for component A (e.g., styrene)
-    component_a_uv = 1.0,    # UV extinction coefficient
-    component_a_ri = 0.185,  # RI response (dn/dc)
-    # Response factors for component B (e.g., butadiene)
-    component_b_uv = 0.1,    # UV extinction coefficient
-    component_b_ri = 0.084   # RI response (dn/dc)
+    # Response factors for styrene (UV-active)
+    component_a_uv = 1.0,    # Strong UV absorption at 254 nm
+    component_a_ri = 0.185,  # dn/dc in THF
+    # Response factors for acrylate (UV-inactive)
+    component_b_uv = 0.02,   # Weak UV absorption
+    component_b_ri = 0.084   # dn/dc in THF
   )
 
 prepped_comp <- prep(rec_comp)
 result_comp <- bake(prepped_comp, new_data = NULL)
 
-# Result contains:
-# - composition_a: Weight fraction of component A at each point
-# - composition_b: Weight fraction of component B at each point
+# Result contains composition columns
+result_comp |>
+  select(sample_id, starts_with("composition_"))
 ```
 
 ### Response Factor Determination
@@ -321,56 +328,47 @@ ggplot(plot_data) +
 - Step-like composition profile
 - Indicates blend or block copolymer
 
-## Complete Workflow Example
+## Comparing Multiple Copolymers
 
-```{r complete-workflow, eval = FALSE}
-# Full copolymer analysis workflow
-rec_full <- recipe(
-  ri_signal + uv_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = copolymers
+Analyze all copolymer samples to compare UV/RI ratios across compositions:
+
+```{r compare-copolymers, fig.width=8, fig.height=5}
+# Analyze all samples (excluding homopolymers for this example)
+copolymers_only <- sec_copolymer |>
+  filter(stringr::str_starts(sample_id, "Copoly"))
+
+# Process all copolymers
+rec_all <- recipe(
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copolymers_only
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Input signals
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
-
-  # Preprocessing
-  step_sec_detector_delay(reference = "ri", delay_volumes = c(uv = -0.05)) |>
+  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
+  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE)
 
-  # Detector processing
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
+prepped_all <- prep(rec_all)
+result_all <- bake(prepped_all, new_data = NULL)
 
-  # Composition analysis
-  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE) |>
-  step_sec_composition(
-    uv_col = "uv",
-    ri_col = "ri",
-    component_a_uv = 1.0,
-    component_a_ri = 0.185,
-    component_b_uv = 0.05,
-    component_b_ri = 0.084
-  ) |>
+# Extract ratio curves for plotting
+all_ratios <- result_all |>
+  select(sample_id, uv_ri_ratio) |>
+  tidyr::unnest(uv_ri_ratio)
 
-  # MW calculations
-  step_sec_conventional_cal(
-    standards = ps_standards,
-    fit_type = "cubic"
-  ) |>
-  step_sec_mw_averages(measures = "log_mw")
-
-prepped_full <- prep(rec_full)
-result_full <- bake(prepped_full, new_data = NULL)
-
-# Report composition statistics
-result_full |>
-  select(
-    sample_id,
-    mw_mw,
-    composition_a_mean,
-    composition_a_sd
-  )
+# Plot UV/RI ratios - higher ratio = more styrene
+ggplot(all_ratios, aes(location, value, color = sample_id)) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Elution Time (min)",
+    y = "UV/RI Ratio",
+    color = "Sample",
+    title = "UV/RI Ratio Profiles by Styrene Content",
+    subtitle = "Higher ratio corresponds to more styrene (UV-absorbing)"
+  ) +
+  scale_color_viridis_d() +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
 ## Best Practices
