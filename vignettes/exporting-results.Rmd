@@ -47,67 +47,46 @@ library(ggplot2)
 
 ## Creating Processed Data for Export
 
-Before exporting, we need processed SEC data. Let's process a single sample to demonstrate the export functions:
+In a real workflow, you'd process SEC data through calibration and MW averaging steps (see the [Getting Started](getting-started.html) vignette). Here, we'll create representative processed data to demonstrate the export functions.
 
-```{r process-data}
-# Load multi-detector SEC data
-data(sec_triple_detect)
+```{r create-mock-data}
+# Simulate processed SEC results with realistic MW values
+# In practice, these columns come from step_sec_mw_averages()
 
-# Filter to a single sample for processing
-ps_sample <- sec_triple_detect |>
-  filter(sample_id == "PS-100K")
+processed <- tibble::tibble(
+  sample_id = c("PS-50K", "PS-100K", "PS-200K"),
+  polymer_type = "polystyrene",
+  # MW averages (typical for narrow PS standards)
+  mw_mn = c(48500, 97200, 195000),
+  mw_mw = c(50200, 101000, 203000),
+  mw_mz = c(52100, 105000, 211000),
+  mw_dispersity = c(1.035, 1.039, 1.041),
+  # Additional metadata
+  injection_volume = 100,  # µL
+  concentration = 2.0      # mg/mL
+)
 
-# View what we're working with
-ps_sample |>
-  select(sample_id, polymer_type, known_mw, known_dispersity) |>
-  distinct()
-```
-
-```{r create-recipe}
-# Create and prep a recipe for one sample
-# Note: the formula tells recipes how to group the data
-rec <- recipe(
-  ri_signal + elution_time + known_mw ~ sample_id,
-  data = ps_sample
-) |>
-  update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(
-    ri_signal,
-    location = vars(elution_time),
-    col_name = "ri"
-  ) |>
-  step_sec_baseline(measures = "ri")
-
-prepped <- prep(rec)
-processed <- bake(prepped, new_data = NULL)
-
-# View the structure - now has nested measure_list column
 processed
 ```
 
-For demonstrating multi-sample comparisons later, let's process a few more samples:
+For multi-sample comparisons, let's create data for different polymer types:
 
-```{r process-multiple}
-# Helper function to process one sample
-process_sample <- function(sample_id_filter) {
-  data <- sec_triple_detect |>
-    filter(sample_id == sample_id_filter)
+```{r create-comparison-data}
+# Three batches with slight variations (typical QC scenario)
+batch1 <- tibble::tibble(
+  sample_id = "Batch-001",
+  mw_mn = 48200, mw_mw = 50100, mw_mz = 52000, mw_dispersity = 1.039
+)
 
-  recipe(
-    ri_signal + elution_time + known_mw ~ sample_id,
-    data = data
-  ) |>
-    update_role(sample_id, new_role = "id") |>
-    step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-    step_sec_baseline(measures = "ri") |>
-    prep() |>
-    bake(new_data = NULL)
-}
+batch2 <- tibble::tibble(
+  sample_id = "Batch-002",
+  mw_mn = 49100, mw_mw = 51200, mw_mz = 53100, mw_dispersity = 1.043
+)
 
-# Process three samples
-ps100k <- process_sample("PS-100K")
-ps500k <- process_sample("PS-500K")
-pmma_high <- process_sample("PMMA-High")
+batch3 <- tibble::tibble(
+  sample_id = "Batch-003",
+  mw_mn = 47800, mw_mw = 49800, mw_mz = 51900, mw_dispersity = 1.042
+)
 ```
 
 ## Summary Tables
@@ -117,7 +96,7 @@ pmma_high <- process_sample("PMMA-High")
 `measure_sec_summary_table()` creates a one-row-per-sample table with key metrics:
 
 ```{r summary-table}
-# Create summary table
+# Create summary table - automatically finds MW columns
 summary_tbl <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id"
@@ -131,33 +110,63 @@ print(summary_tbl)
 You can include any numeric column from your data:
 
 ```{r summary-with-extra}
-# Include known MW for validation
-summary_with_known <- measure_sec_summary_table(
+# Include method metadata alongside MW results
+summary_with_meta <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id",
-  additional_cols = c("known_mw")
+  additional_cols = c("injection_volume", "concentration")
 )
 
-print(summary_with_known)
+print(summary_with_meta)
 ```
 
 ### Controlling Decimal Places
 
 For regulatory submissions that require specific precision:
 
-```{r summary-digits, eval=FALSE}
+```{r summary-digits}
+# Higher precision for documentation
 summary_precise <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id",
-  digits = 4
+  digits = 0  # Whole numbers for MW
 )
+
+print(summary_precise)
 ```
 
 ## Slice Tables: Point-by-Point Data
 
 ### Understanding Slice Data
 
-SEC analysis works on a point-by-point basis across the chromatogram. Each "slice" represents one data point with its elution time and corresponding signal values. Use `measure_sec_slice_table()` to extract this detailed data.
+SEC analysis works on a point-by-point basis across the chromatogram. Each "slice" represents one data point with its elution time and corresponding signal values. Use `measure_sec_slice_table()` to extract this detailed data from recipes that produce `measure_list` columns.
+
+### Creating Slice Data
+
+First, let's process actual chromatogram data to demonstrate slice extraction:
+
+```{r process-for-slices}
+# Load and process actual chromatogram data
+data(sec_triple_detect)
+
+# Process a single sample
+ps_sample <- sec_triple_detect |>
+  filter(sample_id == "PS-100K")
+
+rec <- recipe(
+  ri_signal + elution_time ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri")
+
+chromatogram_data <- prep(rec) |> bake(new_data = NULL)
+```
 
 ### Long Format (Default)
 
@@ -166,23 +175,23 @@ Long format is best for plotting with ggplot2:
 ```{r slice-long}
 # Extract slice data in long format
 slices_long <- measure_sec_slice_table(
-  processed,
+  chromatogram_data,
   measures = "ri",
   sample_id = "sample_id"
 )
 
-# View structure
+# View structure - one row per data point
 head(slices_long, 10)
 ```
 
 ```{r plot-slices, fig.height=4}
 # Plot using the slice table
-ggplot(slices_long, aes(x = location, y = value, color = sample_id)) +
-  geom_line() +
+ggplot(slices_long, aes(x = location, y = value)) +
+  geom_line(color = "#2E86AB") +
   labs(
     x = "Elution Time (min)",
-    y = "RI Signal",
-    title = "Chromatogram Overlay from Slice Data"
+    y = "RI Signal (baseline corrected)",
+    title = "Chromatogram from Slice Data"
   ) +
   theme_minimal()
 ```
@@ -190,11 +199,12 @@ ggplot(slices_long, aes(x = location, y = value, color = sample_id)) +
 ### Wide Format
 
 Wide format is better for spreadsheet export or correlating multiple measures:
-```{r slice-wide, eval=FALSE}
-# If you had multiple measures (e.g., ri and mw), wide format would look like:
+
+```{r slice-wide}
+# Wide format puts each measure in its own column
 slices_wide <- measure_sec_slice_table(
-  processed,
-  measures = c("ri"),
+  chromatogram_data,
+  measures = "ri",
   sample_id = "sample_id",
   pivot = TRUE
 )
@@ -219,10 +229,10 @@ readr::write_csv(slices_long, "sec_slice_data.csv")
 `measure_sec_compare()` provides side-by-side comparison with differences from a reference:
 
 ```{r compare-basic}
-# Compare the samples we processed earlier
+# Compare the three batches we created earlier
 comparison <- measure_sec_compare(
-  ps100k, ps500k, pmma_high,
-  samples = c("PS 100K", "PS 500K", "PMMA High"),
+  batch1, batch2, batch3,
+  samples = c("Batch 001", "Batch 002", "Batch 003"),
   metrics = "mw_averages",
   plot = FALSE
 )
