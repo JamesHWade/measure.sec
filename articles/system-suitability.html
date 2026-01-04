@@ -75,15 +75,66 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>System Suitability Testing (SST) ensures that the chromatographic
-system is performing adequately before, during, and after sample
-analysis. This vignette covers:</p>
+<p>System Suitability Testing (SST) ensures your SEC system is
+performing adequately before analyzing samples. This guide shows you how
+to:</p>
 <ol style="list-style-type: decimal">
-<li>Key SST parameters for SEC</li>
-<li>Using the QC functions</li>
-<li>Comprehensive system suitability testing</li>
-<li>Regulatory requirements</li>
+<li>Calculate key SST parameters (resolution, plate count,
+asymmetry)</li>
+<li>Run comprehensive system suitability tests</li>
+<li>Track column performance over time</li>
+<li>Interpret results and troubleshoot issues</li>
 </ol>
+</div>
+<div class="section level2">
+<h2 id="quick-reference-typical-acceptance-criteria">Quick Reference: Typical Acceptance Criteria<a class="anchor" aria-label="anchor" href="#quick-reference-typical-acceptance-criteria"></a>
+</h2>
+<table class="table">
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Symbol</th>
+<th>Typical Limit</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Resolution</td>
+<td>Rs</td>
+<td>&gt;= 1.5</td>
+<td>Between critical pair</td>
+</tr>
+<tr class="even">
+<td>Plate count</td>
+<td>N</td>
+<td>&gt;= 5,000</td>
+<td>For main peak</td>
+</tr>
+<tr class="odd">
+<td>Tailing factor</td>
+<td>Tf</td>
+<td>0.8 - 1.5</td>
+<td>USP method at 5% height</td>
+</tr>
+<tr class="even">
+<td>Mass recovery</td>
+<td>%</td>
+<td>95 - 105%</td>
+<td>Detected vs. injected</td>
+</tr>
+<tr class="odd">
+<td>Retention RSD</td>
+<td>%RSD</td>
+<td>&lt;= 1.0%</td>
+<td>Across replicates</td>
+</tr>
+<tr class="even">
+<td>Area RSD</td>
+<td>%RSD</td>
+<td>&lt;= 2.0%</td>
+<td>Across replicates</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
@@ -110,50 +161,50 @@ analysis. This vignette covers:</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="key-sst-parameters">Key SST Parameters<a class="anchor" aria-label="anchor" href="#key-sst-parameters"></a>
+<h2 id="how-to-calculate-individual-qc-metrics">How to Calculate Individual QC Metrics<a class="anchor" aria-label="anchor" href="#how-to-calculate-individual-qc-metrics"></a>
 </h2>
 <div class="section level3">
-<h3 id="resolution-rs">Resolution (Rs)<a class="anchor" aria-label="anchor" href="#resolution-rs"></a>
+<h3 id="resolution-between-peaks">Resolution Between Peaks<a class="anchor" aria-label="anchor" href="#resolution-between-peaks"></a>
 </h3>
-<p>Resolution measures the separation between adjacent peaks:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>s</mi></msub><mo>=</mo><mfrac><mrow><mn>2</mn><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>t</mi><mn>2</mn></msub><mo>−</mo><msub><mi>t</mi><mn>1</mn></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mrow><msub><mi>W</mi><mrow><mi>b</mi><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>W</mi><mrow><mi>b</mi><mn>2</mn></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">R_s = \frac{2(t_2 - t_1)}{W_{b1} + W_{b2}}</annotation></semantics></math></p>
+<p>Resolution measures separation between adjacent peaks. Use this to
+verify critical pairs are adequately separated.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Calculate resolution between two peaks</span></span>
+<code class="sourceCode R"><span><span class="co"># Calculate resolution between dimer and monomer peaks</span></span>
 <span><span class="va">Rs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_resolution.html">measure_sec_resolution</a></span><span class="op">(</span></span>
-<span>  retention_1 <span class="op">=</span> <span class="fl">8.2</span>,   <span class="co"># Dimer peak</span></span>
-<span>  retention_2 <span class="op">=</span> <span class="fl">9.5</span>,   <span class="co"># Monomer peak</span></span>
-<span>  width_1 <span class="op">=</span> <span class="fl">0.4</span>,</span>
+<span>  retention_1 <span class="op">=</span> <span class="fl">8.2</span>,   <span class="co"># Dimer (elutes first in SEC)</span></span>
+<span>  retention_2 <span class="op">=</span> <span class="fl">9.5</span>,   <span class="co"># Monomer (elutes second)</span></span>
+<span>  width_1 <span class="op">=</span> <span class="fl">0.4</span>,       <span class="co"># Peak width at baseline</span></span>
 <span>  width_2 <span class="op">=</span> <span class="fl">0.5</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"usp"</span></span>
+<span>  method <span class="op">=</span> <span class="st">"usp"</span>       <span class="co"># USP formula (default)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Resolution:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">Rs</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Resolution: 2.89</span></span></code></pre></div>
-<p><strong>Interpretation:</strong></p>
+<p><strong>Pass/Fail Guidance:</strong></p>
 <table class="table">
 <thead><tr class="header">
 <th>Rs Value</th>
-<th>Separation</th>
-<th>Quality</th>
+<th>Interpretation</th>
+<th>Action</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>&lt; 1.0</td>
-<td>Poor overlap</td>
-<td>Unacceptable</td>
+<td>Significant overlap</td>
+<td>Fail - optimize separation</td>
 </tr>
 <tr class="even">
-<td>1.0</td>
-<td>~94% separated</td>
-<td>Marginal</td>
+<td>1.0 - 1.4</td>
+<td>Partial overlap</td>
+<td>Marginal - investigate</td>
 </tr>
 <tr class="odd">
-<td>1.5</td>
+<td>&gt;= 1.5</td>
 <td>Baseline separation</td>
-<td>Acceptable</td>
+<td>Pass</td>
 </tr>
 <tr class="even">
-<td>&gt; 2.0</td>
+<td>&gt;= 2.0</td>
 <td>Complete separation</td>
 <td>Excellent</td>
 </tr>
@@ -161,22 +212,22 @@ analysis. This vignette covers:</p>
 </table>
 </div>
 <div class="section level3">
-<h3 id="plate-count-n">Plate Count (N)<a class="anchor" aria-label="anchor" href="#plate-count-n"></a>
+<h3 id="plate-count-column-efficiency">Plate Count (Column Efficiency)<a class="anchor" aria-label="anchor" href="#plate-count-column-efficiency"></a>
 </h3>
-<p>Theoretical plate count measures column efficiency:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>5.54</mn><msup><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><msub><mi>t</mi><mi>R</mi></msub><msub><mi>W</mi><mrow><mn>0.5</mn><mi>h</mi></mrow></msub></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">N = 5.54 \left(\frac{t_R}{W_{0.5h}}\right)^2</annotation></semantics></math></p>
+<p>Plate count measures column efficiency. Calculate this for your main
+peak.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Calculate plate count for a peak</span></span>
+<code class="sourceCode R"><span><span class="co"># Calculate theoretical plates for monomer peak</span></span>
 <span><span class="va">N</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_plate_count.html">measure_sec_plate_count</a></span><span class="op">(</span></span>
 <span>  retention <span class="op">=</span> <span class="fl">9.5</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">0.25</span>,</span>
-<span>  width_type <span class="op">=</span> <span class="st">"half_height"</span></span>
+<span>  width_type <span class="op">=</span> <span class="st">"half_height"</span>  <span class="co"># Most common measurement</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Theoretical plates:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">N</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Theoretical plates: 8000</span></span>
 <span></span>
-<span><span class="co"># With dead time for effective plates</span></span>
+<span><span class="co"># With dead time correction for effective plates</span></span>
 <span><span class="va">N_eff</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_plate_count.html">measure_sec_plate_count</a></span><span class="op">(</span></span>
 <span>  retention <span class="op">=</span> <span class="fl">9.5</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">0.25</span>,</span>
@@ -185,24 +236,28 @@ analysis. This vignette covers:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Effective plates:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">N_eff</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Effective plates: 3745</span></span></code></pre></div>
-<p><strong>Typical SEC Performance:</strong></p>
+<p><strong>Typical SEC Column Performance:</strong></p>
 <table class="table">
 <thead><tr class="header">
 <th>Column Type</th>
 <th>Plates/meter</th>
+<th>Notes</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Analytical SEC</td>
-<td>10,000-40,000</td>
+<td>Standard SEC</td>
+<td>10,000 - 30,000</td>
+<td>Typical analytical</td>
 </tr>
 <tr class="even">
-<td>Prep SEC</td>
-<td>5,000-15,000</td>
+<td>High-performance</td>
+<td>30,000 - 50,000</td>
+<td>Modern HPLC SEC</td>
 </tr>
 <tr class="odd">
 <td>UHPLC SEC</td>
 <td>50,000+</td>
+<td>Sub-2um particles</td>
 </tr>
 </tbody>
 </table>
@@ -210,19 +265,19 @@ analysis. This vignette covers:</p>
 <div class="section level3">
 <h3 id="peak-asymmetry">Peak Asymmetry<a class="anchor" aria-label="anchor" href="#peak-asymmetry"></a>
 </h3>
-<p>Asymmetry indicates deviation from Gaussian peak shape:</p>
+<p>Asymmetry indicates deviation from ideal Gaussian peak shape.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Calculate tailing factor (USP method)</span></span>
+<code class="sourceCode R"><span><span class="co"># Calculate USP tailing factor (measured at 5% height)</span></span>
 <span><span class="va">Tf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_asymmetry.html">measure_sec_asymmetry</a></span><span class="op">(</span></span>
-<span>  leading <span class="op">=</span> <span class="fl">0.12</span>,   <span class="co"># Leading half-width at 5% height</span></span>
-<span>  tailing <span class="op">=</span> <span class="fl">0.15</span>,   <span class="co"># Tailing half-width at 5% height</span></span>
+<span>  leading <span class="op">=</span> <span class="fl">0.12</span>,   <span class="co"># Leading half-width</span></span>
+<span>  tailing <span class="op">=</span> <span class="fl">0.15</span>,   <span class="co"># Tailing half-width</span></span>
 <span>  method <span class="op">=</span> <span class="st">"usp"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Tailing factor:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">Tf</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Tailing factor: 1.13</span></span>
 <span></span>
-<span><span class="co"># EP asymmetry factor (at 10% height)</span></span>
+<span><span class="co"># EP asymmetry factor (measured at 10% height)</span></span>
 <span><span class="va">As</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_asymmetry.html">measure_sec_asymmetry</a></span><span class="op">(</span></span>
 <span>  leading <span class="op">=</span> <span class="fl">0.10</span>,</span>
 <span>  tailing <span class="op">=</span> <span class="fl">0.12</span>,</span>
@@ -231,38 +286,38 @@ analysis. This vignette covers:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Asymmetry factor:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">As</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Asymmetry factor: 1.2</span></span></code></pre></div>
-<p><strong>Interpretation:</strong></p>
+<p><strong>Pass/Fail Guidance:</strong></p>
 <table class="table">
 <thead><tr class="header">
 <th>Value</th>
 <th>Shape</th>
-<th>Interpretation</th>
+<th>Action</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>0.8-1.0</td>
+<td>0.8 - 1.0</td>
 <td>Slight fronting</td>
-<td>Acceptable</td>
+<td>Pass</td>
 </tr>
 <tr class="even">
 <td>1.0</td>
-<td>Symmetric</td>
-<td>Ideal</td>
+<td>Symmetric (ideal)</td>
+<td>Pass</td>
 </tr>
 <tr class="odd">
-<td>1.0-1.2</td>
+<td>1.0 - 1.2</td>
 <td>Slight tailing</td>
-<td>Acceptable</td>
+<td>Pass</td>
 </tr>
 <tr class="even">
-<td>&gt; 1.5</td>
-<td>Significant tailing</td>
+<td>1.2 - 1.5</td>
+<td>Moderate tailing</td>
 <td>Investigate</td>
 </tr>
 <tr class="odd">
-<td>&gt; 2.0</td>
-<td>Severe tailing</td>
-<td>Problem</td>
+<td>&gt; 1.5</td>
+<td>Significant tailing</td>
+<td>Fail - troubleshoot</td>
 </tr>
 </tbody>
 </table>
@@ -270,52 +325,56 @@ analysis. This vignette covers:</p>
 <div class="section level3">
 <h3 id="mass-recovery">Mass Recovery<a class="anchor" aria-label="anchor" href="#mass-recovery"></a>
 </h3>
-<p>Recovery verifies that all injected sample is detected:</p>
+<p>Recovery verifies all injected sample is detected.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate percent recovery</span></span>
 <span><span class="va">recovery</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_recovery.html">measure_sec_recovery</a></span><span class="op">(</span></span>
-<span>  detected_mass <span class="op">=</span> <span class="fl">0.195</span>,</span>
-<span>  injected_mass <span class="op">=</span> <span class="fl">0.200</span></span>
+<span>  detected_mass <span class="op">=</span> <span class="fl">0.195</span>,   <span class="co"># From integration</span></span>
+<span>  injected_mass <span class="op">=</span> <span class="fl">0.200</span>    <span class="co"># Known amount injected</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Recovery:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">recovery</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"%\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Recovery: 97.5 %</span></span></code></pre></div>
-<p><strong>Acceptance Criteria:</strong></p>
+<p><strong>Pass/Fail Guidance:</strong></p>
 <table class="table">
 <thead><tr class="header">
 <th>Recovery</th>
 <th>Status</th>
-<th>Action</th>
+<th>Common Causes if Low</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>95-105%</td>
+<td>95 - 105%</td>
 <td>Pass</td>
-<td>None</td>
+<td>-</td>
 </tr>
 <tr class="even">
-<td>90-95% or 105-110%</td>
+<td>90 - 95%</td>
 <td>Marginal</td>
-<td>Investigate</td>
+<td>Slight adsorption, baseline errors</td>
 </tr>
 <tr class="odd">
 <td>&lt; 90%</td>
 <td>Fail</td>
-<td>Identify cause</td>
+<td>Column adsorption, sample precipitation</td>
+</tr>
+<tr class="even">
+<td>&gt; 105%</td>
+<td>Investigate</td>
+<td>Calibration drift, interference</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 <div class="section level2">
-<h2 id="comprehensive-sst">Comprehensive SST<a class="anchor" aria-label="anchor" href="#comprehensive-sst"></a>
+<h2 id="how-to-run-comprehensive-sst">How to Run Comprehensive SST<a class="anchor" aria-label="anchor" href="#how-to-run-comprehensive-sst"></a>
 </h2>
 <div class="section level3">
-<h3 id="using-measure_sec_suitability">Using measure_sec_suitability()<a class="anchor" aria-label="anchor" href="#using-measure_sec_suitability"></a>
+<h3 id="basic-system-suitability-test">Basic System Suitability Test<a class="anchor" aria-label="anchor" href="#basic-system-suitability-test"></a>
 </h3>
-<p>Run a complete SST evaluation:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Define peak data from integration</span></span>
+<code class="sourceCode R"><span><span class="co"># Define peak data from your integration software</span></span>
 <span><span class="va">peaks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"aggregate"</span>, <span class="st">"dimer"</span>, <span class="st">"monomer"</span>, <span class="st">"fragment"</span><span class="op">)</span>,</span>
 <span>  retention <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7.2</span>, <span class="fl">8.5</span>, <span class="fl">9.8</span>, <span class="fl">11.5</span><span class="op">)</span>,</span>
@@ -327,7 +386,7 @@ analysis. This vignette covers:</p>
 <span><span class="va">sst</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_suitability.html">measure_sec_suitability</a></span><span class="op">(</span></span>
 <span>  peaks <span class="op">=</span> <span class="va">peaks</span>,</span>
 <span>  reference_peaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dimer"</span>, <span class="st">"monomer"</span><span class="op">)</span>,  <span class="co"># Critical pair for resolution</span></span>
-<span>  column_length <span class="op">=</span> <span class="fl">30</span>  <span class="co"># cm</span></span>
+<span>  column_length <span class="op">=</span> <span class="fl">30</span>  <span class="co"># cm, for plates/meter calculation</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">sst</span><span class="op">)</span></span>
@@ -344,19 +403,19 @@ analysis. This vignette covers:</p>
 <span><span class="co">#&gt; --------------------------------------------------</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="custom-criteria">Custom Criteria<a class="anchor" aria-label="anchor" href="#custom-criteria"></a>
+<h3 id="sst-with-custom-criteria">SST with Custom Criteria<a class="anchor" aria-label="anchor" href="#sst-with-custom-criteria"></a>
 </h3>
-<p>Specify custom acceptance criteria:</p>
+<p>For validated methods, you may need stricter criteria:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Stricter criteria for validated method</span></span>
+<code class="sourceCode R"><span><span class="co"># Define stricter criteria for validated method</span></span>
 <span><span class="va">strict_criteria</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  resolution_min <span class="op">=</span> <span class="fl">2.0</span>,       <span class="co"># Higher resolution requirement</span></span>
-<span>  plate_count_min <span class="op">=</span> <span class="fl">10000</span>,    <span class="co"># Higher efficiency</span></span>
+<span>  plate_count_min <span class="op">=</span> <span class="fl">10000</span>,    <span class="co"># Higher efficiency requirement</span></span>
 <span>  tailing_min <span class="op">=</span> <span class="fl">0.9</span>,</span>
 <span>  tailing_max <span class="op">=</span> <span class="fl">1.3</span>,</span>
 <span>  recovery_min <span class="op">=</span> <span class="fl">97</span>,</span>
 <span>  recovery_max <span class="op">=</span> <span class="fl">103</span>,</span>
-<span>  retention_rsd_max <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  retention_rsd_max <span class="op">=</span> <span class="fl">0.5</span>,    <span class="co"># Tighter precision</span></span>
 <span>  area_rsd_max <span class="op">=</span> <span class="fl">1.0</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -379,11 +438,11 @@ analysis. This vignette covers:</p>
 <span><span class="co">#&gt; --------------------------------------------------</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="adding-replicate-data">Adding Replicate Data<a class="anchor" aria-label="anchor" href="#adding-replicate-data"></a>
+<h3 id="sst-with-replicate-injections">SST with Replicate Injections<a class="anchor" aria-label="anchor" href="#sst-with-replicate-injections"></a>
 </h3>
-<p>For precision assessment:</p>
+<p>For precision assessment, include replicate data:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Replicate injections</span></span>
+<code class="sourceCode R"><span><span class="co"># Replicate injection data (6 injections)</span></span>
 <span><span class="va">peaks_reps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dimer"</span>, <span class="st">"monomer"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">6</span><span class="op">)</span>,</span>
 <span>  replicate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="fl">2</span><span class="op">)</span>,</span>
@@ -417,67 +476,241 @@ analysis. This vignette covers:</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="column-performance-tracking">Column Performance Tracking<a class="anchor" aria-label="anchor" href="#column-performance-tracking"></a>
+<h2 id="how-to-track-column-performance-over-time">How to Track Column Performance Over Time<a class="anchor" aria-label="anchor" href="#how-to-track-column-performance-over-time"></a>
 </h2>
+<p>Monitoring column performance helps you know when to replace a column
+before it affects your results.</p>
 <div class="section level3">
-<h3 id="monitoring-over-time">Monitoring Over Time<a class="anchor" aria-label="anchor" href="#monitoring-over-time"></a>
+<h3 id="simulating-column-aging-data">Simulating Column Aging Data<a class="anchor" aria-label="anchor" href="#simulating-column-aging-data"></a>
 </h3>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Simulated column tracking data (22 weeks)</span></span>
+<code class="sourceCode R"><span><span class="co"># Simulate column performance over 22 weeks</span></span>
 <span><span class="va">dates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-01"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-06-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"week"</span><span class="op">)</span></span>
 <span><span class="va">n_weeks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">dates</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Create declining performance metrics</span></span>
+<span><span class="co"># Create realistic declining performance</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">column_log</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  date <span class="op">=</span> <span class="va">dates</span>,</span>
-<span>  plates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">25000</span>, <span class="fl">19500</span>, length.out <span class="op">=</span> <span class="va">n_weeks</span><span class="op">)</span>,</span>
-<span>  resolution <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">2.5</span>, <span class="fl">1.95</span>, length.out <span class="op">=</span> <span class="va">n_weeks</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">column_log</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  plates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">25000</span>, <span class="fl">19500</span>, length.out <span class="op">=</span> <span class="va">n_weeks</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_weeks</span>, <span class="fl">0</span>, <span class="fl">300</span><span class="op">)</span>,</span>
+<span>  resolution <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">2.5</span>, <span class="fl">1.95</span>, length.out <span class="op">=</span> <span class="va">n_weeks</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_weeks</span>, <span class="fl">0</span>, <span class="fl">0.05</span><span class="op">)</span>,</span>
+<span>  asymmetry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1.02</span>, <span class="fl">1.25</span>, length.out <span class="op">=</span> <span class="va">n_weeks</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_weeks</span>, <span class="fl">0</span>, <span class="fl">0.02</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="visualizing-column-trends">Visualizing Column Trends<a class="anchor" aria-label="anchor" href="#visualizing-column-trends"></a>
+</h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">column_log</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">plates</span> <span class="op">/</span> <span class="fl">10000</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">plates</span> <span class="op">/</span> <span class="fl">10000</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">resolution</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">1.5</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">1.0</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-15"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">1.55</span>, label <span class="op">=</span> <span class="st">"Rs limit"</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-15"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">1.05</span>, label <span class="op">=</span> <span class="st">"N limit (×10⁴)"</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">resolution</span><span class="op">)</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span>, size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">1.5</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span>, alpha <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">1.0</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span>, alpha <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-15"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">1.55</span>,</span>
+<span>           label <span class="op">=</span> <span class="st">"Rs limit"</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span>, size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-15"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">1.05</span>,</span>
+<span>           label <span class="op">=</span> <span class="st">"N limit (x10^4)"</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span>, size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_continuous</a></span><span class="op">(</span></span>
 <span>    name <span class="op">=</span> <span class="st">"Resolution"</span>,</span>
-<span>    sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/sec_axis.html" class="external-link">sec_axis</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span> <span class="op">*</span> <span class="fl">10000</span>, name <span class="op">=</span> <span class="st">"Theoretical Plates"</span><span class="op">)</span></span>
+<span>    sec.axis <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/sec_axis.html" class="external-link">sec_axis</a></span><span class="op">(</span><span class="op">~</span> <span class="va">.</span> <span class="op">*</span> <span class="fl">10000</span>, name <span class="op">=</span> <span class="st">"Theoretical Plates"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="st">"Date"</span>,</span>
 <span>    title <span class="op">=</span> <span class="st">"Column Performance Tracking"</span>,</span>
 <span>    subtitle <span class="op">=</span> <span class="st">"Resolution (pink) and plate count (blue) over time"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="system-suitability_files/figure-html/tracking-1.png" class="r-plt" alt="" width="768"></p>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
+<span>    axis.title.y.left <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span>,</span>
+<span>    axis.title.y.right <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><img src="system-suitability_files/figure-html/tracking-plot-1.png" class="r-plt" alt="" width="768"></p>
 </div>
 <div class="section level3">
-<h3 id="calculating-column-lifetime">Calculating Column Lifetime<a class="anchor" aria-label="anchor" href="#calculating-column-lifetime"></a>
+<h3 id="predicting-column-replacement">Predicting Column Replacement<a class="anchor" aria-label="anchor" href="#predicting-column-replacement"></a>
 </h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># When performance drops below limit</span></span>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define your limits</span></span>
 <span><span class="va">min_plates</span> <span class="op">&lt;-</span> <span class="fl">10000</span></span>
 <span><span class="va">min_resolution</span> <span class="op">&lt;-</span> <span class="fl">1.5</span></span>
 <span></span>
-<span><span class="co"># Find when limits are crossed</span></span>
-<span><span class="va">plates_ok</span> <span class="op">&lt;-</span> <span class="va">column_log</span><span class="op">$</span><span class="va">plates</span> <span class="op">&gt;</span> <span class="va">min_plates</span></span>
-<span><span class="va">resolution_ok</span> <span class="op">&lt;-</span> <span class="va">column_log</span><span class="op">$</span><span class="va">resolution</span> <span class="op">&gt;</span> <span class="va">min_resolution</span></span>
+<span><span class="co"># Check when limits would be crossed</span></span>
+<span><span class="va">column_log</span> <span class="op">&lt;-</span> <span class="va">column_log</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span>    plates_ok <span class="op">=</span> <span class="va">plates</span> <span class="op">&gt;</span> <span class="va">min_plates</span>,</span>
+<span>    resolution_ok <span class="op">=</span> <span class="va">resolution</span> <span class="op">&gt;</span> <span class="va">min_resolution</span>,</span>
+<span>    overall_ok <span class="op">=</span> <span class="va">plates_ok</span> <span class="op">&amp;</span> <span class="va">resolution_ok</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Column lifetime estimate</span></span>
-<span><span class="va">column_lifetime_weeks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="op">!</span><span class="va">plates_ok</span> <span class="op">|</span> <span class="op">!</span><span class="va">resolution_ok</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in min(which(!plates_ok | !resolution_ok)): no non-missing arguments to</span></span>
-<span><span class="co">#&gt; min; returning Inf</span></span>
+<span><span class="co"># Find first failure point</span></span>
+<span><span class="va">first_failure</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="op">!</span><span class="va">column_log</span><span class="op">$</span><span class="va">overall_ok</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Estimated column lifetime:"</span>, <span class="va">column_lifetime_weeks</span>, <span class="st">"weeks\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Estimated column lifetime: Inf weeks</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Last acceptable date:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="va">column_log</span><span class="op">$</span><span class="va">date</span><span class="op">[</span><span class="va">column_lifetime_weeks</span> <span class="op">-</span> <span class="fl">1</span><span class="op">]</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Last acceptable date: NA</span></span></code></pre></div>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">first_failure</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Column replacement needed at week:"</span>, <span class="va">first_failure</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Date:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="va">column_log</span><span class="op">$</span><span class="va">date</span><span class="op">[</span><span class="va">first_failure</span><span class="op">]</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Resolution at failure:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">column_log</span><span class="op">$</span><span class="va">resolution</span><span class="op">[</span><span class="va">first_failure</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Plates at failure:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">column_log</span><span class="op">$</span><span class="va">plates</span><span class="op">[</span><span class="va">first_failure</span><span class="op">]</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Column still within specifications through end of monitoring period\n"</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; Column still within specifications through end of monitoring period</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
-<h2 id="regulatory-framework">Regulatory Framework<a class="anchor" aria-label="anchor" href="#regulatory-framework"></a>
+<h2 id="troubleshooting-guide">Troubleshooting Guide<a class="anchor" aria-label="anchor" href="#troubleshooting-guide"></a>
+</h2>
+<div class="section level3">
+<h3 id="low-resolution">Low Resolution<a class="anchor" aria-label="anchor" href="#low-resolution"></a>
+</h3>
+<table class="table">
+<thead><tr class="header">
+<th>Possible Cause</th>
+<th>Diagnostic</th>
+<th>Solution</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Column degradation</td>
+<td>Check plate count trend</td>
+<td>Replace column</td>
+</tr>
+<tr class="even">
+<td>Overloading</td>
+<td>Reduce injection volume</td>
+<td>Optimize loading</td>
+</tr>
+<tr class="odd">
+<td>Mobile phase issue</td>
+<td>Check buffer preparation</td>
+<td>Fresh mobile phase</td>
+</tr>
+<tr class="even">
+<td>Flow rate too high</td>
+<td>Compare to method specs</td>
+<td>Adjust flow rate</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="peak-tailing">Peak Tailing<a class="anchor" aria-label="anchor" href="#peak-tailing"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="42%">
+<col width="31%">
+<col width="26%">
+</colgroup>
+<thead><tr class="header">
+<th>Possible Cause</th>
+<th>Diagnostic</th>
+<th>Solution</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Column void/frit issue</td>
+<td>Visual inspection</td>
+<td>Replace frit or column</td>
+</tr>
+<tr class="even">
+<td>Sample-column interaction</td>
+<td>Test with neutral sample</td>
+<td>Adjust mobile phase pH/salt</td>
+</tr>
+<tr class="odd">
+<td>Overloading</td>
+<td>Reduce concentration</td>
+<td>Dilute sample</td>
+</tr>
+<tr class="even">
+<td>Dead volume in system</td>
+<td>Check fittings</td>
+<td>Minimize connections</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="low-plate-count">Low Plate Count<a class="anchor" aria-label="anchor" href="#low-plate-count"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="42%">
+<col width="31%">
+<col width="26%">
+</colgroup>
+<thead><tr class="header">
+<th>Possible Cause</th>
+<th>Diagnostic</th>
+<th>Solution</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Column degradation</td>
+<td>Compare to new column specs</td>
+<td>Replace column</td>
+</tr>
+<tr class="even">
+<td>Air bubbles</td>
+<td>Check for baseline noise</td>
+<td>Degas mobile phase</td>
+</tr>
+<tr class="odd">
+<td>Fitting issues</td>
+<td>Check connections</td>
+<td>Retighten fittings</td>
+</tr>
+<tr class="even">
+<td>Temperature fluctuation</td>
+<td>Monitor column temp</td>
+<td>Stabilize temperature</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="low-recovery">Low Recovery<a class="anchor" aria-label="anchor" href="#low-recovery"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="42%">
+<col width="31%">
+<col width="26%">
+</colgroup>
+<thead><tr class="header">
+<th>Possible Cause</th>
+<th>Diagnostic</th>
+<th>Solution</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Sample adsorption</td>
+<td>Test with BSA</td>
+<td>Increase salt concentration</td>
+</tr>
+<tr class="even">
+<td>Aggregation on-column</td>
+<td>Check for precipitate</td>
+<td>Filter sample, adjust concentration</td>
+</tr>
+<tr class="odd">
+<td>Detector drift</td>
+<td>Check standard response</td>
+<td>Recalibrate detector</td>
+</tr>
+<tr class="even">
+<td>Integration errors</td>
+<td>Review baselines</td>
+<td>Adjust integration parameters</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section level2">
+<h2 id="regulatory-references">Regulatory References<a class="anchor" aria-label="anchor" href="#regulatory-references"></a>
 </h2>
 <div class="section level3">
 <h3 id="usp-621-requirements">USP &lt;621&gt; Requirements<a class="anchor" aria-label="anchor" href="#usp-621-requirements"></a>
@@ -490,56 +723,46 @@ analysis. This vignette covers:</p>
 <tbody>
 <tr class="odd">
 <td>Resolution</td>
-<td>Rs ≥ 2.0 (unless otherwise specified)</td>
+<td>Rs &gt;= 2.0 (unless otherwise specified)</td>
 </tr>
 <tr class="even">
 <td>Tailing</td>
-<td>T ≤ 2.0</td>
+<td>T &lt;= 2.0</td>
 </tr>
 <tr class="odd">
 <td>Plate count</td>
 <td>As specified in monograph</td>
 </tr>
 <tr class="even">
-<td>RSD (replicate injections)</td>
-<td>≤ 2.0% for areas</td>
+<td>RSD (n &gt;= 5)</td>
+<td>&lt;= 2.0% for peak areas</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level3">
-<h3 id="ich-guidelines">ICH Guidelines<a class="anchor" aria-label="anchor" href="#ich-guidelines"></a>
-</h3>
-<p><strong>ICH Q2(R1) Validation:</strong> - Precision (RSD of replicate
-injections) - Accuracy (recovery studies) - Specificity (resolution from
-interfering peaks)</p>
-<p><strong>ICH Q6B Specifications:</strong> - Aggregate content limits -
-Purity specifications</p>
-</div>
-<div class="section level3">
-<h3 id="fda-guidance">FDA Guidance<a class="anchor" aria-label="anchor" href="#fda-guidance"></a>
+<h3 id="ich-q2r1-method-validation">ICH Q2(R1) Method Validation<a class="anchor" aria-label="anchor" href="#ich-q2r1-method-validation"></a>
 </h3>
 <ul>
-<li>SST should be performed before sample analysis</li>
-<li>Reference standard should be analyzed with each batch</li>
-<li>Control charts recommended for trending</li>
+<li>
+<strong>Precision</strong>: RSD of replicate injections</li>
+<li>
+<strong>Accuracy</strong>: Recovery studies</li>
+<li>
+<strong>Specificity</strong>: Resolution from interfering peaks</li>
 </ul>
 </div>
-</div>
-<div class="section level2">
-<h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
-</h2>
 <div class="section level3">
-<h3 id="sst-frequency">SST Frequency<a class="anchor" aria-label="anchor" href="#sst-frequency"></a>
+<h3 id="best-practice-sst-frequency">Best Practice: SST Frequency<a class="anchor" aria-label="anchor" href="#best-practice-sst-frequency"></a>
 </h3>
 <table class="table">
 <thead><tr class="header">
 <th>Situation</th>
-<th>SST Level</th>
+<th>Recommended SST</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Beginning of sequence</td>
+<td>Start of sequence</td>
 <td>Full SST</td>
 </tr>
 <tr class="even">
@@ -561,63 +784,11 @@ Purity specifications</p>
 </tbody>
 </table>
 </div>
-<div class="section level3">
-<h3 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
-</h3>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Record all SST results</strong> in batch records</li>
-<li>
-<strong>Establish control limits</strong> from historical data</li>
-<li>
-<strong>Investigate OOS results</strong> before proceeding</li>
-<li>
-<strong>Trend SST data</strong> over time</li>
-</ol>
-</div>
-<div class="section level3">
-<h3 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
-</h3>
-<table class="table">
-<thead><tr class="header">
-<th>Symptom</th>
-<th>Possible Cause</th>
-<th>Action</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Low resolution</td>
-<td>Column degradation</td>
-<td>Replace column</td>
-</tr>
-<tr class="even">
-<td>Peak tailing</td>
-<td>Sample overload</td>
-<td>Reduce injection</td>
-</tr>
-<tr class="odd">
-<td>Low plates</td>
-<td>Column void</td>
-<td>Check frit/replace</td>
-</tr>
-<tr class="even">
-<td>Poor recovery</td>
-<td>Adsorption</td>
-<td>Change mobile phase</td>
-</tr>
-<tr class="odd">
-<td>High RSD</td>
-<td>Injection variability</td>
-<td>Check autosampler</td>
-</tr>
-</tbody>
-</table>
-</div>
 </div>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
