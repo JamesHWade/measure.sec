@@ -106,6 +106,8 @@ Other sec-data:
 \code{\link{sec_triple_detect}}
 
 Other sec-calibration: 
+\code{\link{load_sec_calibration}()},
+\code{\link{save_sec_calibration}()},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_ps_standards}},
 \code{\link{step_sec_broad_standard}()},
