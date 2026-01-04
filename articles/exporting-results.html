@@ -154,71 +154,53 @@ guide covers:</p>
 <div class="section level2">
 <h2 id="creating-processed-data-for-export">Creating Processed Data for Export<a class="anchor" aria-label="anchor" href="#creating-processed-data-for-export"></a>
 </h2>
-<p>Before exporting, we need processed SEC data. Let’s process a single
-sample to demonstrate the export functions:</p>
+<p>In a real workflow, you’d process SEC data through calibration and MW
+averaging steps (see the <a href="getting-started.html">Getting
+Started</a> vignette). Here, we’ll create representative processed data
+to demonstrate the export functions.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load multi-detector SEC data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Simulate processed SEC results with realistic MW values</span></span>
+<span><span class="co"># In practice, these columns come from step_sec_mw_averages()</span></span>
 <span></span>
-<span><span class="co"># Filter to a single sample for processing</span></span>
-<span><span class="va">ps_sample</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"PS-100K"</span><span class="op">)</span></span>
+<span><span class="va">processed</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  sample_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"PS-50K"</span>, <span class="st">"PS-100K"</span>, <span class="st">"PS-200K"</span><span class="op">)</span>,</span>
+<span>  polymer_type <span class="op">=</span> <span class="st">"polystyrene"</span>,</span>
+<span>  <span class="co"># MW averages (typical for narrow PS standards)</span></span>
+<span>  mw_mn <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">48500</span>, <span class="fl">97200</span>, <span class="fl">195000</span><span class="op">)</span>,</span>
+<span>  mw_mw <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50200</span>, <span class="fl">101000</span>, <span class="fl">203000</span><span class="op">)</span>,</span>
+<span>  mw_mz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">52100</span>, <span class="fl">105000</span>, <span class="fl">211000</span><span class="op">)</span>,</span>
+<span>  mw_dispersity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.035</span>, <span class="fl">1.039</span>, <span class="fl">1.041</span><span class="op">)</span>,</span>
+<span>  <span class="co"># Additional metadata</span></span>
+<span>  injection_volume <span class="op">=</span> <span class="fl">100</span>,  <span class="co"># µL</span></span>
+<span>  concentration <span class="op">=</span> <span class="fl">2.0</span>      <span class="co"># mg/mL</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View what we're working with</span></span>
-<span><span class="va">ps_sample</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">polymer_type</span>, <span class="va">known_mw</span>, <span class="va">known_dispersity</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
-<span><span class="co">#&gt;   sample_id polymer_type known_mw known_dispersity</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-100K   polystyrene    <span style="text-decoration: underline;">100</span>000             1.01</span></span></code></pre></div>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create and prep a recipe for one sample</span></span>
-<span><span class="co"># Note: the formula tells recipes how to group the data</span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">known_mw</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">ps_sample</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">ri_signal</span>,</span>
-<span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
-<span>    col_name <span class="op">=</span> <span class="st">"ri"</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">processed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># View the structure - now has nested measure_list column</span></span>
 <span><span class="va">processed</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
-<span><span class="co">#&gt;   sample_id known_mw          ri elution_time </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-100K     <span style="text-decoration: underline;">100</span>000 <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">&lt;dbl [2,001]&gt;</span></span></span></code></pre></div>
-<p>For demonstrating multi-sample comparisons later, let’s process a few
-more samples:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Helper function to process one sample</span></span>
-<span><span class="va">process_sample</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">sample_id_filter</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">data</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="va">sample_id_filter</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 8</span></span></span>
+<span><span class="co">#&gt;   sample_id polymer_type  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    polystyrene   <span style="text-decoration: underline;">48</span>500  <span style="text-decoration: underline;">50</span>200  <span style="text-decoration: underline;">52</span>100          1.03              100</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-100K   polystyrene   <span style="text-decoration: underline;">97</span>200 <span style="text-decoration: underline;">101</span>000 <span style="text-decoration: underline;">105</span>000          1.04              100</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-200K   polystyrene  <span style="text-decoration: underline;">195</span>000 <span style="text-decoration: underline;">203</span>000 <span style="text-decoration: underline;">211</span>000          1.04              100</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 1 more variable: concentration &lt;dbl&gt;</span></span></span></code></pre></div>
+<p>For multi-sample comparisons, let’s create data for different polymer
+types:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Three batches with slight variations (typical QC scenario)</span></span>
+<span><span class="va">batch1</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  sample_id <span class="op">=</span> <span class="st">"Batch-001"</span>,</span>
+<span>  mw_mn <span class="op">=</span> <span class="fl">48200</span>, mw_mw <span class="op">=</span> <span class="fl">50100</span>, mw_mz <span class="op">=</span> <span class="fl">52000</span>, mw_dispersity <span class="op">=</span> <span class="fl">1.039</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>    <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">known_mw</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>    data <span class="op">=</span> <span class="va">data</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
+<span><span class="va">batch2</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  sample_id <span class="op">=</span> <span class="st">"Batch-002"</span>,</span>
+<span>  mw_mn <span class="op">=</span> <span class="fl">49100</span>, mw_mw <span class="op">=</span> <span class="fl">51200</span>, mw_mz <span class="op">=</span> <span class="fl">53100</span>, mw_dispersity <span class="op">=</span> <span class="fl">1.043</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Process three samples</span></span>
-<span><span class="va">ps100k</span> <span class="op">&lt;-</span> <span class="fu">process_sample</span><span class="op">(</span><span class="st">"PS-100K"</span><span class="op">)</span></span>
-<span><span class="va">ps500k</span> <span class="op">&lt;-</span> <span class="fu">process_sample</span><span class="op">(</span><span class="st">"PS-500K"</span><span class="op">)</span></span>
-<span><span class="va">pmma_high</span> <span class="op">&lt;-</span> <span class="fu">process_sample</span><span class="op">(</span><span class="st">"PMMA-High"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">batch3</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  sample_id <span class="op">=</span> <span class="st">"Batch-003"</span>,</span>
+<span>  mw_mn <span class="op">=</span> <span class="fl">47800</span>, mw_mw <span class="op">=</span> <span class="fl">49800</span>, mw_mz <span class="op">=</span> <span class="fl">51900</span>, mw_dispersity <span class="op">=</span> <span class="fl">1.042</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="summary-tables">Summary Tables<a class="anchor" aria-label="anchor" href="#summary-tables"></a>
@@ -228,8 +210,8 @@ more samples:</p>
 </h3>
 <p><code><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table()</a></code> creates a one-row-per-sample
 table with key metrics:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create summary table</span></span>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create summary table - automatically finds MW columns</span></span>
 <span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">processed</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span></span>
@@ -238,45 +220,62 @@ table with key metrics:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_tbl</span><span class="op">)</span></span>
 <span><span class="co">#&gt; SEC Analysis Summary</span></span>
 <span><span class="co">#&gt; ============================================================ </span></span>
-<span><span class="co">#&gt; Samples: 1 </span></span>
+<span><span class="co">#&gt; Samples: 3 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 1</span></span></span>
-<span><span class="co">#&gt;   sample_id</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-100K</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K     <span style="text-decoration: underline;">48</span>500  <span style="text-decoration: underline;">50</span>200  <span style="text-decoration: underline;">52</span>100          1.03</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-100K    <span style="text-decoration: underline;">97</span>200 <span style="text-decoration: underline;">101</span>000 <span style="text-decoration: underline;">105</span>000          1.04</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-200K   <span style="text-decoration: underline;">195</span>000 <span style="text-decoration: underline;">203</span>000 <span style="text-decoration: underline;">211</span>000          1.04</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="including-additional-columns">Including Additional Columns<a class="anchor" aria-label="anchor" href="#including-additional-columns"></a>
 </h3>
 <p>You can include any numeric column from your data:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Include known MW for validation</span></span>
-<span><span class="va">summary_with_known</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Include method metadata alongside MW results</span></span>
+<span><span class="va">summary_with_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">processed</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span>,</span>
-<span>  additional_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"known_mw"</span><span class="op">)</span></span>
+<span>  additional_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"injection_volume"</span>, <span class="st">"concentration"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_with_known</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_with_meta</span><span class="op">)</span></span>
 <span><span class="co">#&gt; SEC Analysis Summary</span></span>
 <span><span class="co">#&gt; ============================================================ </span></span>
-<span><span class="co">#&gt; Samples: 1 </span></span>
+<span><span class="co">#&gt; Samples: 3 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 2</span></span></span>
-<span><span class="co">#&gt;   sample_id known_mw</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-100K     <span style="text-decoration: underline;">100</span>000</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 7</span></span></span>
+<span><span class="co">#&gt;   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume concentration</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K     <span style="text-decoration: underline;">48</span>500  <span style="text-decoration: underline;">50</span>200  <span style="text-decoration: underline;">52</span>100          1.03              100             2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-100K    <span style="text-decoration: underline;">97</span>200 <span style="text-decoration: underline;">101</span>000 <span style="text-decoration: underline;">105</span>000          1.04              100             2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-200K   <span style="text-decoration: underline;">195</span>000 <span style="text-decoration: underline;">203</span>000 <span style="text-decoration: underline;">211</span>000          1.04              100             2</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="controlling-decimal-places">Controlling Decimal Places<a class="anchor" aria-label="anchor" href="#controlling-decimal-places"></a>
 </h3>
 <p>For regulatory submissions that require specific precision:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">summary_precise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Higher precision for documentation</span></span>
+<span><span class="va">summary_precise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">processed</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span>,</span>
-<span>  digits <span class="op">=</span> <span class="fl">4</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span>  digits <span class="op">=</span> <span class="fl">0</span>  <span class="co"># Whole numbers for MW</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_precise</span><span class="op">)</span></span>
+<span><span class="co">#&gt; SEC Analysis Summary</span></span>
+<span><span class="co">#&gt; ============================================================ </span></span>
+<span><span class="co">#&gt; Samples: 3 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K     <span style="text-decoration: underline;">48</span>500  <span style="text-decoration: underline;">50</span>200  <span style="text-decoration: underline;">52</span>100             1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-100K    <span style="text-decoration: underline;">97</span>200 <span style="text-decoration: underline;">101</span>000 <span style="text-decoration: underline;">105</span>000             1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-200K   <span style="text-decoration: underline;">195</span>000 <span style="text-decoration: underline;">203</span>000 <span style="text-decoration: underline;">211</span>000             1</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -288,7 +287,35 @@ table with key metrics:</p>
 <p>SEC analysis works on a point-by-point basis across the chromatogram.
 Each “slice” represents one data point with its elution time and
 corresponding signal values. Use <code><a href="../reference/measure_sec_slice_table.html">measure_sec_slice_table()</a></code>
-to extract this detailed data.</p>
+to extract this detailed data from recipes that produce
+<code>measure_list</code> columns.</p>
+</div>
+<div class="section level3">
+<h3 id="creating-slice-data">Creating Slice Data<a class="anchor" aria-label="anchor" href="#creating-slice-data"></a>
+</h3>
+<p>First, let’s process actual chromatogram data to demonstrate slice
+extraction:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Load and process actual chromatogram data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Process a single sample</span></span>
+<span><span class="va">ps_sample</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"PS-100K"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">ps_sample</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
+<span>    <span class="va">ri_signal</span>,</span>
+<span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
+<span>    col_name <span class="op">=</span> <span class="st">"ri"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">chromatogram_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="long-format-default">Long Format (Default)<a class="anchor" aria-label="anchor" href="#long-format-default"></a>
@@ -297,12 +324,12 @@ to extract this detailed data.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract slice data in long format</span></span>
 <span><span class="va">slices_long</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_slice_table.html">measure_sec_slice_table</a></span><span class="op">(</span></span>
-<span>  <span class="va">processed</span>,</span>
+<span>  <span class="va">chromatogram_data</span>,</span>
 <span>  measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View structure</span></span>
+<span><span class="co"># View structure - one row per data point</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">slices_long</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 10 × 5</span></span></span>
 <span><span class="co">#&gt;    sample_id slice location measure   value</span></span>
@@ -319,12 +346,12 @@ to extract this detailed data.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> PS-100K      10     5.09 ri      0.001<span style="text-decoration: underline;">26</span></span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot using the slice table</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">slices_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">location</span>, y <span class="op">=</span> <span class="va">value</span>, color <span class="op">=</span> <span class="va">sample_id</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">slices_long</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">location</span>, y <span class="op">=</span> <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="st">"Elution Time (min)"</span>,</span>
-<span>    y <span class="op">=</span> <span class="st">"RI Signal"</span>,</span>
-<span>    title <span class="op">=</span> <span class="st">"Chromatogram Overlay from Slice Data"</span></span>
+<span>    y <span class="op">=</span> <span class="st">"RI Signal (baseline corrected)"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Chromatogram from Slice Data"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="exporting-results_files/figure-html/plot-slices-1.png" class="r-plt" alt="" width="672"></p>
@@ -335,15 +362,24 @@ to extract this detailed data.</p>
 <p>Wide format is better for spreadsheet export or correlating multiple
 measures:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># If you had multiple measures (e.g., ri and mw), wide format would look like:</span></span>
+<code class="sourceCode R"><span><span class="co"># Wide format puts each measure in its own column</span></span>
 <span><span class="va">slices_wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_slice_table.html">measure_sec_slice_table</a></span><span class="op">(</span></span>
-<span>  <span class="va">processed</span>,</span>
-<span>  measures <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ri"</span><span class="op">)</span>,</span>
+<span>  <span class="va">chromatogram_data</span>,</span>
+<span>  measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span>,</span>
 <span>  pivot <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">slices_wide</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">slices_wide</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id slice location      ri</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-100K       1     5    0.001<span style="text-decoration: underline;">32</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-100K       2     5.01 0.001<span style="text-decoration: underline;">89</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-100K       3     5.02 0.001<span style="text-decoration: underline;">56</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PS-100K       4     5.03 0.001<span style="text-decoration: underline;">23</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PS-100K       5     5.04 0.001<span style="text-decoration: underline;">57</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> PS-100K       6     5.05 0.001<span style="text-decoration: underline;">16</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="exporting-slice-data-to-csv">Exporting Slice Data to CSV<a class="anchor" aria-label="anchor" href="#exporting-slice-data-to-csv"></a>
@@ -365,10 +401,10 @@ measures:</p>
 <p><code><a href="../reference/measure_sec_compare.html">measure_sec_compare()</a></code> provides side-by-side comparison
 with differences from a reference:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Compare the samples we processed earlier</span></span>
+<code class="sourceCode R"><span><span class="co"># Compare the three batches we created earlier</span></span>
 <span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_compare.html">measure_sec_compare</a></span><span class="op">(</span></span>
-<span>  <span class="va">ps100k</span>, <span class="va">ps500k</span>, <span class="va">pmma_high</span>,</span>
-<span>  samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"PS 100K"</span>, <span class="st">"PS 500K"</span>, <span class="st">"PMMA High"</span><span class="op">)</span>,</span>
+<span>  <span class="va">batch1</span>, <span class="va">batch2</span>, <span class="va">batch3</span>,</span>
+<span>  samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Batch 001"</span>, <span class="st">"Batch 002"</span>, <span class="st">"Batch 003"</span><span class="op">)</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="st">"mw_averages"</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
@@ -377,15 +413,24 @@ with differences from a reference:</p>
 <span><span class="co">#&gt; SEC Multi-Sample Comparison</span></span>
 <span><span class="co">#&gt; ============================================================ </span></span>
 <span><span class="co">#&gt; Samples: 3 </span></span>
-<span><span class="co">#&gt; Reference: PS 100K </span></span>
+<span><span class="co">#&gt; Reference: Batch 001 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Summary:</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 1</span></span></span>
-<span><span class="co">#&gt;   sample   </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS 100K  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS 500K  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PMMA High</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt;   sample    mw_mn mw_mw mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Batch 001 <span style="text-decoration: underline;">48</span>200 <span style="text-decoration: underline;">50</span>100 <span style="text-decoration: underline;">52</span>000          1.04</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch 002 <span style="text-decoration: underline;">49</span>100 <span style="text-decoration: underline;">51</span>200 <span style="text-decoration: underline;">53</span>100          1.04</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Batch 003 <span style="text-decoration: underline;">47</span>800 <span style="text-decoration: underline;">49</span>800 <span style="text-decoration: underline;">51</span>900          1.04</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Differences from reference:</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 9</span></span></span>
+<span><span class="co">#&gt;   sample    mw_mn_diff mw_mn_pct mw_mw_diff mw_mw_pct mw_mz_diff mw_mz_pct</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Batch 001          0       0            0       0            0       0  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch 002        900       1.9       <span style="text-decoration: underline;">1</span>100       2.2       <span style="text-decoration: underline;">1</span>100       2.1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Batch 003       -<span style="color: #BB0000;">400</span>      -<span style="color: #BB0000;">0.8</span>       -<span style="color: #BB0000;">300</span>      -<span style="color: #BB0000;">0.6</span>       -<span style="color: #BB0000;">100</span>      -<span style="color: #BB0000;">0.2</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: mw_dispersity_diff &lt;dbl&gt;, mw_dispersity_pct &lt;dbl&gt;</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="understanding-the-comparison-output">Understanding the Comparison Output<a class="anchor" aria-label="anchor" href="#understanding-the-comparison-output"></a>
@@ -662,6 +707,24 @@ run the calibration and MW averaging steps:</p>
 <li>Check data has required columns</li>
 </ol>
 </div>
+</div>
+<div class="section level2">
+<h2 id="see-also">See Also<a class="anchor" aria-label="anchor" href="#see-also"></a>
+</h2>
+<ul>
+<li>
+<a href="getting-started.html">Getting Started</a> - Basic SEC
+workflow and concepts</li>
+<li>
+<a href="calibration-management.html">Calibration Management</a> -
+Save and reuse calibrations</li>
+<li>
+<a href="system-suitability.html">System Suitability</a> - QC
+metrics and column performance</li>
+<li>
+<a href="sec-analysis.html">Comprehensive SEC Analysis</a> -
+Complete reference with all functions</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>

@@ -48,77 +48,58 @@ library(ggplot2)
 
 ## Creating Processed Data for Export
 
-Before exporting, we need processed SEC data. Let’s process a single
-sample to demonstrate the export functions:
+In a real workflow, you’d process SEC data through calibration and MW
+averaging steps (see the [Getting
+Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md)
+vignette). Here, we’ll create representative processed data to
+demonstrate the export functions.
 
 ``` r
-# Load multi-detector SEC data
-data(sec_triple_detect)
+# Simulate processed SEC results with realistic MW values
+# In practice, these columns come from step_sec_mw_averages()
 
-# Filter to a single sample for processing
-ps_sample <- sec_triple_detect |>
-  filter(sample_id == "PS-100K")
+processed <- tibble::tibble(
+  sample_id = c("PS-50K", "PS-100K", "PS-200K"),
+  polymer_type = "polystyrene",
+  # MW averages (typical for narrow PS standards)
+  mw_mn = c(48500, 97200, 195000),
+  mw_mw = c(50200, 101000, 203000),
+  mw_mz = c(52100, 105000, 211000),
+  mw_dispersity = c(1.035, 1.039, 1.041),
+  # Additional metadata
+  injection_volume = 100,  # µL
+  concentration = 2.0      # mg/mL
+)
 
-# View what we're working with
-ps_sample |>
-  select(sample_id, polymer_type, known_mw, known_dispersity) |>
-  distinct()
-#> # A tibble: 1 × 4
-#>   sample_id polymer_type known_mw known_dispersity
-#>   <chr>     <chr>           <dbl>            <dbl>
-#> 1 PS-100K   polystyrene    100000             1.01
-```
-
-``` r
-# Create and prep a recipe for one sample
-# Note: the formula tells recipes how to group the data
-rec <- recipe(
-  ri_signal + elution_time + known_mw ~ sample_id,
-  data = ps_sample
-) |>
-  update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(
-    ri_signal,
-    location = vars(elution_time),
-    col_name = "ri"
-  ) |>
-  step_sec_baseline(measures = "ri")
-
-prepped <- prep(rec)
-processed <- bake(prepped, new_data = NULL)
-
-# View the structure - now has nested measure_list column
 processed
-#> # A tibble: 1 × 4
-#>   sample_id known_mw          ri elution_time 
-#>   <chr>        <dbl>      <meas> <list>       
-#> 1 PS-100K     100000 [2,001 × 2] <dbl [2,001]>
+#> # A tibble: 3 × 8
+#>   sample_id polymer_type  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume
+#>   <chr>     <chr>         <dbl>  <dbl>  <dbl>         <dbl>            <dbl>
+#> 1 PS-50K    polystyrene   48500  50200  52100          1.03              100
+#> 2 PS-100K   polystyrene   97200 101000 105000          1.04              100
+#> 3 PS-200K   polystyrene  195000 203000 211000          1.04              100
+#> # ℹ 1 more variable: concentration <dbl>
 ```
 
-For demonstrating multi-sample comparisons later, let’s process a few
-more samples:
+For multi-sample comparisons, let’s create data for different polymer
+types:
 
 ``` r
-# Helper function to process one sample
-process_sample <- function(sample_id_filter) {
-  data <- sec_triple_detect |>
-    filter(sample_id == sample_id_filter)
+# Three batches with slight variations (typical QC scenario)
+batch1 <- tibble::tibble(
+  sample_id = "Batch-001",
+  mw_mn = 48200, mw_mw = 50100, mw_mz = 52000, mw_dispersity = 1.039
+)
 
-  recipe(
-    ri_signal + elution_time + known_mw ~ sample_id,
-    data = data
-  ) |>
-    update_role(sample_id, new_role = "id") |>
-    step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-    step_sec_baseline(measures = "ri") |>
-    prep() |>
-    bake(new_data = NULL)
-}
+batch2 <- tibble::tibble(
+  sample_id = "Batch-002",
+  mw_mn = 49100, mw_mw = 51200, mw_mz = 53100, mw_dispersity = 1.043
+)
 
-# Process three samples
-ps100k <- process_sample("PS-100K")
-ps500k <- process_sample("PS-500K")
-pmma_high <- process_sample("PMMA-High")
+batch3 <- tibble::tibble(
+  sample_id = "Batch-003",
+  mw_mn = 47800, mw_mw = 49800, mw_mz = 51900, mw_dispersity = 1.042
+)
 ```
 
 ## Summary Tables
@@ -129,7 +110,7 @@ pmma_high <- process_sample("PMMA-High")
 creates a one-row-per-sample table with key metrics:
 
 ``` r
-# Create summary table
+# Create summary table - automatically finds MW columns
 summary_tbl <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id"
@@ -138,12 +119,14 @@ summary_tbl <- measure_sec_summary_table(
 print(summary_tbl)
 #> SEC Analysis Summary
 #> ============================================================ 
-#> Samples: 1 
+#> Samples: 3 
 #> 
-#> # A tibble: 1 × 1
-#>   sample_id
-#>   <chr>    
-#> 1 PS-100K
+#> # A tibble: 3 × 5
+#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity
+#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>
+#> 1 PS-50K     48500  50200  52100          1.03
+#> 2 PS-100K    97200 101000 105000          1.04
+#> 3 PS-200K   195000 203000 211000          1.04
 ```
 
 ### Including Additional Columns
@@ -151,22 +134,24 @@ print(summary_tbl)
 You can include any numeric column from your data:
 
 ``` r
-# Include known MW for validation
-summary_with_known <- measure_sec_summary_table(
+# Include method metadata alongside MW results
+summary_with_meta <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id",
-  additional_cols = c("known_mw")
+  additional_cols = c("injection_volume", "concentration")
 )
 
-print(summary_with_known)
+print(summary_with_meta)
 #> SEC Analysis Summary
 #> ============================================================ 
-#> Samples: 1 
+#> Samples: 3 
 #> 
-#> # A tibble: 1 × 2
-#>   sample_id known_mw
-#>   <chr>        <dbl>
-#> 1 PS-100K     100000
+#> # A tibble: 3 × 7
+#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume concentration
+#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>            <dbl>         <dbl>
+#> 1 PS-50K     48500  50200  52100          1.03              100             2
+#> 2 PS-100K    97200 101000 105000          1.04              100             2
+#> 3 PS-200K   195000 203000 211000          1.04              100             2
 ```
 
 ### Controlling Decimal Places
@@ -174,11 +159,24 @@ print(summary_with_known)
 For regulatory submissions that require specific precision:
 
 ``` r
+# Higher precision for documentation
 summary_precise <- measure_sec_summary_table(
   processed,
   sample_id = "sample_id",
-  digits = 4
+  digits = 0  # Whole numbers for MW
 )
+
+print(summary_precise)
+#> SEC Analysis Summary
+#> ============================================================ 
+#> Samples: 3 
+#> 
+#> # A tibble: 3 × 5
+#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity
+#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>
+#> 1 PS-50K     48500  50200  52100             1
+#> 2 PS-100K    97200 101000 105000             1
+#> 3 PS-200K   195000 203000 211000             1
 ```
 
 ## Slice Tables: Point-by-Point Data
@@ -189,7 +187,36 @@ SEC analysis works on a point-by-point basis across the chromatogram.
 Each “slice” represents one data point with its elution time and
 corresponding signal values. Use
 [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)
-to extract this detailed data.
+to extract this detailed data from recipes that produce `measure_list`
+columns.
+
+### Creating Slice Data
+
+First, let’s process actual chromatogram data to demonstrate slice
+extraction:
+
+``` r
+# Load and process actual chromatogram data
+data(sec_triple_detect)
+
+# Process a single sample
+ps_sample <- sec_triple_detect |>
+  filter(sample_id == "PS-100K")
+
+rec <- recipe(
+  ri_signal + elution_time ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri")
+
+chromatogram_data <- prep(rec) |> bake(new_data = NULL)
+```
 
 ### Long Format (Default)
 
@@ -198,12 +225,12 @@ Long format is best for plotting with ggplot2:
 ``` r
 # Extract slice data in long format
 slices_long <- measure_sec_slice_table(
-  processed,
+  chromatogram_data,
   measures = "ri",
   sample_id = "sample_id"
 )
 
-# View structure
+# View structure - one row per data point
 head(slices_long, 10)
 #> # A tibble: 10 × 5
 #>    sample_id slice location measure   value
@@ -222,12 +249,12 @@ head(slices_long, 10)
 
 ``` r
 # Plot using the slice table
-ggplot(slices_long, aes(x = location, y = value, color = sample_id)) +
-  geom_line() +
+ggplot(slices_long, aes(x = location, y = value)) +
+  geom_line(color = "#2E86AB") +
   labs(
     x = "Elution Time (min)",
-    y = "RI Signal",
-    title = "Chromatogram Overlay from Slice Data"
+    y = "RI Signal (baseline corrected)",
+    title = "Chromatogram from Slice Data"
   ) +
   theme_minimal()
 ```
@@ -240,15 +267,24 @@ Wide format is better for spreadsheet export or correlating multiple
 measures:
 
 ``` r
-# If you had multiple measures (e.g., ri and mw), wide format would look like:
+# Wide format puts each measure in its own column
 slices_wide <- measure_sec_slice_table(
-  processed,
-  measures = c("ri"),
+  chromatogram_data,
+  measures = "ri",
   sample_id = "sample_id",
   pivot = TRUE
 )
 
 head(slices_wide)
+#> # A tibble: 6 × 4
+#>   sample_id slice location      ri
+#>   <chr>     <int>    <dbl>   <dbl>
+#> 1 PS-100K       1     5    0.00132
+#> 2 PS-100K       2     5.01 0.00189
+#> 3 PS-100K       3     5.02 0.00156
+#> 4 PS-100K       4     5.03 0.00123
+#> 5 PS-100K       5     5.04 0.00157
+#> 6 PS-100K       6     5.05 0.00116
 ```
 
 ### Exporting Slice Data to CSV
@@ -269,10 +305,10 @@ readr::write_csv(slices_long, "sec_slice_data.csv")
 provides side-by-side comparison with differences from a reference:
 
 ``` r
-# Compare the samples we processed earlier
+# Compare the three batches we created earlier
 comparison <- measure_sec_compare(
-  ps100k, ps500k, pmma_high,
-  samples = c("PS 100K", "PS 500K", "PMMA High"),
+  batch1, batch2, batch3,
+  samples = c("Batch 001", "Batch 002", "Batch 003"),
   metrics = "mw_averages",
   plot = FALSE
 )
@@ -281,15 +317,24 @@ print(comparison)
 #> SEC Multi-Sample Comparison
 #> ============================================================ 
 #> Samples: 3 
-#> Reference: PS 100K 
+#> Reference: Batch 001 
 #> 
 #> Summary:
-#> # A tibble: 3 × 1
-#>   sample   
-#>   <chr>    
-#> 1 PS 100K  
-#> 2 PS 500K  
-#> 3 PMMA High
+#> # A tibble: 3 × 5
+#>   sample    mw_mn mw_mw mw_mz mw_dispersity
+#>   <chr>     <dbl> <dbl> <dbl>         <dbl>
+#> 1 Batch 001 48200 50100 52000          1.04
+#> 2 Batch 002 49100 51200 53100          1.04
+#> 3 Batch 003 47800 49800 51900          1.04
+#> 
+#> Differences from reference:
+#> # A tibble: 3 × 9
+#>   sample    mw_mn_diff mw_mn_pct mw_mw_diff mw_mw_pct mw_mz_diff mw_mz_pct
+#>   <chr>          <dbl>     <dbl>      <dbl>     <dbl>      <dbl>     <dbl>
+#> 1 Batch 001          0       0            0       0            0       0  
+#> 2 Batch 002        900       1.9       1100       2.2       1100       2.1
+#> 3 Batch 003       -400      -0.8       -300      -0.6       -100      -0.2
+#> # ℹ 2 more variables: mw_dispersity_diff <dbl>, mw_dispersity_pct <dbl>
 ```
 
 ### Understanding the Comparison Output
@@ -563,6 +608,21 @@ fails:
     [`quarto::quarto_version()`](https://quarto-dev.github.io/quarto-r/reference/quarto_version.html)
 2.  For PDF output, ensure LaTeX is installed
 3.  Check data has required columns
+
+## See Also
+
+- [Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Basic SEC workflow and concepts
+- [Calibration
+  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Save and reuse calibrations
+- [System
+  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  QC metrics and column performance
+- [Comprehensive SEC
+  Analysis](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md) -
+  Complete reference with all functions
 
 ## Session Info
 
