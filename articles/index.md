@@ -17,6 +17,8 @@ Task-oriented guides for specific applications
   Analysis](https://jameshwade.github.io/measure-sec/articles/protein-sec.md):
 - [Copolymer Composition
   Analysis](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md):
+- [Calibration
+  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md):
 - [System Suitability and
   QC](https://jameshwade.github.io/measure-sec/articles/system-suitability.md):
 
