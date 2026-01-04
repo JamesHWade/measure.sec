@@ -245,7 +245,8 @@ rec_triple <- recipe(
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)
 
-# View results
+# View results - MALS provides absolute MW at each slice
+# For MW averages, you would integrate over the chromatogram
 result_triple |>
   select(sample_id, starts_with("mw_"))
 ```
