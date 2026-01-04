@@ -164,6 +164,7 @@ articles:
   contents:
   - getting-started
   - tutorial-conventional-calibration
+  - tutorial-triple-detection
 
 - title: How-to Guides
   desc: Task-oriented guides for specific applications
