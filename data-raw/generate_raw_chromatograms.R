@@ -88,11 +88,13 @@ add_noise <- function(signal, base_noise, hetero_factor = 0.02) {
 }
 
 # Apply detector delay (shift signal in time)
+# Positive delay_time means detector sees sample LATER (peak shifts to higher t)
+# Negative delay_time means detector sees sample EARLIER (peak shifts to lower t)
 apply_delay <- function(signal, time, delay_time) {
   if (abs(delay_time) < 1e-6) {
     return(signal)
   }
-  approx(time - delay_time, signal, xout = time, rule = 2)$y
+  approx(time + delay_time, signal, xout = time, rule = 2)$y
 }
 
 # =============================================================================
