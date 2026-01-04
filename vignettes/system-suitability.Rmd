@@ -250,7 +250,7 @@ strict_criteria <- list(
   tailing_max = 1.3,
   recovery_min = 97,
   recovery_max = 103,
-  retention_rsd_max = 0.5,
+  retention_rsd_max = 0.5,    # Tighter precision
   area_rsd_max = 1.0
 )
 
