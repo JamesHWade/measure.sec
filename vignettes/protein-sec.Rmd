@@ -99,33 +99,32 @@ Protein SEC typically uses UV detection at 280 nm (tryptophan/tyrosine absorbanc
 
 For simple HMWS/monomer/LMWS quantitation:
 
-```{r aggregates-basic, eval = FALSE}
-# Load or create protein SEC data
-protein_data <- sec_triple_detect |>
-  filter(sample_type == "sample") |>
-  head(1)
+```{r aggregates-basic}
+# Load protein SEC data - mAb samples with reference and stressed conditions
+data(sec_protein, package = "measure.sec")
 
-# Note: Aggregate analysis requires defined peak boundaries
-# The monomer_start and monomer_end values depend on your chromatographic conditions
+# Start with the reference sample
+protein_ref <- sec_protein |>
+  filter(sample_id == "mAb-Reference")
+
+# Aggregate quantitation using tallest peak detection
 rec_agg <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = protein_ref
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Convert UV signal to measure format
+  # Convert UV 280 nm signal to measure format
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
   # Baseline correction
   step_sec_baseline(measures = "uv") |>
-  # Aggregate quantitation
+  # Aggregate quantitation - auto-detect monomer peak
   step_sec_aggregates(
     measures = "uv",
-    monomer_start = 9.5,   # Monomer peak start
-    monomer_end = 11.0,    # Monomer peak end
-    method = "manual"
+    method = "tallest"
   )
 
 prepped_agg <- prep(rec_agg)
@@ -136,13 +135,17 @@ result_agg |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
 ```
 
-### Automatic Peak Detection
+### Manual Peak Boundaries
 
-Let the algorithm find the tallest peak as the monomer:
-```{r aggregates-auto, eval = FALSE}
+For precise control over integration limits:
+
+```{r aggregates-manual, eval = FALSE}
+# When you know the exact monomer elution window
 step_sec_aggregates(
   measures = "uv",
-  method = "tallest"  # Uses tallest peak as monomer reference
+  monomer_start = 14.5,  # Monomer peak start (min)
+  monomer_end = 17.5,    # Monomer peak end (min)
+  method = "manual"
 )
 ```
 
@@ -152,40 +155,31 @@ step_sec_aggregates(
 
 The `step_sec_protein()` function provides a streamlined workflow combining baseline correction, aggregate analysis, and optional oligomer detection:
 
-```{r protein-workflow, eval = FALSE}
-# Comprehensive protein SEC workflow
-# Note: step_sec_protein provides a streamlined workflow for protein analysis
+```{r protein-workflow}
+# Analyze all mAb samples with the protein step
 rec_protein <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = sec_protein
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
   step_sec_protein(
+    measures = "uv",
     type = "native",
     monomer_mw = 150000,        # mAb ~150 kDa
-    extinction_coef = 1.4,      # E1% at 280 nm
-    include_oligomer = TRUE,
     baseline_method = "linear"
   )
 
 prepped_protein <- prep(rec_protein)
 result_protein <- bake(prepped_protein, new_data = NULL)
 
-# View comprehensive results
+# View results for all samples
 result_protein |>
-  select(
-    sample_id,
-    protein_hmws_pct,
-    protein_monomer_pct,
-    protein_lmws_pct,
-    protein_dimer_pct,
-    protein_species_count
-  )
+  select(sample_id, starts_with("protein_"))
 ```
 
 ### Output Columns
@@ -254,12 +248,12 @@ For more control over oligomer detection:
 ```{r oligomer, eval = FALSE}
 # Detailed oligomer analysis with explicit control
 rec_oligo <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = sec_protein
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
@@ -268,7 +262,7 @@ rec_oligo <- recipe(
     measures = "uv",
     monomer_mw = 150000,
     mw_tolerance = 0.15,     # 15% MW tolerance for species assignment
-    min_peak_area = 0.001    # Minimum 0.1% to report
+    min_area_pct = 0.1       # Minimum 0.1% to report
   )
 ```
 
@@ -332,52 +326,54 @@ The oligomer step identifies species based on expected MW:
 2. **Same integration limits** for all samples in a study
 3. **Report detection limit** for minor species
 
-## Example: Stability Study Analysis
+## Example: Comparing Stressed Samples
 
-```{r stability-example, eval = FALSE}
-# Stability data structure example
-# In practice, chrom1-4 and time would be your actual chromatogram data vectors
-# For example:
-#   time <- seq(5, 20, by = 0.05)
-#   chrom1 <- your_uv_signal_at_T0
-#   chrom2 <- your_uv_signal_at_T1M
-#   etc.
+The `sec_protein` dataset includes samples under various stress conditions, simulating a stability study:
 
-stability_data <- tibble(
-  sample_id = c("T0", "T1M", "T3M", "T6M"),
-  timepoint = c(0, 1, 3, 6),
-  uv_signal = list(chrom1, chrom2, chrom3, chrom4),  # Your chromatogram vectors
-  elution_time = list(time, time, time, time)        # Shared time axis
-)
+```{r stability-comparison}
+# Analyze all samples including stressed conditions
+result_protein |>
+  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
+  arrange(desc(protein_hmws_pct))
+```
 
-# Analyze all timepoints
-rec <- recipe(~., data = stability_data) |>
-  step_measure_input_long(
-    uv_signal,
-    location = vars(elution_time),
-    col_name = "uv"
+```{r stability-plot, fig.width=7, fig.height=4}
+# Compare aggregate content across conditions
+library(tidyr)
+
+plot_data <- result_protein |>
+  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
+  pivot_longer(
+    cols = starts_with("protein_"),
+    names_to = "species",
+    values_to = "percent"
   ) |>
-  step_sec_protein(
-    monomer_mw = 150000,
-    include_oligomer = TRUE
+  mutate(
+    species = case_when(
+      species == "protein_hmws_pct" ~ "HMWS",
+      species == "protein_monomer_pct" ~ "Monomer",
+      species == "protein_lmws_pct" ~ "LMWS"
+    ),
+    species = factor(species, levels = c("HMWS", "Monomer", "LMWS"))
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
-
-# Plot stability trend
-ggplot(result, aes(timepoint, protein_monomer_pct)) +
-  geom_line(linewidth = 1, color = "#2E86AB") +
-  geom_point(size = 3, color = "#2E86AB") +
-  geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
-  annotate("text", x = 5, y = 94.5, label = "Specification: > 95%", color = "red") +
+# Focus on non-monomer species for clarity
+plot_data |>
+  filter(species != "Monomer") |>
+  ggplot(aes(x = sample_id, y = percent, fill = species)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 5, linetype = "dashed", color = "red") +
+  annotate("text", x = 1, y = 5.5, label = "Typical spec: < 5%", color = "red", hjust = 0) +
+  scale_fill_manual(values = c("HMWS" = "#E8751A", "LMWS" = "#2E86AB")) +
   labs(
-    x = "Time (months)",
-    y = "% Monomer",
-    title = "Stability Profile: Monomer Content"
+    x = NULL,
+    y = "% of Total",
+    fill = "Species",
+    title = "Aggregate and Fragment Content by Sample",
+    subtitle = "Comparing reference vs stressed mAb samples"
   ) +
-  ylim(90, 100) +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ## See Also
