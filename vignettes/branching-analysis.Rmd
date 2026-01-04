@@ -254,7 +254,7 @@ print(comparison)
 
 ## Conformation Plots
 
-Visualize structure-MW relationships with Rg-MW plots. The slope reveals polymer conformation:
+Visualize structure-MW relationships with `plot_sec_conformation()`. The slope reveals polymer conformation:
 
 ```{r conformation-plot, fig.height=5}
 # Prepare data for conformation plot
@@ -262,24 +262,21 @@ plot_data <- sec_branched |>
   filter(!is.na(rg), rg > 0, !is.na(mw), mw > 0)
 
 # Create Rg-MW conformation plot
-ggplot(plot_data, aes(x = mw, y = rg, color = topology)) +
-  geom_point(alpha = 0.3, size = 1) +
-  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
-  scale_y_log10() +
-  scale_color_manual(
-    values = c("linear" = "#2E86AB", "branched" = "#A23B72", "star" = "#F18F01")
-  ) +
-  labs(
-    x = expression(log[10](M[w])),
-    y = expression(log[10](R[g]~"(nm)")),
-    color = "Topology",
-    title = "Conformation Plot: Rg vs Molecular Weight",
-    subtitle = "Slope ≈ 0.5-0.6 (linear), < 0.5 (branched/compact)"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
+plot_sec_conformation(
+  plot_data,
+  type = "rg_mw",
+  mw_col = "mw",
+  y_col = "rg",
+  sample_id = "topology",
+  show_fit = TRUE,
+  show_exponent = TRUE
+)
 ```
+
+The slope (ν) indicates conformation:
+- **ν ≈ 0.5-0.6**: Linear chains in good solvent
+- **ν < 0.5**: Branched or compact structures
+- **ν > 0.6**: Extended chains
 
 ## Complete Workflow Example
 
@@ -331,6 +328,7 @@ cat("(α < 0.5 suggests branching)\n")
 | Mark-Houwink | `measure_mh_parameters()` | K, α (α < 0.5 = branched) |
 | Rg scaling | `measure_rg_mw_scaling()` | ν exponent |
 | Model comparison | `measure_branching_model_comparison()` | Best-fit architecture |
+| Visualization | `plot_sec_conformation()` | Conformation plots |
 
 ## See Also
 
