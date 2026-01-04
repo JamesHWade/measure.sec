@@ -34,6 +34,8 @@ navbar:
         href: articles/calibration-management.html
       - text: System Suitability
         href: articles/system-suitability.html
+      - text: Polymer Branching
+        href: articles/branching-analysis.html
       - text: Exporting Results
         href: articles/exporting-results.html
       - text: "---"
@@ -165,6 +167,7 @@ articles:
   - copolymer-analysis
   - calibration-management
   - system-suitability
+  - branching-analysis
   - exporting-results
 
 - title: Reference

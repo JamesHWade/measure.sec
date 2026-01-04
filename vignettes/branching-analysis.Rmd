@@ -1,0 +1,337 @@
+---
+title: "Polymer Branching Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Polymer Branching Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+This guide shows how to analyze polymer branching using multi-detector SEC data. You'll learn to:
+
+1. Calculate branching indices (g and g')
+2. Estimate branching frequency
+3. Analyze Mark-Houwink parameters
+4. Compare branching architectures
+5. Visualize conformation data
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(dplyr)
+library(ggplot2)
+```
+
+## When You Need Branching Analysis
+
+Branching affects polymer properties like:
+
+- **Melt viscosity**: Branched polymers often have lower viscosity than linear analogs
+- **Mechanical strength**: Long-chain branching can improve toughness
+- **Solution behavior**: Branched chains are more compact than linear ones
+
+SEC with MALS and viscometry detectors can quantify branching by comparing branched samples to linear references of the same molecular weight.
+
+## Example Data
+
+The package includes `sec_branched`, a dataset with linear, branched, and star polymers:
+
+```{r data}
+data(sec_branched)
+
+# Sample overview
+sec_branched |>
+  distinct(sample_id, topology) |>
+  print()
+
+# Preview the data structure
+sec_branched |>
+  group_by(sample_id) |>
+  summarize(
+    mw_range = paste(round(min(mw)), "-", round(max(mw))),
+    mean_g = round(mean(branching_index, na.rm = TRUE), 3),
+    .groups = "drop"
+  )
+```
+
+## Calculating Branching Index (g)
+
+The branching index **g** compares the radius of gyration of a branched polymer to a linear reference at the same molecular weight:
+
+$$g = \frac{R_g^2(\text{branched})}{R_g^2(\text{linear})}$$
+
+Values of g < 1 indicate branching (branched chains are more compact).
+
+### Using Linear Reference Data
+
+```{r branching-index}
+# Extract linear and branched samples
+linear_ref <- sec_branched |>
+  filter(topology == "linear") |>
+  select(mw, rg)
+
+branched_sample <- sec_branched |>
+  filter(sample_id == "Branch-100K")
+
+# Calculate g ratio using linear reference
+g_result <- measure_branching_index(
+
+  mw = branched_sample$mw,
+  rg = branched_sample$rg,
+  reference = linear_ref,
+  method = "g"
+)
+
+print(g_result)
+```
+
+### Interpreting g Values
+
+| g Value | Interpretation |
+|---------|----------------|
+| 1.0 | Linear polymer |
+| 0.7-0.9 | Lightly branched |
+| 0.4-0.7 | Moderately branched |
+| < 0.4 | Highly branched (star, hyperbranched) |
+
+```{r g-visualization, fig.height=4}
+# Visualize g across MW distribution
+branched_with_g <- branched_sample |>
+  mutate(g = g_result$g)
+
+ggplot(branched_with_g, aes(x = mw, y = g)) +
+
+geom_point(alpha = 0.5, color = "#2E86AB") +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "gray50") +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(
+    x = "Molecular Weight (Da)",
+    y = "Branching Index (g)",
+    title = "Branching Index vs Molecular Weight",
+    subtitle = "g < 1 indicates branching"
+  ) +
+  theme_minimal()
+```
+
+## Estimating Branching Frequency
+
+The branching frequency (branches per molecule) can be estimated from g using Zimm-Stockmayer theory:
+
+```{r branching-frequency}
+# Calculate branching frequency assuming random branching
+freq <- measure_branching_frequency(
+  g = g_result$g,
+  architecture = "random",
+  mw = branched_sample$mw
+)
+
+print(freq)
+```
+
+### Different Architectures
+
+The relationship between g and branching frequency depends on polymer architecture:
+
+```{r architectures}
+# Compare architectures for the same g value
+g_test <- 0.6
+
+architectures <- c("random", "star_3", "star_4", "comb")
+results <- sapply(architectures, function(arch) {
+  tryCatch(
+    measure_branching_frequency(g = g_test, architecture = arch)$branches_per_molecule,
+    error = function(e) NA
+  )
+})
+
+data.frame(
+  Architecture = architectures,
+  Branches = round(results, 2)
+)
+```
+
+## Mark-Houwink Analysis
+
+Mark-Houwink parameters (K and α) describe the relationship between intrinsic viscosity and molecular weight:
+
+$$[\eta] = K \cdot M^\alpha$$
+
+The exponent α provides conformational information:
+
+| α Value | Conformation |
+|---------|--------------|
+| 0.5 | Theta solvent (random coil) |
+| 0.6-0.8 | Good solvent (expanded coil) |
+| > 0.8 | Rod-like |
+| < 0.5 | Branched/compact |
+
+```{r mark-houwink}
+# Extract MW and intrinsic viscosity data
+linear_data <- sec_branched |>
+  filter(topology == "linear", !is.na(intrinsic_visc), intrinsic_visc > 0)
+
+# Calculate Mark-Houwink parameters
+mh <- measure_mh_parameters(
+  mw = linear_data$mw,
+  intrinsic_visc = linear_data$intrinsic_visc
+)
+
+print(mh)
+```
+
+### Comparing Linear vs Branched
+
+```{r mh-comparison, fig.height=4}
+# Compare Mark-Houwink plots
+comparison_data <- sec_branched |>
+  filter(!is.na(intrinsic_visc), intrinsic_visc > 0) |>
+  filter(sample_id %in% c("Linear-100K", "Branch-100K"))
+
+ggplot(comparison_data, aes(x = mw, y = intrinsic_visc, color = topology)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_y_log10() +
+  scale_color_manual(values = c("linear" = "#2E86AB", "branched" = "#A23B72")) +
+  labs(
+    x = "Molecular Weight (Da)",
+    y = "Intrinsic Viscosity (dL/g)",
+    color = "Topology",
+    title = "Mark-Houwink Plot: Linear vs Branched",
+    subtitle = "Branched polymers show lower [η] at same MW"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Rg-MW Scaling Analysis
+
+The relationship between radius of gyration and molecular weight follows:
+
+$$R_g = K_{Rg} \cdot M^\nu$$
+
+The exponent ν provides conformational information similar to α.
+
+```{r rg-scaling}
+# Calculate Rg-MW scaling parameters
+rg_scaling <- measure_rg_mw_scaling(
+  mw = linear_data$mw,
+  rg = linear_data$rg
+)
+
+print(rg_scaling)
+```
+
+## Comparing Branching Models
+
+When you have experimental g data, you can compare it against theoretical predictions to identify the most likely branching architecture:
+
+```{r model-comparison}
+# Compare experimental data to branching models
+branched_data <- sec_branched |>
+  filter(topology == "branched", !is.na(branching_index))
+
+comparison <- measure_branching_model_comparison(
+  g = branched_data$branching_index,
+  mw = branched_data$mw
+)
+
+print(comparison)
+```
+
+## Conformation Plots
+
+Visualize structure-MW relationships using conformation plots:
+```{r conformation-plot, fig.height=5}
+# Prepare data for conformation plot
+plot_data <- sec_branched |>
+  filter(!is.na(rg), rg > 0, !is.na(mw), mw > 0)
+
+# Create Rg-MW conformation plot
+plot_sec_conformation(
+  plot_data,
+  type = "rg_mw",
+  mw_col = "mw",
+  y_col = "rg",
+  sample_id = "topology",
+  show_fit = TRUE,
+  show_exponent = TRUE
+)
+```
+
+## Complete Workflow Example
+
+Here's a complete workflow for analyzing an unknown branched sample:
+
+```{r workflow}
+# Step 1: Load and prepare data
+unknown_sample <- sec_branched |>
+  filter(sample_id == "Branch-200K")
+
+linear_reference <- sec_branched |>
+  filter(topology == "linear")
+
+# Step 2: Calculate branching index
+g_analysis <- measure_branching_index(
+  mw = unknown_sample$mw,
+  rg = unknown_sample$rg,
+  reference = linear_reference |> select(mw, rg),
+  method = "g"
+)
+
+cat("Mean branching index (g):", round(mean(g_analysis$g, na.rm = TRUE), 3), "\n")
+
+# Step 3: Estimate branching frequency
+freq_analysis <- measure_branching_frequency(
+  g = g_analysis$g,
+  architecture = "random",
+  mw = unknown_sample$mw
+)
+
+cat("Mean branches per molecule:", round(mean(freq_analysis$branches_per_molecule, na.rm = TRUE), 1), "\n")
+
+# Step 4: Calculate Mark-Houwink parameters
+mh_branched <- measure_mh_parameters(
+  mw = unknown_sample$mw,
+  intrinsic_visc = unknown_sample$intrinsic_visc
+)
+
+cat("Mark-Houwink exponent (α):", round(mh_branched$alpha, 3), "\n")
+cat("(α < 0.5 suggests branching)\n")
+```
+
+## Summary
+
+| Analysis | Function | Key Output |
+|----------|----------|------------|
+| Branching index | `measure_branching_index()` | g ratio (< 1 = branched) |
+| Branching frequency | `measure_branching_frequency()` | Branches per molecule |
+| Mark-Houwink | `measure_mh_parameters()` | K, α (α < 0.5 = branched) |
+| Rg scaling | `measure_rg_mw_scaling()` | ν exponent |
+| Model comparison | `measure_branching_model_comparison()` | Best-fit architecture |
+| Visualization | `plot_sec_conformation()` | Conformation plots |
+
+## See Also
+
+- [Getting Started](getting-started.html) - Basic SEC workflow
+- [Multi-Detector SEC](triple-detection.html) - MALS and viscometry setup
+- [SEC Analysis Reference](sec-analysis.html) - Complete function reference
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
