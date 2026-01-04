@@ -1032,12 +1032,22 @@ plot_sec_conformation <- function(
     # Data has regular columns - use directly
     slice_data <- data
     # Handle sample_id column naming
-    if (!is.null(sample_id) && sample_id %in% names(slice_data)) {
-      if (sample_id != "sample_id") {
-        # Rename the specified column to sample_id, dropping existing sample_id if present
-        slice_data <- slice_data |>
-          dplyr::select(-dplyr::any_of("sample_id")) |>
-          dplyr::rename(sample_id = !!rlang::sym(sample_id))
+    if (!is.null(sample_id)) {
+      if (sample_id %in% names(slice_data)) {
+        if (sample_id != "sample_id") {
+          # Rename the specified column to sample_id, dropping existing if present
+          slice_data <- slice_data |>
+            dplyr::select(-dplyr::any_of("sample_id")) |>
+            dplyr::rename(sample_id = !!rlang::sym(sample_id))
+        }
+      } else {
+        cli::cli_warn(
+          c(
+            "Sample ID column {.val {sample_id}} not found.",
+            "i" = "Using default sample identifier."
+          )
+        )
+        slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
       }
     } else if (!"sample_id" %in% names(slice_data)) {
       # No sample_id column exists - create one
