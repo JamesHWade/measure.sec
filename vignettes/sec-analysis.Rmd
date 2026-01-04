@@ -666,6 +666,17 @@ result_complete |>
 | `step_sec_composition()` | Composition | Copolymer composition |
 | `step_sec_aggregates()` | Protein | HMWS/monomer/LMWS quantitation |
 
+## See Also
+
+For focused how-to guides on specific workflows:
+
+- [Getting Started](getting-started.html) - Introduction and basic workflow
+- [Multi-Detector SEC](triple-detection.html) - MALS, viscometer, and absolute MW
+- [Protein SEC Analysis](protein-sec.html) - Biopharm aggregate/fragment analysis
+- [Copolymer Composition](copolymer-analysis.html) - UV/RI ratio methods
+- [Calibration Management](calibration-management.html) - Save/load calibrations
+- [System Suitability](system-suitability.html) - QC metrics and SST
+
 ## Session Info
 
 ```{r session-info}

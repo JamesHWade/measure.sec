@@ -26,8 +26,12 @@ navbar:
         href: articles/protein-sec.html
       - text: Copolymer Composition
         href: articles/copolymer-analysis.html
+      - text: Calibration Management
+        href: articles/calibration-management.html
       - text: System Suitability
         href: articles/system-suitability.html
+      - text: Exporting Results
+        href: articles/exporting-results.html
       - text: "---"
       - text: Reference
       - text: Comprehensive SEC Analysis
@@ -153,7 +157,9 @@ articles:
   - triple-detection
   - protein-sec
   - copolymer-analysis
+  - calibration-management
   - system-suitability
+  - exporting-results
 
 - title: Reference
   desc: Technical reference documentation

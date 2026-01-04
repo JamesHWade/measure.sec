@@ -19,11 +19,10 @@ knitr::opts_chunk$set(
 ## Overview
 
 System Suitability Testing (SST) ensures your SEC system is performing adequately before analyzing samples. This guide shows you how to:
-
-1. Calculate key SST parameters (resolution, plate count, asymmetry)
-2. Run comprehensive system suitability tests
-3. Track column performance over time
-4. Interpret results and troubleshoot issues
+1. Extract peak parameters from chromatogram data
+2. Calculate key SST metrics (resolution, plate count, asymmetry)
+3. Run comprehensive system suitability tests
+4. Track column performance over time
 
 ## Quick Reference: Typical Acceptance Criteria
 
@@ -45,155 +44,208 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## How to Calculate Individual QC Metrics
+## Starting from Chromatogram Data
 
-### Resolution Between Peaks
+In real-world SST, you start with a chromatogram from your SEC system. Let's use the `sec_protein` dataset which contains UV detection data from a protein SEC analysis with multiple species.
 
-Resolution measures separation between adjacent peaks. Use this to verify critical pairs are adequately separated.
+### Visualize the Chromatogram
 
-```{r resolution}
-# Calculate resolution between dimer and monomer peaks
+```{r chromatogram-plot, fig.height=4}
+# Load protein SEC data
+data(sec_protein)
+
+# Look at the reference standard
+reference <- sec_protein |>
+  filter(sample_id == "mAb-Reference")
+
+# Plot the chromatogram
+ggplot(reference, aes(x = elution_time, y = uv_280_signal)) +
+  geom_line(color = "#2E86AB", linewidth = 0.8) +
+  labs(
+    x = "Elution Time (min)",
+    y = "UV 280 nm Signal (AU)",
+    title = "Protein SEC Chromatogram",
+    subtitle = "mAb Reference Standard"
+  ) +
+  theme_minimal()
+```
+
+### Understanding Peak Parameters
+
+Your chromatography software typically reports a **peak table** with these key parameters:
+
+| Parameter | What It Measures | How It's Determined |
+|-----------|------------------|---------------------|
+| **Retention time** | When peak apex elutes | Time at maximum signal |
+| **Peak width** | How broad the peak is | Width at baseline or half-height |
+| **Peak area** | Amount of material | Integrated signal |
+| **Leading width** | Front half-width | Distance from front edge to apex |
+| **Tailing width** | Back half-width | Distance from apex to back edge |
+
+For this example, let's define peak parameters based on the chromatogram above. In practice, these come from your integration software:
+
+```{r define-peaks}
+# Peak parameters from integration (typical protein SEC)
+# These represent what your software would report
+peaks <- data.frame(
+  name = c("HMW", "Dimer", "Monomer", "Fragment"),
+  retention = c(6.8, 8.2, 10.5, 13.1),   # minutes
+  width = c(0.35, 0.28, 0.42, 0.38),      # width at half height (for SST)
+  width_base = c(0.70, 0.56, 0.84, 0.76), # width at baseline
+  area = c(0.8, 1.2, 96.5, 1.5),          # % of total
+  height = c(0.018, 0.025, 0.350, 0.022)  # AU
+)
+
+peaks
+```
+
+## How QC Metrics Are Calculated
+
+### Resolution: Measuring Peak Separation
+
+Resolution quantifies how well two adjacent peaks are separated. It uses **retention times** and **peak widths** from your peak table.
+
+```{r resolution-explained, fig.height=3.5}
+# Extract parameters for dimer and monomer peaks
+dimer <- peaks |> filter(name == "Dimer")
+monomer <- peaks |> filter(name == "Monomer")
+
+# Show the calculation
+cat("Dimer retention:", dimer$retention, "min\n")
+cat("Monomer retention:", monomer$retention, "min\n")
+cat("Dimer baseline width:", dimer$width_base, "min\n")
+cat("Monomer baseline width:", monomer$width_base, "min\n")
+cat("\n")
+
+# USP Resolution formula: Rs = 2(t2 - t1) / (w1 + w2)
 Rs <- measure_sec_resolution(
-  retention_1 = 8.2,   # Dimer (elutes first in SEC)
-  retention_2 = 9.5,   # Monomer (elutes second)
-  width_1 = 0.4,       # Peak width at baseline
-  width_2 = 0.5,
-  method = "usp"       # USP formula (default)
-)
-
-cat("Resolution:", round(Rs, 2), "\n")
-```
-
-**Pass/Fail Guidance:**
-
-| Rs Value | Interpretation | Action |
-|----------|----------------|--------|
-| < 1.0 | Significant overlap | Fail - optimize separation |
-| 1.0 - 1.4 | Partial overlap | Marginal - investigate |
-| >= 1.5 | Baseline separation | Pass |
-| >= 2.0 | Complete separation | Excellent |
-
-### Plate Count (Column Efficiency)
-
-Plate count measures column efficiency. Calculate this for your main peak.
-
-```{r plate-count}
-# Calculate theoretical plates for monomer peak
-N <- measure_sec_plate_count(
-  retention = 9.5,
-  width = 0.25,
-  width_type = "half_height"  # Most common measurement
-)
-
-cat("Theoretical plates:", round(N), "\n")
-
-# With dead time correction for effective plates
-N_eff <- measure_sec_plate_count(
-  retention = 9.5,
-  width = 0.25,
-  dead_time = 3.0
-)
-
-cat("Effective plates:", round(N_eff), "\n")
-```
-
-**Typical SEC Column Performance:**
-
-| Column Type | Plates/meter | Notes |
-|-------------|--------------|-------|
-| Standard SEC | 10,000 - 30,000 | Typical analytical |
-| High-performance | 30,000 - 50,000 | Modern HPLC SEC |
-| UHPLC SEC | 50,000+ | Sub-2um particles |
-
-### Peak Asymmetry
-
-Asymmetry indicates deviation from ideal Gaussian peak shape.
-
-```{r asymmetry}
-# Calculate USP tailing factor (measured at 5% height)
-Tf <- measure_sec_asymmetry(
-  leading = 0.12,   # Leading half-width
-  tailing = 0.15,   # Tailing half-width
+  retention_1 = dimer$retention,
+  retention_2 = monomer$retention,
+  width_1 = dimer$width_base,
+  width_2 = monomer$width_base,
   method = "usp"
 )
 
-cat("Tailing factor:", round(Tf, 2), "\n")
-
-# EP asymmetry factor (measured at 10% height)
-As <- measure_sec_asymmetry(
-  leading = 0.10,
-  tailing = 0.12,
-  method = "ep"
-)
-
-cat("Asymmetry factor:", round(As, 2), "\n")
+cat("Resolution (USP) = 2 ×", monomer$retention - dimer$retention,
+    "/ (", dimer$width_base, "+", monomer$width_base, ")\n")
+cat("                 =", round(Rs, 2), "\n")
 ```
 
-**Pass/Fail Guidance:**
+**Interpretation:**
+- Rs < 1.0: Peaks overlap significantly
+- Rs = 1.5: Baseline separation (~99.7% resolved)
+- Rs > 2.0: Complete separation with baseline gap
 
-| Value | Shape | Action |
-|-------|-------|--------|
-| 0.8 - 1.0 | Slight fronting | Pass |
-| 1.0 | Symmetric (ideal) | Pass |
-| 1.0 - 1.2 | Slight tailing | Pass |
-| 1.2 - 1.5 | Moderate tailing | Investigate |
-| > 1.5 | Significant tailing | Fail - troubleshoot |
+### Plate Count: Measuring Column Efficiency
 
-### Mass Recovery
+Plate count measures how sharp your peaks are. Sharper peaks = more plates = better efficiency. It uses **retention time** and **peak width**.
 
-Recovery verifies all injected sample is detected.
+```{r plates-explained}
+# For the monomer peak (main peak)
+cat("Monomer retention:", monomer$retention, "min\n")
+cat("Monomer half-height width:", monomer$width, "min\n")
+cat("\n")
 
-```{r recovery}
-# Calculate percent recovery
-recovery <- measure_sec_recovery(
-  detected_mass = 0.195,   # From integration
-  injected_mass = 0.200    # Known amount injected
+# USP formula for half-height: N = 5.54 × (tR / w0.5)²
+N <- measure_sec_plate_count(
+  retention = monomer$retention,
+  width = monomer$width,
+  width_type = "half_height"
 )
 
+cat("Plate count = 5.54 × (", monomer$retention, "/", monomer$width, ")²\n")
+cat("            = 5.54 ×", round((monomer$retention / monomer$width)^2, 1), "\n")
+cat("            =", round(N), "plates\n")
+```
+
+**What affects plate count:**
+- Column packing quality
+- Flow rate (too fast = lower N)
+- Sample overloading
+- Extra-column dispersion (tubing, fittings)
+
+### Peak Asymmetry: Checking Peak Shape
+
+Asymmetry measures whether a peak is symmetric (ideal) or tailing/fronting. It compares the **leading half-width** to the **tailing half-width** at a specific height.
+
+```{r asymmetry-explained, fig.height=3}
+# For asymmetry, we need leading and tailing half-widths
+# (measured at 5% height for USP, 10% height for EP)
+# Let's assume slight tailing for the monomer:
+leading_width <- 0.20   # front half-width at 5% height
+tailing_width <- 0.24   # back half-width at 5% height
+
+cat("Leading half-width (at 5%):", leading_width, "min\n")
+cat("Tailing half-width (at 5%):", tailing_width, "min\n")
+cat("\n")
+
+# USP Tailing Factor: Tf = (a + b) / 2a
+Tf <- measure_sec_asymmetry(
+  leading = leading_width,
+  tailing = tailing_width,
+  method = "usp"
+)
+
+cat("Tailing factor = (", leading_width, "+", tailing_width, ") / (2 ×", leading_width, ")\n")
+cat("               =", round(Tf, 2), "\n")
+cat("\nInterpretation: Tf =", round(Tf, 2))
+if (Tf >= 0.8 && Tf <= 1.5) {
+  cat(" → Pass (acceptable range 0.8-1.5)\n")
+} else {
+  cat(" → Investigate\n")
+}
+```
+
+### Mass Recovery: Verifying Complete Detection
+
+Recovery checks that all injected sample was detected. This requires knowing the **injected mass** and comparing to **detected mass** from integration.
+
+```{r recovery-explained}
+# Typical protein SEC injection
+injected_mass <- 0.050   # mg (50 µg)
+detected_mass <- 0.048   # mg from integration area and response factor
+
+recovery <- measure_sec_recovery(
+  detected_mass = detected_mass,
+  injected_mass = injected_mass
+)
+
+cat("Injected mass:", injected_mass * 1000, "µg\n")
+cat("Detected mass:", detected_mass * 1000, "µg\n")
 cat("Recovery:", round(recovery, 1), "%\n")
 ```
 
-**Pass/Fail Guidance:**
+**Low recovery causes:**
+- Sample adsorption to column/tubing
+- Aggregation during analysis
+- Detector calibration drift
+- Baseline integration errors
 
-| Recovery | Status | Common Causes if Low |
-|----------|--------|----------------------|
-| 95 - 105% | Pass | - |
-| 90 - 95% | Marginal | Slight adsorption, baseline errors |
-| < 90% | Fail | Column adsorption, sample precipitation |
-| > 105% | Investigate | Calibration drift, interference |
+## Running Comprehensive SST
 
-## How to Run Comprehensive SST
+Once you understand how each metric is calculated, you can run a complete SST evaluation.
 
 ### Basic System Suitability Test
 
 ```{r sst-basic}
-# Define peak data from your integration software
-peaks <- data.frame(
-  name = c("aggregate", "dimer", "monomer", "fragment"),
-  retention = c(7.2, 8.5, 9.8, 11.5),
-  width = c(0.30, 0.28, 0.32, 0.38),
-  area = c(2.1, 5.3, 89.2, 3.4)
-)
-
-# Run system suitability test
+# Use the peak table we defined earlier
 sst <- measure_sec_suitability(
   peaks = peaks,
-  reference_peaks = c("dimer", "monomer"),  # Critical pair for resolution
-  column_length = 30  # cm, for plates/meter calculation
+  reference_peaks = c("Dimer", "Monomer"),  # Critical pair for resolution
+  column_length = 30  # cm
 )
 
 print(sst)
 ```
 
-### SST with Custom Criteria
+### SST with Custom (Stricter) Criteria
 
-For validated methods, you may need stricter criteria:
+For validated biopharmaceutical methods:
 
 ```{r sst-strict}
-# Define stricter criteria for validated method
 strict_criteria <- list(
-  resolution_min = 2.0,       # Higher resolution requirement
-  plate_count_min = 10000,    # Higher efficiency requirement
+  resolution_min = 2.0,
+  plate_count_min = 8000,
   tailing_min = 0.9,
   tailing_max = 1.3,
   recovery_min = 97,
@@ -204,7 +256,7 @@ strict_criteria <- list(
 
 sst_strict <- measure_sec_suitability(
   peaks = peaks,
-  reference_peaks = c("dimer", "monomer"),
+  reference_peaks = c("Dimer", "Monomer"),
   criteria = strict_criteria
 )
 
@@ -213,48 +265,48 @@ print(sst_strict)
 
 ### SST with Replicate Injections
 
-For precision assessment, include replicate data:
+For precision assessment, your peak table includes multiple injections:
 
 ```{r sst-replicates}
-# Replicate injection data (6 injections)
+# 6 replicate injections of the same sample
 peaks_reps <- data.frame(
-  name = rep(c("dimer", "monomer"), each = 6),
+  name = rep(c("Dimer", "Monomer"), each = 6),
   replicate = rep(1:6, 2),
   retention = c(
-    8.52, 8.51, 8.53, 8.50, 8.52, 8.51,  # Dimer
-    9.80, 9.81, 9.79, 9.82, 9.80, 9.81   # Monomer
+    8.22, 8.21, 8.23, 8.20, 8.22, 8.21,  # Dimer
+    10.50, 10.51, 10.49, 10.52, 10.50, 10.51   # Monomer
   ),
   width = c(
     0.28, 0.27, 0.28, 0.28, 0.29, 0.28,
-    0.32, 0.31, 0.32, 0.31, 0.32, 0.32
+    0.42, 0.41, 0.42, 0.41, 0.42, 0.42
   ),
   area = c(
-    5.2, 5.4, 5.3, 5.1, 5.3, 5.2,
-    89.5, 88.9, 89.2, 89.8, 89.1, 89.4
+    1.2, 1.3, 1.2, 1.1, 1.2, 1.2,
+    96.5, 96.2, 96.7, 96.4, 96.5, 96.6
   )
 )
 
 sst_reps <- measure_sec_suitability(
   peaks = peaks_reps,
-  reference_peaks = c("dimer", "monomer")
+  reference_peaks = c("Dimer", "Monomer")
 )
 
 summary(sst_reps)
 ```
 
-## How to Track Column Performance Over Time
+## Tracking Column Performance Over Time
 
-Monitoring column performance helps you know when to replace a column before it affects your results.
+Use SST data from daily runs to monitor column aging.
 
-### Simulating Column Aging Data
+### Column Performance Log
 
 ```{r tracking-data}
-# Simulate column performance over 22 weeks
+# SST results collected over several months
+set.seed(42)
 dates <- seq(as.Date("2024-01-01"), as.Date("2024-06-01"), by = "week")
 n_weeks <- length(dates)
 
-# Create realistic declining performance
-set.seed(42)
+# Simulated gradual column degradation
 column_log <- tibble(
   date = dates,
   plates = seq(25000, 19500, length.out = n_weeks) + rnorm(n_weeks, 0, 300),
@@ -263,7 +315,7 @@ column_log <- tibble(
 )
 ```
 
-### Visualizing Column Trends
+### Visualizing Trends
 
 ```{r tracking-plot, fig.width=8, fig.height=5}
 ggplot(column_log, aes(date)) +
@@ -274,9 +326,9 @@ ggplot(column_log, aes(date)) +
   geom_hline(yintercept = 1.5, linetype = "dashed", color = "#A23B72", alpha = 0.7) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "#2E86AB", alpha = 0.7) +
   annotate("text", x = as.Date("2024-01-15"), y = 1.55,
-           label = "Rs limit", color = "#A23B72", size = 3) +
+           label = "Rs limit (1.5)", color = "#A23B72", size = 3) +
   annotate("text", x = as.Date("2024-01-15"), y = 1.05,
-           label = "N limit (x10^4)", color = "#2E86AB", size = 3) +
+           label = "N limit (10k)", color = "#2E86AB", size = 3) +
   scale_y_continuous(
     name = "Resolution",
     sec.axis = sec_axis(~ . * 10000, name = "Theoretical Plates")
@@ -296,11 +348,9 @@ ggplot(column_log, aes(date)) +
 ### Predicting Column Replacement
 
 ```{r lifetime}
-# Define your limits
 min_plates <- 10000
 min_resolution <- 1.5
 
-# Check when limits would be crossed
 column_log <- column_log |>
   mutate(
     plates_ok = plates > min_plates,
@@ -308,7 +358,6 @@ column_log <- column_log |>
     overall_ok = plates_ok & resolution_ok
   )
 
-# Find first failure point
 first_failure <- which(!column_log$overall_ok)[1]
 
 if (!is.na(first_failure)) {
@@ -317,7 +366,7 @@ if (!is.na(first_failure)) {
   cat("Resolution at failure:", round(column_log$resolution[first_failure], 2), "\n")
   cat("Plates at failure:", round(column_log$plates[first_failure]), "\n")
 } else {
-  cat("Column still within specifications through end of monitoring period\n")
+  cat("Column still within specifications\n")
 }
 ```
 
@@ -325,66 +374,67 @@ if (!is.na(first_failure)) {
 
 ### Low Resolution
 
-| Possible Cause | Diagnostic | Solution |
-|----------------|------------|----------|
-| Column degradation | Check plate count trend | Replace column |
-| Overloading | Reduce injection volume | Optimize loading |
-| Mobile phase issue | Check buffer preparation | Fresh mobile phase |
-| Flow rate too high | Compare to method specs | Adjust flow rate |
+| Cause | Check | Fix |
+|-------|-------|-----|
+| Column degradation | Plate count trending down | Replace column |
+| Overloading | Peak width increases with load | Reduce injection |
+| Mobile phase | Buffer age, contamination | Fresh mobile phase |
 
-### Peak Tailing
+### Peak Tailing (Tf > 1.5)
 
-| Possible Cause | Diagnostic | Solution |
-|----------------|------------|----------|
-| Column void/frit issue | Visual inspection | Replace frit or column |
-| Sample-column interaction | Test with neutral sample | Adjust mobile phase pH/salt |
-| Overloading | Reduce concentration | Dilute sample |
-| Dead volume in system | Check fittings | Minimize connections |
+| Cause | Check | Fix |
+|-------|-------|-----|
+| Column void | Retention time shifted | Replace column |
+| Secondary interactions | Peaks worse for some analytes | Adjust pH/salt |
+| System dead volume | All peaks affected | Check fittings |
 
 ### Low Plate Count
 
-| Possible Cause | Diagnostic | Solution |
-|----------------|------------|----------|
-| Column degradation | Compare to new column specs | Replace column |
-| Air bubbles | Check for baseline noise | Degas mobile phase |
-| Fitting issues | Check connections | Retighten fittings |
-| Temperature fluctuation | Monitor column temp | Stabilize temperature |
+| Cause | Check | Fix |
+|-------|-------|-----|
+| Column degradation | Compare to new column | Replace column |
+| Flow rate too high | N decreases with flow | Optimize flow |
+| Temperature instability | N varies run-to-run | Thermostat column |
 
-### Low Recovery
+### Low Recovery (< 95%)
 
-| Possible Cause | Diagnostic | Solution |
-|----------------|------------|----------|
-| Sample adsorption | Test with BSA | Increase salt concentration |
-| Aggregation on-column | Check for precipitate | Filter sample, adjust concentration |
-| Detector drift | Check standard response | Recalibrate detector |
-| Integration errors | Review baselines | Adjust integration parameters |
+| Cause | Check | Fix |
+|-------|-------|-----|
+| Adsorption | Worse for sticky proteins | Increase ionic strength |
+| Aggregation | HMW increases over run | Fresh sample, lower concentration |
+| Integration error | Baseline drift | Reintegrate |
 
 ## Regulatory References
 
-### USP <621> Requirements
+### USP <621>
 
 | Parameter | Requirement |
 |-----------|-------------|
-| Resolution | Rs >= 2.0 (unless otherwise specified) |
+| Resolution | Rs >= 2.0 (unless specified) |
 | Tailing | T <= 2.0 |
-| Plate count | As specified in monograph |
-| RSD (n >= 5) | <= 2.0% for peak areas |
+| RSD (n >= 5) | <= 2.0% for areas |
 
-### ICH Q2(R1) Method Validation
+### ICH Q2(R1)
 
-- **Precision**: RSD of replicate injections
-- **Accuracy**: Recovery studies
-- **Specificity**: Resolution from interfering peaks
+- **Precision**: %RSD of replicate injections
+- **Accuracy**: Recovery from spiked samples
+- **Specificity**: Resolution from impurities
 
-### Best Practice: SST Frequency
+### SST Frequency
 
-| Situation | Recommended SST |
-|-----------|-----------------|
+| Situation | SST Level |
+|-----------|-----------|
 | Start of sequence | Full SST |
 | Every 10-20 injections | Bracketing standard |
-| End of sequence | System check |
 | After mobile phase change | Full SST |
 | After column change | Full SST + qualification |
+
+## See Also
+
+- [Getting Started](getting-started.html) - Basic SEC workflow and concepts
+- [Protein SEC Analysis](protein-sec.html) - Biopharm aggregate analysis
+- [Calibration Management](calibration-management.html) - Save and track calibrations
+- [Exporting Results](exporting-results.html) - QC reports and data export
 
 ## Session Info
 
