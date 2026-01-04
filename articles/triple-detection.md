@@ -136,25 +136,24 @@ library(ggplot2)
 ``` r
 data(sec_triple_detect, package = "measure.sec")
 
-# Select samples with all three detectors
+# Select sample data (excluding standards)
 samples <- sec_triple_detect |>
-  filter(sample_type == "sample") |>
-  head(3)
+  filter(sample_type == "sample")
 
 glimpse(samples)
-#> Rows: 3
+#> Rows: 14,007
 #> Columns: 11
-#> $ sample_id        <chr> "PMMA-Low", "PMMA-Low", "PMMA-Low"
-#> $ sample_type      <chr> "sample", "sample", "sample"
-#> $ polymer_type     <chr> "pmma", "pmma", "pmma"
-#> $ elution_time     <dbl> 5.00, 5.01, 5.02
-#> $ ri_signal        <dbl> 0.0002177879, 0.0000000000, 0.0002307149
-#> $ uv_signal        <dbl> 0, 0, 0
-#> $ mals_signal      <dbl> 3.454417e-06, 1.210776e-05, 1.804800e-05
-#> $ known_mw         <dbl> 25000, 25000, 25000
-#> $ known_dispersity <dbl> 1.8, 1.8, 1.8
-#> $ dn_dc            <dbl> 0.084, 0.084, 0.084
-#> $ extinction_coef  <dbl> 0.1, 0.1, 0.1
+#> $ sample_id        <chr> "PMMA-Low", "PMMA-Low", "PMMA-Low", "PMMA-Low", "PMMA…
+#> $ sample_type      <chr> "sample", "sample", "sample", "sample", "sample", "sa…
+#> $ polymer_type     <chr> "pmma", "pmma", "pmma", "pmma", "pmma", "pmma", "pmma…
+#> $ elution_time     <dbl> 5.00, 5.01, 5.02, 5.03, 5.04, 5.05, 5.06, 5.07, 5.08,…
+#> $ ri_signal        <dbl> 2.177879e-04, 0.000000e+00, 2.307149e-04, 1.490633e-0…
+#> $ uv_signal        <dbl> 0.000000e+00, 0.000000e+00, 0.000000e+00, 6.442527e-0…
+#> $ mals_signal      <dbl> 3.454417e-06, 1.210776e-05, 1.804800e-05, 2.001408e-0…
+#> $ known_mw         <dbl> 25000, 25000, 25000, 25000, 25000, 25000, 25000, 2500…
+#> $ known_dispersity <dbl> 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8…
+#> $ dn_dc            <dbl> 0.084, 0.084, 0.084, 0.084, 0.084, 0.084, 0.084, 0.08…
+#> $ extinction_coef  <dbl> 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1…
 ```
 
 ## Inter-Detector Delay Correction
@@ -202,8 +201,6 @@ A complete triple detection recipe:
 
 ``` r
 # Complete triple detection recipe
-# Note: This example shows the full pattern; some steps may require
-# additional configuration depending on your detector setup
 rec_triple <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
   data = samples
@@ -226,20 +223,33 @@ rec_triple <- recipe(
   # Step 4: Process each detector
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
   # Step 5: Convert to concentration
-  step_sec_concentration(measures = "ri", detector = "ri") |>
-
-  # Step 6: Calculate MW averages from MALS
-  step_sec_mw_averages(mw_column = "mw_mals")
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,       # µL
+    sample_concentration = 2.0    # mg/mL
+  )
 
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)
 
-# View results
+# View results - MALS provides absolute MW at each slice
+# For MW averages, you would integrate over the chromatogram
 result_triple |>
-  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+  select(sample_id, starts_with("mw_"))
+#> # A tibble: 7 × 2
+#>   sample_id     mw_mals
+#>   <chr>          <meas>
+#> 1 PMMA-Low  [2,001 × 2]
+#> 2 PMMA-Med  [2,001 × 2]
+#> 3 PMMA-High [2,001 × 2]
+#> 4 PEG-5K    [2,001 × 2]
+#> 5 PEG-20K   [2,001 × 2]
+#> 6 Copoly-A  [2,001 × 2]
+#> 7 Copoly-B  [2,001 × 2]
 ```
 
 ## Light Scattering Detectors
@@ -260,7 +270,7 @@ rec_mals <- recipe(
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
   step_sec_baseline(measures = "mals") |>
   step_sec_mals(
-    measures = "mals",
+    mals_col = "mals",
     dn_dc_column = "dn_dc",
     wavelength = 658,  # Laser wavelength in nm
     angles = c(35, 50, 75, 90, 105, 120, 145)  # Detector angles
@@ -366,24 +376,19 @@ rec_quad <- recipe(
   # Process detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
   step_sec_viscometer(measures = "visc") |>
 
   # Concentration
-  step_sec_concentration(measures = "ri", detector = "ri") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,       # µL
+    sample_concentration = 2.0    # mg/mL
+  ) |>
 
   # Intrinsic viscosity
-  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration") |>
-
-  # MW averages
-  step_sec_mw_averages(mw_column = "mw_mals") |>
-
-  # MW distribution
-  step_sec_mw_distribution(
-    signal_col = "ri",
-    mw_column = "mw_mals",
-    output_type = "both"
-  )
+  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
 
 prepped_quad <- prep(rec_quad)
 result_quad <- bake(prepped_quad, new_data = NULL)
@@ -470,12 +475,12 @@ sessionInfo()
 #> [37] digest_0.6.39       future_1.68.0       purrr_1.2.0        
 #> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
 #> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      survival_3.8-3      future.apply_1.20.1
-#> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
-#> [52] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     
-#> [55] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         
-#> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] rlang_1.1.6         Rcpp_1.1.0          glue_1.8.0         
-#> [64] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [67] systemfonts_1.3.1   fs_1.6.6
+#> [46] magrittr_2.0.4      utf8_1.2.6          survival_3.8-3     
+#> [49] future.apply_1.20.1 withr_3.0.2         scales_1.4.0       
+#> [52] lubridate_1.9.4     timechange_0.3.0    rmarkdown_2.30     
+#> [55] globals_0.18.0      nnet_7.3-20         timeDate_4051.111  
+#> [58] ragg_1.5.0          evaluate_1.0.5      knitr_1.51         
+#> [61] hardhat_1.4.2       rlang_1.1.6         Rcpp_1.1.0         
+#> [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
+#> [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
 ```

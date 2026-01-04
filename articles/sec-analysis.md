@@ -112,7 +112,7 @@ ps_standards <- sec_triple_detect |>
 # Create the preprocessing recipe
 # Note: The formula specifies which columns to use and sample_id as grouping
 rec <- recipe(
-  ri_signal + elution_time + dn_dc + known_mw ~ sample_id,
+  ri_signal + elution_time + dn_dc ~ sample_id,
   data = ps_standards
 ) |>
   update_role(sample_id, new_role = "id") |>
@@ -125,17 +125,15 @@ rec <- recipe(
   # Apply baseline correction
   step_sec_baseline(measures = "ri") |>
   # Process RI detector with dn/dc
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  # Calculate molecular weight averages
-  step_sec_mw_averages(mw_column = "known_mw")
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
 
 # Prep and bake
 prepped <- prep(rec)
 result <- bake(prepped, new_data = NULL)
 
-# View results
+# View RI signal results (MW calculation requires calibration - see below)
 result |>
-  select(sample_id, Mn, Mw, Mz, dispersity)
+  select(sample_id, ri)
 ```
 
 ## Conventional Calibration
@@ -230,13 +228,16 @@ rec_cal <- recipe(
     col_name = "ri"
   ) |>
   step_sec_baseline(measures = "ri") |>
+  # Apply calibration to convert elution time to log(MW)
   step_sec_conventional_cal(
+    measures = "ri",
     standards = ps_cal,
     fit_type = "cubic",
-    output_col = "log_mw",
+    output_col = "mw",
     extrapolation = "none"
   ) |>
-  step_sec_mw_averages(measures = "log_mw")
+  # Calculate MW averages from RI signal weighted by MW
+  step_sec_mw_averages(measures = "ri")
 
 # Prep and bake
 prepped <- prep(rec_cal)
@@ -254,7 +255,7 @@ provides comprehensive diagnostics for evaluating calibration quality:
 
 ``` r
 # Get calibration diagnostics
-diagnostics <- tidy(prepped, number = 3)  # step_sec_conventional_cal is step 3
+diagnostics <- tidy(prepped, number = 4)  # step_sec_conventional_cal is step 4
 
 # Overview metrics
 diagnostics |>
