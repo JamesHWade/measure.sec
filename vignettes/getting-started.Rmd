@@ -205,10 +205,15 @@ ps_sample |>
 
 **Recipes** define a sequence of preprocessing steps. Think of a recipe as a blueprint for your analysis—it describes *what* to do, but doesn't do it yet. This separation lets you define the workflow once and apply it to many samples.
 
-```{r recipe, eval = FALSE}
+```{r recipe}
 # Start a recipe with your data
-# The formula ~. means "use all columns"
-rec <- recipe(~., data = ps_sample) |>
+# The formula specifies: predictor columns ~ grouping column
+# sample_id identifies which rows belong to each chromatogram
+rec <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert the ri_signal column to measure format
   # This step tells recipes how to interpret your chromatogram data
   step_measure_input_long(
@@ -222,8 +227,12 @@ rec <- recipe(~., data = ps_sample) |>
 
 Chain additional steps using the pipe (`|>`). Each step transforms the data in sequence:
 
-```{r preprocess, eval = FALSE}
-rec <- recipe(~., data = ps_sample) |>
+```{r preprocess}
+rec <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   # First: convert raw signal to measure format
   step_measure_input_long(
     ri_signal,
@@ -244,7 +253,7 @@ Two functions execute your recipe:
 - **`prep()`**: Learns any required parameters from the training data (like baseline fit coefficients)
 - **`bake()`**: Applies the transformations to produce results
 
-```{r prep-bake, eval = FALSE}
+```{r prep-bake}
 # Prep: Learn parameters from the data
 prepped <- prep(rec)
 
@@ -308,13 +317,17 @@ ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
 
 Apply the calibration using `step_sec_conventional_cal()`:
 
-```{r conventional-cal, eval = FALSE}
+```{r conventional-cal}
 # Prepare standards in the format expected by the calibration step
 # Needs columns: retention (time/volume) and log_mw
 ps_cal <- sec_ps_standards |>
   select(retention = retention_time, log_mw = log_mp)
 
-rec <- recipe(~., data = ps_sample) |>
+rec_cal <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -332,12 +345,12 @@ rec <- recipe(~., data = ps_sample) |>
   # The calibration step converted location values to log10(MW)
   step_sec_mw_averages()
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_cal <- prep(rec_cal)
+result_cal <- bake(prepped_cal, new_data = NULL)
 
 # View molecular weight results
 # New columns are added with mw_ prefix
-result |>
+result_cal |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
 
