@@ -290,6 +290,21 @@ result_full |>
 2.  **Assumes no specific interactions** between detector and polymer
 3.  **Block copolymers** may show different behavior than random
 
+## See Also
+
+- [Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Basic SEC workflow and concepts
+- [Multi-Detector
+  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  Detector setup and processing
+- [Calibration
+  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Save and reuse calibrations
+- [Exporting
+  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md) -
+  Summary tables and report generation
+
 ## Session Info
 
 ``` r

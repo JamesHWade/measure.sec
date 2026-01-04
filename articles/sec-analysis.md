@@ -758,6 +758,29 @@ print(summary)
 | [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md)           | Composition   | Copolymer composition                      |
 | [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)             | Protein       | HMWS/monomer/LMWS quantitation             |
 
+## See Also
+
+For focused how-to guides on specific workflows:
+
+- [Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Introduction and basic workflow
+- [Multi-Detector
+  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  MALS, viscometer, and absolute MW
+- [Protein SEC
+  Analysis](https://jameshwade.github.io/measure-sec/articles/protein-sec.md) -
+  Biopharm aggregate/fragment analysis
+- [Copolymer
+  Composition](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md) -
+  UV/RI ratio methods
+- [Calibration
+  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Save/load calibrations
+- [System
+  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  QC metrics and SST
+
 ## Session Info
 
 ``` r

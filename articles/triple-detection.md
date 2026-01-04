@@ -411,6 +411,21 @@ result_quad <- bake(prepped_quad, new_data = NULL)
     - Check for air bubbles
     - Verify temperature equilibration
 
+## See Also
+
+- [Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Basic SEC workflow and concepts
+- [Calibration
+  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Save and reuse calibrations
+- [Copolymer
+  Composition](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md) -
+  Multi-detector composition analysis
+- [System
+  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  QC metrics and column performance
+
 ## Session Info
 
 ``` r

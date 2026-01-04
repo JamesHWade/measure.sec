@@ -118,7 +118,7 @@ save_sec_calibration(
     notes = "Monthly calibration - January 2024"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpguTSkD/file212d50d4f286.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpSnA9GR/file2137ccbba07.rds
 ```
 
 ### Format Options
@@ -166,7 +166,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-01-04 13:03:55
+#> Created: 2026-01-04 13:16:22
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -234,7 +234,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-01-04 13:03:55
+#> Created: 2026-01-04 13:16:22
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -390,6 +390,21 @@ samples_recipe <- recipe(...) |>
 # Remove temporary file
 unlink(cal_file)
 ```
+
+## See Also
+
+- [Getting
+  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Basic SEC workflow and concepts
+- [System
+  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  Validate column performance
+- [Multi-Detector
+  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  Absolute MW without calibration
+- [Exporting
+  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md) -
+  Summary tables and reports
 
 ## Session Info
 

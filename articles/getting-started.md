@@ -622,13 +622,15 @@ For large datasets:
 Now that you understand the basics, explore these vignettes for
 specialized workflows:
 
-| Vignette                                                                                                    | Use when you need to…                            |
-|-------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)     | Use MALS for absolute MW (no calibration needed) |
-| [`vignette("protein-sec")`](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)               | Analyze protein aggregates (HMWS/monomer/LMWS)   |
-| [`vignette("copolymer-analysis")`](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md) | Determine composition of multi-component samples |
-| [`vignette("system-suitability")`](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) | Set up QC checks and system suitability tests    |
-| [`vignette("sec-analysis")`](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md)             | See comprehensive examples and advanced options  |
+| Vignette                                                                                                            | Use when you need to…                            |
+|---------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)             | Use MALS for absolute MW (no calibration needed) |
+| [`vignette("protein-sec")`](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)                       | Analyze protein aggregates (HMWS/monomer/LMWS)   |
+| [`vignette("copolymer-analysis")`](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md)         | Determine composition of multi-component samples |
+| [`vignette("calibration-management")`](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) | Save, load, and reuse calibrations               |
+| [`vignette("system-suitability")`](https://jameshwade.github.io/measure-sec/articles/system-suitability.md)         | Set up QC checks and system suitability tests    |
+| [`vignette("exporting-results")`](https://jameshwade.github.io/measure-sec/articles/exporting-results.md)           | Export summary tables and generate reports       |
+| [`vignette("sec-analysis")`](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md)                     | See comprehensive examples and advanced options  |
 
 You can also browse all available functions with:
 
