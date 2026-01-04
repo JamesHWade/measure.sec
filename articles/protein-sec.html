@@ -147,32 +147,31 @@ degradation products</li>
 </h3>
 <p>For simple HMWS/monomer/LMWS quantitation:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load or create protein SEC data</span></span>
-<span><span class="va">protein_data</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_type</span> <span class="op">==</span> <span class="st">"sample"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Load protein SEC data - mAb samples with reference and stressed conditions</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_protein</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Note: Aggregate analysis requires defined peak boundaries</span></span>
-<span><span class="co"># The monomer_start and monomer_end values depend on your chromatographic conditions</span></span>
+<span><span class="co"># Start with the reference sample</span></span>
+<span><span class="va">protein_ref</span> <span class="op">&lt;-</span> <span class="va">sec_protein</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"mAb-Reference"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Aggregate quantitation using tallest peak detection</span></span>
 <span><span class="va">rec_agg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span>  <span class="va">uv_280_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">protein_ref</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Convert UV signal to measure format</span></span>
+<span>  <span class="co"># Convert UV 280 nm signal to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">uv_signal</span>,</span>
+<span>    <span class="va">uv_280_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
 <span>    col_name <span class="op">=</span> <span class="st">"uv"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Baseline correction</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"uv"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Aggregate quantitation</span></span>
+<span>  <span class="co"># Aggregate quantitation - auto-detect monomer peak</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_aggregates.html">step_sec_aggregates</a></span><span class="op">(</span></span>
 <span>    measures <span class="op">=</span> <span class="st">"uv"</span>,</span>
-<span>    monomer_start <span class="op">=</span> <span class="fl">9.5</span>,   <span class="co"># Monomer peak start</span></span>
-<span>    monomer_end <span class="op">=</span> <span class="fl">11.0</span>,    <span class="co"># Monomer peak end</span></span>
-<span>    method <span class="op">=</span> <span class="st">"manual"</span></span>
+<span>    method <span class="op">=</span> <span class="st">"tallest"</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_agg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_agg</span><span class="op">)</span></span>
@@ -180,16 +179,23 @@ degradation products</li>
 <span></span>
 <span><span class="co"># View aggregate results</span></span>
 <span><span class="va">result_agg</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">purity_hmws</span>, <span class="va">purity_monomer</span>, <span class="va">purity_lmws</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">purity_hmws</span>, <span class="va">purity_monomer</span>, <span class="va">purity_lmws</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id     purity_hmws purity_monomer purity_lmws</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> mAb-Reference       0.681           98.1        1.15</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="automatic-peak-detection">Automatic Peak Detection<a class="anchor" aria-label="anchor" href="#automatic-peak-detection"></a>
+<h3 id="manual-peak-boundaries">Manual Peak Boundaries<a class="anchor" aria-label="anchor" href="#manual-peak-boundaries"></a>
 </h3>
-<p>Let the algorithm find the tallest peak as the monomer:</p>
+<p>For precise control over integration limits:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/step_sec_aggregates.html">step_sec_aggregates</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="co"># When you know the exact monomer elution window</span></span>
+<span><span class="fu"><a href="../reference/step_sec_aggregates.html">step_sec_aggregates</a></span><span class="op">(</span></span>
 <span>  measures <span class="op">=</span> <span class="st">"uv"</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"tallest"</span>  <span class="co"># Uses tallest peak as monomer reference</span></span>
+<span>  monomer_start <span class="op">=</span> <span class="fl">14.5</span>,  <span class="co"># Monomer peak start (min)</span></span>
+<span>  monomer_end <span class="op">=</span> <span class="fl">17.5</span>,    <span class="co"># Monomer peak end (min)</span></span>
+<span>  method <span class="op">=</span> <span class="st">"manual"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -203,39 +209,42 @@ degradation products</li>
 workflow combining baseline correction, aggregate analysis, and optional
 oligomer detection:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Comprehensive protein SEC workflow</span></span>
-<span><span class="co"># Note: step_sec_protein provides a streamlined workflow for protein analysis</span></span>
+<code class="sourceCode R"><span><span class="co"># Analyze all mAb samples with the protein step</span></span>
 <span><span class="va">rec_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span>  <span class="va">uv_280_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">sec_protein</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">uv_signal</span>,</span>
+<span>    <span class="va">uv_280_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
 <span>    col_name <span class="op">=</span> <span class="st">"uv"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_protein.html">step_sec_protein</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"uv"</span>,</span>
 <span>    type <span class="op">=</span> <span class="st">"native"</span>,</span>
 <span>    monomer_mw <span class="op">=</span> <span class="fl">150000</span>,        <span class="co"># mAb ~150 kDa</span></span>
-<span>    extinction_coef <span class="op">=</span> <span class="fl">1.4</span>,      <span class="co"># E1% at 280 nm</span></span>
-<span>    include_oligomer <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>    baseline_method <span class="op">=</span> <span class="st">"linear"</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_protein</span><span class="op">)</span></span>
 <span><span class="va">result_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_protein</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View comprehensive results</span></span>
+<span><span class="co"># View results for all samples</span></span>
 <span><span class="va">result_protein</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span></span>
-<span>    <span class="va">sample_id</span>,</span>
-<span>    <span class="va">protein_hmws_pct</span>,</span>
-<span>    <span class="va">protein_monomer_pct</span>,</span>
-<span>    <span class="va">protein_lmws_pct</span>,</span>
-<span>    <span class="va">protein_dimer_pct</span>,</span>
-<span>    <span class="va">protein_species_count</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"protein_"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 12</span></span></span>
+<span><span class="co">#&gt;   sample_id       protein_hmws_pct protein_monomer_pct protein_lmws_pct</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> mAb-Reference              0.680                98.1             1.15</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> mAb-Stressed-1             0.644                98.1             1.18</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> mAb-Stressed-2             0.745                97.9             1.34</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> mAb-Aged                   0.651                98.2             1.10</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> mAb-Freeze-Thaw            0.730                98.0             1.23</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 8 more variables: protein_main_start &lt;dbl&gt;, protein_main_end &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   protein_monomer_oligo_pct &lt;dbl&gt;, protein_dimer_pct &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   protein_trimer_pct &lt;dbl&gt;, protein_hmw_oligo_pct &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   protein_lmw_oligo_pct &lt;dbl&gt;, protein_species_count &lt;int&gt;</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="output-columns">Output Columns<a class="anchor" aria-label="anchor" href="#output-columns"></a>
@@ -342,12 +351,12 @@ Heavy/light chain analysis</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Detailed oligomer analysis with explicit control</span></span>
 <span><span class="va">rec_oligo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span>  <span class="va">uv_280_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">sec_protein</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">uv_signal</span>,</span>
+<span>    <span class="va">uv_280_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
 <span>    col_name <span class="op">=</span> <span class="st">"uv"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -356,7 +365,7 @@ Heavy/light chain analysis</p>
 <span>    measures <span class="op">=</span> <span class="st">"uv"</span>,</span>
 <span>    monomer_mw <span class="op">=</span> <span class="fl">150000</span>,</span>
 <span>    mw_tolerance <span class="op">=</span> <span class="fl">0.15</span>,     <span class="co"># 15% MW tolerance for species assignment</span></span>
-<span>    min_peak_area <span class="op">=</span> <span class="fl">0.001</span>    <span class="co"># Minimum 0.1% to report</span></span>
+<span>    min_area_pct <span class="op">=</span> <span class="fl">0.1</span>       <span class="co"># Minimum 0.1% to report</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -521,52 +530,61 @@ study</li>
 </div>
 </div>
 <div class="section level2">
-<h2 id="example-stability-study-analysis">Example: Stability Study Analysis<a class="anchor" aria-label="anchor" href="#example-stability-study-analysis"></a>
+<h2 id="example-comparing-stressed-samples">Example: Comparing Stressed Samples<a class="anchor" aria-label="anchor" href="#example-comparing-stressed-samples"></a>
 </h2>
+<p>The <code>sec_protein</code> dataset includes samples under various
+stress conditions, simulating a stability study:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Stability data structure example</span></span>
-<span><span class="co"># In practice, chrom1-4 and time would be your actual chromatogram data vectors</span></span>
-<span><span class="co"># For example:</span></span>
-<span><span class="co">#   time &lt;- seq(5, 20, by = 0.05)</span></span>
-<span><span class="co">#   chrom1 &lt;- your_uv_signal_at_T0</span></span>
-<span><span class="co">#   chrom2 &lt;- your_uv_signal_at_T1M</span></span>
-<span><span class="co">#   etc.</span></span>
+<code class="sourceCode R"><span><span class="co"># Analyze all samples including stressed conditions</span></span>
+<span><span class="va">result_protein</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">protein_hmws_pct</span>, <span class="va">protein_monomer_pct</span>, <span class="va">protein_lmws_pct</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/desc.html" class="external-link">desc</a></span><span class="op">(</span><span class="va">protein_hmws_pct</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id       protein_hmws_pct protein_monomer_pct protein_lmws_pct</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> mAb-Stressed-2             0.745                97.9             1.34</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> mAb-Freeze-Thaw            0.730                98.0             1.23</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> mAb-Reference              0.680                98.1             1.15</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> mAb-Aged                   0.651                98.2             1.10</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> mAb-Stressed-1             0.644                98.1             1.18</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Compare aggregate content across conditions</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">stability_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  sample_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"T0"</span>, <span class="st">"T1M"</span>, <span class="st">"T3M"</span>, <span class="st">"T6M"</span><span class="op">)</span>,</span>
-<span>  timepoint <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">6</span><span class="op">)</span>,</span>
-<span>  uv_signal <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">chrom1</span>, <span class="va">chrom2</span>, <span class="va">chrom3</span>, <span class="va">chrom4</span><span class="op">)</span>,  <span class="co"># Your chromatogram vectors</span></span>
-<span>  elution_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">time</span>, <span class="va">time</span>, <span class="va">time</span>, <span class="va">time</span><span class="op">)</span>        <span class="co"># Shared time axis</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Analyze all timepoints</span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">stability_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
-<span>    <span class="va">uv_signal</span>,</span>
-<span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
-<span>    col_name <span class="op">=</span> <span class="st">"uv"</span></span>
+<span><span class="va">plot_data</span> <span class="op">&lt;-</span> <span class="va">result_protein</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">protein_hmws_pct</span>, <span class="va">protein_monomer_pct</span>, <span class="va">protein_lmws_pct</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
+<span>    cols <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"protein_"</span><span class="op">)</span>,</span>
+<span>    names_to <span class="op">=</span> <span class="st">"species"</span>,</span>
+<span>    values_to <span class="op">=</span> <span class="st">"percent"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_protein.html">step_sec_protein</a></span><span class="op">(</span></span>
-<span>    monomer_mw <span class="op">=</span> <span class="fl">150000</span>,</span>
-<span>    include_oligomer <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span>    species <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/case_when.html" class="external-link">case_when</a></span><span class="op">(</span></span>
+<span>      <span class="va">species</span> <span class="op">==</span> <span class="st">"protein_hmws_pct"</span> <span class="op">~</span> <span class="st">"HMWS"</span>,</span>
+<span>      <span class="va">species</span> <span class="op">==</span> <span class="st">"protein_monomer_pct"</span> <span class="op">~</span> <span class="st">"Monomer"</span>,</span>
+<span>      <span class="va">species</span> <span class="op">==</span> <span class="st">"protein_lmws_pct"</span> <span class="op">~</span> <span class="st">"LMWS"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">species</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"HMWS"</span>, <span class="st">"Monomer"</span>, <span class="st">"LMWS"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Plot stability trend</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">result</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">timepoint</span>, <span class="va">protein_monomer_pct</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>linewidth <span class="op">=</span> <span class="fl">1</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">3</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">95</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fl">5</span>, y <span class="op">=</span> <span class="fl">94.5</span>, label <span class="op">=</span> <span class="st">"Specification: &gt; 95%"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
+<span><span class="co"># Focus on non-monomer species for clarity</span></span>
+<span><span class="va">plot_data</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">species</span> <span class="op">!=</span> <span class="st">"Monomer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">sample_id</span>, y <span class="op">=</span> <span class="va">percent</span>, fill <span class="op">=</span> <span class="va">species</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_col</a></span><span class="op">(</span>position <span class="op">=</span> <span class="st">"dodge"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">5</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fl">1</span>, y <span class="op">=</span> <span class="fl">5.5</span>, label <span class="op">=</span> <span class="st">"Typical spec: &lt; 5%"</span>, color <span class="op">=</span> <span class="st">"red"</span>, hjust <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"HMWS"</span> <span class="op">=</span> <span class="st">"#E8751A"</span>, <span class="st">"LMWS"</span> <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
-<span>    x <span class="op">=</span> <span class="st">"Time (months)"</span>,</span>
-<span>    y <span class="op">=</span> <span class="st">"% Monomer"</span>,</span>
-<span>    title <span class="op">=</span> <span class="st">"Stability Profile: Monomer Content"</span></span>
+<span>    x <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"% of Total"</span>,</span>
+<span>    fill <span class="op">=</span> <span class="st">"Species"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Aggregate and Fragment Content by Sample"</span>,</span>
+<span>    subtitle <span class="op">=</span> <span class="st">"Comparing reference vs stressed mAb samples"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fl">90</span>, <span class="fl">100</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.text.x <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>angle <span class="op">=</span> <span class="fl">45</span>, hjust <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="protein-sec_files/figure-html/stability-plot-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="see-also">See Also<a class="anchor" aria-label="anchor" href="#see-also"></a>
@@ -589,7 +607,7 @@ tables and report generation</li>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
@@ -612,8 +630,8 @@ tables and report generation</li>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9001    </span></span>
-<span><span class="co">#&gt; [4] recipes_1.3.1          dplyr_1.1.4           </span></span>
+<span><span class="co">#&gt; [1] tidyr_1.3.2            ggplot2_4.0.1          measure.sec_0.0.0.9000</span></span>
+<span><span class="co">#&gt; [4] measure_0.0.1.9001     recipes_1.3.1          dplyr_1.1.4           </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.55           bslib_0.9.0        </span></span>
@@ -624,14 +642,14 @@ tables and report generation</li>
 <span><span class="co">#&gt; [16] lifecycle_1.0.4     compiler_4.5.2      farver_2.1.2       </span></span>
 <span><span class="co">#&gt; [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    </span></span>
 <span><span class="co">#&gt; [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        </span></span>
-<span><span class="co">#&gt; [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      </span></span>
-<span><span class="co">#&gt; [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        </span></span>
-<span><span class="co">#&gt; [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       </span></span>
-<span><span class="co">#&gt; [34] parallelly_1.46.0   lava_1.8.2          tidyselect_1.2.1   </span></span>
-<span><span class="co">#&gt; [37] digest_0.6.39       future_1.68.0       purrr_1.2.0        </span></span>
-<span><span class="co">#&gt; [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      </span></span>
-<span><span class="co">#&gt; [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          </span></span>
-<span><span class="co">#&gt; [46] magrittr_2.0.4      survival_3.8-3      future.apply_1.20.1</span></span>
+<span><span class="co">#&gt; [25] prodlim_2025.04.28  pillar_1.11.1       pkgdown_2.2.0      </span></span>
+<span><span class="co">#&gt; [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       </span></span>
+<span><span class="co">#&gt; [31] gower_1.0.2         rpart_4.1.24        parallelly_1.46.0  </span></span>
+<span><span class="co">#&gt; [34] lava_1.8.2          tidyselect_1.2.1    digest_0.6.39      </span></span>
+<span><span class="co">#&gt; [37] future_1.68.0       purrr_1.2.0         listenv_0.10.0     </span></span>
+<span><span class="co">#&gt; [40] labeling_0.4.3      splines_4.5.2       fastmap_1.2.0      </span></span>
+<span><span class="co">#&gt; [43] grid_4.5.2          cli_3.6.5           magrittr_2.0.4     </span></span>
+<span><span class="co">#&gt; [46] utf8_1.2.6          survival_3.8-3      future.apply_1.20.1</span></span>
 <span><span class="co">#&gt; [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    </span></span>
 <span><span class="co">#&gt; [52] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     </span></span>
 <span><span class="co">#&gt; [55] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         </span></span>

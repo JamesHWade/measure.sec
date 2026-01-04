@@ -64,32 +64,31 @@ absorbance).
 For simple HMWS/monomer/LMWS quantitation:
 
 ``` r
-# Load or create protein SEC data
-protein_data <- sec_triple_detect |>
-  filter(sample_type == "sample") |>
-  head(1)
+# Load protein SEC data - mAb samples with reference and stressed conditions
+data(sec_protein, package = "measure.sec")
 
-# Note: Aggregate analysis requires defined peak boundaries
-# The monomer_start and monomer_end values depend on your chromatographic conditions
+# Start with the reference sample
+protein_ref <- sec_protein |>
+  filter(sample_id == "mAb-Reference")
+
+# Aggregate quantitation using tallest peak detection
 rec_agg <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = protein_ref
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Convert UV signal to measure format
+  # Convert UV 280 nm signal to measure format
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
   # Baseline correction
   step_sec_baseline(measures = "uv") |>
-  # Aggregate quantitation
+  # Aggregate quantitation - auto-detect monomer peak
   step_sec_aggregates(
     measures = "uv",
-    monomer_start = 9.5,   # Monomer peak start
-    monomer_end = 11.0,    # Monomer peak end
-    method = "manual"
+    method = "tallest"
   )
 
 prepped_agg <- prep(rec_agg)
@@ -98,16 +97,23 @@ result_agg <- bake(prepped_agg, new_data = NULL)
 # View aggregate results
 result_agg |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
+#> # A tibble: 1 × 4
+#>   sample_id     purity_hmws purity_monomer purity_lmws
+#>   <chr>               <dbl>          <dbl>       <dbl>
+#> 1 mAb-Reference       0.681           98.1        1.15
 ```
 
-### Automatic Peak Detection
+### Manual Peak Boundaries
 
-Let the algorithm find the tallest peak as the monomer:
+For precise control over integration limits:
 
 ``` r
+# When you know the exact monomer elution window
 step_sec_aggregates(
   measures = "uv",
-  method = "tallest"  # Uses tallest peak as monomer reference
+  monomer_start = 14.5,  # Monomer peak start (min)
+  monomer_end = 17.5,    # Monomer peak end (min)
+  method = "manual"
 )
 ```
 
@@ -121,39 +127,42 @@ function provides a streamlined workflow combining baseline correction,
 aggregate analysis, and optional oligomer detection:
 
 ``` r
-# Comprehensive protein SEC workflow
-# Note: step_sec_protein provides a streamlined workflow for protein analysis
+# Analyze all mAb samples with the protein step
 rec_protein <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = sec_protein
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
   step_sec_protein(
+    measures = "uv",
     type = "native",
     monomer_mw = 150000,        # mAb ~150 kDa
-    extinction_coef = 1.4,      # E1% at 280 nm
-    include_oligomer = TRUE,
     baseline_method = "linear"
   )
 
 prepped_protein <- prep(rec_protein)
 result_protein <- bake(prepped_protein, new_data = NULL)
 
-# View comprehensive results
+# View results for all samples
 result_protein |>
-  select(
-    sample_id,
-    protein_hmws_pct,
-    protein_monomer_pct,
-    protein_lmws_pct,
-    protein_dimer_pct,
-    protein_species_count
-  )
+  select(sample_id, starts_with("protein_"))
+#> # A tibble: 5 × 12
+#>   sample_id       protein_hmws_pct protein_monomer_pct protein_lmws_pct
+#>   <chr>                      <dbl>               <dbl>            <dbl>
+#> 1 mAb-Reference              0.680                98.1             1.15
+#> 2 mAb-Stressed-1             0.644                98.1             1.18
+#> 3 mAb-Stressed-2             0.745                97.9             1.34
+#> 4 mAb-Aged                   0.651                98.2             1.10
+#> 5 mAb-Freeze-Thaw            0.730                98.0             1.23
+#> # ℹ 8 more variables: protein_main_start <dbl>, protein_main_end <dbl>,
+#> #   protein_monomer_oligo_pct <dbl>, protein_dimer_pct <dbl>,
+#> #   protein_trimer_pct <dbl>, protein_hmw_oligo_pct <dbl>,
+#> #   protein_lmw_oligo_pct <dbl>, protein_species_count <int>
 ```
 
 ### Output Columns
@@ -220,12 +229,12 @@ For more control over oligomer detection:
 ``` r
 # Detailed oligomer analysis with explicit control
 rec_oligo <- recipe(
-  uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  uv_280_signal + elution_time ~ sample_id,
+  data = sec_protein
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
-    uv_signal,
+    uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
@@ -234,7 +243,7 @@ rec_oligo <- recipe(
     measures = "uv",
     monomer_mw = 150000,
     mw_tolerance = 0.15,     # 15% MW tolerance for species assignment
-    min_peak_area = 0.001    # Minimum 0.1% to report
+    min_area_pct = 0.1       # Minimum 0.1% to report
   )
 ```
 
@@ -297,53 +306,66 @@ The oligomer step identifies species based on expected MW:
 2.  **Same integration limits** for all samples in a study
 3.  **Report detection limit** for minor species
 
-## Example: Stability Study Analysis
+## Example: Comparing Stressed Samples
+
+The `sec_protein` dataset includes samples under various stress
+conditions, simulating a stability study:
 
 ``` r
-# Stability data structure example
-# In practice, chrom1-4 and time would be your actual chromatogram data vectors
-# For example:
-#   time <- seq(5, 20, by = 0.05)
-#   chrom1 <- your_uv_signal_at_T0
-#   chrom2 <- your_uv_signal_at_T1M
-#   etc.
+# Analyze all samples including stressed conditions
+result_protein |>
+  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
+  arrange(desc(protein_hmws_pct))
+#> # A tibble: 5 × 4
+#>   sample_id       protein_hmws_pct protein_monomer_pct protein_lmws_pct
+#>   <chr>                      <dbl>               <dbl>            <dbl>
+#> 1 mAb-Stressed-2             0.745                97.9             1.34
+#> 2 mAb-Freeze-Thaw            0.730                98.0             1.23
+#> 3 mAb-Reference              0.680                98.1             1.15
+#> 4 mAb-Aged                   0.651                98.2             1.10
+#> 5 mAb-Stressed-1             0.644                98.1             1.18
+```
 
-stability_data <- tibble(
-  sample_id = c("T0", "T1M", "T3M", "T6M"),
-  timepoint = c(0, 1, 3, 6),
-  uv_signal = list(chrom1, chrom2, chrom3, chrom4),  # Your chromatogram vectors
-  elution_time = list(time, time, time, time)        # Shared time axis
-)
+``` r
+# Compare aggregate content across conditions
+library(tidyr)
 
-# Analyze all timepoints
-rec <- recipe(~., data = stability_data) |>
-  step_measure_input_long(
-    uv_signal,
-    location = vars(elution_time),
-    col_name = "uv"
+plot_data <- result_protein |>
+  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
+  pivot_longer(
+    cols = starts_with("protein_"),
+    names_to = "species",
+    values_to = "percent"
   ) |>
-  step_sec_protein(
-    monomer_mw = 150000,
-    include_oligomer = TRUE
+  mutate(
+    species = case_when(
+      species == "protein_hmws_pct" ~ "HMWS",
+      species == "protein_monomer_pct" ~ "Monomer",
+      species == "protein_lmws_pct" ~ "LMWS"
+    ),
+    species = factor(species, levels = c("HMWS", "Monomer", "LMWS"))
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
-
-# Plot stability trend
-ggplot(result, aes(timepoint, protein_monomer_pct)) +
-  geom_line(linewidth = 1, color = "#2E86AB") +
-  geom_point(size = 3, color = "#2E86AB") +
-  geom_hline(yintercept = 95, linetype = "dashed", color = "red") +
-  annotate("text", x = 5, y = 94.5, label = "Specification: > 95%", color = "red") +
+# Focus on non-monomer species for clarity
+plot_data |>
+  filter(species != "Monomer") |>
+  ggplot(aes(x = sample_id, y = percent, fill = species)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 5, linetype = "dashed", color = "red") +
+  annotate("text", x = 1, y = 5.5, label = "Typical spec: < 5%", color = "red", hjust = 0) +
+  scale_fill_manual(values = c("HMWS" = "#E8751A", "LMWS" = "#2E86AB")) +
   labs(
-    x = "Time (months)",
-    y = "% Monomer",
-    title = "Stability Profile: Monomer Content"
+    x = NULL,
+    y = "% of Total",
+    fill = "Species",
+    title = "Aggregate and Fragment Content by Sample",
+    subtitle = "Comparing reference vs stressed mAb samples"
   ) +
-  ylim(90, 100) +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+![](protein-sec_files/figure-html/stability-plot-1.png)
 
 ## See Also
 
@@ -385,8 +407,8 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9001    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] tidyr_1.3.2            ggplot2_4.0.1          measure.sec_0.0.0.9000
+#> [4] measure_0.0.1.9001     recipes_1.3.1          dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.55           bslib_0.9.0        
@@ -397,14 +419,14 @@ sessionInfo()
 #> [16] lifecycle_1.0.4     compiler_4.5.2      farver_2.1.2       
 #> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] parallelly_1.46.0   lava_1.8.2          tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.68.0       purrr_1.2.0        
-#> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
-#> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      survival_3.8-3      future.apply_1.20.1
+#> [25] prodlim_2025.04.28  pillar_1.11.1       pkgdown_2.2.0      
+#> [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       
+#> [31] gower_1.0.2         rpart_4.1.24        parallelly_1.46.0  
+#> [34] lava_1.8.2          tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.68.0       purrr_1.2.0         listenv_0.10.0     
+#> [40] labeling_0.4.3      splines_4.5.2       fastmap_1.2.0      
+#> [43] grid_4.5.2          cli_3.6.5           magrittr_2.0.4     
+#> [46] utf8_1.2.6          survival_3.8-3      future.apply_1.20.1
 #> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
 #> [52] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     
 #> [55] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         

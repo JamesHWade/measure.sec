@@ -60,27 +60,37 @@ Different monomers have different detector responses:
 
 ## Example Dataset
 
+The package includes `sec_copolymer`, a dataset of styrene-acrylate
+copolymers with varying compositions:
+
 ``` r
-data(sec_triple_detect, package = "measure.sec")
+data(sec_copolymer, package = "measure.sec")
 
-# Select copolymer samples
-copolymers <- sec_triple_detect |>
-  filter(polymer_type == "copolymer")
+# View the dataset structure
+glimpse(sec_copolymer)
+#> Rows: 4,206
+#> Columns: 8
+#> $ sample_id        <chr> "Copoly-20S", "Copoly-20S", "Copoly-20S", "Copoly-20S…
+#> $ elution_time     <dbl> 8.00, 8.02, 8.04, 8.06, 8.08, 8.10, 8.12, 8.14, 8.16,…
+#> $ ri_signal        <dbl> 0.005043384, 0.004595667, 0.004945809, 0.005114517, 0…
+#> $ uv_254_signal    <dbl> 0.01516172, 0.01369785, 0.01487566, 0.01432866, 0.015…
+#> $ styrene_fraction <dbl> 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2…
+#> $ mw               <dbl> 45000, 45000, 45000, 45000, 45000, 45000, 45000, 4500…
+#> $ dispersity       <dbl> 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8…
+#> $ description      <chr> "20% styrene, 80% acrylate", "20% styrene, 80% acryla…
 
-glimpse(copolymers)
-#> Rows: 4,002
-#> Columns: 11
-#> $ sample_id        <chr> "Copoly-A", "Copoly-A", "Copoly-A", "Copoly-A", "Copo…
-#> $ sample_type      <chr> "sample", "sample", "sample", "sample", "sample", "sa…
-#> $ polymer_type     <chr> "copolymer", "copolymer", "copolymer", "copolymer", "…
-#> $ elution_time     <dbl> 5.00, 5.01, 5.02, 5.03, 5.04, 5.05, 5.06, 5.07, 5.08,…
-#> $ ri_signal        <dbl> 6.128782e-05, 5.685648e-04, 0.000000e+00, 4.859711e-0…
-#> $ uv_signal        <dbl> 0.0000000000, 0.0004169298, 0.0000000000, 0.000000000…
-#> $ mals_signal      <dbl> 4.816355e-06, 5.069294e-06, 3.309838e-06, 0.000000e+0…
-#> $ known_mw         <dbl> 40000, 40000, 40000, 40000, 40000, 40000, 40000, 4000…
-#> $ known_dispersity <dbl> 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5…
-#> $ dn_dc            <dbl> 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15,…
-#> $ extinction_coef  <dbl> 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6…
+# Available samples
+sec_copolymer |>
+  distinct(sample_id, styrene_fraction, description)
+#> # A tibble: 6 × 3
+#>   sample_id  styrene_fraction description              
+#>   <chr>                 <dbl> <chr>                    
+#> 1 Copoly-20S              0.2 20% styrene, 80% acrylate
+#> 2 Copoly-40S              0.4 40% styrene, 60% acrylate
+#> 3 Copoly-60S              0.6 60% styrene, 40% acrylate
+#> 4 Copoly-80S              0.8 80% styrene, 20% acrylate
+#> 5 PS-Homo                 1   Polystyrene homopolymer  
+#> 6 PA-Homo                 0   Polyacrylate homopolymer
 ```
 
 ## UV/RI Ratio Analysis
@@ -88,10 +98,14 @@ glimpse(copolymers)
 ### Basic Workflow
 
 ``` r
+# Analyze a single copolymer sample
+copoly_40 <- sec_copolymer |>
+  filter(sample_id == "Copoly-40S")
+
 # UV/RI ratio analysis for compositional heterogeneity
 rec_ratio <- recipe(
-  ri_signal + uv_signal + elution_time ~ sample_id,
-  data = copolymers
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copoly_40
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Convert signals to measure format
@@ -101,7 +115,7 @@ rec_ratio <- recipe(
     col_name = "ri"
   ) |>
   step_measure_input_long(
-    uv_signal,
+    uv_254_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
@@ -111,36 +125,39 @@ rec_ratio <- recipe(
   step_sec_uv_ri_ratio(
     uv_col = "uv",
     ri_col = "ri",
-    smooth = TRUE,          # Apply smoothing for noise reduction
-    smooth_span = 0.1,      # Smoothing window (fraction of data)
-    min_signal = 0.01       # Minimum signal threshold
+    smooth = TRUE          # Apply smoothing for noise reduction
   )
 
 prepped_ratio <- prep(rec_ratio)
 result_ratio <- bake(prepped_ratio, new_data = NULL)
 
-# The result contains a uv_ri_ratio column with the ratio curve
+# View result columns
+names(result_ratio)
+#> [1] "sample_id"    "ri"           "uv"           "elution_time" "uv_ri_ratio"
 ```
 
 ### Extracting the Ratio Curve
 
 ``` r
-# Get the ratio values at each elution time
+# The uv_ri_ratio column contains a measure_list
+# Extract the ratio values at each elution time
 ratio_data <- result_ratio |>
   select(sample_id, uv_ri_ratio) |>
   tidyr::unnest(uv_ri_ratio)
 
 # Plot ratio vs elution time
 ggplot(ratio_data, aes(location, value)) +
-  geom_line() +
-  facet_wrap(~sample_id) +
+  geom_line(color = "#A23B72") +
   labs(
     x = "Elution Time (min)",
     y = "UV/RI Ratio",
-    title = "Compositional Profile"
+    title = "UV/RI Ratio Profile for 40% Styrene Copolymer",
+    subtitle = "Flat ratio indicates uniform composition across MW"
   ) +
   theme_minimal()
 ```
+
+![](copolymer-analysis_files/figure-html/extract-ratio-1.png)
 
 ## Composition Calculation
 
@@ -150,33 +167,37 @@ When you know the response factors for each monomer, calculate actual
 composition:
 
 ``` r
-# Composition calculation with known response factors
+# Composition calculation with known response factors for styrene-acrylate
 rec_comp <- recipe(
-  ri_signal + uv_signal + elution_time ~ sample_id,
-  data = copolymers
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copoly_40
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
+  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
   # Calculate composition from UV/RI
   step_sec_composition(
     uv_col = "uv",
     ri_col = "ri",
-    # Response factors for component A (e.g., styrene)
-    component_a_uv = 1.0,    # UV extinction coefficient
-    component_a_ri = 0.185,  # RI response (dn/dc)
-    # Response factors for component B (e.g., butadiene)
-    component_b_uv = 0.1,    # UV extinction coefficient
-    component_b_ri = 0.084   # RI response (dn/dc)
+    # Response factors for styrene (UV-active)
+    component_a_uv = 1.0,    # Strong UV absorption at 254 nm
+    component_a_ri = 0.185,  # dn/dc in THF
+    # Response factors for acrylate (UV-inactive)
+    component_b_uv = 0.02,   # Weak UV absorption
+    component_b_ri = 0.084   # dn/dc in THF
   )
 
 prepped_comp <- prep(rec_comp)
 result_comp <- bake(prepped_comp, new_data = NULL)
 
-# Result contains:
-# - composition_a: Weight fraction of component A at each point
-# - composition_b: Weight fraction of component B at each point
+# Result contains composition columns
+result_comp |>
+  select(sample_id, starts_with("composition_"))
+#> # A tibble: 1 × 2
+#>   sample_id  composition_a
+#>   <chr>             <meas>
+#> 1 Copoly-40S     [701 × 2]
 ```
 
 ### Response Factor Determination
@@ -218,57 +239,51 @@ profile - Indicates gradient copolymer or reactivity differences
 **Characteristics:** - Abrupt ratio changes - Step-like composition
 profile - Indicates blend or block copolymer
 
-## Complete Workflow Example
+## Comparing Multiple Copolymers
+
+Analyze all copolymer samples to compare UV/RI ratios across
+compositions:
 
 ``` r
-# Full copolymer analysis workflow
-rec_full <- recipe(
-  ri_signal + uv_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = copolymers
+# Analyze all samples (excluding homopolymers for this example)
+copolymers_only <- sec_copolymer |>
+  filter(stringr::str_starts(sample_id, "Copoly"))
+
+# Process all copolymers
+rec_all <- recipe(
+  ri_signal + uv_254_signal + elution_time ~ sample_id,
+  data = copolymers_only
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Input signals
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
-
-  # Preprocessing
-  step_sec_detector_delay(reference = "ri", delay_volumes = c(uv = -0.05)) |>
+  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
+  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE)
 
-  # Detector processing
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
+prepped_all <- prep(rec_all)
+result_all <- bake(prepped_all, new_data = NULL)
 
-  # Composition analysis
-  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE) |>
-  step_sec_composition(
-    uv_col = "uv",
-    ri_col = "ri",
-    component_a_uv = 1.0,
-    component_a_ri = 0.185,
-    component_b_uv = 0.05,
-    component_b_ri = 0.084
-  ) |>
+# Extract ratio curves for plotting
+all_ratios <- result_all |>
+  select(sample_id, uv_ri_ratio) |>
+  tidyr::unnest(uv_ri_ratio)
 
-  # MW calculations
-  step_sec_conventional_cal(
-    standards = ps_standards,
-    fit_type = "cubic"
-  ) |>
-  step_sec_mw_averages(measures = "log_mw")
-
-prepped_full <- prep(rec_full)
-result_full <- bake(prepped_full, new_data = NULL)
-
-# Report composition statistics
-result_full |>
-  select(
-    sample_id,
-    mw_mw,
-    composition_a_mean,
-    composition_a_sd
-  )
+# Plot UV/RI ratios - higher ratio = more styrene
+ggplot(all_ratios, aes(location, value, color = sample_id)) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Elution Time (min)",
+    y = "UV/RI Ratio",
+    color = "Sample",
+    title = "UV/RI Ratio Profiles by Styrene Content",
+    subtitle = "Higher ratio corresponds to more styrene (UV-absorbing)"
+  ) +
+  scale_color_viridis_d() +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
+
+![](copolymer-analysis_files/figure-html/compare-copolymers-1.png)
 
 ## Best Practices
 
@@ -339,22 +354,23 @@ sessionInfo()
 #>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.0       
 #> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.0  
 #> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.4     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
-#> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] parallelly_1.46.0   lava_1.8.2          tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.68.0       purrr_1.2.0        
-#> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
-#> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      survival_3.8-3      future.apply_1.20.1
-#> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
-#> [52] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     
-#> [55] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         
-#> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] rlang_1.1.6         Rcpp_1.1.0          glue_1.8.0         
-#> [64] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [67] systemfonts_1.3.1   fs_1.6.6
+#> [16] lifecycle_1.0.4     stringr_1.6.0       compiler_4.5.2     
+#> [19] farver_2.1.2        textshaping_1.0.4   codetools_0.2-20   
+#> [22] htmltools_0.5.9     class_7.3-23        sass_0.4.10        
+#> [25] yaml_2.3.12         prodlim_2025.04.28  tidyr_1.3.2        
+#> [28] pillar_1.11.1       pkgdown_2.2.0       jquerylib_0.1.4    
+#> [31] MASS_7.3-65         cachem_1.1.0        gower_1.0.2        
+#> [34] rpart_4.1.24        parallelly_1.46.0   lava_1.8.2         
+#> [37] tidyselect_1.2.1    digest_0.6.39       stringi_1.8.7      
+#> [40] future_1.68.0       purrr_1.2.0         listenv_0.10.0     
+#> [43] labeling_0.4.3      splines_4.5.2       fastmap_1.2.0      
+#> [46] grid_4.5.2          cli_3.6.5           magrittr_2.0.4     
+#> [49] utf8_1.2.6          survival_3.8-3      future.apply_1.20.1
+#> [52] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
+#> [55] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     
+#> [58] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         
+#> [61] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
+#> [64] viridisLite_0.4.2   rlang_1.1.6         Rcpp_1.1.0         
+#> [67] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
+#> [70] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
 ```
