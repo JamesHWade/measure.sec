@@ -518,14 +518,28 @@ uses RI for concentration and MALS for absolute molecular weight:</p>
 <span>  <span class="co"># Process detectors</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_uv.html">step_sec_uv</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"uv"</span>, extinction_column <span class="op">=</span> <span class="st">"extinction_coef"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mals.html">step_sec_mals</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"mals"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Convert to concentration</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, detector <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Calculate MW averages from MALS-derived MW</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>mw_column <span class="op">=</span> <span class="st">"mw_mals"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mals.html">step_sec_mals</a></span><span class="op">(</span>mals_col <span class="op">=</span> <span class="st">"mals"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="co"># Convert to concentration (requires injection info)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    detector <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    injection_volume <span class="op">=</span> <span class="fl">100</span>,       <span class="co"># µL</span></span>
+<span>    sample_concentration <span class="op">=</span> <span class="fl">2.0</span>    <span class="co"># mg/mL</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_multi</span><span class="op">)</span></span>
-<span><span class="va">result_multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_multi</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">result_multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_multi</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># View multi-detector results</span></span>
+<span><span class="va">result_multi</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span>, <span class="va">uv</span>, <span class="va">mals</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id          ri          uv        mals</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-1K     <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-10K    <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-50K    <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="copolymer-composition-analysis">Copolymer Composition Analysis<a class="anchor" aria-label="anchor" href="#copolymer-composition-analysis"></a>
@@ -572,9 +586,10 @@ weight species (HMWS/aggregates) and low molecular weight species
 (LMWS/fragments):</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create protein-like data (using UV at 280 nm)</span></span>
+<span><span class="co"># Filter to a single sample for demonstration</span></span>
 <span><span class="va">protein_data</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_type</span> <span class="op">==</span> <span class="st">"sample"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/nth.html" class="external-link">first</a></span><span class="op">(</span><span class="va">sample_id</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">rec_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
 <span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
@@ -599,7 +614,11 @@ weight species (HMWS/aggregates) and low molecular weight species
 <span><span class="co"># - purity_monomer: % main peak</span></span>
 <span><span class="co"># - purity_lmws: % low MW species (after monomer)</span></span>
 <span><span class="va">result_protein</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">purity_hmws</span>, <span class="va">purity_monomer</span>, <span class="va">purity_lmws</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">purity_hmws</span>, <span class="va">purity_monomer</span>, <span class="va">purity_lmws</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id purity_hmws purity_monomer purity_lmws</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PMMA-Low         2.05           25.7        72.1</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="molecular-weight-distribution">Molecular Weight Distribution<a class="anchor" aria-label="anchor" href="#molecular-weight-distribution"></a>
@@ -617,9 +636,9 @@ distributions:</p>
 <span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Add MW distribution curves</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_mw_distribution.html">step_sec_mw_distribution</a></span><span class="op">(</span></span>
-<span>    signal_col <span class="op">=</span> <span class="st">"ri"</span>,</span>
-<span>    mw_column <span class="op">=</span> <span class="st">"known_mw"</span>,</span>
-<span>    output_type <span class="op">=</span> <span class="st">"both"</span>  <span class="co"># "differential", "cumulative", or "both"</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    type <span class="op">=</span> <span class="st">"both"</span>,  <span class="co"># "differential", "cumulative", or "both"</span></span>
+<span>    calibration <span class="op">=</span> <span class="cn">NULL</span>  <span class="co"># Assumes x-axis is already log10(MW)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_mwd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_mwd</span><span class="op">)</span></span>
@@ -736,6 +755,20 @@ testing:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Branching Analysis Results</span></span>
+<span><span class="co">#&gt; ================================================== </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; MW Range: 100000 - 500000</span></span>
+<span><span class="co">#&gt; g (Rg ratio): 0.610 - 0.694 (mean: 0.666)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimated branches/molecule: 2.1 - 2.7</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
+<span><span class="co">#&gt;       mw     g</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">100</span>000 0.694</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">200</span>000 0.694</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">500</span>000 0.610</span></span>
 <span><span class="co"># g &lt; 1 indicates branching (smaller Rg than linear)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -774,20 +807,16 @@ testing:</p>
 </h2>
 <p>Here’s a complete workflow for analyzing polymer standards:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Load data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Complete multi-detector SEC workflow</span></span>
+<span><span class="co"># Note: This example demonstrates the full processing pipeline</span></span>
 <span></span>
 <span><span class="co"># Create comprehensive recipe with explicit formula</span></span>
 <span><span class="va">rec_complete</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
-<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">mals_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">+</span> <span class="va">extinction_coef</span> <span class="op">+</span> <span class="va">known_mw</span> <span class="op">+</span> <span class="va">polymer_type</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">mals_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">+</span> <span class="va">extinction_coef</span> <span class="op">+</span> <span class="va">polymer_type</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">sec_triple_detect</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Input conversion</span></span>
+<span>  <span class="co"># Input conversion - all three detectors</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">uv_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"uv"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">mals_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"mals"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -797,11 +826,13 @@ testing:</p>
 <span>  <span class="co"># Detector processing</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_uv.html">step_sec_uv</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"uv"</span>, extinction_column <span class="op">=</span> <span class="st">"extinction_coef"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mals.html">step_sec_mals</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"mals"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, detector <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="co"># Molecular weight calculations</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>mw_column <span class="op">=</span> <span class="st">"known_mw"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_fractions.html">step_sec_mw_fractions</a></span><span class="op">(</span>mw_column <span class="op">=</span> <span class="st">"known_mw"</span>, cutoffs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10000</span>, <span class="fl">100000</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mals.html">step_sec_mals</a></span><span class="op">(</span>mals_col <span class="op">=</span> <span class="st">"mals"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    detector <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    injection_volume <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>    sample_concentration <span class="op">=</span> <span class="fl">2.0</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Composition analysis</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_uv_ri_ratio.html">step_sec_uv_ri_ratio</a></span><span class="op">(</span>uv_col <span class="op">=</span> <span class="st">"uv"</span>, ri_col <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span></span>
 <span></span>
@@ -809,14 +840,19 @@ testing:</p>
 <span><span class="va">prepped_complete</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_complete</span><span class="op">)</span></span>
 <span><span class="va">result_complete</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_complete</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View molecular weight results</span></span>
+<span><span class="co"># View processed results</span></span>
 <span><span class="va">result_complete</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">polymer_type</span>, <span class="va">Mn</span>, <span class="va">Mw</span>, <span class="va">Mz</span>, <span class="va">dispersity</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Generate summary</span></span>
-<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span><span class="va">result_complete</span>, sample_id <span class="op">=</span> <span class="st">"sample_id"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">polymer_type</span>, <span class="va">ri</span>, <span class="va">uv</span>, <span class="va">mals</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">6</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id polymer_type          ri          uv        mals</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-1K     polystyrene  <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-10K    polystyrene  <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-50K    polystyrene  <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PS-100K   polystyrene  <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PS-500K   polystyrene  <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> PMMA-Low  pmma         <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span> <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="available-steps-reference">Available Steps Reference<a class="anchor" aria-label="anchor" href="#available-steps-reference"></a>

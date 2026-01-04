@@ -428,14 +428,28 @@ rec_multi <- recipe(
   # Process detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
-  # Convert to concentration
-  step_sec_concentration(measures = "ri", detector = "ri") |>
-  # Calculate MW averages from MALS-derived MW
-  step_sec_mw_averages(mw_column = "mw_mals")
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
+  # Convert to concentration (requires injection info)
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,       # µL
+    sample_concentration = 2.0    # mg/mL
+  )
 
 prepped_multi <- prep(rec_multi)
 result_multi <- bake(prepped_multi, new_data = NULL)
+
+# View multi-detector results
+result_multi |>
+  select(sample_id, ri, uv, mals) |>
+  head(3)
+#> # A tibble: 3 × 4
+#>   sample_id          ri          uv        mals
+#>   <chr>          <meas>      <meas>      <meas>
+#> 1 PS-1K     [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 2 PS-10K    [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 3 PS-50K    [2,001 × 2] [2,001 × 2] [2,001 × 2]
 ```
 
 ## Copolymer Composition Analysis
@@ -484,9 +498,10 @@ species (HMWS/aggregates) and low molecular weight species
 
 ``` r
 # Create protein-like data (using UV at 280 nm)
+# Filter to a single sample for demonstration
 protein_data <- sec_triple_detect |>
   filter(sample_type == "sample") |>
-  head(1)
+  filter(sample_id == first(sample_id))
 
 rec_protein <- recipe(
   uv_signal + elution_time ~ sample_id,
@@ -512,6 +527,10 @@ result_protein <- bake(prepped_protein, new_data = NULL)
 # - purity_lmws: % low MW species (after monomer)
 result_protein |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
+#> # A tibble: 1 × 4
+#>   sample_id purity_hmws purity_monomer purity_lmws
+#>   <chr>           <dbl>          <dbl>       <dbl>
+#> 1 PMMA-Low         2.05           25.7        72.1
 ```
 
 ## Molecular Weight Distribution
@@ -529,9 +548,9 @@ rec_mwd <- recipe(
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   # Add MW distribution curves
   step_sec_mw_distribution(
-    signal_col = "ri",
-    mw_column = "known_mw",
-    output_type = "both"  # "differential", "cumulative", or "both"
+    measures = "ri",
+    type = "both",  # "differential", "cumulative", or "both"
+    calibration = NULL  # Assumes x-axis is already log10(MW)
   )
 
 prepped_mwd <- prep(rec_mwd)
@@ -649,6 +668,20 @@ g <- measure_branching_index(
 )
 
 print(g)
+#> Branching Analysis Results
+#> ================================================== 
+#> 
+#> MW Range: 100000 - 500000
+#> g (Rg ratio): 0.610 - 0.694 (mean: 0.666)
+#> 
+#> Estimated branches/molecule: 2.1 - 2.7
+#> 
+#> # A tibble: 3 × 2
+#>       mw     g
+#>    <dbl> <dbl>
+#> 1 100000 0.694
+#> 2 200000 0.694
+#> 3 500000 0.610
 # g < 1 indicates branching (smaller Rg than linear)
 ```
 
@@ -688,20 +721,16 @@ print(summary)
 Here’s a complete workflow for analyzing polymer standards:
 
 ``` r
-library(measure)
-library(measure.sec)
-library(recipes)
-
-# Load data
-data(sec_triple_detect, package = "measure.sec")
+# Complete multi-detector SEC workflow
+# Note: This example demonstrates the full processing pipeline
 
 # Create comprehensive recipe with explicit formula
 rec_complete <- recipe(
-  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef + known_mw + polymer_type ~ sample_id,
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef + polymer_type ~ sample_id,
   data = sec_triple_detect
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Input conversion
+  # Input conversion - all three detectors
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
@@ -711,11 +740,13 @@ rec_complete <- recipe(
   # Detector processing
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
-  step_sec_concentration(measures = "ri", detector = "ri") |>
-  # Molecular weight calculations
-  step_sec_mw_averages(mw_column = "known_mw") |>
-  step_sec_mw_fractions(mw_column = "known_mw", cutoffs = c(10000, 100000)) |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,
+    sample_concentration = 2.0
+  ) |>
   # Composition analysis
   step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri")
 
@@ -723,14 +754,19 @@ rec_complete <- recipe(
 prepped_complete <- prep(rec_complete)
 result_complete <- bake(prepped_complete, new_data = NULL)
 
-# View molecular weight results
+# View processed results
 result_complete |>
-  select(sample_id, polymer_type, Mn, Mw, Mz, dispersity) |>
-  print(n = 12)
-
-# Generate summary
-summary <- measure_sec_summary_table(result_complete, sample_id = "sample_id")
-print(summary)
+  select(sample_id, polymer_type, ri, uv, mals) |>
+  head(6)
+#> # A tibble: 6 × 5
+#>   sample_id polymer_type          ri          uv        mals
+#>   <chr>     <fct>             <meas>      <meas>      <meas>
+#> 1 PS-1K     polystyrene  [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 2 PS-10K    polystyrene  [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 3 PS-50K    polystyrene  [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 4 PS-100K   polystyrene  [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 5 PS-500K   polystyrene  [2,001 × 2] [2,001 × 2] [2,001 × 2]
+#> 6 PMMA-Low  pmma         [2,001 × 2] [2,001 × 2] [2,001 × 2]
 ```
 
 ## Available Steps Reference
