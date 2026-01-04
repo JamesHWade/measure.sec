@@ -34,7 +34,9 @@ mw_to_time <- function(mw, slope = -0.75, intercept = 19) {
 # Generate a chromatogram peak (log-normal shape for SEC)
 generate_peak <- function(time, peak_time, dispersity, intensity = 1) {
   sigma <- 0.25 + 0.12 * (dispersity - 1)
-  if (peak_time <= 0) return(rep(0, length(time)))
+  if (peak_time <= 0) {
+    return(rep(0, length(time)))
+  }
 
   mu <- log(peak_time)
   x_shifted <- time - (peak_time - exp(mu - sigma^2))
@@ -66,7 +68,9 @@ add_baseline <- function(signal, time, drift_amp, injection_time = NULL) {
     inj_idx <- which.min(abs(time - injection_time))
     # Sharp spike that decays
     decay_time <- 0.3 # minutes
-    decay_idx <- which(time >= injection_time & time <= injection_time + decay_time)
+    decay_idx <- which(
+      time >= injection_time & time <= injection_time + decay_time
+    )
     if (length(decay_idx) > 0) {
       t_decay <- time[decay_idx] - injection_time
       injection_artifact[decay_idx] <- drift_amp * 3 * exp(-t_decay / 0.05)
@@ -85,7 +89,9 @@ add_noise <- function(signal, base_noise, hetero_factor = 0.02) {
 
 # Apply detector delay (shift signal in time)
 apply_delay <- function(signal, time, delay_time) {
-  if (abs(delay_time) < 1e-6) return(signal)
+  if (abs(delay_time) < 1e-6) {
+    return(signal)
+  }
   approx(time - delay_time, signal, xout = time, rule = 2)$y
 }
 
@@ -102,19 +108,19 @@ generate_raw_ps_standards <- function() {
 
   # PS narrow standards (typical commercial kit)
   standards <- tribble(
-    ~standard_name, ~mp,      ~dispersity,
-    "PS-580",       580,      1.06,
-    "PS-1270",      1270,     1.04,
-    "PS-2960",      2960,     1.03,
-    "PS-5970",      5970,     1.02,
-    "PS-9680",      9680,     1.02,
-    "PS-19600",     19600,    1.02,
-    "PS-33500",     33500,    1.02,
-    "PS-67500",     67500,    1.02,
-    "PS-135000",    135000,   1.01,
-    "PS-270000",    270000,   1.01,
-    "PS-495000",    495000,   1.02,
-    "PS-930000",    930000,   1.02
+    ~standard_name , ~mp    , ~dispersity ,
+    "PS-580"       ,    580 , 1.06        ,
+    "PS-1270"      ,   1270 , 1.04        ,
+    "PS-2960"      ,   2960 , 1.03        ,
+    "PS-5970"      ,   5970 , 1.02        ,
+    "PS-9680"      ,   9680 , 1.02        ,
+    "PS-19600"     ,  19600 , 1.02        ,
+    "PS-33500"     ,  33500 , 1.02        ,
+    "PS-67500"     ,  67500 , 1.02        ,
+    "PS-135000"    , 135000 , 1.01        ,
+    "PS-270000"    , 270000 , 1.01        ,
+    "PS-495000"    , 495000 , 1.02        ,
+    "PS-930000"    , 930000 , 1.02
   )
 
   # Generate chromatogram for each standard
@@ -123,13 +129,16 @@ generate_raw_ps_standards <- function() {
 
     # Base peak (RI detector response)
     ri_signal <- generate_peak(
-      time_points, peak_time, std_row$dispersity,
+      time_points,
+      peak_time,
+      std_row$dispersity,
       intensity = 150 + runif(1, -20, 20) # mV-like values with injection variation
     )
 
     # Add realistic baseline and noise
     ri_signal <- add_baseline(
-      ri_signal, time_points,
+      ri_signal,
+      time_points,
       drift_amp = 1.5 + runif(1, -0.5, 0.5),
       injection_time = min(time_points)
     )
@@ -169,41 +178,60 @@ generate_raw_unknowns <- function() {
 
   # Unknown samples with known true MW for validation
   unknowns <- tribble(
-    ~sample_id,         ~true_mw, ~true_mn, ~true_mz, ~true_dispersity, ~description,
-    "Unknown-A",        45000,    22000,    85000,    2.05,             "Broad distribution PMMA-like",
-    "Unknown-B",        125000,   95000,    165000,   1.32,             "Medium dispersity PS-like",
-    "Unknown-C",        82000,    75000,    92000,    1.09,             "Narrow distribution reference",
-    "Unknown-Bimodal",  NA,       NA,       NA,       NA,               "Bimodal mixture (50K + 200K)",
-    "Unknown-HMW",      1500000,  1200000,  1900000,  1.25,             "Very high MW with aggregates",
-    "Unknown-LMW",      3500,     2800,     4500,     1.25,             "Low MW oligomer region"
+    ~sample_id        , ~true_mw , ~true_mn , ~true_mz , ~true_dispersity , ~description                    ,
+    "Unknown-A"       ,    45000 ,    22000 ,    85000 , 2.05             , "Broad distribution PMMA-like"  ,
+    "Unknown-B"       ,   125000 ,    95000 ,   165000 , 1.32             , "Medium dispersity PS-like"     ,
+    "Unknown-C"       ,    82000 ,    75000 ,    92000 , 1.09             , "Narrow distribution reference" ,
+    "Unknown-Bimodal" , NA       , NA       , NA       , NA               , "Bimodal mixture (50K + 200K)"  ,
+    "Unknown-HMW"     ,  1500000 ,  1200000 ,  1900000 , 1.25             , "Very high MW with aggregates"  ,
+    "Unknown-LMW"     ,     3500 ,     2800 ,     4500 , 1.25             , "Low MW oligomer region"
   )
 
   generate_unknown_chrom <- function(unk_row) {
     if (unk_row$sample_id == "Unknown-Bimodal") {
       # Bimodal: two peaks at 50K and 200K
-      peak1 <- generate_peak(time_points, mw_to_time(50000), 1.15, intensity = 80)
-      peak2 <- generate_peak(time_points, mw_to_time(200000), 1.2, intensity = 120)
+      peak1 <- generate_peak(
+        time_points,
+        mw_to_time(50000),
+        1.15,
+        intensity = 80
+      )
+      peak2 <- generate_peak(
+        time_points,
+        mw_to_time(200000),
+        1.2,
+        intensity = 120
+      )
       ri_signal <- peak1 + peak2
     } else if (unk_row$sample_id == "Unknown-HMW") {
       # High MW with aggregate shoulder
       main_peak <- generate_peak(
         time_points,
         mw_to_time(unk_row$true_mw),
-        unk_row$true_dispersity, intensity = 100
+        unk_row$true_dispersity,
+        intensity = 100
       )
       # Small aggregate peak at higher MW (earlier elution)
-      agg_peak <- generate_peak(time_points, mw_to_time(5000000), 1.3, intensity = 8)
+      agg_peak <- generate_peak(
+        time_points,
+        mw_to_time(5000000),
+        1.3,
+        intensity = 8
+      )
       ri_signal <- main_peak + agg_peak
     } else {
       ri_signal <- generate_peak(
-        time_points, mw_to_time(unk_row$true_mw),
-        unk_row$true_dispersity, intensity = 120 + runif(1, -30, 30)
+        time_points,
+        mw_to_time(unk_row$true_mw),
+        unk_row$true_dispersity,
+        intensity = 120 + runif(1, -30, 30)
       )
     }
 
     # More variable baselines for unknowns (real lab conditions)
     ri_signal <- add_baseline(
-      ri_signal, time_points,
+      ri_signal,
+      time_points,
       drift_amp = 2.0 + runif(1, -1, 1),
       injection_time = min(time_points)
     )
@@ -224,8 +252,14 @@ generate_raw_unknowns <- function() {
   sec_raw_unknowns <- chromatograms |>
     left_join(unknowns, by = "sample_id") |>
     select(
-      sample_id, description, true_mw, true_mn, true_mz, true_dispersity,
-      time_min, ri_mv
+      sample_id,
+      description,
+      true_mw,
+      true_mn,
+      true_mz,
+      true_dispersity,
+      time_min,
+      ri_mv
     )
 
   sec_raw_unknowns
@@ -248,11 +282,11 @@ generate_raw_multidetector <- function() {
 
   # Samples for multi-detector analysis
   samples <- tribble(
-    ~sample_id,    ~mw,     ~dispersity, ~dn_dc, ~ext_coef, ~description,
-    "PS-DelayStd", 100000,  1.02,        0.185,  1.2,       "Narrow PS for delay determination",
-    "Sample-1",    75000,   1.85,        0.185,  1.1,       "PS sample with UV absorption",
-    "Sample-2",    150000,  2.1,         0.085,  0.05,      "PMMA sample (weak UV)",
-    "Sample-3",    45000,   1.5,         0.150,  0.8,       "Copolymer sample"
+    ~sample_id    , ~mw    , ~dispersity , ~dn_dc , ~ext_coef , ~description                        ,
+    "PS-DelayStd" , 100000 , 1.02        , 0.185  , 1.2       , "Narrow PS for delay determination" ,
+    "Sample-1"    ,  75000 , 1.85        , 0.185  , 1.1       , "PS sample with UV absorption"      ,
+    "Sample-2"    , 150000 , 2.1         , 0.085  , 0.05      , "PMMA sample (weak UV)"             ,
+    "Sample-3"    ,  45000 , 1.5         , 0.150  , 0.8       , "Copolymer sample"
   )
 
   generate_multidet_chrom <- function(smp_row) {
@@ -260,13 +294,17 @@ generate_raw_multidetector <- function() {
 
     # RI signal (reference detector)
     conc_profile <- generate_peak(
-      time_points, peak_time, smp_row$dispersity,
+      time_points,
+      peak_time,
+      smp_row$dispersity,
       intensity = 200 * smp_row$dn_dc
     )
 
     ri_signal <- conc_profile
     ri_signal <- add_baseline(
-      ri_signal, time_points, drift_amp = 1.2,
+      ri_signal,
+      time_points,
+      drift_amp = 1.2,
       injection_time = min(time_points)
     )
     ri_signal <- add_noise(ri_signal, base_noise = 0.6)
@@ -275,7 +313,9 @@ generate_raw_multidetector <- function() {
     uv_base <- conc_profile * smp_row$ext_coef / smp_row$dn_dc
     uv_signal <- apply_delay(uv_base, time_points, delay_uv)
     uv_signal <- add_baseline(
-      uv_signal, time_points, drift_amp = 0.8,
+      uv_signal,
+      time_points,
+      drift_amp = 0.8,
       injection_time = min(time_points) + delay_uv
     )
     uv_signal <- add_noise(uv_signal, base_noise = 0.4)
@@ -285,10 +325,16 @@ generate_raw_multidetector <- function() {
     mals_base <- conc_profile * (smp_row$mw / 50000) * smp_row$dn_dc
     mals_signal <- apply_delay(mals_base, time_points, delay_mals)
     mals_signal <- add_baseline(
-      mals_signal, time_points, drift_amp = 2.5,
+      mals_signal,
+      time_points,
+      drift_amp = 2.5,
       injection_time = min(time_points) + delay_mals
     )
-    mals_signal <- add_noise(mals_signal, base_noise = 1.5, hetero_factor = 0.03)
+    mals_signal <- add_noise(
+      mals_signal,
+      base_noise = 1.5,
+      hetero_factor = 0.03
+    )
 
     tibble(
       sample_id = smp_row$sample_id,
@@ -311,9 +357,18 @@ generate_raw_multidetector <- function() {
       delay_mals_ml = delay_mals
     ) |>
     select(
-      sample_id, description, mw, dispersity, dn_dc, ext_coef,
-      time_min, ri_mv, uv_au, mals_mv,
-      delay_uv_ml, delay_mals_ml
+      sample_id,
+      description,
+      mw,
+      dispersity,
+      dn_dc,
+      ext_coef,
+      time_min,
+      ri_mv,
+      uv_au,
+      mals_mv,
+      delay_uv_ml,
+      delay_mals_ml
     )
 
   sec_raw_multidetector
