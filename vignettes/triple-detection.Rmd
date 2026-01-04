@@ -124,10 +124,9 @@ library(ggplot2)
 ```{r data}
 data(sec_triple_detect, package = "measure.sec")
 
-# Select samples with all three detectors
+# Select sample data (excluding standards)
 samples <- sec_triple_detect |>
-  filter(sample_type == "sample") |>
-  head(3)
+  filter(sample_type == "sample")
 
 glimpse(samples)
 ```
@@ -198,10 +197,8 @@ Delay volumes should be determined experimentally:
 
 A complete triple detection recipe:
 
-```{r triple-workflow, eval = FALSE}
+```{r triple-workflow}
 # Complete triple detection recipe
-# Note: This example shows the full pattern; some steps may require
-# additional configuration depending on your detector setup
 rec_triple <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
   data = samples
@@ -224,20 +221,23 @@ rec_triple <- recipe(
   # Step 4: Process each detector
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
   # Step 5: Convert to concentration
-  step_sec_concentration(measures = "ri", detector = "ri") |>
-
-  # Step 6: Calculate MW averages from MALS
-  step_sec_mw_averages(mw_column = "mw_mals")
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,       # µL
+    sample_concentration = 2.0    # mg/mL
+  )
 
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)
 
-# View results
+# View results - MALS provides absolute MW at each slice
+# For MW averages, you would integrate over the chromatogram
 result_triple |>
-  select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+  select(sample_id, starts_with("mw_"))
 ```
 
 ## Light Scattering Detectors
@@ -257,7 +257,7 @@ rec_mals <- recipe(
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
   step_sec_baseline(measures = "mals") |>
   step_sec_mals(
-    measures = "mals",
+    mals_col = "mals",
     dn_dc_column = "dn_dc",
     wavelength = 658,  # Laser wavelength in nm
     angles = c(35, 50, 75, 90, 105, 120, 145)  # Detector angles
@@ -362,24 +362,19 @@ rec_quad <- recipe(
   # Process detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(measures = "mals", dn_dc_column = "dn_dc") |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
   step_sec_viscometer(measures = "visc") |>
 
   # Concentration
-  step_sec_concentration(measures = "ri", detector = "ri") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,       # µL
+    sample_concentration = 2.0    # mg/mL
+  ) |>
 
   # Intrinsic viscosity
-  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration") |>
-
-  # MW averages
-  step_sec_mw_averages(mw_column = "mw_mals") |>
-
-  # MW distribution
-  step_sec_mw_distribution(
-    signal_col = "ri",
-    mw_column = "mw_mals",
-    output_type = "both"
-  )
+  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
 
 prepped_quad <- prep(rec_quad)
 result_quad <- bake(prepped_quad, new_data = NULL)
