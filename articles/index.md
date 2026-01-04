@@ -21,6 +21,8 @@ Task-oriented guides for specific applications
   Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md):
 - [System Suitability and
   QC](https://jameshwade.github.io/measure-sec/articles/system-suitability.md):
+- [Exporting
+  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md):
 
 ### Reference
 
