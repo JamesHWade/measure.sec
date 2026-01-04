@@ -505,6 +505,8 @@ Learning-oriented guides to get you started
   measure.sec](https://jameshwade.github.io/measure-sec/articles/getting-started.md):
 - [Tutorial: Conventional Calibration from Raw
   Data](https://jameshwade.github.io/measure-sec/articles/tutorial-conventional-calibration.md):
+- [Tutorial: Triple Detection from Raw
+  Data](https://jameshwade.github.io/measure-sec/articles/tutorial-triple-detection.md):
 
 ### How-to Guides
 
