@@ -997,8 +997,16 @@ plot_sec_conformation <- function(
     )
   )
 
-  # Check columns exist
-  available <- find_measure_cols(data)
+  # Check columns exist - try measure columns first, fall back to regular columns
+  measure_cols <- find_measure_cols(data)
+  has_measure_cols <- length(measure_cols) > 0
+
+  if (has_measure_cols) {
+    available <- measure_cols
+  } else {
+    available <- names(data)
+  }
+
   if (!mw_col %in% available) {
     cli::cli_abort("MW column {.val {mw_col}} not found.")
   }
@@ -1006,19 +1014,46 @@ plot_sec_conformation <- function(
     cli::cli_abort("Y column {.val {y_col}} not found for type {.val {type}}.")
   }
 
-  # Extract slice data
-  slice_data <- prepare_plot_data(
-    data,
-    measures = c(mw_col, y_col),
-    sample_id = sample_id
-  )
-
-  # Pivot to wide format
-  slice_data <- tidyr::pivot_wider(
-    slice_data,
-    names_from = "measure",
-    values_from = "value"
-  )
+  # Extract and prepare data based on format
+  if (has_measure_cols) {
+    # Data has measure columns - extract via slice table
+    slice_data <- prepare_plot_data(
+      data,
+      measures = c(mw_col, y_col),
+      sample_id = sample_id
+    )
+    # Pivot to wide format
+    slice_data <- tidyr::pivot_wider(
+      slice_data,
+      names_from = "measure",
+      values_from = "value"
+    )
+  } else {
+    # Data has regular columns - use directly
+    slice_data <- data
+    # Handle sample_id column naming
+    if (!is.null(sample_id)) {
+      if (sample_id %in% names(slice_data)) {
+        if (sample_id != "sample_id") {
+          # Rename the specified column to sample_id, dropping existing if present
+          slice_data <- slice_data |>
+            dplyr::select(-dplyr::any_of("sample_id")) |>
+            dplyr::rename(sample_id = !!rlang::sym(sample_id))
+        }
+      } else {
+        cli::cli_warn(
+          c(
+            "Sample ID column {.val {sample_id}} not found.",
+            "i" = "Using default sample identifier."
+          )
+        )
+        slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
+      }
+    } else if (!"sample_id" %in% names(slice_data)) {
+      # No sample_id column exists - create one
+      slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
+    }
+  }
 
   # Filter valid data and compute log values
   slice_data <- slice_data |>
@@ -1036,16 +1071,25 @@ plot_sec_conformation <- function(
 
   # Add linear reference if provided
   if (!is.null(compare_linear)) {
-    ref_data <- prepare_plot_data(
-      compare_linear,
-      measures = c(mw_col, y_col),
-      sample_id = sample_id
-    )
-    ref_data <- tidyr::pivot_wider(
-      ref_data,
-      names_from = "measure",
-      values_from = "value"
-    )
+    ref_measure_cols <- find_measure_cols(compare_linear)
+    ref_has_measure <- length(ref_measure_cols) > 0
+
+    if (ref_has_measure) {
+      ref_data <- prepare_plot_data(
+        compare_linear,
+        measures = c(mw_col, y_col),
+        sample_id = sample_id
+      )
+      ref_data <- tidyr::pivot_wider(
+        ref_data,
+        names_from = "measure",
+        values_from = "value"
+      )
+    } else {
+      ref_data <- compare_linear
+      ref_data <- dplyr::mutate(ref_data, sample_id = "Linear Reference")
+    }
+
     ref_data <- ref_data |>
       dplyr::filter(
         !is.na(.data[[mw_col]]) &
