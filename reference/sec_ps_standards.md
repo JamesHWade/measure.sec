@@ -107,6 +107,9 @@ Other sec-data:
 [`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
 [`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
 [`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
 [`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
 [`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
 

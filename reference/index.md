@@ -178,3 +178,14 @@ Example datasets for SEC analysis
   : Branched Polymer SEC Data
 - [`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md)
   : System Suitability Test Data
+
+## Raw Tutorial Datasets
+
+Realistic raw chromatogram data for tutorials
+
+- [`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md)
+  : Raw SEC Calibration Standards
+- [`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md)
+  : Raw SEC Unknown Samples with Known Molecular Weights
+- [`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md)
+  : Raw Multi-Detector SEC Data

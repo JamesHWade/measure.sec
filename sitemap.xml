@@ -15,6 +15,7 @@
 <url><loc>https://jameshwade.github.io/measure-sec/articles/sec-analysis.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/articles/system-suitability.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/articles/triple-detection.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/articles/tutorial-conventional-calibration.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/autoplot.sec_results.html</loc></url>
@@ -55,6 +56,9 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_protein.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_results.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.html</loc></url>
