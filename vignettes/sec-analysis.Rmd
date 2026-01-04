@@ -74,7 +74,12 @@ ps_standards <- sec_triple_detect |>
   filter(polymer_type == "polystyrene")
 
 # Create the preprocessing recipe
-rec <- recipe(~., data = ps_standards) |>
+# Note: The formula specifies which columns to use and sample_id as grouping
+rec <- recipe(
+  ri_signal + elution_time + dn_dc + known_mw ~ sample_id,
+  data = ps_standards
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert to measure format
   step_measure_input_long(
     ri_signal,
@@ -156,7 +161,12 @@ ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-50K")
 
 # Build the calibration recipe
-rec_cal <- recipe(~., data = ps_sample) |>
+# Note: Use explicit formula with sample_id as the grouping variable
+rec_cal <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -318,7 +328,13 @@ ggplot(combined, aes(retention_time, log_mp, color = polymer, shape = polymer)) 
 For more accurate molecular weight determination, multi-detector SEC uses RI for concentration and MALS for absolute molecular weight:
 
 ```{r multi-detector, eval = FALSE}
-rec_multi <- recipe(~., data = sec_triple_detect) |>
+# Multi-detector SEC workflow for absolute molecular weight
+# Note: MALS processing requires additional detector configuration
+rec_multi <- recipe(
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = sec_triple_detect
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert each detector to measure format
   step_measure_input_long(
     ri_signal,
@@ -351,8 +367,8 @@ rec_multi <- recipe(~., data = sec_triple_detect) |>
   # Calculate MW averages from MALS-derived MW
   step_sec_mw_averages(mw_column = "mw_mals")
 
-prepped <- prep(rec_multi)
-result <- bake(prepped, new_data = NULL)
+prepped_multi <- prep(rec_multi)
+result_multi <- bake(prepped_multi, new_data = NULL)
 ```
 
 ## Copolymer Composition Analysis
