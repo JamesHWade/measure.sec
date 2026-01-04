@@ -1,0 +1,436 @@
+---
+title: "Single-Angle Light Scattering: LALS and RALS"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Single-Angle Light Scattering: LALS and RALS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+Single-angle light scattering detectors (LALS and RALS) provide a simpler, cost-effective alternative to multi-angle detection (MALS) for determining absolute molecular weight. While they don't provide radius of gyration (Rg) information, they can be excellent choices for routine analysis of smaller molecules.
+
+This vignette covers:
+
+1. LALS (Low-Angle Light Scattering) principles and usage
+2. RALS (Right-Angle Light Scattering) principles and usage
+3. When to choose each technique
+4. Comparison with MALS
+
+## Setup
+
+```{r setup}
+library(measure)
+library(measure.sec)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+```
+
+## The Angular Dependence Problem
+
+Light scattering from polymer molecules is angle-dependent. For larger molecules, the scattered intensity varies with detection angle due to intramolecular interference. This is described by the particle scattering function P(θ):
+
+```{r angular-dependence, echo = FALSE, fig.width=7, fig.height=4}
+# Demonstrate angular dependence for different particle sizes
+angles <- seq(0, 180, by = 5)
+theta_rad <- angles * pi / 180
+
+# P(theta) for different Rg values (Debye function approximation)
+# P(theta) ≈ 1 - (16π²/3) * (Rg/λ)² * sin²(θ/2) for small arguments
+lambda <- 658  # nm
+calc_p_theta <- function(rg, theta) {
+  q <- 4 * pi / lambda * sin(theta / 2)
+  x <- (q * rg)^2
+  ifelse(x < 0.1, 1 - x / 3, 3 * (exp(-x) - 1 + x) / x^2)
+}
+
+angular_data <- tibble(
+  angle = rep(angles, 3),
+  rg = rep(c(5, 20, 50), each = length(angles)),
+  p_theta = c(
+    calc_p_theta(5, theta_rad),
+    calc_p_theta(20, theta_rad),
+    calc_p_theta(50, theta_rad)
+  ),
+  rg_label = factor(
+    rep(c("Rg = 5 nm (small)", "Rg = 20 nm (medium)", "Rg = 50 nm (large)"),
+    each = length(angles))
+  )
+)
+
+ggplot(angular_data, aes(angle, p_theta, color = rg_label)) +
+  geom_line(linewidth = 1.2) +
+  geom_vline(xintercept = 7, linetype = "dashed", alpha = 0.5) +
+  geom_vline(xintercept = 90, linetype = "dashed", alpha = 0.5) +
+  annotate("text", x = 7, y = 0.4, label = "LALS\n(7°)", hjust = -0.2, size = 3) +
+  annotate("text", x = 90, y = 0.4, label = "RALS\n(90°)", hjust = -0.2, size = 3) +
+  scale_color_manual(values = c("#2E86AB", "#E8751A", "#A23B72")) +
+  labs(
+    x = "Detection Angle (degrees)",
+    y = "P(θ) - Scattering Function",
+    title = "Angular Dependence of Light Scattering",
+    subtitle = "P(θ) = 1 at low angles for all sizes; deviates at higher angles for large molecules",
+    color = "Particle Size"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+**Key insight**: At low angles (approaching 0°), P(θ) → 1 regardless of particle size. This is why LALS can measure MW without knowing Rg.
+
+## LALS: Low-Angle Light Scattering
+
+### Principle
+
+LALS detectors measure scattering at a low angle (typically 7-15°). At these angles, the particle scattering function P(θ) ≈ 1 for most polymer sizes, eliminating the need for angular extrapolation.
+
+The simplified equation becomes:
+
+$$M_w = \frac{R(\theta)}{K \cdot c}$$
+
+Where:
+- R(θ) = Rayleigh ratio (scattered intensity)
+- K = optical constant
+- c = concentration
+
+### When to Use LALS
+
+| Advantage | Limitation |
+|-----------|------------|
+| No angular extrapolation needed | No Rg information |
+| Simple, single-angle measurement | Less accurate for very large molecules |
+| Faster data acquisition | Requires calibration constant |
+| Lower cost than MALS | More sensitive to dust/aggregates |
+
+**Best for:**
+- Proteins and peptides (Rg < 10 nm)
+- Small synthetic polymers
+- Routine screening applications
+- When Rg is not needed
+
+### LALS Workflow
+
+```{r lals-workflow, eval = FALSE}
+# LALS workflow example
+# Note: Requires LALS detector data
+
+# Simulate sample data structure
+lals_samples <- tibble(
+  sample_id = "Protein-A",
+  ri_signal = list(c(0.1, 0.5, 1.0, 0.5, 0.1)),
+  lals_signal = list(c(0.05, 0.25, 0.5, 0.25, 0.05)),
+  elution_time = list(c(8, 9, 10, 11, 12)),
+  dn_dc = 0.185
+)
+
+rec_lals <- recipe(
+  ri_signal + lals_signal + elution_time + dn_dc ~ sample_id,
+  data = lals_samples
+) |>
+  update_role(sample_id, new_role = "id") |>
+  # Convert signals to measure format
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(lals_signal, location = vars(elution_time), col_name = "lals") |>
+  # Baseline correction
+  step_sec_baseline(measures = c("ri", "lals")) |>
+  # Process RI for concentration
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,
+    sample_concentration = 2.0
+  ) |>
+  # Process LALS for MW
+  step_sec_lals(
+    measures = "lals",
+    concentration_col = "ri",
+    angle = 7,                        # Detection angle
+    laser_wavelength = 670,           # nm
+    dn_dc = 0.185,                    # mL/g
+    solvent_ri = 1.333,               # Water
+    calibration_constant = 1.5e-5     # From instrument calibration
+  )
+
+prepped_lals <- prep(rec_lals)
+result_lals <- bake(prepped_lals, new_data = NULL)
+```
+
+### Key Parameters
+
+| Parameter | Typical Value | Notes |
+|-----------|---------------|-------|
+| `angle` | 7-15° | Must be < 20° for LALS |
+| `laser_wavelength` | 670 nm | Check your instrument specs |
+| `calibration_constant` | Instrument-specific | Required for absolute MW |
+
+## RALS: Right-Angle Light Scattering
+
+### Principle
+
+RALS detectors measure scattering at 90°. While this angle shows more angular dependence than low angles, it offers practical advantages: less sensitivity to stray light and easier optical design.
+
+For small molecules where Rg << λ/20 (roughly Rg < 15 nm at 670 nm), the angular dependence is minimal and RALS provides reasonable MW estimates.
+
+### When to Use RALS
+
+| Advantage | Limitation |
+|-----------|------------|
+| Less sensitive to dust/stray light | Underestimates MW for large molecules |
+| Common, cost-effective detector | No Rg information |
+| Good for small molecules | Angular correction needed for large MW |
+| Often included in GPC systems | Less accurate than LALS for medium sizes |
+
+**Best for:**
+- Small molecules (Rg < 15 nm)
+- Quality control screening
+- Cost-sensitive applications
+- When combined with other detectors
+
+### RALS Workflow
+
+```{r rals-workflow, eval = FALSE}
+# RALS workflow example
+# Note: Requires RALS detector data
+
+# Simulate sample data structure
+rals_samples <- tibble(
+  sample_id = "Polymer-X",
+  ri_signal = list(c(0.1, 0.5, 1.0, 0.5, 0.1)),
+  rals_signal = list(c(0.04, 0.20, 0.40, 0.20, 0.04)),
+  elution_time = list(c(8, 9, 10, 11, 12)),
+  dn_dc = 0.185
+)
+
+rec_rals <- recipe(
+  ri_signal + rals_signal + elution_time + dn_dc ~ sample_id,
+  data = rals_samples
+) |>
+  update_role(sample_id, new_role = "id") |>
+  # Convert signals to measure format
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(rals_signal, location = vars(elution_time), col_name = "rals") |>
+  # Baseline correction
+  step_sec_baseline(measures = c("ri", "rals")) |>
+  # Process RI for concentration
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,
+    sample_concentration = 2.0
+  ) |>
+  # Process RALS for MW
+  step_sec_rals(
+    measures = "rals",
+    concentration_col = "ri",
+    angle = 90,                       # Right angle
+    laser_wavelength = 670,           # nm
+    dn_dc = 0.185,                    # mL/g
+    solvent_ri = 1.333,               # Water
+    calibration_constant = 1.2e-5     # From instrument calibration
+  )
+
+prepped_rals <- prep(rec_rals)
+result_rals <- bake(prepped_rals, new_data = NULL)
+```
+
+## Choosing the Right Technique
+
+### Decision Guide
+
+```{r decision-flowchart, echo = FALSE, fig.width=8, fig.height=5}
+# Visual comparison of techniques
+techniques <- tibble(
+  technique = c("RALS", "LALS", "MALS"),
+  rg_limit = c(15, 30, 200),  # nm - approximate useful range
+  cost = c(1, 2, 4),  # Relative cost
+  complexity = c(1, 2, 4),  # Relative complexity
+  info_content = c(1, 2, 4)  # Information provided
+)
+
+# Create comparison chart
+comparison_long <- techniques |>
+  tidyr::pivot_longer(
+    cols = c(rg_limit, cost, complexity, info_content),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  mutate(
+    metric = factor(
+      metric,
+      levels = c("rg_limit", "info_content", "cost", "complexity"),
+      labels = c("Rg Range (nm)", "Information Content", "Relative Cost", "Complexity")
+    ),
+    technique = factor(technique, levels = c("RALS", "LALS", "MALS"))
+  )
+
+ggplot(comparison_long, aes(technique, value, fill = technique)) +
+  geom_col() +
+  facet_wrap(~metric, scales = "free_y") +
+  scale_fill_manual(values = c("RALS" = "#2E86AB", "LALS" = "#E8751A", "MALS" = "#A23B72")) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Light Scattering Technique Comparison",
+    subtitle = "Higher values indicate greater capability or requirement"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Quick Reference
+
+| Your Sample | Recommended Technique |
+|-------------|----------------------|
+| Proteins, peptides (MW < 50 kDa) | RALS or LALS |
+| Small polymers (Rg < 15 nm) | RALS |
+| Medium polymers (Rg 15-30 nm) | LALS |
+| Large polymers (Rg > 30 nm) | MALS |
+| Need Rg information | MALS |
+| Routine QC screening | RALS |
+| Budget-constrained | RALS or LALS |
+
+### MW Accuracy by Technique
+
+```{r mw-accuracy, echo = FALSE, fig.width=7, fig.height=4}
+# Show how MW accuracy varies with Rg for each technique
+rg_range <- seq(1, 100, by = 1)
+
+# Simulated accuracy (relative error) for each technique
+accuracy_data <- tibble(
+  rg = rep(rg_range, 3),
+  technique = rep(c("RALS", "LALS", "MALS"), each = length(rg_range)),
+  error = c(
+    # RALS: error increases rapidly above ~15 nm
+    pmin(100, 2 + 0.1 * rg_range + 0.05 * rg_range^1.5),
+    # LALS: error stays low until ~30 nm
+    pmin(100, 2 + 0.05 * rg_range + 0.01 * rg_range^1.3),
+    # MALS: low error until very large
+    pmin(100, 2 + 0.02 * rg_range + 0.001 * rg_range^1.2)
+  )
+)
+
+ggplot(accuracy_data, aes(rg, error, color = technique)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 10, linetype = "dashed", alpha = 0.5) +
+  annotate("text", x = 90, y = 12, label = "10% error threshold", size = 3) +
+  scale_color_manual(values = c("RALS" = "#2E86AB", "LALS" = "#E8751A", "MALS" = "#A23B72")) +
+  labs(
+    x = "Radius of Gyration (nm)",
+    y = "Relative MW Error (%)",
+    title = "MW Accuracy by Particle Size",
+    subtitle = "MALS maintains accuracy across all sizes; single-angle methods are limited",
+    color = "Technique"
+  ) +
+  coord_cartesian(ylim = c(0, 50)) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Combining LALS/RALS with MALS
+
+Some instruments include both low-angle and right-angle detectors alongside MALS. This provides:
+
+1. **Redundancy**: Cross-check MW values
+2. **Extended range**: LALS for low angles, MALS for extrapolation
+3. **Sensitivity optimization**: Use optimal detector for each MW range
+
+```{r combined-workflow, eval = FALSE}
+# Combined LALS + RALS + MALS workflow
+rec_combined <- recipe(
+  ri_signal + lals_signal + rals_signal + mals_signal + elution_time + dn_dc ~ sample_id,
+  data = multi_detector_samples
+) |>
+  update_role(sample_id, new_role = "id") |>
+  # Input all detectors
+  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
+  step_measure_input_long(lals_signal, location = vars(elution_time), col_name = "lals") |>
+  step_measure_input_long(rals_signal, location = vars(elution_time), col_name = "rals") |>
+  step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
+  # Baseline and concentration
+  step_sec_baseline(measures = c("ri", "lals", "rals", "mals")) |>
+  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
+  step_sec_concentration(
+    measures = "ri",
+    detector = "ri",
+    injection_volume = 100,
+    sample_concentration = 2.0
+  ) |>
+  # Process each LS detector
+  step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185) |>
+  step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185) |>
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
+```
+
+## Calibration Constants
+
+Both `step_sec_lals()` and `step_sec_rals()` require a `calibration_constant` for absolute MW values. Without it, results are in relative units.
+
+### Determining Calibration Constants
+
+1. **Use a well-characterized standard** (e.g., BSA, narrow PS standard)
+2. **Run the standard** under your experimental conditions
+3. **Calculate the constant** that yields the known MW
+
+```{r calibration, eval = FALSE}
+# Example: Calibrating with BSA (MW = 66,430 Da)
+# 1. Measure BSA with known concentration
+# 2. Calculate: cal_constant = (known_MW * K * c) / raw_signal
+
+bsa_mw <- 66430  # Da
+bsa_conc <- 1.0  # mg/mL
+dn_dc_bsa <- 0.185
+solvent_ri <- 1.333
+wavelength <- 670
+
+# Calculate K
+K <- 4 * pi^2 * solvent_ri^2 * dn_dc_bsa^2 / (6.022e23 * (wavelength * 1e-7)^4)
+
+# If raw_signal at peak = 0.5, then:
+# cal_constant = bsa_mw * K * bsa_conc / raw_signal
+```
+
+## Troubleshooting
+
+### Common Issues
+
+| Problem | Possible Cause | Solution |
+|---------|---------------|----------|
+| MW too high | Aggregates, dust | Filter samples, check baseline |
+| MW too low | Poor dn/dc value | Measure dn/dc accurately |
+| Noisy signal | Low concentration | Increase injection mass |
+| Inconsistent results | Calibration drift | Recalibrate with standard |
+
+### Signal-to-Noise Considerations
+
+Single-angle detectors are more sensitive to noise than MALS (which averages multiple angles). Ensure:
+
+- Adequate sample concentration
+- Clean mobile phase (filtered, degassed)
+- Stable flow rate
+- Regular calibration
+
+## See Also
+
+- [MALS Detection](mals-detection.html) - Multi-angle detection for Rg and large molecules
+- [Triple Detection](triple-detection.html) - Combined RI + Viscometer + LS workflows
+- [Getting Started](getting-started.html) - Basic SEC workflow and concepts
+- [Calibration Management](calibration-management.html) - Save and reuse calibrations
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
