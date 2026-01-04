@@ -163,6 +163,7 @@ articles:
   desc: Learning-oriented guides to get you started
   contents:
   - getting-started
+  - tutorial-conventional-calibration
 
 - title: How-to Guides
   desc: Task-oriented guides for specific applications
