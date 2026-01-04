@@ -315,7 +315,7 @@ mh_branched <- measure_mh_parameters(
   intrinsic_visc = unknown_sample$intrinsic_visc
 )
 
-cat("Mark-Houwink exponent (α):", round(mh_branched$alpha, 3), "\n")
+cat("Mark-Houwink exponent (α):", round(mh_branched$a, 3), "\n")
 cat("(α < 0.5 suggests branching)\n")
 ```
 

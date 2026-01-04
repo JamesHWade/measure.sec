@@ -997,7 +997,6 @@ plot_sec_conformation <- function(
     )
   )
 
-
   # Check columns exist - try measure columns first, fall back to regular columns
   measure_cols <- find_measure_cols(data)
   has_measure_cols <- length(measure_cols) > 0
