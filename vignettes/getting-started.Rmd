@@ -463,7 +463,9 @@ Now that you understand the basics, explore these vignettes for specialized work
 | `vignette("triple-detection")` | Use MALS for absolute MW (no calibration needed) |
 | `vignette("protein-sec")` | Analyze protein aggregates (HMWS/monomer/LMWS) |
 | `vignette("copolymer-analysis")` | Determine composition of multi-component samples |
+| `vignette("calibration-management")` | Save, load, and reuse calibrations |
 | `vignette("system-suitability")` | Set up QC checks and system suitability tests |
+| `vignette("exporting-results")` | Export summary tables and generate reports |
 | `vignette("sec-analysis")` | See comprehensive examples and advanced options |
 
 You can also browse all available functions with:
