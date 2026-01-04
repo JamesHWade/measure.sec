@@ -10,24 +10,22 @@ home:
 
 navbar:
   structure:
-    left: [intro, reference, articles]
+    left: [intro, get-started, reference, articles]
     right: [search, github]
   components:
+    get-started:
+      text: Get Started
+      href: articles/getting-started.html
     articles:
-      text: Articles
+      text: Guides
       menu:
-      - text: Getting Started
-        href: articles/getting-started.html
-      - text: "---"
-      - text: Workflows
+      - text: How-to Guides
       - text: Multi-Detector SEC
         href: articles/triple-detection.html
       - text: Protein SEC Analysis
         href: articles/protein-sec.html
       - text: Copolymer Composition
         href: articles/copolymer-analysis.html
-      - text: "---"
-      - text: Quality Control
       - text: System Suitability
         href: articles/system-suitability.html
       - text: "---"
@@ -143,25 +141,22 @@ reference:
   - sec_system_suitability
 
 articles:
-- title: Getting Started
+- title: Tutorials
   navbar: ~
+  desc: Learning-oriented guides to get you started
   contents:
   - getting-started
 
-- title: Workflows
-  desc: Detailed workflows for specific applications
+- title: How-to Guides
+  desc: Task-oriented guides for specific applications
   contents:
   - triple-detection
   - protein-sec
   - copolymer-analysis
-
-- title: Quality Control
-  desc: System suitability and quality assurance
-  contents:
   - system-suitability
 
 - title: Reference
-  desc: Comprehensive reference documentation
+  desc: Technical reference documentation
   contents:
   - sec-analysis
 
