@@ -134,6 +134,14 @@ result <- bake(prepped, new_data = NULL)
 # View RI signal results (MW calculation requires calibration - see below)
 result |>
   select(sample_id, ri)
+#> # A tibble: 5 × 2
+#>   sample_id          ri
+#>   <chr>          <meas>
+#> 1 PS-1K     [2,001 × 2]
+#> 2 PS-10K    [2,001 × 2]
+#> 3 PS-50K    [2,001 × 2]
+#> 4 PS-100K   [2,001 × 2]
+#> 5 PS-500K   [2,001 × 2]
 ```
 
 ## Conventional Calibration
@@ -204,7 +212,19 @@ ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
 
 Use
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
-to fit the calibration and apply it to samples:
+to fit the calibration and apply it to samples.
+
+**[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+Parameters:**
+
+| Parameter       | Type       | Default   | Description                                                       |
+|-----------------|------------|-----------|-------------------------------------------------------------------|
+| `measures`      | character  | —         | Column(s) containing measure data                                 |
+| `standards`     | data.frame | —         | Calibration standards with `retention` and `log_mw` columns       |
+| `fit_type`      | character  | `"cubic"` | Polynomial fit: `"linear"`, `"quadratic"`, `"cubic"`, `"quartic"` |
+| `output_col`    | character  | `NULL`    | Name for MW output column (or `NULL` to modify in place)          |
+| `extrapolation` | character  | `"warn"`  | Handle values outside calibration: `"none"`, `"warn"`, `"allow"`  |
+| `log_transform` | logical    | `TRUE`    | Whether standards use log10(MW)                                   |
 
 ``` r
 # Prepare standards for the step (needs 'retention' and 'log_mw' columns)
@@ -241,11 +261,17 @@ rec_cal <- recipe(
 
 # Prep and bake
 prepped <- prep(rec_cal)
+#> Warning: Standard at 12.58 has 14.4% MW deviation.
+#> ℹ Consider removing outlier standards or using a different fit type.
 result <- bake(prepped, new_data = NULL)
 
 # View molecular weight results
 result |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+#> # A tibble: 1 × 5
+#>   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity
+#>   <chr>          <dbl>   <dbl>   <dbl>         <dbl>
+#> 1 PS-50K    419927756. 8.24e21 7.81e23       1.96e13
 ```
 
 ### Assessing Calibration Quality
@@ -255,11 +281,15 @@ provides comprehensive diagnostics for evaluating calibration quality:
 
 ``` r
 # Get calibration diagnostics
-diagnostics <- tidy(prepped, number = 4)  # step_sec_conventional_cal is step 4
+diagnostics <- tidy(prepped, number = 3)  # step_sec_conventional_cal is step 3
 
 # Overview metrics
 diagnostics |>
   select(fit_type, n_standards, r_squared, rmse_log_mw, max_abs_pct_deviation)
+#> # A tibble: 1 × 5
+#>   fit_type n_standards r_squared rmse_log_mw max_abs_pct_deviation
+#>   <chr>          <int>     <dbl>       <dbl>                 <dbl>
+#> 1 cubic             16     0.999      0.0294                  14.4
 
 # Access per-standard residuals
 std_results <- diagnostics$standard_results[[1]]
@@ -271,6 +301,25 @@ std_results |>
     residual_log_mw,
     pct_deviation
   )
+#> # A tibble: 16 × 5
+#>    location actual_log_mw predicted_log_mw residual_log_mw pct_deviation
+#>       <dbl>         <dbl>            <dbl>           <dbl>         <dbl>
+#>  1     11.2          6.50             6.47         0.0294         -6.55 
+#>  2     11.6          6.27             6.28        -0.00364         0.841
+#>  3     12.1          6.04             6.06        -0.0192          4.51 
+#>  4     12.6          5.80             5.86        -0.0585         14.4  
+#>  5     13.2          5.63             5.59         0.0421         -9.24 
+#>  6     13.8          5.33             5.32         0.0126         -2.87 
+#>  7     14.3          5.08             5.11        -0.0300          7.15 
+#>  8     15.0          4.83             4.79         0.0413         -9.07 
+#>  9     15.5          4.53             4.55        -0.0262          6.22 
+#> 10     16.1          4.30             4.26         0.0352         -7.78 
+#> 11     16.7          3.99             4.01        -0.0197          4.63 
+#> 12     17.4          3.70             3.70         0.00359        -0.823
+#> 13     17.9          3.47             3.46         0.0146         -3.31 
+#> 14     18.9          3.02             3.02         0.00222        -0.511
+#> 15     19.4          2.76             2.81        -0.0419         10.1  
+#> 16     20.8          2.21             2.19         0.0181         -4.07
 ```
 
 **Key quality metrics:**
@@ -693,14 +742,24 @@ print(g)
 Extract point-by-point chromatographic data:
 
 ``` r
+# Extract point-by-point data from the processed result
 slices <- measure_sec_slice_table(
   result,
-  measures = c("ri", "mw"),
+  measures = "ri",
   sample_id = "sample_id",
-  pivot = TRUE  # Wide format with one column per measure
+  pivot = TRUE
 )
 
 head(slices)
+#> # A tibble: 6 × 4
+#>   sample_id slice location      ri
+#>   <chr>     <int>    <dbl>   <dbl>
+#> 1 PS-50K        1     5    0.00143
+#> 2 PS-50K        2     5.01 0.00167
+#> 3 PS-50K        3     5.02 0.00136
+#> 4 PS-50K        4     5.03 0.00132
+#> 5 PS-50K        5     5.04 0.00213
+#> 6 PS-50K        6     5.05 0.00174
 ```
 
 ### Summary Table
@@ -708,13 +767,22 @@ head(slices)
 Generate a summary table for reporting:
 
 ``` r
-summary <- measure_sec_summary_table(
+# Generate a summary table with key metrics
+summary_tbl <- measure_sec_summary_table(
   result,
   sample_id = "sample_id",
   digits = 0
 )
 
-print(summary)
+print(summary_tbl)
+#> SEC Analysis Summary
+#> ============================================================ 
+#> Samples: 1 
+#> 
+#> # A tibble: 1 × 5
+#>   sample_id     mw_mn   mw_mw   mw_mz mw_dispersity
+#>   <chr>         <dbl>   <dbl>   <dbl>         <dbl>
+#> 1 PS-50K    419927756 8.24e21 7.81e23       1.96e13
 ```
 
 ## Complete Workflow Example
@@ -772,28 +840,50 @@ result_complete |>
 
 ## Available Steps Reference
 
-| Step                                                                                                             | Category      | Description                                |
-|------------------------------------------------------------------------------------------------------------------|---------------|--------------------------------------------|
-| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)     | Preprocessing | Correct inter-detector delays              |
-| [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)                 | Preprocessing | SEC-optimized baseline correction          |
-| [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)                             | Detector      | RI detector with dn/dc                     |
-| [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)                             | Detector      | UV detector with extinction coefficient    |
-| [`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md)                           | Detector      | Diode array detector (multi-wavelength UV) |
-| [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)                         | Detector      | Multi-angle light scattering               |
-| [`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md)                         | Detector      | Low-angle light scattering                 |
-| [`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md)                         | Detector      | Right-angle light scattering               |
-| [`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md)                           | Detector      | Dynamic light scattering                   |
-| [`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)             | Detector      | Differential viscometer                    |
-| [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)       | Calculation   | Signal to concentration                    |
-| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md)     | Calculation   | Intrinsic viscosity                        |
-| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)           | MW            | Mn, Mw, Mz, dispersity                     |
-| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)         | MW            | MW fractions above/below cutoffs           |
-| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md)   | MW            | Differential/cumulative MWD                |
-| [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md) | Calibration   | Narrow standard calibration                |
-| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)       | Calibration   | Universal calibration                      |
-| [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md)           | Composition   | UV/RI ratio                                |
-| [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md)           | Composition   | Copolymer composition                      |
-| [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)             | Protein       | HMWS/monomer/LMWS quantitation             |
+### Preprocessing Steps
+
+| Step                                                                                                         | Key Parameters                 | Description                                                             |
+|--------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------------------------------------------------------------|
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md) | `reference`, `delay_volumes`   | Align multi-detector signals by correcting inter-detector volume delays |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)             | `measures`, `method`, `points` | Remove baseline drift; methods: `"linear"`, `"polynomial"`, `"spline"`  |
+
+### Detector Steps
+
+| Step                                                                                                 | Key Parameters                                | Description                                         |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------|-----------------------------------------------------|
+| [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)                 | `measures`, `dn_dc_column`                    | Process RI signal; requires dn/dc for concentration |
+| [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)                 | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient       |
+| [`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md)               | `measures`, `wavelengths`                     | Multi-wavelength diode array detection              |
+| [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)             | `mals_col`, `dn_dc_column`, `wavelength`      | Multi-angle light scattering for Mw and Rg          |
+| [`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md)             | `lals_col`, `dn_dc_column`                    | Low-angle LS for Mw without extrapolation           |
+| [`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md)             | `rals_col`, `dn_dc_column`                    | Right-angle LS (90°)                                |
+| [`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md)               | `dls_col`                                     | Dynamic LS for hydrodynamic radius                  |
+| [`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md) | `visc_col`, `dp_column`                       | Differential viscometer for intrinsic viscosity     |
+
+### Calibration Steps
+
+| Step                                                                                                             | Key Parameters                           | Description                                        |
+|------------------------------------------------------------------------------------------------------------------|------------------------------------------|----------------------------------------------------|
+| [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md) | `standards`, `fit_type`, `extrapolation` | Narrow standard calibration (polymer-specific)     |
+| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)       | `standards`, `k`, `alpha`                | Universal calibration with Mark-Houwink parameters |
+
+### Calculation Steps
+
+| Step                                                                                                           | Key Parameters                             | Outputs                                    |
+|----------------------------------------------------------------------------------------------------------------|--------------------------------------------|--------------------------------------------|
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)     | `injection_volume`, `sample_concentration` | Absolute concentration (mg/mL)             |
+| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md)   | `concentration_col`, `viscosity_col`       | \[η\] at each slice                        |
+| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)         | `measures`                                 | `mw_mn`, `mw_mw`, `mw_mz`, `mw_dispersity` |
+| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)       | `cutoffs`                                  | Weight fractions above/below MW cutoffs    |
+| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md) | `type`                                     | Differential and/or cumulative MWD curves  |
+
+### Composition Steps
+
+| Step                                                                                                   | Key Parameters                           | Outputs                                        |
+|--------------------------------------------------------------------------------------------------------|------------------------------------------|------------------------------------------------|
+| [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md) | `uv_col`, `ri_col`, `smooth`             | Point-by-point UV/RI ratio                     |
+| [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md) | `component_a_uv`, `component_a_ri`, …    | Weight fraction of each component              |
+| [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)   | `monomer_start`, `monomer_end`, `method` | `purity_hmws`, `purity_monomer`, `purity_lmws` |
 
 ## See Also
 

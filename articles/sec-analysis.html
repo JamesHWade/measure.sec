@@ -214,7 +214,15 @@ standards:</p>
 <span></span>
 <span><span class="co"># View RI signal results (MW calculation requires calibration - see below)</span></span>
 <span><span class="va">result</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 2</span></span></span>
+<span><span class="co">#&gt;   sample_id          ri</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-1K     <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-10K    <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-50K    <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PS-100K   <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PS-500K   <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="conventional-calibration">Conventional Calibration<a class="anchor" aria-label="anchor" href="#conventional-calibration"></a>
@@ -281,7 +289,67 @@ standards:</p>
 <h3 id="building-a-calibration-curve">Building a Calibration Curve<a class="anchor" aria-label="anchor" href="#building-a-calibration-curve"></a>
 </h3>
 <p>Use <code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code> to fit the calibration
-and apply it to samples:</p>
+and apply it to samples.</p>
+<p><strong><code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>
+Parameters:</strong></p>
+<table class="table">
+<colgroup>
+<col width="28%">
+<col width="15%">
+<col width="23%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>measures</code></td>
+<td>character</td>
+<td>—</td>
+<td>Column(s) containing measure data</td>
+</tr>
+<tr class="even">
+<td><code>standards</code></td>
+<td>data.frame</td>
+<td>—</td>
+<td>Calibration standards with <code>retention</code> and
+<code>log_mw</code> columns</td>
+</tr>
+<tr class="odd">
+<td><code>fit_type</code></td>
+<td>character</td>
+<td><code>"cubic"</code></td>
+<td>Polynomial fit: <code>"linear"</code>, <code>"quadratic"</code>,
+<code>"cubic"</code>, <code>"quartic"</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>output_col</code></td>
+<td>character</td>
+<td><code>NULL</code></td>
+<td>Name for MW output column (or <code>NULL</code> to modify in
+place)</td>
+</tr>
+<tr class="odd">
+<td><code>extrapolation</code></td>
+<td>character</td>
+<td><code>"warn"</code></td>
+<td>Handle values outside calibration: <code>"none"</code>,
+<code>"warn"</code>, <code>"allow"</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>log_transform</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>Whether standards use log10(MW)</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Prepare standards for the step (needs 'retention' and 'log_mw' columns)</span></span>
 <span><span class="va">ps_cal</span> <span class="op">&lt;-</span> <span class="va">sec_ps_standards</span> <span class="op">|&gt;</span></span>
@@ -317,11 +385,17 @@ and apply it to samples:</p>
 <span></span>
 <span><span class="co"># Prep and bake</span></span>
 <span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_cal</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Standard at 12.58 has 14.4% MW deviation.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Consider removing outlier standards or using a different fit type.</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View molecular weight results</span></span>
 <span><span class="va">result</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    419<span style="text-decoration: underline;">927</span>756. 8.24<span style="color: #949494;">e</span>21 7.81<span style="color: #949494;">e</span>23       1.96<span style="color: #949494;">e</span>13</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="assessing-calibration-quality">Assessing Calibration Quality<a class="anchor" aria-label="anchor" href="#assessing-calibration-quality"></a>
@@ -330,11 +404,15 @@ and apply it to samples:</p>
 evaluating calibration quality:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get calibration diagnostics</span></span>
-<span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">prepped</span>, number <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>  <span class="co"># step_sec_conventional_cal is step 4</span></span>
+<span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">prepped</span>, number <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>  <span class="co"># step_sec_conventional_cal is step 3</span></span>
 <span></span>
 <span><span class="co"># Overview metrics</span></span>
 <span><span class="va">diagnostics</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">fit_type</span>, <span class="va">n_standards</span>, <span class="va">r_squared</span>, <span class="va">rmse_log_mw</span>, <span class="va">max_abs_pct_deviation</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
+<span><span class="co">#&gt;   fit_type n_standards r_squared rmse_log_mw max_abs_pct_deviation</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                 <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> cubic             16     0.999      0.029<span style="text-decoration: underline;">4</span>                  14.4</span></span>
 <span></span>
 <span><span class="co"># Access per-standard residuals</span></span>
 <span><span class="va">std_results</span> <span class="op">&lt;-</span> <span class="va">diagnostics</span><span class="op">$</span><span class="va">standard_results</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
@@ -345,7 +423,26 @@ evaluating calibration quality:</p>
 <span>    <span class="va">predicted_log_mw</span>,</span>
 <span>    <span class="va">residual_log_mw</span>,</span>
 <span>    <span class="va">pct_deviation</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<span>  <span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 16 × 5</span></span></span>
+<span><span class="co">#&gt;    location actual_log_mw predicted_log_mw residual_log_mw pct_deviation</span></span>
+<span><span class="co">#&gt;       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span>     11.2          6.50             6.47         0.029<span style="text-decoration: underline;">4</span>         -<span style="color: #BB0000;">6.55</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span>     11.6          6.27             6.28        -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">64</span>         0.841</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span>     12.1          6.04             6.06        -<span style="color: #BB0000;">0.019</span><span style="color: #BB0000; text-decoration: underline;">2</span>          4.51 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span>     12.6          5.80             5.86        -<span style="color: #BB0000;">0.058</span><span style="color: #BB0000; text-decoration: underline;">5</span>         14.4  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span>     13.2          5.63             5.59         0.042<span style="text-decoration: underline;">1</span>         -<span style="color: #BB0000;">9.24</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span>     13.8          5.33             5.32         0.012<span style="text-decoration: underline;">6</span>         -<span style="color: #BB0000;">2.87</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span>     14.3          5.08             5.11        -<span style="color: #BB0000;">0.030</span><span style="color: #BB0000; text-decoration: underline;">0</span>          7.15 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span>     15.0          4.83             4.79         0.041<span style="text-decoration: underline;">3</span>         -<span style="color: #BB0000;">9.07</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span>     15.5          4.53             4.55        -<span style="color: #BB0000;">0.026</span><span style="color: #BB0000; text-decoration: underline;">2</span>          6.22 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span>     16.1          4.30             4.26         0.035<span style="text-decoration: underline;">2</span>         -<span style="color: #BB0000;">7.78</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span>     16.7          3.99             4.01        -<span style="color: #BB0000;">0.019</span><span style="color: #BB0000; text-decoration: underline;">7</span>          4.63 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span>     17.4          3.70             3.70         0.003<span style="text-decoration: underline;">59</span>        -<span style="color: #BB0000;">0.823</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">13</span>     17.9          3.47             3.46         0.014<span style="text-decoration: underline;">6</span>         -<span style="color: #BB0000;">3.31</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">14</span>     18.9          3.02             3.02         0.002<span style="text-decoration: underline;">22</span>        -<span style="color: #BB0000;">0.511</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">15</span>     19.4          2.76             2.81        -<span style="color: #BB0000;">0.041</span><span style="color: #BB0000; text-decoration: underline;">9</span>         10.1  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">16</span>     20.8          2.21             2.19         0.018<span style="text-decoration: underline;">1</span>         -<span style="color: #BB0000;">4.07</span></span></span></code></pre></div>
 <p><strong>Key quality metrics:</strong></p>
 <table class="table">
 <thead><tr class="header">
@@ -782,27 +879,46 @@ testing:</p>
 </h3>
 <p>Extract point-by-point chromatographic data:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">slices</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_slice_table.html">measure_sec_slice_table</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="co"># Extract point-by-point data from the processed result</span></span>
+<span><span class="va">slices</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_slice_table.html">measure_sec_slice_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">result</span>,</span>
-<span>  measures <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ri"</span>, <span class="st">"mw"</span><span class="op">)</span>,</span>
+<span>  measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span>,</span>
-<span>  pivot <span class="op">=</span> <span class="cn">TRUE</span>  <span class="co"># Wide format with one column per measure</span></span>
+<span>  pivot <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">slices</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">slices</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 4</span></span></span>
+<span><span class="co">#&gt;   sample_id slice location      ri</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K        1     5    0.001<span style="text-decoration: underline;">43</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PS-50K        2     5.01 0.001<span style="text-decoration: underline;">67</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PS-50K        3     5.02 0.001<span style="text-decoration: underline;">36</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PS-50K        4     5.03 0.001<span style="text-decoration: underline;">32</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PS-50K        5     5.04 0.002<span style="text-decoration: underline;">13</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> PS-50K        6     5.05 0.001<span style="text-decoration: underline;">74</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="summary-table">Summary Table<a class="anchor" aria-label="anchor" href="#summary-table"></a>
 </h3>
 <p>Generate a summary table for reporting:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="co"># Generate a summary table with key metrics</span></span>
+<span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/measure_sec_summary_table.html">measure_sec_summary_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">result</span>,</span>
 <span>  sample_id <span class="op">=</span> <span class="st">"sample_id"</span>,</span>
 <span>  digits <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_tbl</span><span class="op">)</span></span>
+<span><span class="co">#&gt; SEC Analysis Summary</span></span>
+<span><span class="co">#&gt; ============================================================ </span></span>
+<span><span class="co">#&gt; Samples: 1 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id     mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    419<span style="text-decoration: underline;">927</span>756 8.24<span style="color: #949494;">e</span>21 7.81<span style="color: #949494;">e</span>23       1.96<span style="color: #949494;">e</span>13</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -860,120 +976,241 @@ testing:</p>
 <div class="section level2">
 <h2 id="available-steps-reference">Available Steps Reference<a class="anchor" aria-label="anchor" href="#available-steps-reference"></a>
 </h2>
+<div class="section level3">
+<h3 id="preprocessing-steps">Preprocessing Steps<a class="anchor" aria-label="anchor" href="#preprocessing-steps"></a>
+</h3>
 <table class="table">
 <colgroup>
-<col width="20%">
-<col width="34%">
-<col width="44%">
+<col width="17%">
+<col width="45%">
+<col width="37%">
 </colgroup>
 <thead><tr class="header">
 <th>Step</th>
-<th>Category</th>
+<th>Key Parameters</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td><code><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay()</a></code></td>
-<td>Preprocessing</td>
-<td>Correct inter-detector delays</td>
+<td>
+<code>reference</code>, <code>delay_volumes</code>
+</td>
+<td>Align multi-detector signals by correcting inter-detector volume
+delays</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/step_sec_baseline.html">step_sec_baseline()</a></code></td>
-<td>Preprocessing</td>
-<td>SEC-optimized baseline correction</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_ri.html">step_sec_ri()</a></code></td>
-<td>Detector</td>
-<td>RI detector with dn/dc</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_uv.html">step_sec_uv()</a></code></td>
-<td>Detector</td>
-<td>UV detector with extinction coefficient</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_dad.html">step_sec_dad()</a></code></td>
-<td>Detector</td>
-<td>Diode array detector (multi-wavelength UV)</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code></td>
-<td>Detector</td>
-<td>Multi-angle light scattering</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code></td>
-<td>Detector</td>
-<td>Low-angle light scattering</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_rals.html">step_sec_rals()</a></code></td>
-<td>Detector</td>
-<td>Right-angle light scattering</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_dls.html">step_sec_dls()</a></code></td>
-<td>Detector</td>
-<td>Dynamic light scattering</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_viscometer.html">step_sec_viscometer()</a></code></td>
-<td>Detector</td>
-<td>Differential viscometer</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_concentration.html">step_sec_concentration()</a></code></td>
-<td>Calculation</td>
-<td>Signal to concentration</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code></td>
-<td>Calculation</td>
-<td>Intrinsic viscosity</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code></td>
-<td>MW</td>
-<td>Mn, Mw, Mz, dispersity</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code></td>
-<td>MW</td>
-<td>MW fractions above/below cutoffs</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code></td>
-<td>MW</td>
-<td>Differential/cumulative MWD</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code></td>
-<td>Calibration</td>
-<td>Narrow standard calibration</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_universal_cal.html">step_sec_universal_cal()</a></code></td>
-<td>Calibration</td>
-<td>Universal calibration</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_uv_ri_ratio.html">step_sec_uv_ri_ratio()</a></code></td>
-<td>Composition</td>
-<td>UV/RI ratio</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/step_sec_composition.html">step_sec_composition()</a></code></td>
-<td>Composition</td>
-<td>Copolymer composition</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/step_sec_aggregates.html">step_sec_aggregates()</a></code></td>
-<td>Protein</td>
-<td>HMWS/monomer/LMWS quantitation</td>
+<td>
+<code>measures</code>, <code>method</code>, <code>points</code>
+</td>
+<td>Remove baseline drift; methods: <code>"linear"</code>,
+<code>"polynomial"</code>, <code>"spline"</code>
+</td>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="section level3">
+<h3 id="detector-steps">Detector Steps<a class="anchor" aria-label="anchor" href="#detector-steps"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="17%">
+<col width="45%">
+<col width="37%">
+</colgroup>
+<thead><tr class="header">
+<th>Step</th>
+<th>Key Parameters</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_ri.html">step_sec_ri()</a></code></td>
+<td>
+<code>measures</code>, <code>dn_dc_column</code>
+</td>
+<td>Process RI signal; requires dn/dc for concentration</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_uv.html">step_sec_uv()</a></code></td>
+<td>
+<code>measures</code>, <code>extinction_column</code>,
+<code>wavelength</code>
+</td>
+<td>Process UV signal with extinction coefficient</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_dad.html">step_sec_dad()</a></code></td>
+<td>
+<code>measures</code>, <code>wavelengths</code>
+</td>
+<td>Multi-wavelength diode array detection</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code></td>
+<td>
+<code>mals_col</code>, <code>dn_dc_column</code>,
+<code>wavelength</code>
+</td>
+<td>Multi-angle light scattering for Mw and Rg</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code></td>
+<td>
+<code>lals_col</code>, <code>dn_dc_column</code>
+</td>
+<td>Low-angle LS for Mw without extrapolation</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_rals.html">step_sec_rals()</a></code></td>
+<td>
+<code>rals_col</code>, <code>dn_dc_column</code>
+</td>
+<td>Right-angle LS (90°)</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_dls.html">step_sec_dls()</a></code></td>
+<td><code>dls_col</code></td>
+<td>Dynamic LS for hydrodynamic radius</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_viscometer.html">step_sec_viscometer()</a></code></td>
+<td>
+<code>visc_col</code>, <code>dp_column</code>
+</td>
+<td>Differential viscometer for intrinsic viscosity</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="calibration-steps">Calibration Steps<a class="anchor" aria-label="anchor" href="#calibration-steps"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="17%">
+<col width="45%">
+<col width="37%">
+</colgroup>
+<thead><tr class="header">
+<th>Step</th>
+<th>Key Parameters</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code></td>
+<td>
+<code>standards</code>, <code>fit_type</code>,
+<code>extrapolation</code>
+</td>
+<td>Narrow standard calibration (polymer-specific)</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_universal_cal.html">step_sec_universal_cal()</a></code></td>
+<td>
+<code>standards</code>, <code>k</code>, <code>alpha</code>
+</td>
+<td>Universal calibration with Mark-Houwink parameters</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="calculation-steps">Calculation Steps<a class="anchor" aria-label="anchor" href="#calculation-steps"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="19%">
+<col width="51%">
+<col width="29%">
+</colgroup>
+<thead><tr class="header">
+<th>Step</th>
+<th>Key Parameters</th>
+<th>Outputs</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_concentration.html">step_sec_concentration()</a></code></td>
+<td>
+<code>injection_volume</code>,
+<code>sample_concentration</code>
+</td>
+<td>Absolute concentration (mg/mL)</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code></td>
+<td>
+<code>concentration_col</code>, <code>viscosity_col</code>
+</td>
+<td>[η] at each slice</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code></td>
+<td><code>measures</code></td>
+<td>
+<code>mw_mn</code>, <code>mw_mw</code>, <code>mw_mz</code>,
+<code>mw_dispersity</code>
+</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code></td>
+<td><code>cutoffs</code></td>
+<td>Weight fractions above/below MW cutoffs</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code></td>
+<td><code>type</code></td>
+<td>Differential and/or cumulative MWD curves</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="composition-steps">Composition Steps<a class="anchor" aria-label="anchor" href="#composition-steps"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="19%">
+<col width="51%">
+<col width="29%">
+</colgroup>
+<thead><tr class="header">
+<th>Step</th>
+<th>Key Parameters</th>
+<th>Outputs</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_uv_ri_ratio.html">step_sec_uv_ri_ratio()</a></code></td>
+<td>
+<code>uv_col</code>, <code>ri_col</code>, <code>smooth</code>
+</td>
+<td>Point-by-point UV/RI ratio</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/step_sec_composition.html">step_sec_composition()</a></code></td>
+<td>
+<code>component_a_uv</code>, <code>component_a_ri</code>, …</td>
+<td>Weight fraction of each component</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/step_sec_aggregates.html">step_sec_aggregates()</a></code></td>
+<td>
+<code>monomer_start</code>, <code>monomer_end</code>,
+<code>method</code>
+</td>
+<td>
+<code>purity_hmws</code>, <code>purity_monomer</code>,
+<code>purity_lmws</code>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div class="section level2">
 <h2 id="see-also">See Also<a class="anchor" aria-label="anchor" href="#see-also"></a>
