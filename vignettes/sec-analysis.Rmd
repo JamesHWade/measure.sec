@@ -68,7 +68,7 @@ sec_triple_detect |>
 
 Let's start with a simple RI detector workflow for polystyrene standards:
 
-```{r basic-workflow, eval = FALSE}
+```{r basic-workflow}
 # Filter to PS standards
 ps_standards <- sec_triple_detect |>
   filter(polymer_type == "polystyrene")
@@ -147,9 +147,20 @@ ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
 
 ### Building a Calibration Curve
 
-Use `step_sec_conventional_cal()` to fit the calibration and apply it to samples:
+Use `step_sec_conventional_cal()` to fit the calibration and apply it to samples.
 
-```{r conventional-cal, eval = FALSE}
+**`step_sec_conventional_cal()` Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `measures` | character | — | Column(s) containing measure data |
+| `standards` | data.frame | — | Calibration standards with `retention` and `log_mw` columns |
+| `fit_type` | character | `"cubic"` | Polynomial fit: `"linear"`, `"quadratic"`, `"cubic"`, `"quartic"` |
+| `output_col` | character | `NULL` | Name for MW output column (or `NULL` to modify in place) |
+| `extrapolation` | character | `"warn"` | Handle values outside calibration: `"none"`, `"warn"`, `"allow"` |
+| `log_transform` | logical | `TRUE` | Whether standards use log10(MW) |
+
+```{r conventional-cal}
 # Prepare standards for the step (needs 'retention' and 'log_mw' columns)
 ps_cal <- sec_ps_standards |>
   select(retention = retention_time, log_mw = log_mp)
@@ -195,9 +206,9 @@ result |>
 
 The `tidy()` method provides comprehensive diagnostics for evaluating calibration quality:
 
-```{r calibration-diagnostics, eval = FALSE}
+```{r calibration-diagnostics}
 # Get calibration diagnostics
-diagnostics <- tidy(prepped, number = 4)  # step_sec_conventional_cal is step 4
+diagnostics <- tidy(prepped, number = 3)  # step_sec_conventional_cal is step 3
 
 # Overview metrics
 diagnostics |>
@@ -573,12 +584,13 @@ print(g)
 
 Extract point-by-point chromatographic data:
 
-```{r slice-table, eval = FALSE}
+```{r slice-table}
+# Extract point-by-point data from the processed result
 slices <- measure_sec_slice_table(
   result,
-  measures = c("ri", "mw"),
+  measures = "ri",
   sample_id = "sample_id",
-  pivot = TRUE  # Wide format with one column per measure
+  pivot = TRUE
 )
 
 head(slices)
@@ -588,14 +600,15 @@ head(slices)
 
 Generate a summary table for reporting:
 
-```{r summary-table, eval = FALSE}
-summary <- measure_sec_summary_table(
+```{r summary-table}
+# Generate a summary table with key metrics
+summary_tbl <- measure_sec_summary_table(
   result,
   sample_id = "sample_id",
   digits = 0
 )
 
-print(summary)
+print(summary_tbl)
 ```
 
 ## Complete Workflow Example
@@ -644,28 +657,50 @@ result_complete |>
 
 ## Available Steps Reference
 
-| Step | Category | Description |
-|------|----------|-------------|
-| `step_sec_detector_delay()` | Preprocessing | Correct inter-detector delays |
-| `step_sec_baseline()` | Preprocessing | SEC-optimized baseline correction |
-| `step_sec_ri()` | Detector | RI detector with dn/dc |
-| `step_sec_uv()` | Detector | UV detector with extinction coefficient |
-| `step_sec_dad()` | Detector | Diode array detector (multi-wavelength UV) |
-| `step_sec_mals()` | Detector | Multi-angle light scattering |
-| `step_sec_lals()` | Detector | Low-angle light scattering |
-| `step_sec_rals()` | Detector | Right-angle light scattering |
-| `step_sec_dls()` | Detector | Dynamic light scattering |
-| `step_sec_viscometer()` | Detector | Differential viscometer |
-| `step_sec_concentration()` | Calculation | Signal to concentration |
-| `step_sec_intrinsic_visc()` | Calculation | Intrinsic viscosity |
-| `step_sec_mw_averages()` | MW | Mn, Mw, Mz, dispersity |
-| `step_sec_mw_fractions()` | MW | MW fractions above/below cutoffs |
-| `step_sec_mw_distribution()` | MW | Differential/cumulative MWD |
-| `step_sec_conventional_cal()` | Calibration | Narrow standard calibration |
-| `step_sec_universal_cal()` | Calibration | Universal calibration |
-| `step_sec_uv_ri_ratio()` | Composition | UV/RI ratio |
-| `step_sec_composition()` | Composition | Copolymer composition |
-| `step_sec_aggregates()` | Protein | HMWS/monomer/LMWS quantitation |
+### Preprocessing Steps
+
+| Step | Key Parameters | Description |
+|------|----------------|-------------|
+| `step_sec_detector_delay()` | `reference`, `delay_volumes` | Align multi-detector signals by correcting inter-detector volume delays |
+| `step_sec_baseline()` | `measures`, `method`, `points` | Remove baseline drift; methods: `"linear"`, `"polynomial"`, `"spline"` |
+
+### Detector Steps
+
+| Step | Key Parameters | Description |
+|------|----------------|-------------|
+| `step_sec_ri()` | `measures`, `dn_dc_column` | Process RI signal; requires dn/dc for concentration |
+| `step_sec_uv()` | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient |
+| `step_sec_dad()` | `measures`, `wavelengths` | Multi-wavelength diode array detection |
+| `step_sec_mals()` | `mals_col`, `dn_dc_column`, `wavelength` | Multi-angle light scattering for Mw and Rg |
+| `step_sec_lals()` | `lals_col`, `dn_dc_column` | Low-angle LS for Mw without extrapolation |
+| `step_sec_rals()` | `rals_col`, `dn_dc_column` | Right-angle LS (90°) |
+| `step_sec_dls()` | `dls_col` | Dynamic LS for hydrodynamic radius |
+| `step_sec_viscometer()` | `visc_col`, `dp_column` | Differential viscometer for intrinsic viscosity |
+
+### Calibration Steps
+
+| Step | Key Parameters | Description |
+|------|----------------|-------------|
+| `step_sec_conventional_cal()` | `standards`, `fit_type`, `extrapolation` | Narrow standard calibration (polymer-specific) |
+| `step_sec_universal_cal()` | `standards`, `k`, `alpha` | Universal calibration with Mark-Houwink parameters |
+
+### Calculation Steps
+
+| Step | Key Parameters | Outputs |
+|------|----------------|---------|
+| `step_sec_concentration()` | `injection_volume`, `sample_concentration` | Absolute concentration (mg/mL) |
+| `step_sec_intrinsic_visc()` | `concentration_col`, `viscosity_col` | [η] at each slice |
+| `step_sec_mw_averages()` | `measures` | `mw_mn`, `mw_mw`, `mw_mz`, `mw_dispersity` |
+| `step_sec_mw_fractions()` | `cutoffs` | Weight fractions above/below MW cutoffs |
+| `step_sec_mw_distribution()` | `type` | Differential and/or cumulative MWD curves |
+
+### Composition Steps
+
+| Step | Key Parameters | Outputs |
+|------|----------------|---------|
+| `step_sec_uv_ri_ratio()` | `uv_col`, `ri_col`, `smooth` | Point-by-point UV/RI ratio |
+| `step_sec_composition()` | `component_a_uv`, `component_a_ri`, ... | Weight fraction of each component |
+| `step_sec_aggregates()` | `monomer_start`, `monomer_end`, `method` | `purity_hmws`, `purity_monomer`, `purity_lmws` |
 
 ## See Also
 
