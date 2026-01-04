@@ -229,18 +229,20 @@ rec_triple <- recipe(
   # Step 3: Baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
 
-  # Step 4: Process each detector
+  # Step 4: Process concentration detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
-  # Step 5: Convert to concentration
+  # Step 5: Convert to concentration (MUST come before MALS)
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,       # µL
     sample_concentration = 2.0    # mg/mL
-  )
+  ) |>
+
+  # Step 6: Process MALS (requires concentration for absolute MW)
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
 
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)

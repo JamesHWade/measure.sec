@@ -22,6 +22,10 @@ navbar:
       - text: How-to Guides
       - text: Multi-Detector SEC
         href: articles/triple-detection.html
+      - text: MALS Detection
+        href: articles/mals-detection.html
+      - text: LALS/RALS Detection
+        href: articles/lals-rals-detection.html
       - text: Protein SEC Analysis
         href: articles/protein-sec.html
       - text: Copolymer Composition
@@ -155,6 +159,8 @@ articles:
   desc: Task-oriented guides for specific applications
   contents:
   - triple-detection
+  - mals-detection
+  - lals-rals-detection
   - protein-sec
   - copolymer-analysis
   - calibration-management
