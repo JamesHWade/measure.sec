@@ -26,6 +26,8 @@ navbar:
         href: articles/protein-sec.html
       - text: Copolymer Composition
         href: articles/copolymer-analysis.html
+      - text: Calibration Management
+        href: articles/calibration-management.html
       - text: System Suitability
         href: articles/system-suitability.html
       - text: "---"
@@ -153,6 +155,7 @@ articles:
   - triple-detection
   - protein-sec
   - copolymer-analysis
+  - calibration-management
   - system-suitability
 
 - title: Reference
