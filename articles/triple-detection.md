@@ -169,7 +169,11 @@ Use
 to correct for these delays:
 
 ``` r
-rec <- recipe(~., data = samples) |>
+rec <- recipe(
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert all detector signals to measure format
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -197,7 +201,14 @@ Delay volumes should be determined experimentally:
 A complete triple detection recipe:
 
 ``` r
-rec <- recipe(~., data = samples) |>
+# Complete triple detection recipe
+# Note: This example shows the full pattern; some steps may require
+# additional configuration depending on your detector setup
+rec_triple <- recipe(
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Step 1: Convert signals to measure format
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -223,11 +234,11 @@ rec <- recipe(~., data = samples) |>
   # Step 6: Calculate MW averages from MALS
   step_sec_mw_averages(mw_column = "mw_mals")
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_triple <- prep(rec_triple)
+result_triple <- bake(prepped_triple, new_data = NULL)
 
 # View results
-result |>
+result_triple |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
 
@@ -240,7 +251,12 @@ multiple angles:
 
 ``` r
 # Process MALS data
-rec <- recipe(~., data = samples) |>
+# Note: MALS processing requires specific detector configuration
+rec_mals <- recipe(
+  mals_signal + elution_time + dn_dc ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
   step_sec_baseline(measures = "mals") |>
   step_sec_mals(
@@ -285,7 +301,12 @@ step_sec_rals(
 Add intrinsic viscosity for Mark-Houwink analysis:
 
 ``` r
-rec <- recipe(~., data = samples) |>
+# Note: This requires viscometer data (visc_signal) and pre-calculated concentration
+rec_visc <- recipe(
+  visc_signal + elution_time ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
   step_sec_baseline(measures = "visc") |>
   step_sec_viscometer(measures = "visc") |>
@@ -319,7 +340,14 @@ step_sec_universal_cal(
 Full workflow with RI, UV, MALS, and viscometer:
 
 ``` r
-rec <- recipe(~., data = samples) |>
+# Complete quadruple detection example
+# Note: This requires viscometer data (visc_signal) which is not in sec_triple_detect
+# The pattern shows the complete workflow for quad detection setups
+rec_quad <- recipe(
+  ri_signal + uv_signal + mals_signal + visc_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Input all four detectors
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -357,8 +385,8 @@ rec <- recipe(~., data = samples) |>
     output_type = "both"
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_quad <- prep(rec_quad)
+result_quad <- bake(prepped_quad, new_data = NULL)
 ```
 
 ## Comparing Conventional vs Absolute MW

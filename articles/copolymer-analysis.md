@@ -88,7 +88,12 @@ glimpse(copolymers)
 ### Basic Workflow
 
 ``` r
-rec <- recipe(~., data = copolymers) |>
+# UV/RI ratio analysis for compositional heterogeneity
+rec_ratio <- recipe(
+  ri_signal + uv_signal + elution_time ~ sample_id,
+  data = copolymers
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert signals to measure format
   step_measure_input_long(
     ri_signal,
@@ -111,8 +116,8 @@ rec <- recipe(~., data = copolymers) |>
     min_signal = 0.01       # Minimum signal threshold
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_ratio <- prep(rec_ratio)
+result_ratio <- bake(prepped_ratio, new_data = NULL)
 
 # The result contains a uv_ri_ratio column with the ratio curve
 ```
@@ -121,7 +126,7 @@ result <- bake(prepped, new_data = NULL)
 
 ``` r
 # Get the ratio values at each elution time
-ratio_data <- result |>
+ratio_data <- result_ratio |>
   select(sample_id, uv_ri_ratio) |>
   tidyr::unnest(uv_ri_ratio)
 
@@ -145,7 +150,12 @@ When you know the response factors for each monomer, calculate actual
 composition:
 
 ``` r
-rec <- recipe(~., data = copolymers) |>
+# Composition calculation with known response factors
+rec_comp <- recipe(
+  ri_signal + uv_signal + elution_time ~ sample_id,
+  data = copolymers
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
@@ -161,8 +171,8 @@ rec <- recipe(~., data = copolymers) |>
     component_b_ri = 0.084   # RI response (dn/dc)
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_comp <- prep(rec_comp)
+result_comp <- bake(prepped_comp, new_data = NULL)
 
 # Result contains:
 # - composition_a: Weight fraction of component A at each point
@@ -211,8 +221,12 @@ profile - Indicates blend or block copolymer
 ## Complete Workflow Example
 
 ``` r
-# Full copolymer analysis
-rec <- recipe(~., data = copolymers) |>
+# Full copolymer analysis workflow
+rec_full <- recipe(
+  ri_signal + uv_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = copolymers
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Input signals
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -243,11 +257,11 @@ rec <- recipe(~., data = copolymers) |>
   ) |>
   step_sec_mw_averages(measures = "log_mw")
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_full <- prep(rec_full)
+result_full <- bake(prepped_full, new_data = NULL)
 
 # Report composition statistics
-result |>
+result_full |>
   select(
     sample_id,
     mw_mw,

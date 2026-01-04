@@ -383,8 +383,13 @@ Think of a recipe as a blueprint for your analysis—it describes
 define the workflow once and apply it to many samples.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Start a recipe with your data</span></span>
-<span><span class="co"># The formula ~. means "use all columns"</span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="co"># The formula specifies: predictor columns ~ grouping column</span></span>
+<span><span class="co"># sample_id identifies which rows belong to each chromatogram</span></span>
+<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">ps_sample</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Convert the ri_signal column to measure format</span></span>
 <span>  <span class="co"># This step tells recipes how to interpret your chromatogram data</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
@@ -399,7 +404,11 @@ define the workflow once and apply it to many samples.</p>
 <p>Chain additional steps using the pipe (<code>|&gt;</code>). Each step
 transforms the data in sequence:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">ps_sample</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># First: convert raw signal to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">ri_signal</span>,</span>
@@ -434,7 +443,11 @@ produce results</li>
 <span><span class="co"># View the processed data - ri now contains the baseline-corrected,</span></span>
 <span><span class="co"># concentration-converted chromatogram</span></span>
 <span><span class="va">result</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">ri</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 2</span></span></span>
+<span><span class="co">#&gt;   sample_id          ri</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
 <blockquote>
 <p><strong>Why two steps?</strong> This design lets you prep once on
 training data (like calibration standards), then bake on new samples
@@ -521,7 +534,11 @@ details.</p>
 <span><span class="va">ps_cal</span> <span class="op">&lt;-</span> <span class="va">sec_ps_standards</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span>retention <span class="op">=</span> <span class="va">retention_time</span>, log_mw <span class="op">=</span> <span class="va">log_mp</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">ps_sample</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="va">rec_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">ps_sample</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">ri_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
@@ -539,13 +556,21 @@ details.</p>
 <span>  <span class="co"># The calibration step converted location values to log10(MW)</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_cal</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Standard at 12.58 has 14.4% MW deviation.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Consider removing outlier standards or using a different fit type.</span></span>
+<span><span class="co">#&gt; Warning: 1037 points (51.8%) are outside calibration range.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Calibration range: 11.15 to 20.79</span></span>
+<span><span class="va">result_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_cal</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View molecular weight results</span></span>
 <span><span class="co"># New columns are added with mw_ prefix</span></span>
-<span><span class="va">result</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">result_cal</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
+<span><span class="co">#&gt;   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    419<span style="text-decoration: underline;">927</span>756. 8.24<span style="color: #949494;">e</span>21 7.81<span style="color: #949494;">e</span>23       1.96<span style="color: #949494;">e</span>13</span></span></code></pre></div>
 <blockquote>
 <p><strong>Important</strong>: Conventional calibration assumes your
 sample has similar hydrodynamic behavior to your standards. Polystyrene

@@ -110,7 +110,12 @@ ps_standards <- sec_triple_detect |>
   filter(polymer_type == "polystyrene")
 
 # Create the preprocessing recipe
-rec <- recipe(~., data = ps_standards) |>
+# Note: The formula specifies which columns to use and sample_id as grouping
+rec <- recipe(
+  ri_signal + elution_time + dn_dc + known_mw ~ sample_id,
+  data = ps_standards
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert to measure format
   step_measure_input_long(
     ri_signal,
@@ -213,7 +218,12 @@ ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-50K")
 
 # Build the calibration recipe
-rec_cal <- recipe(~., data = ps_sample) |>
+# Note: Use explicit formula with sample_id as the grouping variable
+rec_cal <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -385,7 +395,13 @@ For more accurate molecular weight determination, multi-detector SEC
 uses RI for concentration and MALS for absolute molecular weight:
 
 ``` r
-rec_multi <- recipe(~., data = sec_triple_detect) |>
+# Multi-detector SEC workflow for absolute molecular weight
+# Note: MALS processing requires additional detector configuration
+rec_multi <- recipe(
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = sec_triple_detect
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert each detector to measure format
   step_measure_input_long(
     ri_signal,
@@ -418,8 +434,8 @@ rec_multi <- recipe(~., data = sec_triple_detect) |>
   # Calculate MW averages from MALS-derived MW
   step_sec_mw_averages(mw_column = "mw_mals")
 
-prepped <- prep(rec_multi)
-result <- bake(prepped, new_data = NULL)
+prepped_multi <- prep(rec_multi)
+result_multi <- bake(prepped_multi, new_data = NULL)
 ```
 
 ## Copolymer Composition Analysis
@@ -432,7 +448,11 @@ molecular weight distribution:
 copolymers <- sec_triple_detect |>
   filter(polymer_type == "copolymer")
 
-rec_comp <- recipe(~., data = copolymers) |>
+rec_comp <- recipe(
+  ri_signal + uv_signal + elution_time ~ sample_id,
+  data = copolymers
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = c("ri", "uv")) |>
@@ -448,8 +468,8 @@ rec_comp <- recipe(~., data = copolymers) |>
     component_b_ri = 0.084  # RI response factor for component B
   )
 
-prepped <- prep(rec_comp)
-result <- bake(prepped, new_data = NULL)
+prepped_comp <- prep(rec_comp)
+result_comp <- bake(prepped_comp, new_data = NULL)
 
 # The result contains:
 # - uv_ri_ratio: Point-by-point UV/RI ratio
@@ -468,7 +488,11 @@ protein_data <- sec_triple_detect |>
   filter(sample_type == "sample") |>
   head(1)
 
-rec_protein <- recipe(~., data = protein_data) |>
+rec_protein <- recipe(
+  uv_signal + elution_time ~ sample_id,
+  data = protein_data
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = "uv") |>
   # Quantify aggregates with manual peak boundaries
@@ -479,14 +503,14 @@ rec_protein <- recipe(~., data = protein_data) |>
     method = "manual"
   )
 
-prepped <- prep(rec_protein)
-result <- bake(prepped, new_data = NULL)
+prepped_protein <- prep(rec_protein)
+result_protein <- bake(prepped_protein, new_data = NULL)
 
 # Results include:
 # - purity_hmws: % high MW species (before monomer)
 # - purity_monomer: % main peak
 # - purity_lmws: % low MW species (after monomer)
-result |>
+result_protein |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
 ```
 
@@ -495,7 +519,11 @@ result |>
 Generate differential and cumulative molecular weight distributions:
 
 ``` r
-rec_mwd <- recipe(~., data = sec_triple_detect) |>
+rec_mwd <- recipe(
+  ri_signal + elution_time + dn_dc + known_mw ~ sample_id,
+  data = sec_triple_detect
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_sec_baseline(measures = "ri") |>
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
@@ -506,8 +534,8 @@ rec_mwd <- recipe(~., data = sec_triple_detect) |>
     output_type = "both"  # "differential", "cumulative", or "both"
   )
 
-prepped <- prep(rec_mwd)
-result <- bake(prepped, new_data = NULL)
+prepped_mwd <- prep(rec_mwd)
+result_mwd <- bake(prepped_mwd, new_data = NULL)
 
 # The result contains:
 # - mwd_differential: dw/d(logM) vs logM
@@ -667,8 +695,12 @@ library(recipes)
 # Load data
 data(sec_triple_detect, package = "measure.sec")
 
-# Create comprehensive recipe
-rec <- recipe(~., data = sec_triple_detect) |>
+# Create comprehensive recipe with explicit formula
+rec_complete <- recipe(
+  ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef + known_mw + polymer_type ~ sample_id,
+  data = sec_triple_detect
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Input conversion
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -688,16 +720,16 @@ rec <- recipe(~., data = sec_triple_detect) |>
   step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri")
 
 # Process
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_complete <- prep(rec_complete)
+result_complete <- bake(prepped_complete, new_data = NULL)
 
 # View molecular weight results
-result |>
+result_complete |>
   select(sample_id, polymer_type, Mn, Mw, Mz, dispersity) |>
   print(n = 12)
 
 # Generate summary
-summary <- measure_sec_summary_table(result, sample_id = "sample_id")
+summary <- measure_sec_summary_table(result_complete, sample_id = "sample_id")
 print(summary)
 ```
 

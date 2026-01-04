@@ -193,7 +193,12 @@ molecular weight distribution, you can:</p>
 <h3 id="basic-workflow">Basic Workflow<a class="anchor" aria-label="anchor" href="#basic-workflow"></a>
 </h3>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">copolymers</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># UV/RI ratio analysis for compositional heterogeneity</span></span>
+<span><span class="va">rec_ratio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">copolymers</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Convert signals to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">ri_signal</span>,</span>
@@ -216,8 +221,8 @@ molecular weight distribution, you can:</p>
 <span>    min_signal <span class="op">=</span> <span class="fl">0.01</span>       <span class="co"># Minimum signal threshold</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_ratio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_ratio</span><span class="op">)</span></span>
+<span><span class="va">result_ratio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_ratio</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The result contains a uv_ri_ratio column with the ratio curve</span></span></code></pre></div>
 </div>
@@ -226,7 +231,7 @@ molecular weight distribution, you can:</p>
 </h3>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get the ratio values at each elution time</span></span>
-<span><span class="va">ratio_data</span> <span class="op">&lt;-</span> <span class="va">result</span> <span class="op">|&gt;</span></span>
+<span><span class="va">ratio_data</span> <span class="op">&lt;-</span> <span class="va">result_ratio</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">uv_ri_ratio</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/unnest.html" class="external-link">unnest</a></span><span class="op">(</span><span class="va">uv_ri_ratio</span><span class="op">)</span></span>
 <span></span>
@@ -251,7 +256,12 @@ molecular weight distribution, you can:</p>
 <p>When you know the response factors for each monomer, calculate actual
 composition:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">copolymers</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Composition calculation with known response factors</span></span>
+<span><span class="va">rec_comp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">copolymers</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">uv_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"uv"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ri"</span>, <span class="st">"uv"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -267,8 +277,8 @@ composition:</p>
 <span>    component_b_ri <span class="op">=</span> <span class="fl">0.084</span>   <span class="co"># RI response (dn/dc)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_comp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_comp</span><span class="op">)</span></span>
+<span><span class="va">result_comp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_comp</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Result contains:</span></span>
 <span><span class="co"># - composition_a: Weight fraction of component A at each point</span></span>
@@ -347,8 +357,12 @@ composition profile - Indicates blend or block copolymer</p>
 <h2 id="complete-workflow-example">Complete Workflow Example<a class="anchor" aria-label="anchor" href="#complete-workflow-example"></a>
 </h2>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Full copolymer analysis</span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">copolymers</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Full copolymer analysis workflow</span></span>
+<span><span class="va">rec_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">+</span> <span class="va">extinction_coef</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">copolymers</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Input signals</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">uv_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"uv"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -379,11 +393,11 @@ composition profile - Indicates blend or block copolymer</p>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"log_mw"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_full</span><span class="op">)</span></span>
+<span><span class="va">result_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_full</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Report composition statistics</span></span>
-<span><span class="va">result</span> <span class="op">|&gt;</span></span>
+<span><span class="va">result_full</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span></span>
 <span>    <span class="va">sample_id</span>,</span>
 <span>    <span class="va">mw_mw</span>,</span>

@@ -292,8 +292,13 @@ it to many samples.
 
 ``` r
 # Start a recipe with your data
-# The formula ~. means "use all columns"
-rec <- recipe(~., data = ps_sample) |>
+# The formula specifies: predictor columns ~ grouping column
+# sample_id identifies which rows belong to each chromatogram
+rec <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert the ri_signal column to measure format
   # This step tells recipes how to interpret your chromatogram data
   step_measure_input_long(
@@ -309,7 +314,11 @@ Chain additional steps using the pipe (`|>`). Each step transforms the
 data in sequence:
 
 ``` r
-rec <- recipe(~., data = ps_sample) |>
+rec <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   # First: convert raw signal to measure format
   step_measure_input_long(
     ri_signal,
@@ -344,6 +353,10 @@ result <- bake(prepped, new_data = NULL)
 # concentration-converted chromatogram
 result |>
   select(sample_id, ri)
+#> # A tibble: 1 × 2
+#>   sample_id          ri
+#>   <chr>          <meas>
+#> 1 PS-50K    [2,001 × 2]
 ```
 
 > **Why two steps?** This design lets you prep once on training data
@@ -431,7 +444,11 @@ Apply the calibration using
 ps_cal <- sec_ps_standards |>
   select(retention = retention_time, log_mw = log_mp)
 
-rec <- recipe(~., data = ps_sample) |>
+rec_cal <- recipe(
+  ri_signal + elution_time + dn_dc ~ sample_id,
+  data = ps_sample
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -449,13 +466,21 @@ rec <- recipe(~., data = ps_sample) |>
   # The calibration step converted location values to log10(MW)
   step_sec_mw_averages()
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_cal <- prep(rec_cal)
+#> Warning: Standard at 12.58 has 14.4% MW deviation.
+#> ℹ Consider removing outlier standards or using a different fit type.
+#> Warning: 1037 points (51.8%) are outside calibration range.
+#> ℹ Calibration range: 11.15 to 20.79
+result_cal <- bake(prepped_cal, new_data = NULL)
 
 # View molecular weight results
 # New columns are added with mw_ prefix
-result |>
+result_cal |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
+#> # A tibble: 1 × 5
+#>   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity
+#>   <chr>          <dbl>   <dbl>   <dbl>         <dbl>
+#> 1 PS-50K    419927756. 8.24e21 7.81e23       1.96e13
 ```
 
 > **Important**: Conventional calibration assumes your sample has

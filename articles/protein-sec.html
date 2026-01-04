@@ -153,7 +153,13 @@ degradation products</li>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_type</span> <span class="op">==</span> <span class="st">"sample"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">protein_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="co"># Note: Aggregate analysis requires defined peak boundaries</span></span>
+<span><span class="co"># The monomer_start and monomer_end values depend on your chromatographic conditions</span></span>
+<span><span class="va">rec_agg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Convert UV signal to measure format</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">uv_signal</span>,</span>
@@ -170,11 +176,11 @@ degradation products</li>
 <span>    method <span class="op">=</span> <span class="st">"manual"</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_agg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_agg</span><span class="op">)</span></span>
+<span><span class="va">result_agg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_agg</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View aggregate results</span></span>
-<span><span class="va">result</span> <span class="op">|&gt;</span></span>
+<span><span class="va">result_agg</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">purity_hmws</span>, <span class="va">purity_monomer</span>, <span class="va">purity_lmws</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -198,7 +204,13 @@ degradation products</li>
 workflow combining baseline correction, aggregate analysis, and optional
 oligomer detection:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">protein_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Comprehensive protein SEC workflow</span></span>
+<span><span class="co"># Note: step_sec_protein provides a streamlined workflow for protein analysis</span></span>
+<span><span class="va">rec_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">uv_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>
@@ -212,11 +224,11 @@ oligomer detection:</p>
 <span>    baseline_method <span class="op">=</span> <span class="st">"linear"</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">prepped_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_protein</span><span class="op">)</span></span>
+<span><span class="va">result_protein</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_protein</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View comprehensive results</span></span>
-<span><span class="va">result</span> <span class="op">|&gt;</span></span>
+<span><span class="va">result_protein</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span></span>
 <span>    <span class="va">sample_id</span>,</span>
 <span>    <span class="va">protein_hmws_pct</span>,</span>
@@ -329,7 +341,12 @@ Heavy/light chain analysis</p>
 </h3>
 <p>For more control over oligomer detection:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">protein_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Detailed oligomer analysis with explicit control</span></span>
+<span><span class="va">rec_oligo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
+<span>  <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">protein_data</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span></span>
 <span>    <span class="va">uv_signal</span>,</span>
 <span>    location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>,</span>

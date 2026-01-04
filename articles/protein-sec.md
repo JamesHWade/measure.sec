@@ -69,7 +69,13 @@ protein_data <- sec_triple_detect |>
   filter(sample_type == "sample") |>
   head(1)
 
-rec <- recipe(~., data = protein_data) |>
+# Note: Aggregate analysis requires defined peak boundaries
+# The monomer_start and monomer_end values depend on your chromatographic conditions
+rec_agg <- recipe(
+  uv_signal + elution_time ~ sample_id,
+  data = protein_data
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Convert UV signal to measure format
   step_measure_input_long(
     uv_signal,
@@ -86,11 +92,11 @@ rec <- recipe(~., data = protein_data) |>
     method = "manual"
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_agg <- prep(rec_agg)
+result_agg <- bake(prepped_agg, new_data = NULL)
 
 # View aggregate results
-result |>
+result_agg |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
 ```
 
@@ -115,7 +121,13 @@ function provides a streamlined workflow combining baseline correction,
 aggregate analysis, and optional oligomer detection:
 
 ``` r
-rec <- recipe(~., data = protein_data) |>
+# Comprehensive protein SEC workflow
+# Note: step_sec_protein provides a streamlined workflow for protein analysis
+rec_protein <- recipe(
+  uv_signal + elution_time ~ sample_id,
+  data = protein_data
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     uv_signal,
     location = vars(elution_time),
@@ -129,11 +141,11 @@ rec <- recipe(~., data = protein_data) |>
     baseline_method = "linear"
   )
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_protein <- prep(rec_protein)
+result_protein <- bake(prepped_protein, new_data = NULL)
 
 # View comprehensive results
-result |>
+result_protein |>
   select(
     sample_id,
     protein_hmws_pct,
@@ -206,7 +218,12 @@ Heavy/light chain analysis
 For more control over oligomer detection:
 
 ``` r
-rec <- recipe(~., data = protein_data) |>
+# Detailed oligomer analysis with explicit control
+rec_oligo <- recipe(
+  uv_signal + elution_time ~ sample_id,
+  data = protein_data
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     uv_signal,
     location = vars(elution_time),
