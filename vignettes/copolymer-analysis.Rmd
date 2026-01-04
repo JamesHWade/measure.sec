@@ -144,7 +144,7 @@ result_ratio <- bake(prepped_ratio, new_data = NULL)
 
 ```{r extract-ratio, eval = FALSE}
 # Get the ratio values at each elution time
-ratio_data <- result |>
+ratio_data <- result_ratio |>
   select(sample_id, uv_ri_ratio) |>
   tidyr::unnest(uv_ri_ratio)
 
@@ -324,8 +324,12 @@ ggplot(plot_data) +
 ## Complete Workflow Example
 
 ```{r complete-workflow, eval = FALSE}
-# Full copolymer analysis
-rec <- recipe(~., data = copolymers) |>
+# Full copolymer analysis workflow
+rec_full <- recipe(
+  ri_signal + uv_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
+  data = copolymers
+) |>
+  update_role(sample_id, new_role = "id") |>
   # Input signals
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -356,11 +360,11 @@ rec <- recipe(~., data = copolymers) |>
   ) |>
   step_sec_mw_averages(measures = "log_mw")
 
-prepped <- prep(rec)
-result <- bake(prepped, new_data = NULL)
+prepped_full <- prep(rec_full)
+result_full <- bake(prepped_full, new_data = NULL)
 
 # Report composition statistics
-result |>
+result_full |>
   select(
     sample_id,
     mw_mw,

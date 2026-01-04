@@ -252,7 +252,12 @@ Use for:
 For more control over oligomer detection:
 
 ```{r oligomer, eval = FALSE}
-rec <- recipe(~., data = protein_data) |>
+# Detailed oligomer analysis with explicit control
+rec_oligo <- recipe(
+  uv_signal + elution_time ~ sample_id,
+  data = protein_data
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     uv_signal,
     location = vars(elution_time),

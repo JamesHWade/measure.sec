@@ -298,7 +298,12 @@ step_sec_rals(
 Add intrinsic viscosity for Mark-Houwink analysis:
 
 ```{r viscometer, eval = FALSE}
-rec <- recipe(~., data = samples) |>
+# Note: This requires viscometer data (visc_signal) and pre-calculated concentration
+rec_visc <- recipe(
+  visc_signal + elution_time ~ sample_id,
+  data = samples
+) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
   step_sec_baseline(measures = "visc") |>
   step_sec_viscometer(measures = "visc") |>
