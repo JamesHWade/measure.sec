@@ -16,6 +16,10 @@
 #' @param standards A data frame containing calibration standards with columns:
 #'   - `location` (or `time`, `volume`, `retention`): Elution position
 #'   - `log_mw` (or `mw`): Molecular weight (will be log-transformed if `mw`)
+#'   Required unless `calibration` is provided.
+#' @param calibration A pre-loaded calibration object from
+#'   [load_sec_calibration()]. When provided, skips fitting and uses the saved
+#'   calibration directly. Takes precedence over `standards`.
 #' @param fit_type Type of polynomial fit for the calibration curve:
 #'   - `"cubic"` (default): Third-order polynomial
 #'   - `"quadratic"`: Second-order polynomial
@@ -95,6 +99,7 @@ step_sec_conventional_cal <- function(
   recipe,
   measures = NULL,
   standards = NULL,
+  calibration = NULL,
   fit_type = c("cubic", "quadratic", "linear", "fifth"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
@@ -102,15 +107,34 @@ step_sec_conventional_cal <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-
   id = recipes::rand_id("sec_conventional_cal")
 ) {
   fit_type <- match.arg(fit_type)
   extrapolation <- match.arg(extrapolation)
 
-  # Validate standards
-  if (is.null(standards)) {
-    cli::cli_abort("{.arg standards} is required for conventional calibration.")
+  # Check if using pre-loaded calibration
+  if (!is.null(calibration)) {
+    if (!inherits(calibration, "sec_calibration")) {
+      cli::cli_abort(
+        c(
+          "{.arg calibration} must be a {.cls sec_calibration} object.",
+          "i" = "Use {.fn load_sec_calibration} to load a saved calibration."
+        )
+      )
+    }
+    # Use settings from calibration object
+    fit_type <- calibration$fit_type
+    extrapolation <- calibration$extrapolation
+    output_col <- calibration$output_col
+    log_output <- calibration$log_output
+    standards <- calibration$standards
+  } else if (is.null(standards)) {
+    cli::cli_abort(
+      c(
+        "Either {.arg standards} or {.arg calibration} is required.",
+        "i" = "Provide calibration standards or use {.fn load_sec_calibration}."
+      )
+    )
   }
 
   if (!is.data.frame(standards)) {
@@ -125,6 +149,7 @@ step_sec_conventional_cal <- function(
     step_sec_conventional_cal_new(
       measures = measures,
       standards = standards,
+      calibration = calibration,
       fit_type = fit_type,
       extrapolation = extrapolation,
       output_col = output_col,
@@ -222,6 +247,7 @@ step_sec_conventional_cal <- function(
 step_sec_conventional_cal_new <- function(
   measures,
   standards,
+  calibration,
   fit_type,
   extrapolation,
   output_col,
@@ -238,6 +264,7 @@ step_sec_conventional_cal_new <- function(
     subclass = "sec_conventional_cal",
     measures = measures,
     standards = standards,
+    calibration = calibration,
     fit_type = fit_type,
     extrapolation = extrapolation,
     output_col = output_col,
@@ -263,7 +290,40 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
     measures <- x$measures
   }
 
-  # Extract calibration data
+  # Check if using pre-loaded calibration
+  if (!is.null(x$calibration)) {
+    cal <- x$calibration
+
+    # Use the pre-fitted model directly
+    cal_fit <- cal$fit_object
+    calibration_range <- cal$calibration_range
+    calibration_diagnostics <- cal$diagnostics
+
+    cli::cli_alert_info(
+      "Using pre-loaded {.field {cal$fit_type}} calibration (R\\u00b2 = {round(cal$diagnostics$r_squared, 4)})"
+    )
+
+    return(
+      step_sec_conventional_cal_new(
+        measures = measures,
+        standards = x$standards,
+        calibration = x$calibration,
+        fit_type = x$fit_type,
+        extrapolation = x$extrapolation,
+        output_col = x$output_col,
+        log_output = x$log_output,
+        calibration_fit = cal_fit,
+        calibration_range = calibration_range,
+        calibration_diagnostics = calibration_diagnostics,
+        role = x$role,
+        trained = TRUE,
+        skip = x$skip,
+        id = x$id
+      )
+    )
+  }
+
+  # Otherwise fit calibration from standards
   standards <- x$standards
   location_col <- .get_location_col(standards)
   location <- standards[[location_col]]
@@ -385,6 +445,7 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
   step_sec_conventional_cal_new(
     measures = measures,
     standards = standards,
+    calibration = NULL,
     fit_type = x$fit_type,
     extrapolation = x$extrapolation,
     output_col = x$output_col,

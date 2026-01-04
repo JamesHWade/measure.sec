@@ -8,6 +8,7 @@ step_sec_conventional_cal(
   recipe,
   measures = NULL,
   standards = NULL,
+  calibration = NULL,
   fit_type = c("cubic", "quadratic", "linear", "fifth"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
@@ -28,7 +29,12 @@ If \code{NULL}, uses all measure columns.}
 \itemize{
 \item \code{location} (or \code{time}, \code{volume}, \code{retention}): Elution position
 \item \code{log_mw} (or \code{mw}): Molecular weight (will be log-transformed if \code{mw})
+Required unless \code{calibration} is provided.
 }}
+
+\item{calibration}{A pre-loaded calibration object from
+\code{\link[=load_sec_calibration]{load_sec_calibration()}}. When provided, skips fitting and uses the saved
+calibration directly. Takes precedence over \code{standards}.}
 
 \item{fit_type}{Type of polynomial fit for the calibration curve:
 \itemize{
@@ -121,6 +127,8 @@ tidy(rec, number = 3)
 }
 \seealso{
 Other sec-calibration: 
+\code{\link{load_sec_calibration}()},
+\code{\link{save_sec_calibration}()},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_ps_standards}},

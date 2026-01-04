@@ -155,6 +155,8 @@ Gel permeation chromatography.
 }
 \seealso{
 Other sec-calibration: 
+\code{\link{load_sec_calibration}()},
+\code{\link{save_sec_calibration}()},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_ps_standards}},
