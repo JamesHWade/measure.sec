@@ -30,6 +30,34 @@ This vignette covers:
 3. Detailed oligomer analysis
 4. Regulatory considerations
 
+## Why SEC for Biopharmaceutical Analysis?
+
+### The Unique Demands of Protein Characterization
+
+Proteins are inherently more complex than small molecules or synthetic polymers. They fold into precise three-dimensional structures, associate into quaternary complexes, and can aggregate through multiple pathways. For biopharmaceutical products---monoclonal antibodies, enzymes, vaccines---understanding the **size distribution** of species in solution is critical to both efficacy and safety.
+
+SEC has become the primary analytical technique for protein aggregation analysis because it separates species non-destructively under native conditions. Unlike SDS-PAGE (which denatures proteins) or analytical ultracentrifugation (which requires specialized equipment and long run times), SEC provides quantitative, reproducible data in under 30 minutes per sample with standard HPLC instrumentation. The technique preserves non-covalent interactions, enabling detection of both reversible and irreversible aggregates.
+
+### How Protein Aggregates Form
+
+**Aggregation** refers to the association of protein molecules into higher-order species beyond the intended quaternary structure. Aggregates can form through several mechanisms:
+
+- **Native aggregation**: Properly folded monomers associate through surface interactions. These aggregates often form at high concentrations, interfaces (air-water, container surfaces), or under mechanical stress.
+
+- **Non-native aggregation**: Partially unfolded proteins expose hydrophobic regions that drive irreversible association. Heat stress, freeze-thaw cycles, and oxidation promote unfolding.
+
+- **Covalent aggregation**: Disulfide scrambling or other chemical crosslinks create species that persist even under denaturing conditions.
+
+The size of aggregates matters: small oligomers (dimers, trimers) may have reduced activity, while large aggregates (visible or subvisible particles) are the primary concern for immunogenicity.
+
+### Why Aggregate Monitoring Matters
+
+Regulatory agencies (FDA, EMA, WHO) require comprehensive aggregate characterization for biopharmaceutical approval and lot release. This focus stems from immunogenicity concerns: aggregated proteins can activate the immune system, potentially leading to anti-drug antibodies that reduce efficacy or cause adverse reactions.
+
+The connection between aggregation and immunogenicity is well-established through clinical experience: early insulin and growth hormone products had immunogenicity problems traced to aggregation, and modern monoclonal antibody products face similar scrutiny. ICH Q6B specifically identifies aggregate content as a critical quality attribute (CQA), and product specifications typically limit high molecular weight species (HMWS) to less than 5%---with tighter limits for high-dose or frequently administered products.
+
+SEC aggregate quantitation is the most common release test for biopharmaceuticals precisely because it is fast, robust, and directly measures what regulators care about: the distribution of species by size.
+
 ## Setup
 
 ```{r setup}

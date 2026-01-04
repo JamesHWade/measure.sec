@@ -24,6 +24,36 @@ System Suitability Testing (SST) ensures your SEC system is performing adequatel
 3. Run comprehensive system suitability tests
 4. Track column performance over time
 
+## Why System Suitability Matters
+
+### The Foundation of Reliable Results
+
+System Suitability Testing is not just a regulatory checkbox---it's the foundation of analytical reliability. An SEC system has many components that can drift or fail: pumps, columns, detectors, tubing, and fittings. Without verification, you might analyze samples on a degraded system and generate data that looks normal but is fundamentally wrong.
+
+Consider what happens when column efficiency degrades: peaks broaden, overlapping species that were once resolved merge together, and molecular weight calculations shift systematically. If you're quantifying protein aggregates with a 5% specification, running on a column with 30% lower plate count might cause you to underestimate aggregate content---potentially releasing out-of-specification material. SST prevents this by verifying system performance *before* each analytical batch.
+
+### How Column Degradation Affects Results
+
+SEC columns degrade gradually through several mechanisms:
+
+- **Void formation**: Packing material settles or dissolves, creating dead volume at the column head. This causes peak fronting, reduced plate count, and shifted retention times.
+
+- **Surface contamination**: Sample components that adsorb irreversibly reduce available surface area. Resolution decreases, especially for polar analytes.
+
+- **Frit blockage**: Particulates from samples or mobile phase clog inlet frits. Back-pressure increases, and eventually flow becomes inconsistent.
+
+- **Mechanical damage**: Pressure shocks or physical impact can fracture particles, creating fine particles that block flow paths.
+
+These degradation modes produce characteristic SST failures: plate count drops before resolution does; asymmetry changes from symmetric to tailing; retention times shift earlier (void formation) or later (contamination). Tracking these metrics over time lets you predict column failure before it affects sample results.
+
+### Where Acceptance Criteria Come From
+
+The acceptance criteria commonly used for SEC---Rs ≥ 1.5, N ≥ 5000, Tf between 0.8 and 1.5---derive from pharmacopeial methods (USP, EP, JP) and decades of chromatographic practice. They represent minimum performance levels at which separation quality is acceptable for quantitative work.
+
+Resolution ≥ 1.5 ensures baseline separation between critical pairs (~99.7% peak purity). Plate count ≥ 5000 provides sufficient peak sharpness for accurate integration. Tailing factor between 0.8 and 1.5 indicates the column is free from significant void formation or secondary interactions.
+
+For regulated environments, these limits may be tightened based on method validation data. A biopharmaceutical method might require Rs ≥ 2.0 between monomer and dimer if that's what was demonstrated during validation. The principle is consistent: SST criteria should reflect the performance level at which the method was validated and shown to give accurate results.
+
 ## Quick Reference: Typical Acceptance Criteria
 
 | Parameter | Symbol | Typical Limit | Notes |
