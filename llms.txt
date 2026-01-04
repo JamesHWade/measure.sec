@@ -497,8 +497,12 @@ Learning-oriented guides to get you started
 
 Task-oriented guides for specific applications
 
-- [Multi-Detector SEC
-  Analysis](https://jameshwade.github.io/measure-sec/articles/triple-detection.md):
+- [Multi-Detector SEC: Detector Integration and
+  Workflows](https://jameshwade.github.io/measure-sec/articles/triple-detection.md):
+- [Multi-Angle Light Scattering (MALS) for Absolute Molecular
+  Weight](https://jameshwade.github.io/measure-sec/articles/mals-detection.md):
+- [Single-Angle Light Scattering: LALS and
+  RALS](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md):
 - [Protein SEC
   Analysis](https://jameshwade.github.io/measure-sec/articles/protein-sec.md):
 - [Copolymer Composition
