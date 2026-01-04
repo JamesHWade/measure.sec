@@ -17,6 +17,7 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/get_sec_template.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/list_sec_templates.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure.sec-package.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_branching_index.html</loc></url>
@@ -42,6 +43,7 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/plot_sec_multidetector.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/plot_sec_mwd.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/required_pkgs.step_sec.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_branched.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/sec_copolymer.html</loc></url>

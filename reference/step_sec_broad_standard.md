@@ -159,6 +159,8 @@ Research and Development*, 8(1), 54-57.
 ## See also
 
 Other sec-calibration:
+[`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md),
+[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
 [`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
 [`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
 [`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),

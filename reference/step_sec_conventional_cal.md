@@ -11,6 +11,7 @@ step_sec_conventional_cal(
   recipe,
   measures = NULL,
   standards = NULL,
+  calibration = NULL,
   fit_type = c("cubic", "quadratic", "linear", "fifth"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
@@ -40,7 +41,14 @@ step_sec_conventional_cal(
   - `location` (or `time`, `volume`, `retention`): Elution position
 
   - `log_mw` (or `mw`): Molecular weight (will be log-transformed if
-    `mw`)
+    `mw`) Required unless `calibration` is provided.
+
+- calibration:
+
+  A pre-loaded calibration object from
+  [`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md).
+  When provided, skips fitting and uses the saved calibration directly.
+  Takes precedence over `standards`.
 
 - fit_type:
 
@@ -127,6 +135,8 @@ quality. R² \> 0.999 is typical for good calibrations.
 ## See also
 
 Other sec-calibration:
+[`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md),
+[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
 [`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
 [`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
 [`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),

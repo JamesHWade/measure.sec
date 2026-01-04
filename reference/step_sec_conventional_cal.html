@@ -63,6 +63,7 @@ it to convert elution time/volume to molecular weight.</p>
 <span>  <span class="va">recipe</span>,</span>
 <span>  measures <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  standards <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  calibration <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fit_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cubic"</span>, <span class="st">"quadratic"</span>, <span class="st">"linear"</span>, <span class="st">"fifth"</span><span class="op">)</span>,</span>
 <span>  extrapolation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"none"</span>, <span class="st">"linear"</span><span class="op">)</span>,</span>
 <span>  output_col <span class="op">=</span> <span class="st">"mw"</span>,</span>
@@ -89,8 +90,15 @@ If <code>NULL</code>, uses all measure columns.</p></dd>
 
 <dt id="arg-standards">standards<a class="anchor" aria-label="anchor" href="#arg-standards"></a></dt>
 <dd><p>A data frame containing calibration standards with columns:</p><ul><li><p><code>location</code> (or <code>time</code>, <code>volume</code>, <code>retention</code>): Elution position</p></li>
-<li><p><code>log_mw</code> (or <code>mw</code>): Molecular weight (will be log-transformed if <code>mw</code>)</p></li>
+<li><p><code>log_mw</code> (or <code>mw</code>): Molecular weight (will be log-transformed if <code>mw</code>)
+Required unless <code>calibration</code> is provided.</p></li>
 </ul></dd>
+
+
+<dt id="arg-calibration">calibration<a class="anchor" aria-label="anchor" href="#arg-calibration"></a></dt>
+<dd><p>A pre-loaded calibration object from
+<code><a href="load_sec_calibration.html">load_sec_calibration()</a></code>. When provided, skips fitting and uses the saved
+calibration directly. Takes precedence over <code>standards</code>.</p></dd>
 
 
 <dt id="arg-fit-type">fit_type<a class="anchor" aria-label="anchor" href="#arg-fit-type"></a></dt>
@@ -160,6 +168,8 @@ for assessing fit quality. R² &gt; 0.999 is typical for good calibrations.</p>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Other sec-calibration:
+<code><a href="load_sec_calibration.html">load_sec_calibration()</a></code>,
+<code><a href="save_sec_calibration.html">save_sec_calibration()</a></code>,
 <code><a href="sec_calibration_standards.html">sec_calibration_standards</a></code>,
 <code><a href="sec_pmma_standards.html">sec_pmma_standards</a></code>,
 <code><a href="sec_ps_standards.html">sec_ps_standards</a></code>,
