@@ -165,10 +165,10 @@ ggplot() +
             size = 3, color = "gray30") +
   # Draw nodes
 
-  geom_label(data = nodes |> filter(type == "question"),
+  geom_label(data = nodes |> dplyr::filter(type == "question"),
              aes(x = x, y = y, label = label),
              fill = "#E3F2FD", color = "#2E86AB", size = 3, label.padding = unit(0.4, "lines")) +
-  geom_label(data = nodes |> filter(type == "answer", label != ""),
+  geom_label(data = nodes |> dplyr::filter(type == "answer", label != ""),
              aes(x = x, y = y, label = label),
              fill = "#E8F5E9", color = "#1B5E20", size = 3, label.padding = unit(0.4, "lines")) +
   geom_label(data = final_nodes,
