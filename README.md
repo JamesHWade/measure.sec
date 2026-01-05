@@ -38,66 +38,17 @@ and Gel Permeation Chromatography (GPC) data.
 
 ### Package Workflow
 
-The typical SEC analysis workflow processes raw chromatogram data
+<figure>
+<img src="man/figures/measure.sec_overview.png"
+alt="SEC Data Analysis Workflow" />
+<figcaption aria-hidden="true">SEC Data Analysis Workflow</figcaption>
+</figure>
+
+*The typical SEC analysis workflow processes raw chromatogram data
 through preprocessing, detector-specific signal processing, calibration,
 and molecular weight calculations. Concentration detectors (RI, UV)
 require calibration curves from standards, while light scattering
-detectors (MALS) provide absolute molecular weight directly.
-
-``` mermaid
-flowchart LR
-    subgraph Input["📥 Input"]
-        A[Raw Chromatogram]
-    end
-
-    subgraph Preprocessing["⚙️ Preprocessing"]
-        C[step_measure_input_long]
-        D[step_sec_baseline]
-        E[step_sec_detector_delay<br>multi-detector only]
-    end
-
-    subgraph Detectors["📊 Detector Processing"]
-        F[step_sec_ri<br>dn/dc normalization]
-        G[step_sec_uv<br>ε normalization]
-        H[step_sec_mals<br>Zimm/Debye/Berry]
-        I[step_sec_viscometer]
-    end
-
-    subgraph Concentration["📏 Concentration"]
-        F2[step_sec_concentration]
-    end
-
-    subgraph Calibration["📐 Calibration"]
-        J[step_sec_conventional_cal<br>from standards]
-        K[step_sec_universal_cal<br>Mark-Houwink]
-    end
-
-    subgraph Analysis["🔬 MW Calculation"]
-        L[step_sec_mw_averages]
-        M[step_sec_composition]
-    end
-
-    subgraph Output["📤 Output"]
-        O[MW Averages<br>Mn, Mw, Mz, PDI]
-        P[Absolute MW & Rg<br>from MALS]
-        Q[Composition<br>& Branching]
-    end
-
-    A --> C --> D --> E
-    E --> F & G & H & I
-    F & G --> F2
-    F2 --> J & K
-    F2 --> H
-    H --> P
-    J & K --> L
-    L --> O
-    I --> Q
-    M --> Q
-```
-
-*Note: Calibration standards are passed as parameters to
-`step_sec_conventional_cal()`, not as a separate data input. MALS
-provides absolute MW without requiring calibration standards.*
+detectors (MALS) provide absolute molecular weight directly.*
 
 ## Installation
 
