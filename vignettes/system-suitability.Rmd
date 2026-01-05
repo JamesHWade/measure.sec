@@ -80,7 +80,7 @@ In real-world SST, you start with a chromatogram from your SEC system. Let's use
 
 ### Visualize the Chromatogram
 
-```{r chromatogram-plot, fig.height=4}
+```{r chromatogram-plot, fig.width=7, fig.height=4}
 # Load protein SEC data
 data(sec_protein)
 
@@ -135,7 +135,7 @@ peaks
 
 Resolution quantifies how well two adjacent peaks are separated. It uses **retention times** and **peak widths** from your peak table.
 
-```{r resolution-explained, fig.height=3.5}
+```{r resolution-explained, fig.width=7, fig.height=4}
 # Extract parameters for dimer and monomer peaks
 dimer <- peaks |> filter(name == "Dimer")
 monomer <- peaks |> filter(name == "Monomer")
@@ -198,7 +198,7 @@ cat("            =", round(N), "plates\n")
 
 Asymmetry measures whether a peak is symmetric (ideal) or tailing/fronting. It compares the **leading half-width** to the **tailing half-width** at a specific height.
 
-```{r asymmetry-explained, fig.height=3}
+```{r asymmetry-explained, fig.width=7, fig.height=4}
 # For asymmetry, we need leading and tailing half-widths
 # (measured at 5% height for USP, 10% height for EP)
 # Let's assume slight tailing for the monomer:
