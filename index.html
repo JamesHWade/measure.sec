@@ -101,73 +101,26 @@
 <div class="section level3">
 <h3 id="package-workflow">Package Workflow<a class="anchor" aria-label="anchor" href="#package-workflow"></a>
 </h3>
-<p>The typical SEC analysis workflow processes raw chromatogram data through preprocessing, detector-specific signal processing, calibration, and molecular weight calculations. Concentration detectors (RI, UV) require calibration curves from standards, while light scattering detectors (MALS) provide absolute molecular weight directly.</p>
-<pre class="mermaid"><code>flowchart LR
-    subgraph Input["📥 Input"]
-        A[Raw Chromatogram]
-    end
-
-    subgraph Preprocessing["⚙️ Preprocessing"]
-        C[step_measure_input_long]
-        D[step_sec_baseline]
-        E[step_sec_detector_delay&lt;br&gt;multi-detector only]
-    end
-
-    subgraph Detectors["📊 Detector Processing"]
-        F[step_sec_ri&lt;br&gt;dn/dc normalization]
-        G[step_sec_uv&lt;br&gt;ε normalization]
-        H[step_sec_mals&lt;br&gt;Zimm/Debye/Berry]
-        I[step_sec_viscometer]
-    end
-
-    subgraph Concentration["📏 Concentration"]
-        F2[step_sec_concentration]
-    end
-
-    subgraph Calibration["📐 Calibration"]
-        J[step_sec_conventional_cal&lt;br&gt;from standards]
-        K[step_sec_universal_cal&lt;br&gt;Mark-Houwink]
-    end
-
-    subgraph Analysis["🔬 MW Calculation"]
-        L[step_sec_mw_averages]
-        M[step_sec_composition]
-    end
-
-    subgraph Output["📤 Output"]
-        O[MW Averages&lt;br&gt;Mn, Mw, Mz, PDI]
-        P[Absolute MW &amp; Rg&lt;br&gt;from MALS]
-        Q[Composition&lt;br&gt;&amp; Branching]
-    end
-
-    A --&gt; C --&gt; D --&gt; E
-    E --&gt; F &amp; G &amp; H &amp; I
-    F &amp; G --&gt; F2
-    F2 --&gt; J &amp; K
-    F2 --&gt; H
-    H --&gt; P
-    J &amp; K --&gt; L
-    L --&gt; O
-    I --&gt; Q
-    M --&gt; Q</code></pre>
-<p><em>Note: Calibration standards are passed as parameters to <code><a href="reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>, not as a separate data input. MALS provides absolute MW without requiring calibration standards.</em></p>
+<figure><img src="reference/figures/measure.sec_overview.png" alt="SEC Data Analysis Workflow"><figcaption aria-hidden="true">
+SEC Data Analysis Workflow
+</figcaption></figure><p><em>The typical SEC analysis workflow processes raw chromatogram data through preprocessing, detector-specific signal processing, calibration, and molecular weight calculations. Concentration detectors (RI, UV) require calibration curves from standards, while light scattering detectors (MALS) provide absolute molecular weight directly.</em></p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>You can install the development version of measure.sec from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/measure-sec"</span><span class="op">)</span></span></code></pre></div>
 <p>Note: measure.sec requires the <a href="https://github.com/JamesHWade/measure" class="external-link">measure</a> package:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/measure"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
@@ -364,7 +317,7 @@
 <div class="section level2">
 <h2 id="quality-control-functions">Quality Control Functions<a class="anchor" aria-label="anchor" href="#quality-control-functions"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Peak resolution</span></span>
 <span><span class="va">Rs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/measure_sec_resolution.html">measure_sec_resolution</a></span><span class="op">(</span></span>
 <span>  retention_1 <span class="op">=</span> <span class="fl">8.5</span>,</span>
@@ -393,7 +346,7 @@
 <div class="section level2">
 <h2 id="polymer-analysis-functions">Polymer Analysis Functions<a class="anchor" aria-label="anchor" href="#polymer-analysis-functions"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Estimate Mark-Houwink parameters</span></span>
 <span><span class="va">mw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10000</span>, <span class="fl">25000</span>, <span class="fl">50000</span>, <span class="fl">100000</span>, <span class="fl">250000</span><span class="op">)</span></span>
 <span><span class="va">iv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.15</span>, <span class="fl">0.28</span>, <span class="fl">0.45</span>, <span class="fl">0.72</span>, <span class="fl">1.2</span><span class="op">)</span></span>
@@ -413,7 +366,7 @@
 <div class="section level2">
 <h2 id="data-export">Data Export<a class="anchor" aria-label="anchor" href="#data-export"></a>
 </h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract slice-by-slice data</span></span>
 <span><span class="va">slices</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/measure_sec_slice_table.html">measure_sec_slice_table</a></span><span class="op">(</span><span class="va">result</span>, measures <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ri"</span>, <span class="st">"mw"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -430,7 +383,7 @@
 <li>Known molecular weights and dispersities</li>
 <li>Sample-specific dn/dc and extinction coefficients</li>
 </ul>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">sec_triple_detect</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -438,7 +391,7 @@
 <h2 id="integration-with-measure">Integration with measure<a class="anchor" aria-label="anchor" href="#integration-with-measure"></a>
 </h2>
 <p>measure.sec automatically registers with the measure package on load:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span></span>
