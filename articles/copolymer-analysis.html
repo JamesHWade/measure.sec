@@ -96,6 +96,73 @@ molecular weight distribution, you can:</p>
 </ol>
 </div>
 <div class="section level2">
+<h2 id="understanding-copolymer-heterogeneity">Understanding Copolymer Heterogeneity<a class="anchor" aria-label="anchor" href="#understanding-copolymer-heterogeneity"></a>
+</h2>
+<div class="section level3">
+<h3 id="what-makes-copolymers-complex">What Makes Copolymers Complex<a class="anchor" aria-label="anchor" href="#what-makes-copolymers-complex"></a>
+</h3>
+<p>A <strong>copolymer</strong> is a polymer chain built from two or
+more different monomer units. Unlike homopolymers (single monomer type),
+copolymers have an additional dimension of complexity:
+<strong>compositional heterogeneity</strong>—the variation in monomer
+ratio across the molecular weight distribution.</p>
+<p>Consider a styrene-acrylate copolymer: the overall composition might
+be 40% styrene, but this is just an average. Individual chains might
+range from 30% to 50% styrene, and this variation often correlates with
+molecular weight. Understanding this heterogeneity is essential for
+predicting material properties—a copolymer with uniform composition
+behaves very differently from one with significant compositional drift,
+even if they have identical average compositions.</p>
+</div>
+<div class="section level3">
+<h3 id="why-composition-varies-with-molecular-weight">Why Composition Varies with Molecular Weight<a class="anchor" aria-label="anchor" href="#why-composition-varies-with-molecular-weight"></a>
+</h3>
+<p>During polymerization, monomer consumption changes the reactor
+composition over time. If one monomer reacts faster than the other
+(different reactivity ratios), the chains formed early will have a
+different composition than chains formed later. The result is
+<strong>compositional drift</strong>: a systematic change in composition
+across the molecular weight distribution.</p>
+<p>This drift creates a correlation between MW and composition. In SEC,
+higher MW chains elute first. If these high MW chains were formed when
+the reactor was enriched in one monomer, they will have higher content
+of that monomer. The UV/RI ratio across the chromatogram directly
+reveals this variation.</p>
+<p>Beyond drift, copolymers can also show <strong>compositional
+distribution</strong>—random variation in composition at each molecular
+weight. Block copolymers, gradient copolymers, and statistical
+copolymers each have distinct compositional signatures that SEC with
+dual detection can reveal.</p>
+</div>
+<div class="section level3">
+<h3 id="what-uvri-ratio-analysis-can-and-cannot-tell-you">What UV/RI Ratio Analysis Can (and Cannot) Tell You<a class="anchor" aria-label="anchor" href="#what-uvri-ratio-analysis-can-and-cannot-tell-you"></a>
+</h3>
+<p>The UV/RI ratio method provides a powerful, accessible approach to
+compositional analysis when one monomer absorbs UV light and the other
+doesn’t. The ratio of UV to RI signal at each elution slice reflects the
+local composition. A flat ratio indicates uniform composition; a
+changing ratio reveals heterogeneity.</p>
+<p>However, this approach has important limitations:</p>
+<ul>
+<li>
+<strong>Both monomers must have different UV responses.</strong> If
+both absorb equally (or neither absorbs), UV/RI provides no
+compositional information.</li>
+<li>
+<strong>Response factors must be known.</strong> Converting UV/RI
+ratio to actual composition requires accurate extinction coefficients
+and dn/dc values for each monomer unit.</li>
+<li>
+<strong>Secondary effects can interfere.</strong> Sequence effects
+(alternating vs. random vs. blocky distribution) can affect both UV
+absorption and RI response beyond simple compositional effects.</li>
+</ul>
+<p>For systems where UV/RI analysis isn’t applicable, more sophisticated
+techniques like SEC-FTIR or SEC-NMR can provide compositional
+information, though with added complexity and cost.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">

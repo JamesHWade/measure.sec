@@ -105,6 +105,64 @@ Single-angle alternatives</li>
 </ul>
 </div>
 <div class="section level2">
+<h2 id="why-multi-detector-sec">Why Multi-Detector SEC?<a class="anchor" aria-label="anchor" href="#why-multi-detector-sec"></a>
+</h2>
+<div class="section level3">
+<h3 id="the-limitation-of-conventional-sec">The Limitation of Conventional SEC<a class="anchor" aria-label="anchor" href="#the-limitation-of-conventional-sec"></a>
+</h3>
+<p>Conventional SEC with a single concentration detector (RI or UV)
+relies on <strong>column calibration</strong> with narrow standards of
+known molecular weight. This approach has a fundamental limitation: it
+assumes your sample has the same relationship between hydrodynamic size
+and molecular weight as the calibration standards. For a polystyrene
+sample measured with polystyrene standards, this works well. But what
+about other polymers, proteins, or branched structures?</p>
+<p>The problem is that SEC separates by <strong>hydrodynamic
+volume</strong>—how much space a molecule occupies in solution—not by
+molecular weight directly. A compact, branched polymer with MW = 100,000
+Da might elute at the same time as a linear polymer with MW = 50,000 Da
+simply because they occupy similar volumes. Conventional calibration
+cannot distinguish between them.</p>
+</div>
+<div class="section level3">
+<h3 id="what-each-detector-adds">What Each Detector Adds<a class="anchor" aria-label="anchor" href="#what-each-detector-adds"></a>
+</h3>
+<p>Multi-detector SEC overcomes this limitation by measuring molecular
+properties directly:</p>
+<ul>
+<li><p><strong>Concentration detectors (RI, UV)</strong> tell you
+<em>how much</em> material is present at each elution slice. RI responds
+to refractive index changes (nearly universal), while UV detects
+chromophores (selective but sensitive).</p></li>
+<li><p><strong>Light scattering detectors (MALS, LALS, RALS)</strong>
+measure molecular weight <em>directly</em> from the intensity of
+scattered light, independent of calibration standards. They also provide
+radius of gyration (Rg) for larger molecules, revealing information
+about molecular shape and structure.</p></li>
+<li><p><strong>Viscometers</strong> measure intrinsic viscosity [η],
+which reflects molecular size and shape in solution. Combined with MW
+from light scattering, viscometry reveals branching and conformation
+through the Mark-Houwink relationship.</p></li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="when-to-use-absolute-vs-relative-mw">When to Use Absolute vs Relative MW<a class="anchor" aria-label="anchor" href="#when-to-use-absolute-vs-relative-mw"></a>
+</h3>
+<p><strong>Use conventional calibration</strong> (relative MW) when: -
+Your sample is the same polymer type as your standards (e.g., PS sample
+with PS standards) - You need fast screening and don’t require absolute
+values - Relative comparison between samples is sufficient</p>
+<p><strong>Use multi-detector SEC</strong> (absolute MW) when: - Your
+sample differs structurally from available standards - You’re analyzing
+proteins, copolymers, or branched polymers - Regulatory requirements
+demand absolute MW values - You need structural information beyond
+molecular weight (Rg, branching, conformation)</p>
+<p>The additional complexity of multi-detector systems is justified when
+accurate absolute measurements matter—and for proteins and complex
+polymers, they almost always do.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">

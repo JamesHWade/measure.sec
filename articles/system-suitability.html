@@ -87,6 +87,71 @@ SST metrics (resolution, plate count, asymmetry) 3. Run comprehensive
 system suitability tests 4. Track column performance over time</p>
 </div>
 <div class="section level2">
+<h2 id="why-system-suitability-matters">Why System Suitability Matters<a class="anchor" aria-label="anchor" href="#why-system-suitability-matters"></a>
+</h2>
+<div class="section level3">
+<h3 id="the-foundation-of-reliable-results">The Foundation of Reliable Results<a class="anchor" aria-label="anchor" href="#the-foundation-of-reliable-results"></a>
+</h3>
+<p>System Suitability Testing is not just a regulatory checkbox—it’s the
+foundation of analytical reliability. An SEC system has many components
+that can drift or fail: pumps, columns, detectors, tubing, and fittings.
+Without verification, you might analyze samples on a degraded system and
+generate data that looks normal but is fundamentally wrong.</p>
+<p>Consider what happens when column efficiency degrades: peaks broaden,
+overlapping species that were once resolved merge together, and
+molecular weight calculations shift systematically. If you’re
+quantifying protein aggregates with a 5% specification, running on a
+column with 30% lower plate count might cause you to underestimate
+aggregate content—potentially releasing out-of-specification material.
+SST prevents this by verifying system performance <em>before</em> each
+analytical batch.</p>
+</div>
+<div class="section level3">
+<h3 id="how-column-degradation-affects-results">How Column Degradation Affects Results<a class="anchor" aria-label="anchor" href="#how-column-degradation-affects-results"></a>
+</h3>
+<p>SEC columns degrade gradually through several mechanisms:</p>
+<ul>
+<li><p><strong>Void formation</strong>: Packing material settles or
+dissolves, creating dead volume at the column head. This causes peak
+fronting, reduced plate count, and shifted retention times.</p></li>
+<li><p><strong>Surface contamination</strong>: Sample components that
+adsorb irreversibly reduce available surface area. Resolution decreases,
+especially for polar analytes.</p></li>
+<li><p><strong>Frit blockage</strong>: Particulates from samples or
+mobile phase clog inlet frits. Back-pressure increases, and eventually
+flow becomes inconsistent.</p></li>
+<li><p><strong>Mechanical damage</strong>: Pressure shocks or physical
+impact can fracture particles, creating fine particles that block flow
+paths.</p></li>
+</ul>
+<p>These degradation modes produce characteristic SST failures: plate
+count drops before resolution does; asymmetry changes from symmetric to
+tailing; retention times shift earlier (void formation) or later
+(contamination). Tracking these metrics over time lets you predict
+column failure before it affects sample results.</p>
+</div>
+<div class="section level3">
+<h3 id="where-acceptance-criteria-come-from">Where Acceptance Criteria Come From<a class="anchor" aria-label="anchor" href="#where-acceptance-criteria-come-from"></a>
+</h3>
+<p>The acceptance criteria commonly used for SEC—Rs ≥ 1.5, N ≥ 5000, Tf
+between 0.8 and 1.5—derive from pharmacopeial methods (USP, EP, JP) and
+decades of chromatographic practice. They represent minimum performance
+levels at which separation quality is acceptable for quantitative
+work.</p>
+<p>Resolution ≥ 1.5 ensures baseline separation between critical pairs
+(~99.7% peak purity). Plate count ≥ 5000 provides sufficient peak
+sharpness for accurate integration. Tailing factor between 0.8 and 1.5
+indicates the column is free from significant void formation or
+secondary interactions.</p>
+<p>For regulated environments, these limits may be tightened based on
+method validation data. A biopharmaceutical method might require Rs ≥
+2.0 between monomer and dimer if that’s what was demonstrated during
+validation. The principle is consistent: SST criteria should reflect the
+performance level at which the method was validated and shown to give
+accurate results.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="quick-reference-typical-acceptance-criteria">Quick Reference: Typical Acceptance Criteria<a class="anchor" aria-label="anchor" href="#quick-reference-typical-acceptance-criteria"></a>
 </h2>
 <table class="table">

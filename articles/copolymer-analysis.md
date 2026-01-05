@@ -16,6 +16,69 @@ This vignette covers:
 2.  Composition calculations
 3.  Interpreting compositional heterogeneity
 
+## Understanding Copolymer Heterogeneity
+
+### What Makes Copolymers Complex
+
+A **copolymer** is a polymer chain built from two or more different
+monomer units. Unlike homopolymers (single monomer type), copolymers
+have an additional dimension of complexity: **compositional
+heterogeneity**—the variation in monomer ratio across the molecular
+weight distribution.
+
+Consider a styrene-acrylate copolymer: the overall composition might be
+40% styrene, but this is just an average. Individual chains might range
+from 30% to 50% styrene, and this variation often correlates with
+molecular weight. Understanding this heterogeneity is essential for
+predicting material properties—a copolymer with uniform composition
+behaves very differently from one with significant compositional drift,
+even if they have identical average compositions.
+
+### Why Composition Varies with Molecular Weight
+
+During polymerization, monomer consumption changes the reactor
+composition over time. If one monomer reacts faster than the other
+(different reactivity ratios), the chains formed early will have a
+different composition than chains formed later. The result is
+**compositional drift**: a systematic change in composition across the
+molecular weight distribution.
+
+This drift creates a correlation between MW and composition. In SEC,
+higher MW chains elute first. If these high MW chains were formed when
+the reactor was enriched in one monomer, they will have higher content
+of that monomer. The UV/RI ratio across the chromatogram directly
+reveals this variation.
+
+Beyond drift, copolymers can also show **compositional
+distribution**—random variation in composition at each molecular weight.
+Block copolymers, gradient copolymers, and statistical copolymers each
+have distinct compositional signatures that SEC with dual detection can
+reveal.
+
+### What UV/RI Ratio Analysis Can (and Cannot) Tell You
+
+The UV/RI ratio method provides a powerful, accessible approach to
+compositional analysis when one monomer absorbs UV light and the other
+doesn’t. The ratio of UV to RI signal at each elution slice reflects the
+local composition. A flat ratio indicates uniform composition; a
+changing ratio reveals heterogeneity.
+
+However, this approach has important limitations:
+
+- **Both monomers must have different UV responses.** If both absorb
+  equally (or neither absorbs), UV/RI provides no compositional
+  information.
+- **Response factors must be known.** Converting UV/RI ratio to actual
+  composition requires accurate extinction coefficients and dn/dc values
+  for each monomer unit.
+- **Secondary effects can interfere.** Sequence effects (alternating
+  vs. random vs. blocky distribution) can affect both UV absorption and
+  RI response beyond simple compositional effects.
+
+For systems where UV/RI analysis isn’t applicable, more sophisticated
+techniques like SEC-FTIR or SEC-NMR can provide compositional
+information, though with added complexity and cost.
+
 ## Setup
 
 ``` r
