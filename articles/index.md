@@ -34,6 +34,13 @@ Task-oriented guides for specific applications
 - [Exporting
   Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md):
 
+### Explanation
+
+Understanding-oriented guides for SEC concepts
+
+- [SEC Concepts: A Practical
+  Guide](https://jameshwade.github.io/measure-sec/articles/sec-concepts.md):
+
 ### Reference
 
 Technical reference documentation
