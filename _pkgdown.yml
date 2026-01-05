@@ -39,6 +39,10 @@ navbar:
       - text: Exporting Results
         href: articles/exporting-results.html
       - text: "---"
+      - text: Explanation
+      - text: SEC Concepts Guide
+        href: articles/sec-concepts.html
+      - text: "---"
       - text: Reference
       - text: Comprehensive SEC Analysis
         href: articles/sec-analysis.html
@@ -178,6 +182,11 @@ articles:
   - system-suitability
   - branching-analysis
   - exporting-results
+
+- title: Explanation
+  desc: Understanding-oriented guides for SEC concepts
+  contents:
+  - sec-concepts
 
 - title: Reference
   desc: Technical reference documentation
