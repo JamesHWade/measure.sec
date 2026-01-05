@@ -26,7 +26,9 @@ Imports:
     tibble,
     tidyr
 Suggests:
+    IDPmisc,
     knitr,
+    mgcv,
     patchwork,
     quarto,
     rmarkdown,

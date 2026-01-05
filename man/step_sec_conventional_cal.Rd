@@ -9,7 +9,7 @@ step_sec_conventional_cal(
   measures = NULL,
   standards = NULL,
   calibration = NULL,
-  fit_type = c("cubic", "quadratic", "linear", "fifth"),
+  fit_type = c("cubic", "quadratic", "linear", "fifth", "gam"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
   log_output = TRUE,
@@ -36,12 +36,13 @@ Required unless \code{calibration} is provided.
 \code{\link[=load_sec_calibration]{load_sec_calibration()}}. When provided, skips fitting and uses the saved
 calibration directly. Takes precedence over \code{standards}.}
 
-\item{fit_type}{Type of polynomial fit for the calibration curve:
+\item{fit_type}{Type of fit for the calibration curve:
 \itemize{
 \item \code{"cubic"} (default): Third-order polynomial
 \item \code{"quadratic"}: Second-order polynomial
 \item \code{"linear"}: First-order (linear) fit
 \item \code{"fifth"}: Fifth-order polynomial
+\item \code{"gam"}: Generalized Additive Model with cubic splines (requires mgcv)
 }}
 
 \item{extrapolation}{How to handle data outside the calibration range:

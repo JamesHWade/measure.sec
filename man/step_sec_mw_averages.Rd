@@ -10,6 +10,8 @@ step_sec_mw_averages(
   calibration = NULL,
   integration_range = NULL,
   output_cols = c("mn", "mw", "mz", "mp", "dispersity"),
+  include_uncertainty = FALSE,
+  calibration_error = NULL,
   prefix = "mw_",
   role = "predictor",
   trained = FALSE,
@@ -36,6 +38,14 @@ the x-axis range for integration. If \code{NULL}, uses full range.}
 
 \item{output_cols}{Character vector of metrics to calculate. Default
 includes all: \code{c("mn", "mw", "mz", "mp", "dispersity")}.}
+
+\item{include_uncertainty}{Logical. If \code{TRUE}, calculates and outputs
+uncertainty estimates for MW averages. Requires \code{calibration_error} to
+be specified. Default is \code{FALSE}.}
+
+\item{calibration_error}{Calibration error (RMSE) in log10(MW) units for
+uncertainty propagation. Required when \code{include_uncertainty = TRUE}.
+Can be obtained from \code{tidy()} output of \code{step_sec_conventional_cal()}.}
 
 \item{prefix}{Prefix for output column names. Default is \code{"mw_"}.}
 
@@ -69,6 +79,23 @@ The detector signal is assumed to be proportional to weight concentration.
 For RI detection, this is typically valid. For UV detection, response factors
 may need to be applied first.
 
+\strong{Uncertainty Propagation:}
+
+When \code{include_uncertainty = TRUE}, the step calculates uncertainty estimates
+based on calibration error propagation. The uncertainties account for:
+\itemize{
+\item Calibration curve fit error (RMSE in log10 MW units)
+\item MW distribution width effects on different averages
+}
+
+The propagation follows:
+\itemize{
+\item Mn uncertainty is enhanced for wide distributions (most sensitive to low MW)
+\item Mw uncertainty equals the relative calibration error
+\item Mz uncertainty is enhanced for high MW sensitivity
+\item Dispersity uncertainty from error propagation of Mw/Mn
+}
+
 \strong{Prerequisites:}
 \itemize{
 \item Data should be baseline corrected
@@ -86,6 +113,16 @@ rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline() |>
   step_sec_mw_averages() |>
+  prep()
+
+# With uncertainty propagation (calibration_error from tidy() of calibration step)
+rec_with_unc <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_wide(starts_with("signal_")) |>
+  step_sec_baseline() |>
+  step_sec_mw_averages(
+    include_uncertainty = TRUE,
+    calibration_error = 0.02  # RMSE in log10(MW)
+  ) |>
   prep()
 }
 }
