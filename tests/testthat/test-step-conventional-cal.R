@@ -299,6 +299,8 @@ test_that("step_sec_conventional_cal works with different fit types", {
 test_that("step_sec_conventional_cal works with GAM fit type", {
   skip_if_not_installed("measure")
   skip_if_not_installed("mgcv")
+  # Skip on macOS ARM64 due to numerical precision issues in mgcv::gam()
+  skip_on_os("mac")
 
   test_data <- create_test_sec_data()
   standards <- create_ps_standards()
@@ -360,6 +362,8 @@ test_that("step_sec_conventional_cal GAM rejects insufficient standards", {
 test_that("step_sec_conventional_cal GAM tidy method returns coefficients", {
   skip_if_not_installed("measure")
   skip_if_not_installed("mgcv")
+  # Skip on macOS ARM64 due to numerical precision issues in mgcv::gam()
+  skip_on_os("mac")
 
   test_data <- create_test_sec_data()
   standards <- create_ps_standards()
