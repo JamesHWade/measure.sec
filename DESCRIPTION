@@ -42,7 +42,7 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
 Remotes:
-    JamesHWade/measure
+    JamesHWade/measure@7c2fcc597ce94f18b5d63f299fe6538ada194bc1
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 LazyData: true
