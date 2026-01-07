@@ -139,6 +139,13 @@
       "step_sec_peaks_detect",
       "peaks",
       "SEC-optimized peak detection with finderskeepers algorithm"
+    ),
+
+    # Integration
+    list(
+      "step_sec_integration_window",
+      "integration",
+      "Define integration window for MW calculations"
     )
   )
 
