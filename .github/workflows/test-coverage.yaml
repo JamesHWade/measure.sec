@@ -22,16 +22,12 @@ jobs:
         with:
           use-public-rspm: true
 
-      - name: Install measure from GitHub (workaround for pak issue)
+      - name: Install dependencies (workaround for pak issue)
         run: |
           install.packages("remotes")
-          remotes::install_github("JamesHWade/measure", dependencies = FALSE)
+          remotes::install_deps(dependencies = TRUE)
+          install.packages(c("covr", "xml2"))
         shell: Rscript {0}
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::covr, any::xml2
-          needs: coverage
 
       - name: Test coverage
         run: |

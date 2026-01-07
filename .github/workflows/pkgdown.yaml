@@ -31,16 +31,12 @@ jobs:
         with:
           use-public-rspm: true
 
-      - name: Install measure from GitHub (workaround for pak issue)
+      - name: Install dependencies (workaround for pak issue)
         run: |
           install.packages("remotes")
-          remotes::install_github("JamesHWade/measure", dependencies = FALSE)
+          remotes::install_deps(dependencies = TRUE)
+          install.packages("pkgdown")
         shell: Rscript {0}
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::pkgdown, local::.
-          needs: website
 
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
