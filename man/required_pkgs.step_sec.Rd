@@ -6,9 +6,10 @@
 %   R/step_sec_detector_delay.R, R/step_sec_dls.R, R/step_sec_intrinsic_visc.R,
 %   R/step_sec_lals.R, R/step_sec_mals.R, R/step_sec_mw_averages.R,
 %   R/step_sec_mw_distribution.R, R/step_sec_mw_fractions.R,
-%   R/step_sec_oligomer.R, R/step_sec_protein.R, R/step_sec_rals.R,
-%   R/step_sec_ri.R, R/step_sec_universal_cal.R, R/step_sec_uv.R,
-%   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
+%   R/step_sec_oligomer.R, R/step_sec_peaks_detect.R, R/step_sec_protein.R,
+%   R/step_sec_rals.R, R/step_sec_ri.R, R/step_sec_universal_cal.R,
+%   R/step_sec_uv.R, R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R,
+%   R/tidy-methods.R
 \name{required_pkgs.step_sec_aggregates}
 \alias{required_pkgs.step_sec_aggregates}
 \alias{required_pkgs.step_sec_band_broadening}
@@ -27,6 +28,7 @@
 \alias{required_pkgs.step_sec_mw_distribution}
 \alias{required_pkgs.step_sec_mw_fractions}
 \alias{required_pkgs.step_sec_oligomer}
+\alias{required_pkgs.step_sec_peaks_detect}
 \alias{required_pkgs.step_sec_protein}
 \alias{required_pkgs.step_sec_rals}
 \alias{required_pkgs.step_sec_ri}
@@ -70,6 +72,8 @@
 \method{required_pkgs}{step_sec_mw_fractions}(x, ...)
 
 \method{required_pkgs}{step_sec_oligomer}(x, ...)
+
+\method{required_pkgs}{step_sec_peaks_detect}(x, ...)
 
 \method{required_pkgs}{step_sec_protein}(x, ...)
 

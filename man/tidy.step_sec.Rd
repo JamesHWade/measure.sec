@@ -6,9 +6,10 @@
 %   R/step_sec_detector_delay.R, R/step_sec_dls.R, R/step_sec_intrinsic_visc.R,
 %   R/step_sec_lals.R, R/step_sec_mals.R, R/step_sec_mw_averages.R,
 %   R/step_sec_mw_distribution.R, R/step_sec_mw_fractions.R,
-%   R/step_sec_oligomer.R, R/step_sec_protein.R, R/step_sec_rals.R,
-%   R/step_sec_ri.R, R/step_sec_universal_cal.R, R/step_sec_uv.R,
-%   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
+%   R/step_sec_oligomer.R, R/step_sec_peaks_detect.R, R/step_sec_protein.R,
+%   R/step_sec_rals.R, R/step_sec_ri.R, R/step_sec_universal_cal.R,
+%   R/step_sec_uv.R, R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R,
+%   R/tidy-methods.R
 \name{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_band_broadening}
@@ -27,6 +28,7 @@
 \alias{tidy.step_sec_mw_distribution}
 \alias{tidy.step_sec_mw_fractions}
 \alias{tidy.step_sec_oligomer}
+\alias{tidy.step_sec_peaks_detect}
 \alias{tidy.step_sec_protein}
 \alias{tidy.step_sec_rals}
 \alias{tidy.step_sec_ri}
@@ -70,6 +72,8 @@
 \method{tidy}{step_sec_mw_fractions}(x, ...)
 
 \method{tidy}{step_sec_oligomer}(x, ...)
+
+\method{tidy}{step_sec_peaks_detect}(x, ...)
 
 \method{tidy}{step_sec_protein}(x, ...)
 
