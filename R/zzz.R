@@ -153,6 +153,13 @@
       "step_sec_exclude_regions",
       "preprocessing",
       "Mark regions for exclusion from baseline/integration"
+    ),
+
+    # Peak deconvolution
+    list(
+      "step_sec_peaks_deconvolve",
+      "peaks",
+      "SEC-optimized peak deconvolution with EMG model"
     )
   )
 

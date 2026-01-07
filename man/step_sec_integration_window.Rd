@@ -134,9 +134,11 @@ Other sec-chromatography:
 \code{\link{step_sec_band_broadening}()},
 \code{\link{step_sec_baseline}()},
 \code{\link{step_sec_detector_delay}()},
+\code{\link{step_sec_exclude_regions}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},
 \code{\link{step_sec_mw_fractions}()},
+\code{\link{step_sec_peaks_deconvolve}()},
 \code{\link{step_sec_peaks_detect}()}
 }
 \concept{sec-chromatography}
