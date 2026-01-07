@@ -294,6 +294,116 @@ test_that("step_sec_conventional_cal works with different fit types", {
   }
 })
 
+# -- GAM fit type tests ---------------------------------------------------------
+
+test_that("step_sec_conventional_cal works with GAM fit type", {
+  skip_if_not_installed("measure")
+  skip_if_not_installed("mgcv")
+  # Skip on macOS ARM64 due to numerical precision issues in mgcv::gam()
+  skip_on_os("mac")
+
+  test_data <- create_test_sec_data()
+  standards <- create_ps_standards()
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_conventional_cal(
+      standards = standards,
+      fit_type = "gam",
+      extrapolation = "none"
+    )
+
+  suppressWarnings(prepped <- recipes::prep(rec))
+
+  # Check that GAM calibration fit was created
+  step <- prepped$steps[[1]]
+  expect_true(step$trained)
+  expect_true(inherits(step$calibration_fit, "gam"))
+  expect_true(!is.null(step$calibration_diagnostics))
+  expect_true(step$calibration_diagnostics$r_squared > 0.99)
+
+  # Bake should produce valid results
+
+  result <- recipes::bake(prepped, new_data = NULL)
+  expect_true("mw" %in% names(result))
+
+  # Check values are reasonable (log MW between 3 and 7) for non-NA values
+  mw_values <- result$mw[[1]]$value
+  valid_values <- mw_values[!is.na(mw_values)]
+  expect_true(length(valid_values) > 0)
+  expect_true(all(valid_values >= 3 & valid_values <= 7))
+})
+
+test_that("step_sec_conventional_cal GAM rejects insufficient standards", {
+  skip_if_not_installed("measure")
+  skip_if_not_installed("mgcv")
+
+  test_data <- create_test_sec_data()
+
+  # Only 3 unique standards - GAM requires 4
+  few_standards <- data.frame(
+    retention = c(11, 14, 17),
+    log_mw = c(6, 5, 4)
+  )
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_conventional_cal(
+      standards = few_standards,
+      fit_type = "gam",
+      extrapolation = "none"
+    )
+
+  # Should error due to insufficient standards (min 4 required for GAM)
+  expect_error(
+    recipes::prep(rec),
+    "Insufficient standards"
+  )
+})
+
+test_that("step_sec_conventional_cal GAM tidy method returns coefficients", {
+  skip_if_not_installed("measure")
+  skip_if_not_installed("mgcv")
+  # Skip on macOS ARM64 due to numerical precision issues in mgcv::gam()
+  skip_on_os("mac")
+
+  test_data <- create_test_sec_data()
+  standards <- create_ps_standards()
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_conventional_cal(
+      standards = standards,
+      fit_type = "gam",
+      extrapolation = "none"
+    )
+
+  suppressWarnings(prepped <- recipes::prep(rec))
+  tidy_result <- recipes::tidy(prepped, number = 1)
+
+  expect_s3_class(tidy_result, "tbl_df")
+  expect_equal(tidy_result$fit_type, "gam")
+  expect_true(tidy_result$r_squared > 0.99)
+  expect_true(!is.null(tidy_result$coefficients[[1]]))
+  expect_true(length(tidy_result$coefficients[[1]]) > 0)
+})
+
+test_that("step_sec_conventional_cal GAM requires mgcv package", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  standards <- create_ps_standards()
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_conventional_cal(
+      standards = standards,
+      fit_type = "gam",
+      extrapolation = "none"
+    )
+
+  step <- rec$steps[[1]]
+  required <- required_pkgs.step_sec_conventional_cal(step)
+
+  expect_true("mgcv" %in% required)
+})
+
 # -- Column name flexibility ---------------------------------------------------
 
 test_that("step_sec_conventional_cal accepts various column names for standards", {

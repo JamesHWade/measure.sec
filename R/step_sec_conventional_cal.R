@@ -20,11 +20,12 @@
 #' @param calibration A pre-loaded calibration object from
 #'   [load_sec_calibration()]. When provided, skips fitting and uses the saved
 #'   calibration directly. Takes precedence over `standards`.
-#' @param fit_type Type of polynomial fit for the calibration curve:
+#' @param fit_type Type of fit for the calibration curve:
 #'   - `"cubic"` (default): Third-order polynomial
 #'   - `"quadratic"`: Second-order polynomial
 #'   - `"linear"`: First-order (linear) fit
 #'   - `"fifth"`: Fifth-order polynomial
+#'   - `"gam"`: Generalized Additive Model with cubic splines (requires mgcv)
 #' @param extrapolation How to handle data outside the calibration range:
 #'   - `"warn"` (default): Extrapolate but warn
 #'   - `"none"`: Return NA for out-of-range values
@@ -100,7 +101,7 @@ step_sec_conventional_cal <- function(
   measures = NULL,
   standards = NULL,
   calibration = NULL,
-  fit_type = c("cubic", "quadratic", "linear", "fifth"),
+  fit_type = c("cubic", "quadratic", "linear", "fifth", "gam"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
   log_output = TRUE,
@@ -224,6 +225,46 @@ step_sec_conventional_cal <- function(
   found[1]
 }
 
+#' Fit GAM calibration curve using mgcv
+#'
+#' Fits a Generalized Additive Model with cubic regression splines for
+#' flexible calibration curves. Falls back to linear model if too few points.
+#'
+#' @param cal_data Data frame with `location` and `log_mw` columns.
+#' @return A fitted GAM model (mgcv::gam object) or lm object if fallback.
+#' @noRd
+.fit_gam_calibration <- function(cal_data) {
+  rlang::check_installed("mgcv", reason = "for GAM calibration")
+
+  n_unique <- length(unique(cal_data$location))
+
+  if (n_unique < 4) {
+    # Fall back to linear model for very few points
+    cli::cli_warn(
+      c(
+        "Too few unique points ({n_unique}) for GAM, using linear model.",
+        "i" = "GAM requires at least 4 unique calibration points."
+      )
+    )
+    return(stats::lm(log_mw ~ location, data = cal_data))
+  }
+
+  # Set k (number of basis functions) based on available data
+
+  # k must be less than number of unique values, and >= 3 for a spline
+  # Use n_unique - 1 as upper bound, minimum of 4 for reasonable flexibility
+  k <- min(n_unique - 1, 10)
+  k <- max(k, 4)
+
+  # Fit GAM with cubic regression splines (bs = 'cs')
+  # Using REML for smoothing parameter estimation (most robust)
+  mgcv::gam(
+    stats::as.formula(paste0("log_mw ~ s(location, bs = 'cs', k = ", k, ")")),
+    data = cal_data,
+    method = "REML"
+  )
+}
+
 #' Get log MW values from standards
 #' @noRd
 .get_log_mw <- function(standards) {
@@ -339,7 +380,8 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
     linear = 2,
     quadratic = 3,
     cubic = 4,
-    fifth = 6
+    fifth = 6,
+    gam = 4
   )
 
   if (n_standards < min_standards) {
@@ -351,23 +393,40 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
     )
   }
 
-  # Fit calibration curve using orthogonal polynomials
-  degree <- switch(
-    x$fit_type,
-    linear = 1,
-    quadratic = 2,
-    cubic = 3,
-    fifth = 5
-  )
-
+  # Fit calibration curve
   cal_data <- data.frame(location = location, log_mw = log_mw)
-  cal_fit <- stats::lm(log_mw ~ stats::poly(location, degree), data = cal_data)
+
+  if (x$fit_type == "gam") {
+    # Fit GAM using mgcv with cubic splines
+    cal_fit <- .fit_gam_calibration(cal_data)
+  } else {
+    # Fit polynomial using orthogonal polynomials
+    degree <- switch(
+      x$fit_type,
+      linear = 1,
+      quadratic = 2,
+      cubic = 3,
+      fifth = 5
+    )
+    cal_fit <- stats::lm(
+      log_mw ~ stats::poly(location, degree),
+      data = cal_data
+    )
+  }
 
   # Calculate comprehensive diagnostics
   cal_summary <- suppressWarnings(summary(cal_fit))
-  r_squared <- cal_summary$r.squared
-  adj_r_squared <- cal_summary$adj.r.squared
-  sigma <- cal_summary$sigma # Residual standard error
+
+  if (x$fit_type == "gam") {
+    # GAM summary has different structure
+    r_squared <- cal_summary$r.sq
+    adj_r_squared <- cal_summary$r.sq # GAM doesn't have adj R² in same way
+    sigma <- sqrt(cal_summary$scale) # Residual standard error
+  } else {
+    r_squared <- cal_summary$r.squared
+    adj_r_squared <- cal_summary$adj.r.squared
+    sigma <- cal_summary$sigma # Residual standard error
+  }
 
   # Predictions and residuals for each standard
   predicted_log_mw <- stats::predict(cal_fit)
@@ -383,13 +442,25 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
   rmse_log <- sqrt(mean(residuals_log_mw^2))
 
   # Calculate prediction intervals at standard locations
-  pred_with_se <- stats::predict(
-    cal_fit,
-    newdata = cal_data,
-    se.fit = TRUE,
-    interval = "prediction",
-    level = 0.95
-  )
+  if (x$fit_type == "gam") {
+    # GAM uses se.fit differently
+    pred_with_se <- stats::predict(cal_fit, newdata = cal_data, se.fit = TRUE)
+    prediction_se <- pred_with_se$se.fit
+    # Approximate prediction intervals using 1.96 * SE
+    ci_lower_log_mw <- as.numeric(predicted_log_mw) - 1.96 * prediction_se
+    ci_upper_log_mw <- as.numeric(predicted_log_mw) + 1.96 * prediction_se
+  } else {
+    pred_with_se <- stats::predict(
+      cal_fit,
+      newdata = cal_data,
+      se.fit = TRUE,
+      interval = "prediction",
+      level = 0.95
+    )
+    prediction_se <- pred_with_se$se.fit
+    ci_lower_log_mw <- as.numeric(pred_with_se$fit[, "lwr"])
+    ci_upper_log_mw <- as.numeric(pred_with_se$fit[, "upr"])
+  }
 
   # Build per-standard diagnostics table
   standard_diagnostics <- tibble::tibble(
@@ -400,21 +471,29 @@ prep.step_sec_conventional_cal <- function(x, training, info = NULL, ...) {
     actual_mw = mw_daltons,
     predicted_mw = as.numeric(predicted_mw),
     pct_deviation = as.numeric(pct_deviation),
-    prediction_se = as.numeric(pred_with_se$se.fit),
-    ci_lower_log_mw = as.numeric(pred_with_se$fit[, "lwr"]),
-    ci_upper_log_mw = as.numeric(pred_with_se$fit[, "upr"])
+    prediction_se = as.numeric(prediction_se),
+    ci_lower_log_mw = ci_lower_log_mw,
+    ci_upper_log_mw = ci_upper_log_mw
   )
 
   # Store calibration range
   calibration_range <- range(location)
 
   # Build comprehensive diagnostics object
+  # GAM uses different df accessor
+
+  if (x$fit_type == "gam") {
+    df_residual <- cal_fit$df.residual
+  } else {
+    df_residual <- cal_fit$df.residual
+  }
+
   calibration_diagnostics <- list(
     r_squared = r_squared,
     adj_r_squared = adj_r_squared,
     rmse_log_mw = rmse_log,
     residual_std_error = sigma,
-    degrees_of_freedom = cal_fit$df.residual,
+    degrees_of_freedom = df_residual,
     max_abs_residual = max(abs(residuals_log_mw)),
     max_abs_pct_deviation = max(abs(pct_deviation)),
     mean_abs_pct_deviation = mean(abs(pct_deviation)),
@@ -553,7 +632,14 @@ print.step_sec_conventional_cal <- function(
 tidy.step_sec_conventional_cal <- function(x, ...) {
   if (x$trained && !is.null(x$calibration_diagnostics)) {
     diag <- x$calibration_diagnostics
-    coefs <- stats::coef(x$calibration_fit)
+
+    # Get coefficients - GAM stores these differently
+    if (x$fit_type == "gam") {
+      coefs <- x$calibration_fit$coefficients
+    } else {
+      coefs <- stats::coef(x$calibration_fit)
+    }
+
     tibble::tibble(
       fit_type = x$fit_type,
       n_standards = nrow(x$standards),
@@ -600,5 +686,9 @@ tidy.step_sec_conventional_cal <- function(x, ...) {
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_conventional_cal <- function(x, ...) {
-  c("measure.sec", "measure")
+  pkgs <- c("measure.sec", "measure")
+  if (!is.null(x$fit_type) && x$fit_type == "gam") {
+    pkgs <- c(pkgs, "mgcv")
+  }
+  pkgs
 }

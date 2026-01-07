@@ -10,6 +10,8 @@ step_sec_baseline(
   left_frac = 0.05,
   right_frac = 0.05,
   method = "linear",
+  rf_span = 2/3,
+  rf_maxit = c(20, 20),
   role = NA,
   trained = FALSE,
   skip = FALSE,
@@ -25,17 +27,29 @@ process. If \code{NULL} (the default), all measure columns (columns with class
 \code{measure_list}) will be processed.}
 
 \item{left_frac}{Fraction of points from the beginning to use as the left
-baseline region. Default is \code{0.05} (first 5\% of data points).}
+baseline region. Default is \code{0.05} (first 5\% of data points). Not used for
+\code{method = "rf"}.}
 
 \item{right_frac}{Fraction of points from the end to use as the right
-baseline region. Default is \code{0.05} (last 5\% of data points).}
+baseline region. Default is \code{0.05} (last 5\% of data points). Not used for
+\code{method = "rf"}.}
 
 \item{method}{Method for baseline estimation. One of:
 \itemize{
 \item \code{"linear"} (default): Linear interpolation between left and right means
 \item \code{"median"}: Uses median of baseline regions (more robust to outliers)
 \item \code{"spline"}: Smooth spline through baseline regions
+\item \code{"rf"}: Robust local regression (IDPmisc::rfbaseline). Best for complex
+baselines with curvature or drift. Does not use left_frac/right_frac.
 }}
+
+\item{rf_span}{Span parameter for RF baseline (only used when \code{method = "rf"}).
+A numeric value between 0 and 1 specifying the fraction of points used for
+local regression. Default is \code{2/3}. Higher values produce smoother baselines.}
+
+\item{rf_maxit}{Maximum iterations for RF baseline (only used when \code{method = "rf"}).
+A numeric vector of length 2 specifying max iterations for the two stages
+of the robust fitting. Default is \code{c(20, 20)}.}
 
 \item{role}{Not used by this step since no new variables are created.}
 
@@ -105,6 +119,12 @@ rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline(left_frac = 0.1, right_frac = 0.1, method = "median") |>
   prep()
+
+# Using RF baseline for complex baseline shapes
+rec <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_wide(starts_with("signal_")) |>
+  step_sec_baseline(method = "rf", rf_span = 0.5) |>
+  prep()
 }
 }
 \seealso{
@@ -114,8 +134,12 @@ correction, \code{\link[measure:step_measure_detrend]{measure::step_measure_detr
 Other sec-chromatography: 
 \code{\link{step_sec_band_broadening}()},
 \code{\link{step_sec_detector_delay}()},
+\code{\link{step_sec_exclude_regions}()},
+\code{\link{step_sec_integration_window}()},
 \code{\link{step_sec_mw_averages}()},
 \code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()}
+\code{\link{step_sec_mw_fractions}()},
+\code{\link{step_sec_peaks_deconvolve}()},
+\code{\link{step_sec_peaks_detect}()}
 }
 \concept{sec-chromatography}

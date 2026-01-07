@@ -15,6 +15,9 @@
 
     # Register all SEC steps
     .register_sec_steps(pkgname)
+
+    # Register SEC-specific peak detection algorithms
+    .register_sec_peak_algorithms(pkgname)
   }
 }
 
@@ -129,10 +132,58 @@
       "step_sec_universal_cal",
       "calibration",
       "Universal calibration using Mark-Houwink"
+    ),
+
+    # Peak detection
+    list(
+      "step_sec_peaks_detect",
+      "peaks",
+      "SEC-optimized peak detection with finderskeepers algorithm"
+    ),
+
+    # Integration
+    list(
+      "step_sec_integration_window",
+      "integration",
+      "Define integration window for MW calculations"
+    ),
+
+    # Exclusion regions
+    list(
+      "step_sec_exclude_regions",
+      "preprocessing",
+      "Mark regions for exclusion from baseline/integration"
+    ),
+
+    # Peak deconvolution
+    list(
+      "step_sec_peaks_deconvolve",
+      "peaks",
+      "SEC-optimized peak deconvolution with EMG model"
     )
   )
 
   for (s in steps) {
     measure::register_measure_step(s[[1]], pkgname, s[[2]], s[[3]])
   }
+}
+
+#' Register SEC-specific Peak Detection Algorithms
+#'
+#' Registers SEC-specific peak detection algorithms with the measure registry.
+#' Currently registers the finderskeepers algorithm.
+#'
+#' @param pkgname Package name (passed from .onLoad).
+#' @noRd
+.register_sec_peak_algorithms <- function(pkgname) {
+  # Note: The finderskeepers algorithm is implemented directly in
+  # step_sec_peaks_detect.R rather than registered with measure's registry.
+  # This is because the algorithm has SEC-specific parameters (loess_span,
+  # ist_points, ist_nonlinearity) that don't fit the standard measure
+  # algorithm interface. The step handles algorithm selection internally.
+  #
+  # If measure's registry adds support for technique-specific parameter
+  # sets in the future, this function could register finderskeepers there.
+
+  invisible(NULL)
 }

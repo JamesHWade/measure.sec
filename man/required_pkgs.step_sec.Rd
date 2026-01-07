@@ -3,10 +3,12 @@
 %   R/step_sec_band_broadening.R, R/step_sec_baseline.R,
 %   R/step_sec_broad_standard.R, R/step_sec_composition.R,
 %   R/step_sec_concentration.R, R/step_sec_conventional_cal.R, R/step_sec_dad.R,
-%   R/step_sec_detector_delay.R, R/step_sec_dls.R, R/step_sec_intrinsic_visc.R,
+%   R/step_sec_detector_delay.R, R/step_sec_dls.R, R/step_sec_exclude_regions.R,
+%   R/step_sec_integration_window.R, R/step_sec_intrinsic_visc.R,
 %   R/step_sec_lals.R, R/step_sec_mals.R, R/step_sec_mw_averages.R,
 %   R/step_sec_mw_distribution.R, R/step_sec_mw_fractions.R,
-%   R/step_sec_oligomer.R, R/step_sec_protein.R, R/step_sec_rals.R,
+%   R/step_sec_oligomer.R, R/step_sec_peaks_deconvolve.R,
+%   R/step_sec_peaks_detect.R, R/step_sec_protein.R, R/step_sec_rals.R,
 %   R/step_sec_ri.R, R/step_sec_universal_cal.R, R/step_sec_uv.R,
 %   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
 \name{required_pkgs.step_sec_aggregates}
@@ -20,6 +22,8 @@
 \alias{required_pkgs.step_sec_dad}
 \alias{required_pkgs.step_sec_detector_delay}
 \alias{required_pkgs.step_sec_dls}
+\alias{required_pkgs.step_sec_exclude_regions}
+\alias{required_pkgs.step_sec_integration_window}
 \alias{required_pkgs.step_sec_intrinsic_visc}
 \alias{required_pkgs.step_sec_lals}
 \alias{required_pkgs.step_sec_mals}
@@ -27,6 +31,8 @@
 \alias{required_pkgs.step_sec_mw_distribution}
 \alias{required_pkgs.step_sec_mw_fractions}
 \alias{required_pkgs.step_sec_oligomer}
+\alias{required_pkgs.step_sec_peaks_deconvolve}
+\alias{required_pkgs.step_sec_peaks_detect}
 \alias{required_pkgs.step_sec_protein}
 \alias{required_pkgs.step_sec_rals}
 \alias{required_pkgs.step_sec_ri}
@@ -57,6 +63,10 @@
 
 \method{required_pkgs}{step_sec_dls}(x, ...)
 
+\method{required_pkgs}{step_sec_exclude_regions}(x, ...)
+
+\method{required_pkgs}{step_sec_integration_window}(x, ...)
+
 \method{required_pkgs}{step_sec_intrinsic_visc}(x, ...)
 
 \method{required_pkgs}{step_sec_lals}(x, ...)
@@ -70,6 +80,10 @@
 \method{required_pkgs}{step_sec_mw_fractions}(x, ...)
 
 \method{required_pkgs}{step_sec_oligomer}(x, ...)
+
+\method{required_pkgs}{step_sec_peaks_deconvolve}(x, ...)
+
+\method{required_pkgs}{step_sec_peaks_detect}(x, ...)
 
 \method{required_pkgs}{step_sec_protein}(x, ...)
 

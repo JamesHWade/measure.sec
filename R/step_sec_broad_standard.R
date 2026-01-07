@@ -24,7 +24,14 @@
 #'   - `"quadratic"`: log10(M) = C1 + C2*V + C3*V^2
 #' @param method Calibration method:
 #'   - `"hamielec"` (default): Optimize to match Mn and Mw
-#'   - `"integral"`: Use integral MWD matching (not yet implemented)
+#'   - `"integral"`: Use cumulative MWD matching (requires `reference_mwd`)
+#' @param reference_mwd Optional data frame for integral method containing the
+#'   known cumulative molecular weight distribution of the broad standard:
+#'   - `mw`: Molecular weight values (Daltons)
+#'   - `cumulative`: Cumulative weight fraction (0 to 1)
+#'
+#'   Required when `method = "integral"`. Can be obtained from the standard's
+#'   certificate of analysis or determined by light scattering/viscometry.
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
 #'   the elution range to use for the broad standard. If `NULL`, auto-detects
 #'   peak region.
@@ -59,6 +66,19 @@
 #' quadratic fits) using Nelder-Mead optimization to minimize the squared
 #' relative errors between calculated and known Mn and Mw values.
 #'
+#' **Integral/Cumulative Match Method:**
+#'
+#' The integral method matches the entire cumulative MWD shape rather than just
+#' Mn and Mw. This requires a reference cumulative distribution (`reference_mwd`)
+#' typically obtained from the standard's certificate or measured by light
+#' scattering/viscometry. The algorithm optimizes calibration coefficients to
+#' minimize the sum of squared differences between the calculated and reference
+#' cumulative distributions.
+#'
+#' This method is more robust than Hamielec because it uses the full distribution
+#' shape, not just two moments. It's particularly useful when the standard's
+#' MWD shape is well-characterized.
+#'
 #' **When to Use Broad Standard Calibration:**
 #'
 #' - QC labs running the same polymer type repeatedly
@@ -71,6 +91,7 @@
 #' - Results are only valid for polymers with similar hydrodynamic behavior
 #' - Linear calibration may not fit well over very wide MW ranges
 #' - Requires well-characterized broad standard (accurate Mn and Mw)
+#' - Integral method requires full cumulative MWD data
 #'
 #' @references
 #' Balke, S.T., Hamielec, A.E., LeClair, B.P., and Pearce, S.L. (1969).
@@ -120,12 +141,12 @@ step_sec_broad_standard <- function(
   known_mw = NULL,
   fit_type = c("linear", "quadratic"),
   method = c("hamielec", "integral"),
+  reference_mwd = NULL,
   integration_range = NULL,
   extrapolation = c("warn", "none"),
   output_col = "mw",
   log_output = TRUE,
   role = NA,
-
   trained = FALSE,
   skip = FALSE,
   id = recipes::rand_id("sec_broad_standard")
@@ -166,15 +187,53 @@ step_sec_broad_standard <- function(
   # Validate broad standard has required columns
   .validate_broad_standard_columns(broad_standard)
 
-  # Warn about unimplemented methods
+  # Validate reference_mwd for integral method
   if (method == "integral") {
-    cli::cli_warn(
-      c(
-        "The {.val integral} method is not yet implemented.",
-        "i" = "Using {.val hamielec} method instead."
+    if (is.null(reference_mwd)) {
+      cli::cli_abort(
+        c(
+          "The {.val integral} method requires {.arg reference_mwd}.",
+          "i" = "Provide a data frame with {.field mw} and {.field cumulative} columns.",
+          "i" = "Use {.val hamielec} method if you only have Mn and Mw values."
+        )
       )
-    )
-    method <- "hamielec"
+    }
+
+    if (!is.data.frame(reference_mwd)) {
+      cli::cli_abort("{.arg reference_mwd} must be a data frame.")
+    }
+
+    if (!all(c("mw", "cumulative") %in% names(reference_mwd))) {
+      cli::cli_abort(
+        c(
+          "{.arg reference_mwd} must contain {.field mw} and {.field cumulative} columns.",
+          "i" = "{.field mw}: Molecular weight values in Daltons",
+          "i" = "{.field cumulative}: Cumulative weight fraction (0 to 1)"
+        )
+      )
+    }
+
+    if (
+      !is.numeric(reference_mwd$mw) || !is.numeric(reference_mwd$cumulative)
+    ) {
+      cli::cli_abort(
+        "Columns {.field mw} and {.field cumulative} must be numeric."
+      )
+    }
+
+    if (
+      any(reference_mwd$cumulative < 0) || any(reference_mwd$cumulative > 1)
+    ) {
+      cli::cli_abort(
+        "{.field cumulative} values must be between 0 and 1."
+      )
+    }
+
+    if (nrow(reference_mwd) < 5) {
+      cli::cli_abort(
+        "{.arg reference_mwd} must have at least 5 data points."
+      )
+    }
   }
 
   recipes::add_step(
@@ -186,6 +245,7 @@ step_sec_broad_standard <- function(
       known_mw = known_mw,
       fit_type = fit_type,
       method = method,
+      reference_mwd = reference_mwd,
       integration_range = integration_range,
       extrapolation = extrapolation,
       output_col = output_col,
@@ -270,6 +330,7 @@ step_sec_broad_standard_new <- function(
   known_mw,
   fit_type,
   method,
+  reference_mwd,
   integration_range,
   extrapolation,
   output_col,
@@ -290,6 +351,7 @@ step_sec_broad_standard_new <- function(
     known_mw = known_mw,
     fit_type = fit_type,
     method = method,
+    reference_mwd = reference_mwd,
     integration_range = integration_range,
     extrapolation = extrapolation,
     output_col = output_col,
@@ -509,6 +571,192 @@ step_sec_broad_standard_new <- function(
   )
 }
 
+#' Objective function for integral/cumulative match optimization
+#' @noRd
+.integral_objective <- function(
+  params,
+  location,
+  signal,
+  reference_mwd,
+  fit_type
+) {
+  # Apply calibration to get log10(MW)
+  if (fit_type == "linear") {
+    log_mw <- params[1] + params[2] * location
+  } else {
+    # quadratic
+    log_mw <- params[1] + params[2] * location + params[3] * location^2
+  }
+
+  # Convert to MW
+  mw <- 10^log_mw
+
+  # Weight is proportional to signal (ensure non-negative)
+  w <- pmax(signal, 0)
+
+  # Only use valid points
+
+  valid <- w > 0 & is.finite(mw) & mw > 0
+  if (sum(valid) < 5) {
+    return(1e10)
+  }
+
+  mw <- mw[valid]
+  w <- w[valid]
+
+  # Sort by MW (ascending) for cumulative calculation
+  ord <- order(mw)
+  mw_sorted <- mw[ord]
+  w_sorted <- w[ord]
+
+  # Calculate cumulative weight fraction
+  cum_w <- cumsum(w_sorted)
+  cum_frac <- cum_w / sum(w_sorted)
+
+  # Interpolate reference cumulative at calculated MW values
+  # Use log-scale for interpolation (MW values span orders of magnitude)
+  ref_cum_interp <- stats::approx(
+    x = log10(reference_mwd$mw),
+    y = reference_mwd$cumulative,
+    xout = log10(mw_sorted),
+    rule = 2 # Extrapolate using boundary values
+  )$y
+
+  # Sum of squared differences between calculated and reference cumulative
+  sum((cum_frac - ref_cum_interp)^2)
+}
+
+#' Fit integral/cumulative match calibration
+#' @noRd
+.fit_integral <- function(
+  location,
+  signal,
+  reference_mwd,
+  known_mn,
+  known_mw,
+  fit_type,
+  integration_range
+) {
+  # Apply integration range if specified
+  if (!is.null(integration_range)) {
+    idx <- location >= integration_range[1] & location <= integration_range[2]
+    location <- location[idx]
+    signal <- signal[idx]
+  } else {
+    # Auto-detect peak region (above 5% of max)
+    threshold <- 0.05 * max(signal, na.rm = TRUE)
+    idx <- signal > threshold
+    if (sum(idx) > 10) {
+      location <- location[idx]
+      signal <- signal[idx]
+    }
+  }
+
+  if (length(location) < 10) {
+    cli::cli_abort("Insufficient data points in broad standard chromatogram.")
+  }
+
+  # Sort reference MWD by MW
+  ref_ord <- order(reference_mwd$mw)
+  reference_mwd <- reference_mwd[ref_ord, ]
+
+  known_dispersity <- known_mw / known_mn
+  known_log_mw <- log10(known_mw)
+  known_log_mn <- log10(known_mn)
+
+  # Initial guess for coefficients (same as Hamielec)
+  v_range <- range(location)
+  v_mid <- mean(v_range)
+  avg_log_mw <- (known_log_mn + known_log_mw) / 2
+  c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
+  c1_init <- avg_log_mw - c2_init * v_mid
+
+  if (fit_type == "linear") {
+    initial_params <- c(c1_init, c2_init)
+
+    result <- stats::optim(
+      par = initial_params,
+      fn = .integral_objective,
+      location = location,
+      signal = signal,
+      reference_mwd = reference_mwd,
+      fit_type = fit_type,
+      method = "Nelder-Mead",
+      control = list(maxit = 1000)
+    )
+
+    coefficients <- result$par
+    names(coefficients) <- c("intercept", "slope")
+  } else {
+    # Quadratic fit
+    c3_init <- 0
+    initial_params <- c(c1_init, c2_init, c3_init)
+
+    result <- stats::optim(
+      par = initial_params,
+      fn = .integral_objective,
+      location = location,
+      signal = signal,
+      reference_mwd = reference_mwd,
+      fit_type = fit_type,
+      method = "Nelder-Mead",
+      control = list(maxit = 2000)
+    )
+
+    coefficients <- result$par
+    names(coefficients) <- c("intercept", "slope", "quadratic")
+  }
+
+  # Calculate final MW values with fitted coefficients
+  final_result <- .calc_mw_from_coefficients(
+    location,
+    signal,
+    coefficients,
+    fit_type
+  )
+
+  # Calculate diagnostics
+  mn_error_pct <- 100 * (final_result$mn - known_mn) / known_mn
+  mw_error_pct <- 100 * (final_result$mw - known_mw) / known_mw
+  dispersity_error_pct <- 100 *
+    (final_result$dispersity - known_dispersity) /
+    known_dispersity
+
+  diagnostics <- list(
+    known_mn = known_mn,
+    known_mw = known_mw,
+    known_dispersity = known_dispersity,
+    calculated_mn = final_result$mn,
+    calculated_mw = final_result$mw,
+    calculated_dispersity = final_result$dispersity,
+    mn_error_pct = mn_error_pct,
+    mw_error_pct = mw_error_pct,
+    dispersity_error_pct = dispersity_error_pct,
+    convergence = result$convergence,
+    iterations = result$counts["function"],
+    final_objective = result$value,
+    method = "integral"
+  )
+
+  # Warn if fit results in poor Mn/Mw match
+  # (integral method prioritizes shape, so Mn/Mw may differ slightly)
+  if (abs(mn_error_pct) > 10 || abs(mw_error_pct) > 10) {
+    cli::cli_warn(
+      c(
+        "Integral calibration has >10% deviation from known Mn/Mw.",
+        "i" = "Mn error: {round(mn_error_pct, 2)}%, Mw error: {round(mw_error_pct, 2)}%",
+        "i" = "This may indicate the reference MWD shape doesn't match the chromatogram."
+      )
+    )
+  }
+
+  list(
+    coefficients = coefficients,
+    calibration_range = range(location),
+    diagnostics = diagnostics
+  )
+}
+
 #' @export
 prep.step_sec_broad_standard <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
@@ -528,15 +776,28 @@ prep.step_sec_broad_standard <- function(x, training, info = NULL, ...) {
   location <- broad_standard[[location_col]]
   signal <- broad_standard[[signal_col]]
 
-  # Fit calibration
-  fit_result <- .fit_hamielec(
-    location = location,
-    signal = signal,
-    known_mn = x$known_mn,
-    known_mw = x$known_mw,
-    fit_type = x$fit_type,
-    integration_range = x$integration_range
-  )
+  # Fit calibration based on method
+  if (x$method == "integral") {
+    fit_result <- .fit_integral(
+      location = location,
+      signal = signal,
+      reference_mwd = x$reference_mwd,
+      known_mn = x$known_mn,
+      known_mw = x$known_mw,
+      fit_type = x$fit_type,
+      integration_range = x$integration_range
+    )
+  } else {
+    # Default to Hamielec method
+    fit_result <- .fit_hamielec(
+      location = location,
+      signal = signal,
+      known_mn = x$known_mn,
+      known_mw = x$known_mw,
+      fit_type = x$fit_type,
+      integration_range = x$integration_range
+    )
+  }
 
   step_sec_broad_standard_new(
     measures = measures,
@@ -545,6 +806,7 @@ prep.step_sec_broad_standard <- function(x, training, info = NULL, ...) {
     known_mw = x$known_mw,
     fit_type = x$fit_type,
     method = x$method,
+    reference_mwd = x$reference_mwd,
     integration_range = x$integration_range,
     extrapolation = x$extrapolation,
     output_col = x$output_col,

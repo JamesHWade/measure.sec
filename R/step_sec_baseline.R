@@ -18,13 +18,23 @@
 #'   process. If `NULL` (the default), all measure columns (columns with class
 #'   `measure_list`) will be processed.
 #' @param left_frac Fraction of points from the beginning to use as the left
-#'   baseline region. Default is `0.05` (first 5% of data points).
+#'   baseline region. Default is `0.05` (first 5% of data points). Not used for
+#'   `method = "rf"`.
 #' @param right_frac Fraction of points from the end to use as the right
-#'   baseline region. Default is `0.05` (last 5% of data points).
+#'   baseline region. Default is `0.05` (last 5% of data points). Not used for
+#'   `method = "rf"`.
 #' @param method Method for baseline estimation. One of:
 #'   - `"linear"` (default): Linear interpolation between left and right means
 #'   - `"median"`: Uses median of baseline regions (more robust to outliers)
 #'   - `"spline"`: Smooth spline through baseline regions
+#'   - `"rf"`: Robust local regression (IDPmisc::rfbaseline). Best for complex
+#'     baselines with curvature or drift. Does not use left_frac/right_frac.
+#' @param rf_span Span parameter for RF baseline (only used when `method = "rf"`).
+#'   A numeric value between 0 and 1 specifying the fraction of points used for
+#'   local regression. Default is `2/3`. Higher values produce smoother baselines.
+#' @param rf_maxit Maximum iterations for RF baseline (only used when `method = "rf"`).
+#'   A numeric vector of length 2 specifying max iterations for the two stages
+#'   of the robust fitting. Default is `c(20, 20)`.
 #' @param role Not used by this step since no new variables are created.
 #' @param trained A logical to indicate if the quantities for preprocessing
 #'   have been estimated.
@@ -85,6 +95,12 @@
 #'   step_measure_input_wide(starts_with("signal_")) |>
 #'   step_sec_baseline(left_frac = 0.1, right_frac = 0.1, method = "median") |>
 #'   prep()
+#'
+#' # Using RF baseline for complex baseline shapes
+#' rec <- recipe(~., data = sec_triple_detect) |>
+#'   step_measure_input_wide(starts_with("signal_")) |>
+#'   step_sec_baseline(method = "rf", rf_span = 0.5) |>
+#'   prep()
 #' }
 step_sec_baseline <- function(
   recipe,
@@ -92,6 +108,8 @@ step_sec_baseline <- function(
   left_frac = 0.05,
   right_frac = 0.05,
   method = "linear",
+  rf_span = 2 / 3,
+  rf_maxit = c(20, 20),
   role = NA,
   trained = FALSE,
   skip = FALSE,
@@ -104,6 +122,8 @@ step_sec_baseline <- function(
       left_frac = left_frac,
       right_frac = right_frac,
       method = method,
+      rf_span = rf_span,
+      rf_maxit = rf_maxit,
       role = role,
       trained = trained,
       skip = skip,
@@ -117,6 +137,8 @@ step_sec_baseline_new <- function(
   left_frac,
   right_frac,
   method,
+  rf_span,
+  rf_maxit,
   role,
   trained,
   skip,
@@ -128,6 +150,8 @@ step_sec_baseline_new <- function(
     left_frac = left_frac,
     right_frac = right_frac,
     method = method,
+    rf_span = rf_span,
+    rf_maxit = rf_maxit,
     role = role,
     trained = trained,
     skip = skip,
@@ -139,40 +163,65 @@ step_sec_baseline_new <- function(
 prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
 
-  # Validate parameters
-  if (
-    !is.numeric(x$left_frac) ||
-      length(x$left_frac) != 1 ||
-      x$left_frac <= 0 ||
-      x$left_frac >= 0.5
-  ) {
-    cli::cli_abort(
-      "{.arg left_frac} must be a number between 0 and 0.5, not {.val {x$left_frac}}."
-    )
-  }
-
-  if (
-    !is.numeric(x$right_frac) ||
-      length(x$right_frac) != 1 ||
-      x$right_frac <= 0 ||
-      x$right_frac >= 0.5
-  ) {
-    cli::cli_abort(
-      "{.arg right_frac} must be a number between 0 and 0.5, not {.val {x$right_frac}}."
-    )
-  }
-
-  if (x$left_frac + x$right_frac >= 0.5) {
-    cli::cli_abort(
-      "{.arg left_frac} + {.arg right_frac} must be less than 0.5."
-    )
-  }
-
-  valid_methods <- c("linear", "median", "spline")
+  # Validate method first
+  valid_methods <- c("linear", "median", "spline", "rf")
   if (!x$method %in% valid_methods) {
     cli::cli_abort(
       "{.arg method} must be one of {.or {.val {valid_methods}}}, not {.val {x$method}}."
     )
+  }
+
+  # Validate fraction parameters (not used for rf method)
+  if (x$method != "rf") {
+    if (
+      !is.numeric(x$left_frac) ||
+        length(x$left_frac) != 1 ||
+        x$left_frac <= 0 ||
+        x$left_frac >= 0.5
+    ) {
+      cli::cli_abort(
+        "{.arg left_frac} must be a number between 0 and 0.5, not {.val {x$left_frac}}."
+      )
+    }
+
+    if (
+      !is.numeric(x$right_frac) ||
+        length(x$right_frac) != 1 ||
+        x$right_frac <= 0 ||
+        x$right_frac >= 0.5
+    ) {
+      cli::cli_abort(
+        "{.arg right_frac} must be a number between 0 and 0.5, not {.val {x$right_frac}}."
+      )
+    }
+
+    if (x$left_frac + x$right_frac >= 0.5) {
+      cli::cli_abort(
+        "{.arg left_frac} + {.arg right_frac} must be less than 0.5."
+      )
+    }
+  }
+
+  # Validate RF-specific parameters
+  if (x$method == "rf") {
+    if (
+      !is.numeric(x$rf_span) ||
+        length(x$rf_span) != 1 ||
+        x$rf_span <= 0 ||
+        x$rf_span > 1
+    ) {
+      cli::cli_abort(
+        "{.arg rf_span} must be a number between 0 and 1, not {.val {x$rf_span}}."
+      )
+    }
+
+    if (
+      !is.numeric(x$rf_maxit) || length(x$rf_maxit) != 2 || any(x$rf_maxit < 1)
+    ) {
+      cli::cli_abort(
+        "{.arg rf_maxit} must be a numeric vector of length 2 with positive values."
+      )
+    }
   }
 
   # Resolve which columns to process
@@ -187,6 +236,8 @@ prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
     left_frac = x$left_frac,
     right_frac = x$right_frac,
     method = x$method,
+    rf_span = x$rf_span,
+    rf_maxit = x$rf_maxit,
     role = x$role,
     trained = TRUE,
     skip = x$skip,
@@ -201,7 +252,9 @@ bake.step_sec_baseline <- function(object, new_data, ...) {
       new_data[[col]],
       left_frac = object$left_frac,
       right_frac = object$right_frac,
-      method = object$method
+      method = object$method,
+      rf_span = object$rf_span,
+      rf_maxit = object$rf_maxit
     )
     new_data[[col]] <- new_measure_list(result)
   }
@@ -240,6 +293,8 @@ tidy.step_sec_baseline <- function(x, ...) {
     left_frac = x$left_frac,
     right_frac = x$right_frac,
     method = x$method,
+    rf_span = x$rf_span %||% NA_real_,
+    rf_maxit = list(x$rf_maxit %||% NA),
     id = x$id
   )
 }
@@ -248,7 +303,11 @@ tidy.step_sec_baseline <- function(x, ...) {
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_baseline <- function(x, ...) {
-  c("measure.sec", "measure")
+  pkgs <- c("measure.sec", "measure")
+  if (!is.null(x$method) && x$method == "rf") {
+    pkgs <- c(pkgs, "IDPmisc")
+  }
+  pkgs
 }
 
 # ------------------------------------------------------------------------------
@@ -260,15 +319,26 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
 #' @param left_frac Fraction for left baseline region.
 #' @param right_frac Fraction for right baseline region.
 #' @param method Baseline estimation method.
+#' @param rf_span Span parameter for RF baseline.
+#' @param rf_maxit Max iterations for RF baseline.
 #' @return A list of measure_tbl objects with baseline-corrected values.
 #' @noRd
-.compute_sec_baseline <- function(dat, left_frac, right_frac, method) {
+.compute_sec_baseline <- function(
+  dat,
+  left_frac,
+  right_frac,
+  method,
+  rf_span = 2 / 3,
+  rf_maxit = c(20, 20)
+) {
   purrr::map(
     dat,
     .sec_baseline_single,
     left_frac = left_frac,
     right_frac = right_frac,
-    method = method
+    method = method,
+    rf_span = rf_span,
+    rf_maxit = rf_maxit
   )
 }
 
@@ -278,9 +348,18 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
 #' @param left_frac Fraction for left baseline region.
 #' @param right_frac Fraction for right baseline region.
 #' @param method Baseline estimation method.
+#' @param rf_span Span parameter for RF baseline.
+#' @param rf_maxit Max iterations for RF baseline.
 #' @return A measure_tbl with baseline-corrected values.
 #' @noRd
-.sec_baseline_single <- function(x, left_frac, right_frac, method) {
+.sec_baseline_single <- function(
+  x,
+  left_frac,
+  right_frac,
+  method,
+  rf_span = 2 / 3,
+  rf_maxit = c(20, 20)
+) {
   y <- x$value
   n <- length(y)
 
@@ -297,7 +376,14 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
     return(x)
   }
 
-  # Calculate region indices
+  # RF method uses robust local regression - no regions needed
+  if (method == "rf") {
+    baseline <- .sec_baseline_rf(y, rf_span = rf_span, rf_maxit = rf_maxit)
+    x$value <- y - baseline
+    return(x)
+  }
+
+  # Calculate region indices for other methods
   n_left <- max(1, floor(n * left_frac))
   n_right <- max(1, floor(n * right_frac))
 
@@ -403,4 +489,47 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
   # Subtract baseline
   x$value <- y - baseline
   x
+}
+
+#' Compute RF (Robust Fitting) baseline using IDPmisc::rfbaseline
+#'
+#' This function uses robust local regression to estimate the baseline.
+#' It is particularly effective for complex baselines with curvature or drift.
+#'
+#' @param y Numeric vector of signal values.
+#' @param rf_span Span parameter (fraction of points for local regression).
+#' @param rf_maxit Max iterations for the two stages of robust fitting.
+#' @return Numeric vector of baseline estimates.
+#' @noRd
+.sec_baseline_rf <- function(y, rf_span = 2 / 3, rf_maxit = c(20, 20)) {
+  rlang::check_installed("IDPmisc", reason = "for RF baseline correction")
+
+  # Handle edge case of flat or near-flat signal
+  signal_range <- diff(range(y, na.rm = TRUE))
+  signal_sd <- stats::sd(y, na.rm = TRUE)
+
+  if (signal_range < 1e-6 || signal_sd < 1e-6) {
+    return(rep(min(y, na.rm = TRUE), length(y)))
+  }
+
+  # Fit RF baseline
+  baseline_fit <- tryCatch(
+    IDPmisc::rfbaseline(
+      x = seq_along(y),
+      y = y,
+      span = rf_span,
+      maxit = rf_maxit
+    )$fit,
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "RF baseline fitting failed: {e$message}",
+          "i" = "Falling back to minimum value as baseline."
+        )
+      )
+      rep(min(y, na.rm = TRUE), length(y))
+    }
+  )
+
+  baseline_fit
 }

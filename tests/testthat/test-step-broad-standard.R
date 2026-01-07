@@ -573,15 +573,15 @@ test_that("step_sec_broad_standard integrates with step_sec_mw_averages", {
   expect_true("mw_dispersity" %in% names(result))
 })
 
-# -- Integral method warning ---------------------------------------------------
+# -- Integral method tests -----------------------------------------------------
 
-test_that("step_sec_broad_standard warns for unimplemented integral method", {
+test_that("step_sec_broad_standard integral method requires reference_mwd", {
   skip_if_not_installed("measure")
 
   test_data <- create_test_sec_data()
   broad_std <- create_broad_standard(mn = 50000, mw = 150000)
 
-  expect_warning(
+  expect_error(
     recipes::recipe(~., data = test_data) |>
       step_sec_broad_standard(
         broad_standard = broad_std,
@@ -589,8 +589,86 @@ test_that("step_sec_broad_standard warns for unimplemented integral method", {
         known_mw = 150000,
         method = "integral"
       ),
-    "not yet implemented"
+    "requires.*reference_mwd"
   )
+})
+
+test_that("step_sec_broad_standard validates reference_mwd columns", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  broad_std <- create_broad_standard(mn = 50000, mw = 150000)
+
+  # Missing cumulative column
+  bad_ref <- data.frame(mw = c(1000, 10000, 100000))
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_broad_standard(
+        broad_standard = broad_std,
+        known_mn = 50000,
+        known_mw = 150000,
+        method = "integral",
+        reference_mwd = bad_ref
+      ),
+    "mw.*cumulative"
+  )
+})
+
+test_that("step_sec_broad_standard validates reference_mwd cumulative range", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  broad_std <- create_broad_standard(mn = 50000, mw = 150000)
+
+  # Cumulative values > 1
+  bad_ref <- data.frame(
+    mw = c(1000, 10000, 100000),
+    cumulative = c(0.1, 0.5, 1.5)
+  )
+  expect_error(
+    recipes::recipe(~., data = test_data) |>
+      step_sec_broad_standard(
+        broad_standard = broad_std,
+        known_mn = 50000,
+        known_mw = 150000,
+        method = "integral",
+        reference_mwd = bad_ref
+      ),
+    "cumulative.*0 and 1"
+  )
+})
+
+test_that("step_sec_broad_standard integral method works with valid reference", {
+  skip_if_not_installed("measure")
+
+  test_data <- create_test_sec_data()
+  broad_std <- create_broad_standard(mn = 50000, mw = 150000)
+
+  # Create a reference cumulative MWD matching the broad standard
+  # Use log-normal distribution parameterized by Mn and Mw
+  ref_mw <- 10^seq(3, 6, length.out = 50)
+  # Approximation: for log-normal, sigma^2 = log(Mw/Mn)
+  sigma_sq <- log(150000 / 50000)
+  mu <- log(50000) + sigma_sq / 2 # Mn = exp(mu - sigma^2/2)
+  ref_cum <- stats::plnorm(ref_mw, meanlog = mu, sdlog = sqrt(sigma_sq))
+
+  reference_mwd <- data.frame(mw = ref_mw, cumulative = ref_cum)
+
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_broad_standard(
+      broad_standard = broad_std,
+      known_mn = 50000,
+      known_mw = 150000,
+      method = "integral",
+      reference_mwd = reference_mwd
+    )
+
+  prepped <- recipes::prep(rec)
+  expect_s3_class(prepped, "recipe")
+
+  # Check that tidy returns correct method
+  tidy_result <- recipes::tidy(prepped, number = 1)
+  expect_equal(tidy_result$method, "integral")
 })
 
 # -- Additional coverage tests -------------------------------------------------

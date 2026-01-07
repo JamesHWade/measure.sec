@@ -80,7 +80,15 @@ reference:
   - step_sec_baseline
   - step_sec_band_broadening
   - step_sec_concentration
+  - step_sec_exclude_regions
+  - step_sec_integration_window
   - estimate_sigma
+
+- title: Peak Detection
+  desc: Peak detection and deconvolution
+  contents:
+  - step_sec_peaks_detect
+  - step_sec_peaks_deconvolve
 
 - title: Calibration
   desc: Molecular weight calibration methods

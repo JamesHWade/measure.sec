@@ -12,6 +12,7 @@ step_sec_broad_standard(
   known_mw = NULL,
   fit_type = c("linear", "quadratic"),
   method = c("hamielec", "integral"),
+  reference_mwd = NULL,
   integration_range = NULL,
   extrapolation = c("warn", "none"),
   output_col = "mw",
@@ -48,8 +49,18 @@ If \code{NULL}, uses all measure columns.}
 \item{method}{Calibration method:
 \itemize{
 \item \code{"hamielec"} (default): Optimize to match Mn and Mw
-\item \code{"integral"}: Use integral MWD matching (not yet implemented)
+\item \code{"integral"}: Use cumulative MWD matching (requires \code{reference_mwd})
 }}
+
+\item{reference_mwd}{Optional data frame for integral method containing the
+known cumulative molecular weight distribution of the broad standard:
+\itemize{
+\item \code{mw}: Molecular weight values (Daltons)
+\item \code{cumulative}: Cumulative weight fraction (0 to 1)
+}
+
+Required when \code{method = "integral"}. Can be obtained from the standard's
+certificate of analysis or determined by light scattering/viscometry.}
 
 \item{integration_range}{Optional numeric vector \code{c(min, max)} specifying
 the elution range to use for the broad standard. If \code{NULL}, auto-detects
@@ -100,6 +111,19 @@ The algorithm simultaneously optimizes coefficients C1 and C2 (and C3 for
 quadratic fits) using Nelder-Mead optimization to minimize the squared
 relative errors between calculated and known Mn and Mw values.
 
+\strong{Integral/Cumulative Match Method:}
+
+The integral method matches the entire cumulative MWD shape rather than just
+Mn and Mw. This requires a reference cumulative distribution (\code{reference_mwd})
+typically obtained from the standard's certificate or measured by light
+scattering/viscometry. The algorithm optimizes calibration coefficients to
+minimize the sum of squared differences between the calculated and reference
+cumulative distributions.
+
+This method is more robust than Hamielec because it uses the full distribution
+shape, not just two moments. It's particularly useful when the standard's
+MWD shape is well-characterized.
+
 \strong{When to Use Broad Standard Calibration:}
 \itemize{
 \item QC labs running the same polymer type repeatedly
@@ -113,6 +137,7 @@ relative errors between calculated and known Mn and Mw values.
 \item Results are only valid for polymers with similar hydrodynamic behavior
 \item Linear calibration may not fit well over very wide MW ranges
 \item Requires well-characterized broad standard (accurate Mn and Mw)
+\item Integral method requires full cumulative MWD data
 }
 }
 \examples{
