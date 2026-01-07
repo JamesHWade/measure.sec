@@ -52,6 +52,7 @@ test_that("measure_sec_report errors without quarto package", {
 
 test_that("measure_sec_report validates data input", {
   skip_if_not_installed("quarto")
+  skip_if(!nzchar(Sys.which("quarto")), "Quarto CLI not found")
 
   expect_error(
     measure_sec_report("not a data frame"),
@@ -61,6 +62,7 @@ test_that("measure_sec_report validates data input", {
 
 test_that("measure_sec_report validates template argument", {
   skip_if_not_installed("quarto")
+  skip_if(!nzchar(Sys.which("quarto")), "Quarto CLI not found")
 
   test_data <- tibble::tibble(sample_id = "A")
 
@@ -72,6 +74,7 @@ test_that("measure_sec_report validates template argument", {
 
 test_that("measure_sec_report validates output_format argument", {
   skip_if_not_installed("quarto")
+  skip_if(!nzchar(Sys.which("quarto")), "Quarto CLI not found")
 
   test_data <- tibble::tibble(sample_id = "A")
 
