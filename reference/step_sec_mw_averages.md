@@ -13,6 +13,8 @@ step_sec_mw_averages(
   calibration = NULL,
   integration_range = NULL,
   output_cols = c("mn", "mw", "mz", "mp", "dispersity"),
+  include_uncertainty = FALSE,
+  calibration_error = NULL,
   prefix = "mw_",
   role = "predictor",
   trained = FALSE,
@@ -51,6 +53,20 @@ step_sec_mw_averages(
 
   Character vector of metrics to calculate. Default includes all:
   `c("mn", "mw", "mz", "mp", "dispersity")`.
+
+- include_uncertainty:
+
+  Logical. If `TRUE`, calculates and outputs uncertainty estimates for
+  MW averages. Requires `calibration_error` to be specified. Default is
+  `FALSE`.
+
+- calibration_error:
+
+  Calibration error (RMSE) in log10(MW) units for uncertainty
+  propagation. Required when `include_uncertainty = TRUE`. Can be
+  obtained from
+  [`tidy()`](https://generics.r-lib.org/reference/tidy.html) output of
+  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md).
 
 - prefix:
 
@@ -94,6 +110,27 @@ The detector signal is assumed to be proportional to weight
 concentration. For RI detection, this is typically valid. For UV
 detection, response factors may need to be applied first.
 
+**Uncertainty Propagation:**
+
+When `include_uncertainty = TRUE`, the step calculates uncertainty
+estimates based on calibration error propagation. The uncertainties
+account for:
+
+- Calibration curve fit error (RMSE in log10 MW units)
+
+- MW distribution width effects on different averages
+
+The propagation follows:
+
+- Mn uncertainty is enhanced for wide distributions (most sensitive to
+  low MW)
+
+- Mw uncertainty equals the relative calibration error
+
+- Mz uncertainty is enhanced for high MW sensitivity
+
+- Dispersity uncertainty from error propagation of Mw/Mn
+
 **Prerequisites:**
 
 - Data should be baseline corrected
@@ -108,8 +145,12 @@ Other sec-chromatography:
 [`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
 [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
 [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
 [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
 
 ## Examples
 
@@ -123,6 +164,16 @@ rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline() |>
   step_sec_mw_averages() |>
+  prep()
+
+# With uncertainty propagation (calibration_error from tidy() of calibration step)
+rec_with_unc <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_wide(starts_with("signal_")) |>
+  step_sec_baseline() |>
+  step_sec_mw_averages(
+    include_uncertainty = TRUE,
+    calibration_error = 0.02  # RMSE in log10(MW)
+  ) |>
   prep()
 } # }
 ```

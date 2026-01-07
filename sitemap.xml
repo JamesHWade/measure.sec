@@ -74,6 +74,8 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_dad.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_dls.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_lals.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_mals.html</loc></url>
@@ -81,6 +83,8 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_protein.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_rals.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_ri.html</loc></url>

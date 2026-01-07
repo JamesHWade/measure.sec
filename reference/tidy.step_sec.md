@@ -36,6 +36,12 @@ tidy(x, ...)
 # S3 method for class 'step_sec_dls'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_exclude_regions'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_integration_window'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_intrinsic_visc'
 tidy(x, ...)
 
@@ -55,6 +61,12 @@ tidy(x, ...)
 tidy(x, ...)
 
 # S3 method for class 'step_sec_oligomer'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_peaks_deconvolve'
+tidy(x, ...)
+
+# S3 method for class 'step_sec_peaks_detect'
 tidy(x, ...)
 
 # S3 method for class 'step_sec_protein'

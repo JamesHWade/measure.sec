@@ -15,6 +15,7 @@ step_sec_broad_standard(
   known_mw = NULL,
   fit_type = c("linear", "quadratic"),
   method = c("hamielec", "integral"),
+  reference_mwd = NULL,
   integration_range = NULL,
   extrapolation = c("warn", "none"),
   output_col = "mw",
@@ -69,7 +70,20 @@ step_sec_broad_standard(
 
   - `"hamielec"` (default): Optimize to match Mn and Mw
 
-  - `"integral"`: Use integral MWD matching (not yet implemented)
+  - `"integral"`: Use cumulative MWD matching (requires `reference_mwd`)
+
+- reference_mwd:
+
+  Optional data frame for integral method containing the known
+  cumulative molecular weight distribution of the broad standard:
+
+  - `mw`: Molecular weight values (Daltons)
+
+  - `cumulative`: Cumulative weight fraction (0 to 1)
+
+  Required when `method = "integral"`. Can be obtained from the
+  standard's certificate of analysis or determined by light
+  scattering/viscometry.
 
 - integration_range:
 
@@ -132,6 +146,19 @@ The algorithm simultaneously optimizes coefficients C1 and C2 (and C3
 for quadratic fits) using Nelder-Mead optimization to minimize the
 squared relative errors between calculated and known Mn and Mw values.
 
+**Integral/Cumulative Match Method:**
+
+The integral method matches the entire cumulative MWD shape rather than
+just Mn and Mw. This requires a reference cumulative distribution
+(`reference_mwd`) typically obtained from the standard's certificate or
+measured by light scattering/viscometry. The algorithm optimizes
+calibration coefficients to minimize the sum of squared differences
+between the calculated and reference cumulative distributions.
+
+This method is more robust than Hamielec because it uses the full
+distribution shape, not just two moments. It's particularly useful when
+the standard's MWD shape is well-characterized.
+
 **When to Use Broad Standard Calibration:**
 
 - QC labs running the same polymer type repeatedly
@@ -149,6 +176,8 @@ squared relative errors between calculated and known Mn and Mw values.
 - Linear calibration may not fit well over very wide MW ranges
 
 - Requires well-characterized broad standard (accurate Mn and Mw)
+
+- Integral method requires full cumulative MWD data
 
 ## References
 

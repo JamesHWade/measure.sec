@@ -15,6 +15,8 @@ step_sec_baseline(
   left_frac = 0.05,
   right_frac = 0.05,
   method = "linear",
+  rf_span = 2/3,
+  rf_maxit = c(20, 20),
   role = NA,
   trained = FALSE,
   skip = FALSE,
@@ -38,12 +40,14 @@ step_sec_baseline(
 - left_frac:
 
   Fraction of points from the beginning to use as the left baseline
-  region. Default is `0.05` (first 5% of data points).
+  region. Default is `0.05` (first 5% of data points). Not used for
+  `method = "rf"`.
 
 - right_frac:
 
   Fraction of points from the end to use as the right baseline region.
-  Default is `0.05` (last 5% of data points).
+  Default is `0.05` (last 5% of data points). Not used for
+  `method = "rf"`.
 
 - method:
 
@@ -56,6 +60,23 @@ step_sec_baseline(
     outliers)
 
   - `"spline"`: Smooth spline through baseline regions
+
+  - `"rf"`: Robust local regression (IDPmisc::rfbaseline). Best for
+    complex baselines with curvature or drift. Does not use
+    left_frac/right_frac.
+
+- rf_span:
+
+  Span parameter for RF baseline (only used when `method = "rf"`). A
+  numeric value between 0 and 1 specifying the fraction of points used
+  for local regression. Default is `2/3`. Higher values produce smoother
+  baselines.
+
+- rf_maxit:
+
+  Maximum iterations for RF baseline (only used when `method = "rf"`). A
+  numeric vector of length 2 specifying max iterations for the two
+  stages of the robust fitting. Default is `c(20, 20)`.
 
 - role:
 
@@ -131,9 +152,13 @@ for simple trend removal.
 Other sec-chromatography:
 [`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
 [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
 [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
 [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
 
 ## Examples
 
@@ -152,6 +177,12 @@ rec <- recipe(~., data = sec_triple_detect) |>
 rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_wide(starts_with("signal_")) |>
   step_sec_baseline(left_frac = 0.1, right_frac = 0.1, method = "median") |>
+  prep()
+
+# Using RF baseline for complex baseline shapes
+rec <- recipe(~., data = sec_triple_detect) |>
+  step_measure_input_wide(starts_with("signal_")) |>
+  step_sec_baseline(method = "rf", rf_span = 0.5) |>
   prep()
 } # }
 ```

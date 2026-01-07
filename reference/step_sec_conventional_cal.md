@@ -12,7 +12,7 @@ step_sec_conventional_cal(
   measures = NULL,
   standards = NULL,
   calibration = NULL,
-  fit_type = c("cubic", "quadratic", "linear", "fifth"),
+  fit_type = c("cubic", "quadratic", "linear", "fifth", "gam"),
   extrapolation = c("warn", "none", "linear"),
   output_col = "mw",
   log_output = TRUE,
@@ -52,7 +52,7 @@ step_sec_conventional_cal(
 
 - fit_type:
 
-  Type of polynomial fit for the calibration curve:
+  Type of fit for the calibration curve:
 
   - `"cubic"` (default): Third-order polynomial
 
@@ -61,6 +61,9 @@ step_sec_conventional_cal(
   - `"linear"`: First-order (linear) fit
 
   - `"fifth"`: Fifth-order polynomial
+
+  - `"gam"`: Generalized Additive Model with cubic splines (requires
+    mgcv)
 
 - extrapolation:
 

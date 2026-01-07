@@ -67,6 +67,8 @@ calculates molecular weight averages from size exclusion chromatography data.</p
 <span>  calibration <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  integration_range <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  output_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mn"</span>, <span class="st">"mw"</span>, <span class="st">"mz"</span>, <span class="st">"mp"</span>, <span class="st">"dispersity"</span><span class="op">)</span>,</span>
+<span>  include_uncertainty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  calibration_error <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  prefix <span class="op">=</span> <span class="st">"mw_"</span>,</span>
 <span>  role <span class="op">=</span> <span class="st">"predictor"</span>,</span>
 <span>  trained <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -106,6 +108,18 @@ the x-axis range for integration. If <code>NULL</code>, uses full range.</p></dd
 includes all: <code>c("mn", "mw", "mz", "mp", "dispersity")</code>.</p></dd>
 
 
+<dt id="arg-include-uncertainty">include_uncertainty<a class="anchor" aria-label="anchor" href="#arg-include-uncertainty"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, calculates and outputs
+uncertainty estimates for MW averages. Requires <code>calibration_error</code> to
+be specified. Default is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-calibration-error">calibration_error<a class="anchor" aria-label="anchor" href="#arg-calibration-error"></a></dt>
+<dd><p>Calibration error (RMSE) in log10(MW) units for
+uncertainty propagation. Required when <code>include_uncertainty = TRUE</code>.
+Can be obtained from <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code> output of <code><a href="step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>.</p></dd>
+
+
 <dt id="arg-prefix">prefix<a class="anchor" aria-label="anchor" href="#arg-prefix"></a></dt>
 <dd><p>Prefix for output column names. Default is <code>"mw_"</code>.</p></dd>
 
@@ -135,7 +149,15 @@ includes all: <code>c("mn", "mw", "mz", "mp", "dispersity")</code>.</p></dd>
     <p>This step calculates standard molecular weight averages from SEC/GPC data:</p><table class="table table"><tr><td>Metric</td><td>Formula</td><td>Description</td></tr><tr><td>Mn</td><td>sum(w) / sum(w/M)</td><td>Number-average molecular weight</td></tr><tr><td>Mw</td><td>sum(wM) / sum(w)</td><td>Weight-average molecular weight</td></tr><tr><td>Mz</td><td>sum(wM^2) / sum(wM)</td><td>Z-average molecular weight</td></tr><tr><td>Mp</td><td>M at peak maximum</td><td>Peak molecular weight</td></tr><tr><td>D</td><td>Mw/Mn</td><td>Dispersity (polydispersity index)</td></tr></table><p>The detector signal is assumed to be proportional to weight concentration.
 For RI detection, this is typically valid. For UV detection, response factors
 may need to be applied first.</p>
-<p><strong>Prerequisites:</strong></p><ul><li><p>Data should be baseline corrected</p></li>
+<p><strong>Uncertainty Propagation:</strong></p>
+<p>When <code>include_uncertainty = TRUE</code>, the step calculates uncertainty estimates
+based on calibration error propagation. The uncertainties account for:</p><ul><li><p>Calibration curve fit error (RMSE in log10 MW units)</p></li>
+<li><p>MW distribution width effects on different averages</p></li>
+</ul><p>The propagation follows:</p><ul><li><p>Mn uncertainty is enhanced for wide distributions (most sensitive to low MW)</p></li>
+<li><p>Mw uncertainty equals the relative calibration error</p></li>
+<li><p>Mz uncertainty is enhanced for high MW sensitivity</p></li>
+<li><p>Dispersity uncertainty from error propagation of Mw/Mn</p></li>
+</ul><p><strong>Prerequisites:</strong></p><ul><li><p>Data should be baseline corrected</p></li>
 <li><p>X-axis should represent retention time/volume or log(MW)</p></li>
 <li><p>Integration limits should exclude solvent peaks</p></li>
 </ul></div>
@@ -145,8 +167,12 @@ may need to be applied first.</p>
 <code><a href="step_sec_band_broadening.html">step_sec_band_broadening()</a></code>,
 <code><a href="step_sec_baseline.html">step_sec_baseline()</a></code>,
 <code><a href="step_sec_detector_delay.html">step_sec_detector_delay()</a></code>,
+<code><a href="step_sec_exclude_regions.html">step_sec_exclude_regions()</a></code>,
+<code><a href="step_sec_integration_window.html">step_sec_integration_window()</a></code>,
 <code><a href="step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code>,
-<code><a href="step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code></p></div>
+<code><a href="step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code>,
+<code><a href="step_sec_peaks_deconvolve.html">step_sec_peaks_deconvolve()</a></code>,
+<code><a href="step_sec_peaks_detect.html">step_sec_peaks_detect()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -160,6 +186,16 @@ may need to be applied first.</p>
 <span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_wide.html" class="external-link">step_measure_input_wide</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"signal_"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">step_sec_mw_averages</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># With uncertainty propagation (calibration_error from tidy() of calibration step)</span></span></span>
+<span class="r-in"><span><span class="va">rec_with_unc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">sec_triple_detect</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_wide.html" class="external-link">step_measure_input_wide</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"signal_"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">step_sec_mw_averages</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    include_uncertainty <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>    calibration_error <span class="op">=</span> <span class="fl">0.02</span>  <span class="co"># RMSE in log10(MW)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

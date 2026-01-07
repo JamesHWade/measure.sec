@@ -56,8 +56,21 @@ Baseline correction and signal enhancement
   : Band Broadening Correction for SEC
 - [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)
   : Convert Detector Signal to Concentration
+- [`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md)
+  : SEC/GPC Region Exclusion
+- [`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md)
+  : SEC/GPC Integration Window
 - [`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
   : Estimate Spreading Parameter from Narrow Standard
+
+## Peak Detection
+
+Peak detection and deconvolution
+
+- [`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
+  : SEC/GPC Peak Detection
+- [`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md)
+  : SEC/GPC Peak Deconvolution
 
 ## Calibration
 

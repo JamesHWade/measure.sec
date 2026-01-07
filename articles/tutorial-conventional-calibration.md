@@ -770,7 +770,7 @@ sessionInfo()
 #> 
 #> other attached packages:
 #> [1] ggplot2_4.0.1          tidyr_1.3.2            measure.sec_0.0.0.9000
-#> [4] measure_0.0.1.9001     recipes_1.3.1          dplyr_1.1.4           
+#> [4] measure_0.0.1.9002     recipes_1.3.1          dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.55           bslib_0.9.0        

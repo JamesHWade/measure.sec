@@ -69,7 +69,7 @@ it to convert elution time/volume to molecular weight.</p>
 <span>  measures <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  standards <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  calibration <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  fit_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cubic"</span>, <span class="st">"quadratic"</span>, <span class="st">"linear"</span>, <span class="st">"fifth"</span><span class="op">)</span>,</span>
+<span>  fit_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cubic"</span>, <span class="st">"quadratic"</span>, <span class="st">"linear"</span>, <span class="st">"fifth"</span>, <span class="st">"gam"</span><span class="op">)</span>,</span>
 <span>  extrapolation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"none"</span>, <span class="st">"linear"</span><span class="op">)</span>,</span>
 <span>  output_col <span class="op">=</span> <span class="st">"mw"</span>,</span>
 <span>  log_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -107,10 +107,11 @@ calibration directly. Takes precedence over <code>standards</code>.</p></dd>
 
 
 <dt id="arg-fit-type">fit_type<a class="anchor" aria-label="anchor" href="#arg-fit-type"></a></dt>
-<dd><p>Type of polynomial fit for the calibration curve:</p><ul><li><p><code>"cubic"</code> (default): Third-order polynomial</p></li>
+<dd><p>Type of fit for the calibration curve:</p><ul><li><p><code>"cubic"</code> (default): Third-order polynomial</p></li>
 <li><p><code>"quadratic"</code>: Second-order polynomial</p></li>
 <li><p><code>"linear"</code>: First-order (linear) fit</p></li>
 <li><p><code>"fifth"</code>: Fifth-order polynomial</p></li>
+<li><p><code>"gam"</code>: Generalized Additive Model with cubic splines (requires mgcv)</p></li>
 </ul></dd>
 
 

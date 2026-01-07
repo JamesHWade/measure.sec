@@ -118,7 +118,7 @@ save_sec_calibration(
     notes = "Monthly calibration - January 2024"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpuHKZN9/file21ca54f7482b.rds
+#> ✔ Saved cubic calibration to /tmp/RtmphErFVL/file26bf5b5f131f.rds
 ```
 
 ### Format Options
@@ -166,7 +166,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-01-05 02:34:23
+#> Created: 2026-01-07 21:10:34
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -234,7 +234,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-01-05 02:34:23
+#> Created: 2026-01-07 21:10:34
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -431,7 +431,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9001    
+#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
 #> [4] recipes_1.3.1          dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):

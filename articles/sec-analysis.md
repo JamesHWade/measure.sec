@@ -934,7 +934,7 @@ sessionInfo()
 #> 
 #> other attached packages:
 #> [1] ggplot2_4.0.1          purrr_1.2.0            tidyr_1.3.2           
-#> [4] measure.sec_0.0.0.9000 measure_0.0.1.9001     recipes_1.3.1         
+#> [4] measure.sec_0.0.0.9000 measure_0.0.1.9002     recipes_1.3.1         
 #> [7] dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):

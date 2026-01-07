@@ -72,6 +72,7 @@ standard with known Mn and Mw values.</p>
 <span>  known_mw <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fit_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"linear"</span>, <span class="st">"quadratic"</span><span class="op">)</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hamielec"</span>, <span class="st">"integral"</span><span class="op">)</span>,</span>
+<span>  reference_mwd <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  integration_range <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  extrapolation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  output_col <span class="op">=</span> <span class="st">"mw"</span>,</span>
@@ -119,8 +120,16 @@ If <code>NULL</code>, uses all measure columns.</p></dd>
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>Calibration method:</p><ul><li><p><code>"hamielec"</code> (default): Optimize to match Mn and Mw</p></li>
-<li><p><code>"integral"</code>: Use integral MWD matching (not yet implemented)</p></li>
+<li><p><code>"integral"</code>: Use cumulative MWD matching (requires <code>reference_mwd</code>)</p></li>
 </ul></dd>
+
+
+<dt id="arg-reference-mwd">reference_mwd<a class="anchor" aria-label="anchor" href="#arg-reference-mwd"></a></dt>
+<dd><p>Optional data frame for integral method containing the
+known cumulative molecular weight distribution of the broad standard:</p><ul><li><p><code>mw</code>: Molecular weight values (Daltons)</p></li>
+<li><p><code>cumulative</code>: Cumulative weight fraction (0 to 1)</p></li>
+</ul><p>Required when <code>method = "integral"</code>. Can be obtained from the standard's
+certificate of analysis or determined by light scattering/viscometry.</p></dd>
 
 
 <dt id="arg-integration-range">integration_range<a class="anchor" aria-label="anchor" href="#arg-integration-range"></a></dt>
@@ -178,6 +187,16 @@ supports a quadratic extension for better fit over wide MW ranges:</p>
 <p>The algorithm simultaneously optimizes coefficients C1 and C2 (and C3 for
 quadratic fits) using Nelder-Mead optimization to minimize the squared
 relative errors between calculated and known Mn and Mw values.</p>
+<p><strong>Integral/Cumulative Match Method:</strong></p>
+<p>The integral method matches the entire cumulative MWD shape rather than just
+Mn and Mw. This requires a reference cumulative distribution (<code>reference_mwd</code>)
+typically obtained from the standard's certificate or measured by light
+scattering/viscometry. The algorithm optimizes calibration coefficients to
+minimize the sum of squared differences between the calculated and reference
+cumulative distributions.</p>
+<p>This method is more robust than Hamielec because it uses the full distribution
+shape, not just two moments. It's particularly useful when the standard's
+MWD shape is well-characterized.</p>
 <p><strong>When to Use Broad Standard Calibration:</strong></p><ul><li><p>QC labs running the same polymer type repeatedly</p></li>
 <li><p>When narrow standards aren't available for your polymer</p></li>
 <li><p>When you have a well-characterized in-house reference material</p></li>
@@ -185,6 +204,7 @@ relative errors between calculated and known Mn and Mw values.</p>
 </ul><p><strong>Limitations:</strong></p><ul><li><p>Results are only valid for polymers with similar hydrodynamic behavior</p></li>
 <li><p>Linear calibration may not fit well over very wide MW ranges</p></li>
 <li><p>Requires well-characterized broad standard (accurate Mn and Mw)</p></li>
+<li><p>Integral method requires full cumulative MWD data</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

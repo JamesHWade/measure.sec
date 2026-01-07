@@ -35,6 +35,12 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_dls'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_exclude_regions'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_integration_window'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_intrinsic_visc'
 required_pkgs(x, ...)
 
@@ -54,6 +60,12 @@ required_pkgs(x, ...)
 required_pkgs(x, ...)
 
 # S3 method for class 'step_sec_oligomer'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_peaks_deconvolve'
+required_pkgs(x, ...)
+
+# S3 method for class 'step_sec_peaks_detect'
 required_pkgs(x, ...)
 
 # S3 method for class 'step_sec_protein'

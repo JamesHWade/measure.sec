@@ -76,6 +76,8 @@ the chromatogram.</p>
 <span>  left_frac <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  right_frac <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"linear"</span>,</span>
+<span>  rf_span <span class="op">=</span> <span class="fl">2</span><span class="op">/</span><span class="fl">3</span>,</span>
+<span>  rf_maxit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">20</span><span class="op">)</span>,</span>
 <span>  role <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  trained <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  skip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -100,19 +102,35 @@ process. If <code>NULL</code> (the default), all measure columns (columns with c
 
 <dt id="arg-left-frac">left_frac<a class="anchor" aria-label="anchor" href="#arg-left-frac"></a></dt>
 <dd><p>Fraction of points from the beginning to use as the left
-baseline region. Default is <code>0.05</code> (first 5% of data points).</p></dd>
+baseline region. Default is <code>0.05</code> (first 5% of data points). Not used for
+<code>method = "rf"</code>.</p></dd>
 
 
 <dt id="arg-right-frac">right_frac<a class="anchor" aria-label="anchor" href="#arg-right-frac"></a></dt>
 <dd><p>Fraction of points from the end to use as the right
-baseline region. Default is <code>0.05</code> (last 5% of data points).</p></dd>
+baseline region. Default is <code>0.05</code> (last 5% of data points). Not used for
+<code>method = "rf"</code>.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>Method for baseline estimation. One of:</p><ul><li><p><code>"linear"</code> (default): Linear interpolation between left and right means</p></li>
 <li><p><code>"median"</code>: Uses median of baseline regions (more robust to outliers)</p></li>
 <li><p><code>"spline"</code>: Smooth spline through baseline regions</p></li>
+<li><p><code>"rf"</code>: Robust local regression (IDPmisc::rfbaseline). Best for complex
+baselines with curvature or drift. Does not use left_frac/right_frac.</p></li>
 </ul></dd>
+
+
+<dt id="arg-rf-span">rf_span<a class="anchor" aria-label="anchor" href="#arg-rf-span"></a></dt>
+<dd><p>Span parameter for RF baseline (only used when <code>method = "rf"</code>).
+A numeric value between 0 and 1 specifying the fraction of points used for
+local regression. Default is <code>2/3</code>. Higher values produce smoother baselines.</p></dd>
+
+
+<dt id="arg-rf-maxit">rf_maxit<a class="anchor" aria-label="anchor" href="#arg-rf-maxit"></a></dt>
+<dd><p>Maximum iterations for RF baseline (only used when <code>method = "rf"</code>).
+A numeric vector of length 2 specifying max iterations for the two stages
+of the robust fitting. Default is <code>c(20, 20)</code>.</p></dd>
 
 
 <dt id="arg-role">role<a class="anchor" aria-label="anchor" href="#arg-role"></a></dt>
@@ -168,9 +186,13 @@ correction, <code><a href="https://jameshwade.github.io/measure/reference/step_m
 <p>Other sec-chromatography:
 <code><a href="step_sec_band_broadening.html">step_sec_band_broadening()</a></code>,
 <code><a href="step_sec_detector_delay.html">step_sec_detector_delay()</a></code>,
+<code><a href="step_sec_exclude_regions.html">step_sec_exclude_regions()</a></code>,
+<code><a href="step_sec_integration_window.html">step_sec_integration_window()</a></code>,
 <code><a href="step_sec_mw_averages.html">step_sec_mw_averages()</a></code>,
 <code><a href="step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code>,
-<code><a href="step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code></p></div>
+<code><a href="step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code>,
+<code><a href="step_sec_peaks_deconvolve.html">step_sec_peaks_deconvolve()</a></code>,
+<code><a href="step_sec_peaks_detect.html">step_sec_peaks_detect()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -189,6 +211,12 @@ correction, <code><a href="https://jameshwade.github.io/measure/reference/step_m
 <span class="r-in"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">sec_triple_detect</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_wide.html" class="external-link">step_measure_input_wide</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"signal_"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">step_sec_baseline</span><span class="op">(</span>left_frac <span class="op">=</span> <span class="fl">0.1</span>, right_frac <span class="op">=</span> <span class="fl">0.1</span>, method <span class="op">=</span> <span class="st">"median"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Using RF baseline for complex baseline shapes</span></span></span>
+<span class="r-in"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">sec_triple_detect</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_wide.html" class="external-link">step_measure_input_wide</a></span><span class="op">(</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"signal_"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">step_sec_baseline</span><span class="op">(</span>method <span class="op">=</span> <span class="st">"rf"</span>, rf_span <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
