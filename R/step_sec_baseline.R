@@ -161,7 +161,6 @@ step_sec_baseline_new <- function(
 
 #' @export
 prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
-
   check_for_measure(training)
 
   # Validate method first
@@ -205,15 +204,20 @@ prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
 
   # Validate RF-specific parameters
   if (x$method == "rf") {
-    if (!is.numeric(x$rf_span) || length(x$rf_span) != 1 ||
-        x$rf_span <= 0 || x$rf_span > 1) {
+    if (
+      !is.numeric(x$rf_span) ||
+        length(x$rf_span) != 1 ||
+        x$rf_span <= 0 ||
+        x$rf_span > 1
+    ) {
       cli::cli_abort(
         "{.arg rf_span} must be a number between 0 and 1, not {.val {x$rf_span}}."
       )
     }
 
-    if (!is.numeric(x$rf_maxit) || length(x$rf_maxit) != 2 ||
-        any(x$rf_maxit < 1)) {
+    if (
+      !is.numeric(x$rf_maxit) || length(x$rf_maxit) != 2 || any(x$rf_maxit < 1)
+    ) {
       cli::cli_abort(
         "{.arg rf_maxit} must be a numeric vector of length 2 with positive values."
       )

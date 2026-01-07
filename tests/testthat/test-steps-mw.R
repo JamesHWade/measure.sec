@@ -364,7 +364,7 @@ test_that("step_sec_baseline with method='rf' corrects curved baseline", {
 
   # Signal with curved baseline
   peak <- dnorm(time, mean = 15, sd = 1)
-  baseline <- 0.1 + 0.002 * (time - 15)^2  # Curved drift
+  baseline <- 0.1 + 0.002 * (time - 15)^2 # Curved drift
   signal <- peak + baseline
 
   test_data <- tibble::tibble(sample_id = "test")
