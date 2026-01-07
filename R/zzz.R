@@ -146,6 +146,13 @@
       "step_sec_integration_window",
       "integration",
       "Define integration window for MW calculations"
+    ),
+
+    # Exclusion regions
+    list(
+      "step_sec_exclude_regions",
+      "preprocessing",
+      "Mark regions for exclusion from baseline/integration"
     )
   )
 
