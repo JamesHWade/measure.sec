@@ -81,8 +81,20 @@ reference:
   - step_sec_band_broadening
   - step_sec_concentration
   - step_sec_exclude_regions
+  - step_sec_flow_marker
   - step_sec_integration_window
   - estimate_sigma
+
+- title: Standards Helpers
+  desc: Functions for matching and normalizing calibration standard names
+  contents:
+  - get_recognized_standards
+  - get_standard_names
+  - get_standard_type
+  - normalize_standard_name
+  - match_standards
+  - is_standard
+  - auto_detect_standards
 
 - title: Peak Detection
   desc: Peak detection and deconvolution
