@@ -38,6 +38,9 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_exclude_regions'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_flow_marker'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_integration_window'
 required_pkgs(x, ...)
 

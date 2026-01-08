@@ -20,12 +20,18 @@
 <url><loc>https://jameshwade.github.io/measure-sec/articles/tutorial-triple-detection.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/auto_detect_standards.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/autoplot.sec_results.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/estimate_sigma.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/get_recognized_standards.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/get_sec_template.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/get_standard_names.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/get_standard_type.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/is_standard.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/list_sec_templates.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/match_standards.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure.sec-package.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_branching_index.html</loc></url>
@@ -43,6 +49,7 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/normalize_standard_name.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/plot_sec.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/plot_sec_calibration.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/plot_sec_chromatogram.html</loc></url>
@@ -75,6 +82,7 @@
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_dls.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.html</loc></url>
+<url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_flow_marker.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.html</loc></url>
 <url><loc>https://jameshwade.github.io/measure-sec/reference/step_sec_lals.html</loc></url>

@@ -39,6 +39,9 @@ tidy(x, ...)
 # S3 method for class 'step_sec_exclude_regions'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_flow_marker'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_integration_window'
 tidy(x, ...)
 

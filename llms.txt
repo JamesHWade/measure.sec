@@ -312,10 +312,31 @@ Baseline correction and signal enhancement
   : Convert Detector Signal to Concentration
 - [`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md)
   : SEC/GPC Region Exclusion
+- [`step_sec_flow_marker()`](https://jameshwade.github.io/measure-sec/reference/step_sec_flow_marker.md)
+  : Flow Marker Correction for SEC/GPC
 - [`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md)
   : SEC/GPC Integration Window
 - [`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
   : Estimate Spreading Parameter from Narrow Standard
+
+## Standards Helpers
+
+Functions for matching and normalizing calibration standard names
+
+- [`get_recognized_standards()`](https://jameshwade.github.io/measure-sec/reference/get_recognized_standards.md)
+  : Get Recognized SEC Calibration Standards
+- [`get_standard_names()`](https://jameshwade.github.io/measure-sec/reference/get_standard_names.md)
+  : Get Standard Names
+- [`get_standard_type()`](https://jameshwade.github.io/measure-sec/reference/get_standard_type.md)
+  : Get Standard Type
+- [`normalize_standard_name()`](https://jameshwade.github.io/measure-sec/reference/normalize_standard_name.md)
+  : Normalize Standard Names for Matching
+- [`match_standards()`](https://jameshwade.github.io/measure-sec/reference/match_standards.md)
+  : Match Sample Names to Recognized Standards
+- [`is_standard()`](https://jameshwade.github.io/measure-sec/reference/is_standard.md)
+  : Check if Sample Names Contain Standards
+- [`auto_detect_standards()`](https://jameshwade.github.io/measure-sec/reference/auto_detect_standards.md)
+  : Auto-Detect Standards in a Data Frame
 
 ## Peak Detection
 
