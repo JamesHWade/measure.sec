@@ -1,4 +1,4 @@
-# measure.sec ![](reference/figures/logo.png)
+# measure.sec
 
 ## Overview
 

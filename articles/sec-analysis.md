@@ -933,14 +933,14 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          purrr_1.2.0            tidyr_1.3.2           
+#> [1] ggplot2_4.0.1          purrr_1.2.1            tidyr_1.3.2           
 #> [4] measure.sec_0.0.0.9000 measure_0.0.1.9002     recipes_1.3.1         
 #> [7] dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.55           bslib_0.9.0        
 #>  [4] lattice_0.22-7      vctrs_0.6.5         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.0       
+#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
 #> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.0  
 #> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
 #> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
@@ -958,7 +958,7 @@ sessionInfo()
 #> [52] timechange_0.3.0    rmarkdown_2.30      globals_0.18.0     
 #> [55] nnet_7.3-20         timeDate_4051.111   ragg_1.5.0         
 #> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] mgcv_1.9-3          rlang_1.1.6         Rcpp_1.1.0         
+#> [61] mgcv_1.9-3          rlang_1.1.7         Rcpp_1.1.1         
 #> [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
 #> [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
 ```
