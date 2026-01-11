@@ -2,7 +2,17 @@ url: https://jameshwade.github.io/measure-sec/
 
 template:
   bootstrap: 5
-  bootswatch: flatly
+  bslib:
+    primary: "#4A90A4"      # Main brand color
+    warning: "#FF9933"       # Accent color
+    base_font: {google: "Open Sans"}
+    heading_font: {google: "Montserrat"}
+    code_font: {google: "Fira Code"}
+  light-switch: true         # Enable dark mode
+
+logo:
+  src: man/figures/logo.png
+  alt: "measure.sec hex logo"
 
 home:
   title: measure.sec
