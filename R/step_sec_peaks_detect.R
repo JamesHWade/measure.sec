@@ -348,7 +348,6 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   n <- length(value)
 
   # Handle edge cases
-
   if (n < 10) {
     return(measure:::new_peaks_tbl())
   }
@@ -367,10 +366,15 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
     return(measure:::new_peaks_tbl())
   }
 
+  # Ensure data is sorted by location first
+  ord <- order(loc_valid)
+  loc_sorted <- loc_valid[ord]
+  val_sorted <- val_valid[ord]
+
   # Step 1: LOESS smoothing
   loess_fit <- tryCatch(
     stats::loess(
-      val_valid ~ loc_valid,
+      val_sorted ~ loc_sorted,
       span = loess_span,
       degree = 2,
       family = "gaussian"
@@ -382,54 +386,58 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   )
 
   if (!is.null(loess_fit)) {
-    smoothed <- stats::predict(loess_fit, newdata = loc_valid)
+    smoothed <- stats::predict(loess_fit, newdata = loc_sorted)
     # Handle any NAs from prediction
-    smoothed[is.na(smoothed)] <- val_valid[is.na(smoothed)]
-  } else {
-    smoothed <- val_valid
+    smoothed[is.na(smoothed)] <- val_sorted[is.na(smoothed)]
+    val_sorted <- smoothed
   }
-
-  # Ensure data is sorted by location
-  ord <- order(loc_valid)
-  loc_sorted <- loc_valid[ord]
-  val_sorted <- smoothed[ord]
 
   # Step 2: Iterative Soft Thresholding (IST) with nonlinear spacing
-  # Estimate baseline variance from the lowest portion of the signal
-  baseline_region <- val_sorted < stats::quantile(val_sorted, 0.1)
-  if (sum(baseline_region) < 3) {
-    baseline_region <- val_sorted < stats::quantile(val_sorted, 0.25)
-  }
-  baseline_var <- if (sum(baseline_region) > 2) {
-    stats::var(val_sorted[baseline_region])
+  # Use points with location < 0.05 as baseline region. When data starts at
+  # higher values (e.g., SEC elution volumes of 5-25 mL), this returns NA,
+  # resulting in all-zero IST counts and a percentile-based threshold fallback.
+  early_region <- loc_sorted < 0.05
+
+  # Baseline variance from early chromatogram region
+  baseline_var <- if (sum(early_region) > 0) {
+    stats::var(val_sorted[early_region], na.rm = TRUE)
   } else {
-    stats::var(val_sorted) / 100 # fallback
+    cli::cli_inform(c(
+      "i" = "No data points below x=0.05 for baseline estimation.",
+      "i" = "Using percentile-based threshold for peak detection."
+    ))
+    NA_real_
   }
 
   # Generate nonlinear threshold spacing
-  # Concentrates thresholds near the baseline for better sensitivity
   nonlinear_spacing <- function(n, a) {
     nlseq <- 1 / exp(seq(0, a, length.out = n))
     nlseq / max(nlseq)
   }
 
-  min_val <- min(val_sorted, na.rm = TRUE)
+  # Use first value as reference (matches original finderskeepers)
+  first_val <- val_sorted[1]
   max_val <- max(val_sorted, na.rm = TRUE)
 
-  if (abs(max_val - min_val) < .Machine$double.eps * 100) {
+  if (abs(max_val - first_val) < .Machine$double.eps * 100) {
     # Signal is essentially flat
     return(measure:::new_peaks_tbl())
   }
 
-  thresholds <- min_val +
-    (max_val - min_val) *
+  thresholds <- first_val +
+    (max_val - first_val) *
       nonlinear_spacing(ist_points, ist_nonlinearity)
 
   # Count points at each threshold level
+  # When baseline_var is NA (no early region data), return 0 to trigger fallback threshold
   point_counts <- vapply(
     thresholds,
     function(thresh) {
-      as.integer(sum(abs(val_sorted - thresh) <= sqrt(baseline_var)))
+      if (is.na(baseline_var)) {
+        0L
+      } else {
+        as.integer(sum(abs(val_sorted - thresh) <= baseline_var, na.rm = TRUE))
+      }
     },
     integer(1)
   )
@@ -443,19 +451,26 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   threshold <- tryCatch(
     {
       cpt_result <- changepoint::cpt.mean(point_counts)
-      cpt_idx <- min(changepoint::cpts(cpt_result))
-      if (length(cpt_idx) == 0 || cpt_idx < 1 || cpt_idx > length(thresholds)) {
-        # Fallback: use 10th percentile
-        stats::quantile(val_sorted, 0.1)
+      cpts <- changepoint::cpts(cpt_result)
+
+      if (length(cpts) == 0) {
+        # No changepoint found (e.g., all counts are 0)
+        # Use 10th percentile as fallback
+        stats::quantile(val_sorted, 0.1, na.rm = TRUE)
       } else {
-        thresholds[cpt_idx]
+        cpt_idx <- min(cpts)
+        if (cpt_idx < 1 || cpt_idx > length(thresholds)) {
+          stats::quantile(val_sorted, 0.1, na.rm = TRUE)
+        } else {
+          thresholds[cpt_idx]
+        }
       }
     },
     error = function(e) {
       cli::cli_warn(
         "Changepoint detection failed: {e$message}. Using percentile threshold."
       )
-      stats::quantile(val_sorted, 0.1)
+      stats::quantile(val_sorted, 0.1, na.rm = TRUE)
     }
   )
 
@@ -465,7 +480,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
     return(measure:::new_peaks_tbl())
   }
 
-  # Step 5: Peak detection by walking through above-threshold regions
+  # Step 5: Peak boundary detection using walk algorithm
   peaks <- .find_peak_boundaries(
     loc_sorted,
     val_sorted,
@@ -476,16 +491,24 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   peaks
 }
 
-#' Find peak boundaries from thresholded signal
+#' Find peak boundaries using walk algorithm
 #'
-#' @param location Sorted location vector.
-#' @param value Sorted (smoothed) value vector.
+#' Walks through above-threshold points to identify peak start, apex, and end
+#' positions using an upward-then-downward traversal pattern.
+#'
+#' @param location Sorted location vector (x-axis, e.g., elution volume).
+#' @param value Sorted (smoothed) value vector (y-axis, e.g., signal).
 #' @param above_thresh Logical vector indicating points above threshold.
-#' @param min_height Minimum peak height.
+#' @param min_height Minimum peak height to keep.
 #' @return A peaks_tbl object.
 #' @noRd
-.find_peak_boundaries <- function(location, value, above_thresh, min_height) {
-  # Get indices of above-threshold points
+.find_peak_boundaries <- function(
+  location,
+  value,
+  above_thresh,
+  min_height
+) {
+  # Get the culled data (points above threshold)
   idx_above <- which(above_thresh)
   n_above <- length(idx_above)
 
@@ -493,72 +516,112 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
     return(measure:::new_peaks_tbl())
   }
 
-  # Initialize peak storage
-  peaks <- list()
-  peak_count <- 0L
+  # Extract x and y for above-threshold points
+  xvar <- location[idx_above]
+  yvar <- value[idx_above]
 
-  # Walk through above-threshold points to find peaks
-  i <- 1
-  while (i < n_above) {
-    # Start of potential peak region
-    start_idx <- idx_above[i]
+  # Initialize peak storage - pre-allocate for up to 50 peaks
+  # (sufficient for typical SEC chromatograms; warns if exceeded)
+  max_peaks <- 50L
+  peaks_start <- rep(0, max_peaks)
+  peaks_apex <- rep(0, max_peaks)
+  peaks_end <- rep(0, max_peaks)
 
-    # Find apex (highest point in this connected region)
-    j <- i
-    apex_idx <- start_idx
-    apex_val <- value[start_idx]
+  # Walk through the data using original algorithm
+  counter <- 1L
+  starter <- 1L
+  chaser <- starter
+  scouter <- chaser + 1L
 
-    # Trace upward
-    while (j < n_above && value[idx_above[j + 1]] >= value[idx_above[j]]) {
-      j <- j + 1
-      if (value[idx_above[j]] > apex_val) {
-        apex_idx <- idx_above[j]
-        apex_val <- value[idx_above[j]]
-      }
+  while (scouter <= n_above) {
+    # Trace upward (while signal is increasing)
+    while (scouter <= n_above && yvar[chaser] < yvar[scouter]) {
+      chaser <- chaser + 1L
+      scouter <- scouter + 1L
     }
 
-    # Apex found at j, now trace downward
-    apex_j <- j
-
-    while (j < n_above && value[idx_above[j + 1]] <= value[idx_above[j]]) {
-      j <- j + 1
+    # Record start and apex
+    if (
+      starter <= n_above && (scouter - 1L) >= 1L && (scouter - 1L) <= n_above
+    ) {
+      peaks_start[counter] <- xvar[starter]
+      peaks_apex[counter] <- xvar[scouter - 1L]
     }
 
-    # End of peak region
-    end_idx <- idx_above[j]
+    chaser <- chaser + 1L
+    scouter <- scouter + 1L
 
-    # Calculate height (apex - mean of start and end values)
-    base_height <- (value[start_idx] + value[end_idx]) / 2
-    peak_height <- apex_val - base_height
-
-    # Only keep if height exceeds threshold
-    if (peak_height >= min_height) {
-      peak_count <- peak_count + 1
-      peaks[[peak_count]] <- list(
-        peak_id = peak_count,
-        location = location[apex_idx],
-        height = peak_height,
-        left_base = location[start_idx],
-        right_base = location[end_idx],
-        area = NA_real_
-      )
+    # Trace downward (while signal is decreasing)
+    while (scouter <= n_above && yvar[chaser] > yvar[scouter]) {
+      chaser <- chaser + 1L
+      scouter <- scouter + 1L
     }
 
-    # Move to next potential peak
-    i <- j + 1
+    # Record end
+    if ((scouter - 2L) >= 1L && (scouter - 2L) <= n_above) {
+      peaks_end[counter] <- xvar[scouter - 2L]
+    }
+
+    # Move to next peak
+    starter <- chaser + 1L
+    chaser <- starter
+    scouter <- chaser + 1L
+    counter <- counter + 1L
+
+    # Safety check - warn if we hit the limit
+    if (counter > max_peaks) {
+      cli::cli_warn(c(
+        "!" = "Peak detection reached maximum limit of {max_peaks} peaks.",
+        "i" = "Additional peaks beyond this limit are not reported.",
+        "i" = "Consider increasing {.arg min_height} to reduce peak count."
+      ))
+      break
+    }
   }
 
-  # Convert to peaks_tbl
-  if (peak_count == 0) {
+  # Filter to valid peaks (start > 0) and calculate heights
+  valid_peaks <- peaks_start > 0
+  n_valid <- sum(valid_peaks)
+
+  if (n_valid == 0) {
     return(measure:::new_peaks_tbl())
   }
 
+  # Extract valid peaks
+  valid_start <- peaks_start[valid_peaks]
+  valid_apex <- peaks_apex[valid_peaks]
+  valid_end <- peaks_end[valid_peaks]
+
+  # Calculate heights: apex_value - start_value
+  heights <- vapply(
+    seq_len(n_valid),
+    function(i) {
+      apex_val <- value[which.min(abs(location - valid_apex[i]))]
+      start_val <- value[which.min(abs(location - valid_start[i]))]
+      apex_val - start_val
+    },
+    double(1)
+  )
+
+  # Filter by min_height
+  keep <- heights > min_height
+  if (!any(keep)) {
+    return(measure:::new_peaks_tbl())
+  }
+
+  # Build final peaks table
+  final_start <- valid_start[keep]
+  final_apex <- valid_apex[keep]
+  final_end <- valid_end[keep]
+  final_heights <- heights[keep]
+  n_final <- length(final_start)
+
   measure:::new_peaks_tbl(
-    peak_id = vapply(peaks, function(p) as.integer(p$peak_id), integer(1)),
-    location = vapply(peaks, `[[`, double(1), "location"),
-    height = vapply(peaks, `[[`, double(1), "height"),
-    left_base = vapply(peaks, `[[`, double(1), "left_base"),
-    right_base = vapply(peaks, `[[`, double(1), "right_base"),
-    area = vapply(peaks, `[[`, double(1), "area")
+    peak_id = seq_len(n_final),
+    location = final_apex,
+    height = final_heights,
+    left_base = final_start,
+    right_base = final_end,
+    area = rep(NA_real_, n_final)
   )
 }
