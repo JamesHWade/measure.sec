@@ -356,8 +356,8 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
     return(measure:::new_peaks_tbl())
   }
 
-  # Remove NAs for processing
-  valid_idx <- !is.na(value)
+  # Remove NAs for processing (filter both location and value)
+  valid_idx <- !is.na(value) & !is.na(location)
   loc_valid <- location[valid_idx]
   val_valid <- value[valid_idx]
   n_valid <- length(val_valid)
