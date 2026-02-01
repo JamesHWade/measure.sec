@@ -56,52 +56,51 @@
 #'   width_2 = 0.5
 #' )
 measure_sec_resolution <- function(
-  retention_1,
-  retention_2,
-  width_1,
-  width_2,
-  width_type = c("baseline", "half_height", "tangent"),
-  method = c("usp", "ep")
+	retention_1,
+	retention_2,
+	width_1,
+	width_2,
+	width_type = c("baseline", "half_height", "tangent"),
+	method = c("usp", "ep")
 ) {
-  width_type <- match.arg(width_type)
-  method <- match.arg(method)
+	width_type <- match.arg(width_type)
+	method <- match.arg(method)
 
-  # Validate inputs
-  if (!is.numeric(retention_1) || !is.numeric(retention_2)) {
-    cli::cli_abort("Retention times must be numeric.")
-  }
-  if (!is.numeric(width_1) || !is.numeric(width_2)) {
-    cli::cli_abort("Peak widths must be numeric.")
-  }
-  if (width_1 <= 0 || width_2 <= 0) {
-    cli::cli_abort("Peak widths must be positive.")
-  }
+	# Validate inputs
+	if (!is.numeric(retention_1) || !is.numeric(retention_2)) {
+		cli::cli_abort("Retention times must be numeric.")
+	}
+	if (!is.numeric(width_1) || !is.numeric(width_2)) {
+		cli::cli_abort("Peak widths must be numeric.")
+	}
+	if (width_1 <= 0 || width_2 <= 0) {
+		cli::cli_abort("Peak widths must be positive.")
+	}
 
-  # Ensure proper order (peak 1 should elute before peak 2)
-  if (retention_1 > retention_2) {
-    temp <- retention_1
-    retention_1 <- retention_2
-    retention_2 <- temp
-    temp <- width_1
-    width_1 <- width_2
-    width_2 <- temp
-  }
+	# Ensure proper order (peak 1 should elute before peak 2)
+	if (retention_1 > retention_2) {
+		temp <- retention_1
+		retention_1 <- retention_2
+		retention_2 <- temp
+		temp <- width_1
+		width_1 <- width_2
+		width_2 <- temp
+	}
 
-  delta_t <- retention_2 - retention_1
+	delta_t <- retention_2 - retention_1
 
-  if (method == "usp") {
-    # USP: Rs = 2(t2 - t1) / (w1 + w2)
-    # For baseline width
-    Rs <- 2 * delta_t / (width_1 + width_2)
-  } else {
-    # EP: Rs = 1.18(t2 - t1) / (w1 + w2)
-    # For half-height width
-    Rs <- 1.18 * delta_t / (width_1 + width_2)
-  }
+	if (method == "usp") {
+		# USP: Rs = 2(t2 - t1) / (w1 + w2)
+		# For baseline width
+		Rs <- 2 * delta_t / (width_1 + width_2)
+	} else {
+		# EP: Rs = 1.18(t2 - t1) / (w1 + w2)
+		# For half-height width
+		Rs <- 1.18 * delta_t / (width_1 + width_2)
+	}
 
-  Rs
+	Rs
 }
-
 
 #' Calculate Theoretical Plate Count
 #'
@@ -158,44 +157,43 @@ measure_sec_resolution <- function(
 #'   dead_time = 3.0
 #' )
 measure_sec_plate_count <- function(
-  retention,
-  width,
-  width_type = c("half_height", "baseline", "inflection"),
-  dead_time = NULL
+	retention,
+	width,
+	width_type = c("half_height", "baseline", "inflection"),
+	dead_time = NULL
 ) {
-  width_type <- match.arg(width_type)
+	width_type <- match.arg(width_type)
 
-  if (!is.numeric(retention) || retention <= 0) {
-    cli::cli_abort("Retention time must be a positive number.")
-  }
-  if (!is.numeric(width) || width <= 0) {
-    cli::cli_abort("Peak width must be a positive number.")
-  }
+	if (!is.numeric(retention) || retention <= 0) {
+		cli::cli_abort("Retention time must be a positive number.")
+	}
+	if (!is.numeric(width) || width <= 0) {
+		cli::cli_abort("Peak width must be a positive number.")
+	}
 
-  # Adjust retention if dead time provided
-  if (!is.null(dead_time)) {
-    if (!is.numeric(dead_time) || dead_time < 0) {
-      cli::cli_abort("Dead time must be a non-negative number.")
-    }
-    if (dead_time >= retention) {
-      cli::cli_abort("Dead time must be less than retention time.")
-    }
-    retention <- retention - dead_time
-  }
+	# Adjust retention if dead time provided
+	if (!is.null(dead_time)) {
+		if (!is.numeric(dead_time) || dead_time < 0) {
+			cli::cli_abort("Dead time must be a non-negative number.")
+		}
+		if (dead_time >= retention) {
+			cli::cli_abort("Dead time must be less than retention time.")
+		}
+		retention <- retention - dead_time
+	}
 
-  # Calculate N based on width type
-  ratio <- retention / width
+	# Calculate N based on width type
+	ratio <- retention / width
 
-  N <- switch(
-    width_type,
-    "half_height" = 5.54 * ratio^2,
-    "baseline" = 16 * ratio^2,
-    "inflection" = 4 * ratio^2
-  )
+	N <- switch(
+		width_type,
+		"half_height" = 5.54 * ratio^2,
+		"baseline" = 16 * ratio^2,
+		"inflection" = 4 * ratio^2
+	)
 
-  N
+	N
 }
-
 
 #' Calculate Peak Asymmetry Factor
 #'
@@ -247,31 +245,30 @@ measure_sec_plate_count <- function(
 #'   method = "usp"
 #' )
 measure_sec_asymmetry <- function(
-  leading,
-  tailing,
-  method = c("usp", "ep")
+	leading,
+	tailing,
+	method = c("usp", "ep")
 ) {
-  method <- match.arg(method)
+	method <- match.arg(method)
 
-  if (!is.numeric(leading) || leading <= 0) {
-    cli::cli_abort("Leading width must be a positive number.")
-  }
-  if (!is.numeric(tailing) || tailing <= 0) {
-    cli::cli_abort("Tailing width must be a positive number.")
-  }
+	if (!is.numeric(leading) || leading <= 0) {
+		cli::cli_abort("Leading width must be a positive number.")
+	}
+	if (!is.numeric(tailing) || tailing <= 0) {
+		cli::cli_abort("Tailing width must be a positive number.")
+	}
 
-  if (method == "usp") {
-    # USP Tailing Factor: Tf = (a + b) / 2a
-    # where a = leading half-width, b = tailing half-width
-    Tf <- (leading + tailing) / (2 * leading)
-    return(Tf)
-  } else {
-    # EP Asymmetry Factor: As = b / a
-    As <- tailing / leading
-    return(As)
-  }
+	if (method == "usp") {
+		# USP Tailing Factor: Tf = (a + b) / 2a
+		# where a = leading half-width, b = tailing half-width
+		Tf <- (leading + tailing) / (2 * leading)
+		return(Tf)
+	} else {
+		# EP Asymmetry Factor: As = b / a
+		As <- tailing / leading
+		return(As)
+	}
 }
-
 
 #' Calculate Mass Recovery
 #'
@@ -318,22 +315,21 @@ measure_sec_asymmetry <- function(
 #' )
 #' # Returns 97.5%
 measure_sec_recovery <- function(
-  detected_mass,
-  injected_mass,
-  units = "mg"
+	detected_mass,
+	injected_mass,
+	units = "mg"
 ) {
-  if (!is.numeric(detected_mass) || detected_mass < 0) {
-    cli::cli_abort("Detected mass must be a non-negative number.")
-  }
-  if (!is.numeric(injected_mass) || injected_mass <= 0) {
-    cli::cli_abort("Injected mass must be a positive number.")
-  }
+	if (!is.numeric(detected_mass) || detected_mass < 0) {
+		cli::cli_abort("Detected mass must be a non-negative number.")
+	}
+	if (!is.numeric(injected_mass) || injected_mass <= 0) {
+		cli::cli_abort("Injected mass must be a positive number.")
+	}
 
-  recovery <- 100 * detected_mass / injected_mass
+	recovery <- 100 * detected_mass / injected_mass
 
-  recovery
+	recovery
 }
-
 
 #' System Suitability Test for SEC
 #'
@@ -409,268 +405,270 @@ measure_sec_recovery <- function(
 #' print(sst)
 #' }
 measure_sec_suitability <- function(
-  data = NULL,
-  peaks,
-  reference_peaks = NULL,
-  injected_mass = NULL,
-  criteria = NULL,
-  column_length = NULL
+	data = NULL,
+	peaks,
+	reference_peaks = NULL,
+	injected_mass = NULL,
+	criteria = NULL,
+	column_length = NULL
 ) {
-  # Default criteria (typical biopharmaceutical)
-  if (is.null(criteria)) {
-    criteria <- list(
-      resolution_min = 1.5,
-      plate_count_min = 5000,
-      tailing_min = 0.8,
-      tailing_max = 1.5,
-      recovery_min = 95,
-      recovery_max = 105,
-      retention_rsd_max = 1.0,
-      area_rsd_max = 2.0
-    )
-  }
+	# Default criteria (typical biopharmaceutical)
+	if (is.null(criteria)) {
+		criteria <- list(
+			resolution_min = 1.5,
+			plate_count_min = 5000,
+			tailing_min = 0.8,
+			tailing_max = 1.5,
+			recovery_min = 95,
+			recovery_max = 105,
+			retention_rsd_max = 1.0,
+			area_rsd_max = 2.0
+		)
+	}
 
-  # Initialize results
-  results <- list()
-  all_passed <- TRUE
+	# Initialize results
+	results <- list()
+	all_passed <- TRUE
 
-  # Validate peaks input
-  if (!is.data.frame(peaks)) {
-    cli::cli_abort("{.arg peaks} must be a data frame.")
-  }
+	# Validate peaks input
+	if (!is.data.frame(peaks)) {
+		cli::cli_abort("{.arg peaks} must be a data frame.")
+	}
 
-  required_cols <- c("retention", "width")
-  missing_cols <- setdiff(required_cols, names(peaks))
-  if (length(missing_cols) > 0) {
-    cli::cli_abort(
-      "Missing required columns in {.arg peaks}: {.val {missing_cols}}."
-    )
-  }
+	required_cols <- c("retention", "width")
+	missing_cols <- setdiff(required_cols, names(peaks))
+	if (length(missing_cols) > 0) {
+		cli::cli_abort(
+			"Missing required columns in {.arg peaks}: {.val {missing_cols}}."
+		)
+	}
 
-  # Resolution (if reference peaks specified)
-  if (!is.null(reference_peaks) && length(reference_peaks) >= 2) {
-    if ("name" %in% names(peaks)) {
-      peak1_idx <- which(peaks$name == reference_peaks[1])
-      peak2_idx <- which(peaks$name == reference_peaks[2])
-    } else {
-      peak1_idx <- 1
-      peak2_idx <- 2
-    }
+	# Resolution (if reference peaks specified)
+	if (!is.null(reference_peaks) && length(reference_peaks) >= 2) {
+		if ("name" %in% names(peaks)) {
+			peak1_idx <- which(peaks$name == reference_peaks[1])
+			peak2_idx <- which(peaks$name == reference_peaks[2])
+		} else {
+			peak1_idx <- 1
+			peak2_idx <- 2
+		}
 
-    if (length(peak1_idx) > 0 && length(peak2_idx) > 0) {
-      Rs <- measure_sec_resolution(
-        retention_1 = peaks$retention[peak1_idx[1]],
-        retention_2 = peaks$retention[peak2_idx[1]],
-        width_1 = peaks$width[peak1_idx[1]],
-        width_2 = peaks$width[peak2_idx[1]]
-      )
+		if (length(peak1_idx) > 0 && length(peak2_idx) > 0) {
+			Rs <- measure_sec_resolution(
+				retention_1 = peaks$retention[peak1_idx[1]],
+				retention_2 = peaks$retention[peak2_idx[1]],
+				width_1 = peaks$width[peak1_idx[1]],
+				width_2 = peaks$width[peak2_idx[1]]
+			)
 
-      Rs_pass <- Rs >= criteria$resolution_min
-      all_passed <- all_passed && Rs_pass
+			Rs_pass <- Rs >= criteria$resolution_min
+			all_passed <- all_passed && Rs_pass
 
-      results$resolution <- list(
-        value = Rs,
-        criterion = paste0(">= ", criteria$resolution_min),
-        passed = Rs_pass,
-        peaks = paste(reference_peaks[1:2], collapse = " / ")
-      )
-    }
-  }
+			results$resolution <- list(
+				value = Rs,
+				criterion = paste0(">= ", criteria$resolution_min),
+				passed = Rs_pass,
+				peaks = paste(reference_peaks[1:2], collapse = " / ")
+			)
+		}
+	}
 
-  # Plate count (use largest peak or first peak)
-  if ("area" %in% names(peaks)) {
-    main_peak_idx <- which.max(peaks$area)
-  } else {
-    main_peak_idx <- 1
-  }
+	# Plate count (use largest peak or first peak)
+	if ("area" %in% names(peaks)) {
+		main_peak_idx <- which.max(peaks$area)
+	} else {
+		main_peak_idx <- 1
+	}
 
-  N <- measure_sec_plate_count(
-    retention = peaks$retention[main_peak_idx],
-    width = peaks$width[main_peak_idx]
-  )
+	N <- measure_sec_plate_count(
+		retention = peaks$retention[main_peak_idx],
+		width = peaks$width[main_peak_idx]
+	)
 
-  N_pass <- N >= criteria$plate_count_min
-  all_passed <- all_passed && N_pass
+	N_pass <- N >= criteria$plate_count_min
+	all_passed <- all_passed && N_pass
 
-  results$plate_count <- list(
-    value = round(N),
-    criterion = paste0(">= ", criteria$plate_count_min),
-    passed = N_pass
-  )
+	results$plate_count <- list(
+		value = round(N),
+		criterion = paste0(">= ", criteria$plate_count_min),
+		passed = N_pass
+	)
 
-  # Plates per meter (if column length provided)
-  if (!is.null(column_length) && column_length > 0) {
-    plates_per_m <- N / (column_length / 100)
-    results$plates_per_meter <- list(
-      value = round(plates_per_m),
-      criterion = "informational",
-      passed = NA
-    )
-  }
+	# Plates per meter (if column length provided)
+	if (!is.null(column_length) && column_length > 0) {
+		plates_per_m <- N / (column_length / 100)
+		results$plates_per_meter <- list(
+			value = round(plates_per_m),
+			criterion = "informational",
+			passed = NA
+		)
+	}
 
-  # Tailing factor (if leading/tailing widths available, otherwise skip)
-  if ("leading" %in% names(peaks) && "tailing" %in% names(peaks)) {
-    Tf <- measure_sec_asymmetry(
-      leading = peaks$leading[main_peak_idx],
-      tailing = peaks$tailing[main_peak_idx]
-    )
+	# Tailing factor (if leading/tailing widths available, otherwise skip)
+	if ("leading" %in% names(peaks) && "tailing" %in% names(peaks)) {
+		Tf <- measure_sec_asymmetry(
+			leading = peaks$leading[main_peak_idx],
+			tailing = peaks$tailing[main_peak_idx]
+		)
 
-    Tf_pass <- Tf >= criteria$tailing_min && Tf <= criteria$tailing_max
-    all_passed <- all_passed && Tf_pass
+		Tf_pass <- Tf >= criteria$tailing_min && Tf <= criteria$tailing_max
+		all_passed <- all_passed && Tf_pass
 
-    results$tailing_factor <- list(
-      value = round(Tf, 2),
-      criterion = paste0(criteria$tailing_min, "-", criteria$tailing_max),
-      passed = Tf_pass
-    )
-  }
+		results$tailing_factor <- list(
+			value = round(Tf, 2),
+			criterion = paste0(criteria$tailing_min, "-", criteria$tailing_max),
+			passed = Tf_pass
+		)
+	}
 
-  # Mass recovery (if injected mass and areas available)
-  if (!is.null(injected_mass) && "area" %in% names(peaks)) {
-    total_area <- sum(peaks$area, na.rm = TRUE)
-    # Assume area is proportional to mass (needs calibration in practice)
-    # This is a placeholder - real implementation needs response factor
-    recovery <- measure_sec_recovery(
-      detected_mass = total_area / 100 * injected_mass, # Simplified
-      injected_mass = injected_mass
-    )
+	# Mass recovery (if injected mass and areas available)
+	if (!is.null(injected_mass) && "area" %in% names(peaks)) {
+		total_area <- sum(peaks$area, na.rm = TRUE)
+		# Assume area is proportional to mass (needs calibration in practice)
+		# This is a placeholder - real implementation needs response factor
+		recovery <- measure_sec_recovery(
+			detected_mass = total_area / 100 * injected_mass, # Simplified
+			injected_mass = injected_mass
+		)
 
-    recovery_pass <- recovery >= criteria$recovery_min &&
-      recovery <= criteria$recovery_max
-    all_passed <- all_passed && recovery_pass
+		recovery_pass <- recovery >= criteria$recovery_min &&
+			recovery <= criteria$recovery_max
+		all_passed <- all_passed && recovery_pass
 
-    results$recovery <- list(
-      value = round(recovery, 1),
-      criterion = paste0(
-        criteria$recovery_min,
-        "-",
-        criteria$recovery_max,
-        "%"
-      ),
-      passed = recovery_pass
-    )
-  }
+		results$recovery <- list(
+			value = round(recovery, 1),
+			criterion = paste0(
+				criteria$recovery_min,
+				"-",
+				criteria$recovery_max,
+				"%"
+			),
+			passed = recovery_pass
+		)
+	}
 
-  # Retention time RSD (if multiple replicates in peaks)
-  if ("replicate" %in% names(peaks) && "name" %in% names(peaks)) {
-    # Calculate RSD per peak
-    rsd_data <- peaks |>
-      dplyr::group_by(.data$name) |>
-      dplyr::summarize(
-        mean_rt = mean(.data$retention, na.rm = TRUE),
-        sd_rt = stats::sd(.data$retention, na.rm = TRUE),
-        rsd_rt = 100 * .data$sd_rt / .data$mean_rt,
-        .groups = "drop"
-      )
+	# Retention time RSD (if multiple replicates in peaks)
+	if ("replicate" %in% names(peaks) && "name" %in% names(peaks)) {
+		# Calculate RSD per peak
+		rsd_data <- peaks |>
+			dplyr::group_by(.data$name) |>
+			dplyr::summarize(
+				mean_rt = mean(.data$retention, na.rm = TRUE),
+				sd_rt = stats::sd(.data$retention, na.rm = TRUE),
+				rsd_rt = 100 * .data$sd_rt / .data$mean_rt,
+				.groups = "drop"
+			)
 
-    max_rsd <- max(rsd_data$rsd_rt, na.rm = TRUE)
+		max_rsd <- max(rsd_data$rsd_rt, na.rm = TRUE)
 
-    if (!is.na(max_rsd) && is.finite(max_rsd)) {
-      rsd_pass <- max_rsd <= criteria$retention_rsd_max
-      all_passed <- all_passed && rsd_pass
+		if (!is.na(max_rsd) && is.finite(max_rsd)) {
+			rsd_pass <- max_rsd <= criteria$retention_rsd_max
+			all_passed <- all_passed && rsd_pass
 
-      results$retention_rsd <- list(
-        value = round(max_rsd, 2),
-        criterion = paste0("<= ", criteria$retention_rsd_max, "%"),
-        passed = rsd_pass
-      )
-    }
-  }
+			results$retention_rsd <- list(
+				value = round(max_rsd, 2),
+				criterion = paste0("<= ", criteria$retention_rsd_max, "%"),
+				passed = rsd_pass
+			)
+		}
+	}
 
-  # Build summary
-  summary_lines <- character()
-  for (metric in names(results)) {
-    r <- results[[metric]]
-    status <- if (is.na(r$passed)) {
-      "INFO"
-    } else if (r$passed) {
-      "PASS"
-    } else {
-      "FAIL"
-    }
-    summary_lines <- c(
-      summary_lines,
-      sprintf(
-        "%-20s: %s (%s) [%s]",
-        gsub("_", " ", metric, fixed = TRUE),
-        format(r$value, nsmall = 1),
-        r$criterion,
-        status
-      )
-    )
-  }
+	# Build summary
+	summary_lines <- character()
+	for (metric in names(results)) {
+		r <- results[[metric]]
+		status <- if (is.na(r$passed)) {
+			"INFO"
+		} else if (r$passed) {
+			"PASS"
+		} else {
+			"FAIL"
+		}
+		summary_lines <- c(
+			summary_lines,
+			sprintf(
+				"%-20s: %s (%s) [%s]",
+				gsub("_", " ", metric, fixed = TRUE),
+				format(r$value, nsmall = 1),
+				r$criterion,
+				status
+			)
+		)
+	}
 
-  # Create output object
-  output <- list(
-    results = results,
-    passed = all_passed,
-    summary = paste(summary_lines, collapse = "\n"),
-    criteria = criteria,
-    n_peaks = nrow(peaks)
-  )
+	# Create output object
+	output <- list(
+		results = results,
+		passed = all_passed,
+		summary = paste(summary_lines, collapse = "\n"),
+		criteria = criteria,
+		n_peaks = nrow(peaks)
+	)
 
-  class(output) <- c("sec_suitability", "list")
+	class(output) <- c("sec_suitability", "list")
 
-  output
+	output
 }
-
 
 #' @export
 print.sec_suitability <- function(x, ...) {
-  cat("SEC System Suitability Test\n")
-  cat(strrep("=", 50), "\n\n")
+	cat("SEC System Suitability Test\n")
+	cat(strrep("=", 50), "\n\n")
 
-  cat("Overall Status: ")
-  if (x$passed) {
-    cat("PASSED\n\n")
-  } else {
-    cat("FAILED\n\n")
-  }
+	cat("Overall Status: ")
+	if (x$passed) {
+		cat("PASSED\n\n")
+	} else {
+		cat("FAILED\n\n")
+	}
 
-  cat("Results:\n")
-  cat(strrep("-", 50), "\n")
-  cat(x$summary, "\n")
-  cat(strrep("-", 50), "\n")
+	cat("Results:\n")
+	cat(strrep("-", 50), "\n")
+	cat(x$summary, "\n")
+	cat(strrep("-", 50), "\n")
 
-  invisible(x)
+	invisible(x)
 }
-
 
 #' @export
 summary.sec_suitability <- function(object, ...) {
-  cat("SEC System Suitability Summary\n\n")
+	cat("SEC System Suitability Summary\n\n")
 
-  n_metrics <- length(object$results)
-  n_passed <- sum(vapply(
-    object$results,
-    function(r) {
-      if (is.na(r$passed)) {
-        return(FALSE)
-      }
-      r$passed
-    },
-    logical(1)
-  ))
-  n_failed <- sum(vapply(
-    object$results,
-    function(r) {
-      if (is.na(r$passed)) {
-        return(FALSE)
-      }
-      !r$passed
-    },
-    logical(1)
-  ))
-  n_info <- sum(vapply(object$results, function(r) is.na(r$passed), logical(1)))
+	n_metrics <- length(object$results)
+	n_passed <- sum(
+		vapply(
+			object$results,
+			function(r) {
+				if (is.na(r$passed)) {
+					return(FALSE)
+				}
+				r$passed
+			},
+			logical(1)
+		)
+	)
+	n_failed <- sum(
+		vapply(
+			object$results,
+			function(r) {
+				if (is.na(r$passed)) {
+					return(FALSE)
+				}
+				!r$passed
+			},
+			logical(1)
+		)
+	)
+	n_info <- sum(vapply(object$results, function(r) is.na(r$passed), logical(1)))
 
-  cat("Metrics evaluated:", n_metrics, "\n")
-  cat("  Passed:", n_passed, "\n")
-  cat("  Failed:", n_failed, "\n")
-  if (n_info > 0) {
-    cat("  Informational:", n_info, "\n")
-  }
+	cat("Metrics evaluated:", n_metrics, "\n")
+	cat("  Passed:", n_passed, "\n")
+	cat("  Failed:", n_failed, "\n")
+	if (n_info > 0) {
+		cat("  Informational:", n_info, "\n")
+	}
 
-  cat("\nOverall:", if (object$passed) "PASSED" else "FAILED", "\n")
+	cat("\nOverall:", if (object$passed) "PASSED" else "FAILED", "\n")
 
-  invisible(object)
+	invisible(object)
 }

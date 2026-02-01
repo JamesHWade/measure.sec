@@ -138,6 +138,7 @@ Other sec-chromatography:
 \code{\link{step_sec_mw_distribution}()},
 \code{\link{step_sec_mw_fractions}()},
 \code{\link{step_sec_peaks_deconvolve}()},
-\code{\link{step_sec_peaks_detect}()}
+\code{\link{step_sec_peaks_detect}()},
+\code{\link{step_sec_peaks_refine}()}
 }
 \concept{sec-chromatography}

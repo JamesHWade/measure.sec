@@ -91,251 +91,251 @@
 #'   prep()
 #' }
 step_sec_composition <- function(
-  recipe,
-  uv_col = NULL,
-  ri_col = NULL,
-  component_a_uv,
-  component_a_ri,
-  component_b_uv,
-  component_b_ri,
-  output_col = "composition_a",
-  min_signal = 0.01,
-  clip = TRUE,
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_composition")
+	recipe,
+	uv_col = NULL,
+	ri_col = NULL,
+	component_a_uv,
+	component_a_ri,
+	component_b_uv,
+	component_b_ri,
+	output_col = "composition_a",
+	min_signal = 0.01,
+	clip = TRUE,
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_composition")
 ) {
-  # Validate response factors
-  if (
-    missing(component_a_uv) ||
-      missing(component_a_ri) ||
-      missing(component_b_uv) ||
-      missing(component_b_ri)
-  ) {
-    cli::cli_abort(
-      "All response factors must be specified: {.arg component_a_uv}, {.arg component_a_ri}, {.arg component_b_uv}, {.arg component_b_ri}."
-    )
-  }
+	# Validate response factors
+	if (
+		missing(component_a_uv) ||
+			missing(component_a_ri) ||
+			missing(component_b_uv) ||
+			missing(component_b_ri)
+	) {
+		cli::cli_abort(
+			"All response factors must be specified: {.arg component_a_uv}, {.arg component_a_ri}, {.arg component_b_uv}, {.arg component_b_ri}."
+		)
+	}
 
-  # Calculate response ratios for pure components
-  ratio_a <- component_a_uv / component_a_ri
-  ratio_b <- component_b_uv / component_b_ri
+	# Calculate response ratios for pure components
+	ratio_a <- component_a_uv / component_a_ri
+	ratio_b <- component_b_uv / component_b_ri
 
-  if (abs(ratio_a - ratio_b) < 1e-10) {
-    cli::cli_abort(
-      c(
-        "Components have identical UV/RI ratios.",
-        "i" = "Composition cannot be determined when response ratios are equal."
-      )
-    )
-  }
+	if (abs(ratio_a - ratio_b) < 1e-10) {
+		cli::cli_abort(
+			c(
+				"Components have identical UV/RI ratios.",
+				"i" = "Composition cannot be determined when response ratios are equal."
+			)
+		)
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_composition_new(
-      uv_col = uv_col,
-      ri_col = ri_col,
-      component_a_uv = component_a_uv,
-      component_a_ri = component_a_ri,
-      component_b_uv = component_b_uv,
-      component_b_ri = component_b_ri,
-      ratio_a = ratio_a,
-      ratio_b = ratio_b,
-      output_col = output_col,
-      min_signal = min_signal,
-      clip = clip,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_composition_new(
+			uv_col = uv_col,
+			ri_col = ri_col,
+			component_a_uv = component_a_uv,
+			component_a_ri = component_a_ri,
+			component_b_uv = component_b_uv,
+			component_b_ri = component_b_ri,
+			ratio_a = ratio_a,
+			ratio_b = ratio_b,
+			output_col = output_col,
+			min_signal = min_signal,
+			clip = clip,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_composition_new <- function(
-  uv_col,
-  ri_col,
-  component_a_uv,
-  component_a_ri,
-  component_b_uv,
-  component_b_ri,
-  ratio_a,
-  ratio_b,
-  output_col,
-  min_signal,
-  clip,
-  role,
-  trained,
-  skip,
-  id
+	uv_col,
+	ri_col,
+	component_a_uv,
+	component_a_ri,
+	component_b_uv,
+	component_b_ri,
+	ratio_a,
+	ratio_b,
+	output_col,
+	min_signal,
+	clip,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_composition",
-    uv_col = uv_col,
-    ri_col = ri_col,
-    component_a_uv = component_a_uv,
-    component_a_ri = component_a_ri,
-    component_b_uv = component_b_uv,
-    component_b_ri = component_b_ri,
-    ratio_a = ratio_a,
-    ratio_b = ratio_b,
-    output_col = output_col,
-    min_signal = min_signal,
-    clip = clip,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_composition",
+		uv_col = uv_col,
+		ri_col = ri_col,
+		component_a_uv = component_a_uv,
+		component_a_ri = component_a_ri,
+		component_b_uv = component_b_uv,
+		component_b_ri = component_b_ri,
+		ratio_a = ratio_a,
+		ratio_b = ratio_b,
+		output_col = output_col,
+		min_signal = min_signal,
+		clip = clip,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_composition <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  measure_cols <- find_measure_cols(training)
+	measure_cols <- find_measure_cols(training)
 
-  # Find UV column if not specified
-  if (is.null(x$uv_col)) {
-    uv_cols <- measure_cols[grepl("uv", measure_cols, ignore.case = TRUE)]
-    if (length(uv_cols) == 0) {
-      cli::cli_abort("No UV column found. Specify {.arg uv_col} explicitly.")
-    }
-    uv_col <- uv_cols[1]
-  } else {
-    uv_col <- x$uv_col
-    if (!uv_col %in% measure_cols) {
-      cli::cli_abort("UV column {.val {uv_col}} not found in measure columns.")
-    }
-  }
+	# Find UV column if not specified
+	if (is.null(x$uv_col)) {
+		uv_cols <- measure_cols[grepl("uv", measure_cols, ignore.case = TRUE)]
+		if (length(uv_cols) == 0) {
+			cli::cli_abort("No UV column found. Specify {.arg uv_col} explicitly.")
+		}
+		uv_col <- uv_cols[1]
+	} else {
+		uv_col <- x$uv_col
+		if (!uv_col %in% measure_cols) {
+			cli::cli_abort("UV column {.val {uv_col}} not found in measure columns.")
+		}
+	}
 
-  # Find RI column if not specified
-  if (is.null(x$ri_col)) {
-    ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
-    if (length(ri_cols) == 0) {
-      cli::cli_abort("No RI column found. Specify {.arg ri_col} explicitly.")
-    }
-    ri_col <- ri_cols[1]
-  } else {
-    ri_col <- x$ri_col
-    if (!ri_col %in% measure_cols) {
-      cli::cli_abort("RI column {.val {ri_col}} not found in measure columns.")
-    }
-  }
+	# Find RI column if not specified
+	if (is.null(x$ri_col)) {
+		ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
+		if (length(ri_cols) == 0) {
+			cli::cli_abort("No RI column found. Specify {.arg ri_col} explicitly.")
+		}
+		ri_col <- ri_cols[1]
+	} else {
+		ri_col <- x$ri_col
+		if (!ri_col %in% measure_cols) {
+			cli::cli_abort("RI column {.val {ri_col}} not found in measure columns.")
+		}
+	}
 
-  step_sec_composition_new(
-    uv_col = uv_col,
-    ri_col = ri_col,
-    component_a_uv = x$component_a_uv,
-    component_a_ri = x$component_a_ri,
-    component_b_uv = x$component_b_uv,
-    component_b_ri = x$component_b_ri,
-    ratio_a = x$ratio_a,
-    ratio_b = x$ratio_b,
-    output_col = x$output_col,
-    min_signal = x$min_signal,
-    clip = x$clip,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_composition_new(
+		uv_col = uv_col,
+		ri_col = ri_col,
+		component_a_uv = x$component_a_uv,
+		component_a_ri = x$component_a_ri,
+		component_b_uv = x$component_b_uv,
+		component_b_ri = x$component_b_ri,
+		ratio_a = x$ratio_a,
+		ratio_b = x$ratio_b,
+		output_col = x$output_col,
+		min_signal = x$min_signal,
+		clip = x$clip,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_composition <- function(object, new_data, ...) {
-  uv_col <- object$uv_col
-  ri_col <- object$ri_col
-  ratio_a <- object$ratio_a
-  ratio_b <- object$ratio_b
-  output_col <- object$output_col
-  min_signal <- object$min_signal
-  clip <- object$clip
+	uv_col <- object$uv_col
+	ri_col <- object$ri_col
+	ratio_a <- object$ratio_a
+	ratio_b <- object$ratio_b
+	output_col <- object$output_col
+	min_signal <- object$min_signal
+	clip <- object$clip
 
-  # Calculate composition for each sample
-  comp_list <- purrr::map2(
-    new_data[[uv_col]],
-    new_data[[ri_col]],
-    function(uv_m, ri_m) {
-      uv_val <- uv_m$value
-      ri_val <- ri_m$value
-      location <- uv_m$location
+	# Calculate composition for each sample
+	comp_list <- purrr::map2(
+		new_data[[uv_col]],
+		new_data[[ri_col]],
+		function(uv_m, ri_m) {
+			uv_val <- uv_m$value
+			ri_val <- ri_m$value
+			location <- uv_m$location
 
-      # Determine signal threshold
-      max_ri <- max(abs(ri_val), na.rm = TRUE)
-      threshold <- min_signal * max_ri
+			# Determine signal threshold
+			max_ri <- max(abs(ri_val), na.rm = TRUE)
+			threshold <- min_signal * max_ri
 
-      # Calculate observed ratio and composition
-      composition <- rep(NA_real_, length(uv_val))
-      valid <- abs(ri_val) > threshold & !is.na(uv_val) & !is.na(ri_val)
+			# Calculate observed ratio and composition
+			composition <- rep(NA_real_, length(uv_val))
+			valid <- abs(ri_val) > threshold & !is.na(uv_val) & !is.na(ri_val)
 
-      if (any(valid)) {
-        observed_ratio <- uv_val[valid] / ri_val[valid]
+			if (any(valid)) {
+				observed_ratio <- uv_val[valid] / ri_val[valid]
 
-        # Calculate weight fraction of component A
-        # w_A = (R_obs - R_B) / (R_A - R_B)
-        composition[valid] <- (observed_ratio - ratio_b) / (ratio_a - ratio_b)
+				# Calculate weight fraction of component A
+				# w_A = (R_obs - R_B) / (R_A - R_B)
+				composition[valid] <- (observed_ratio - ratio_b) / (ratio_a - ratio_b)
 
-        # Clip to \[0, 1\] if requested
-        if (clip) {
-          composition[valid] <- pmax(0, pmin(1, composition[valid]))
-        }
-      }
+				# Clip to \[0, 1\] if requested
+				if (clip) {
+					composition[valid] <- pmax(0, pmin(1, composition[valid]))
+				}
+			}
 
-      # Return as measure object
-      new_measure_tbl(location = location, value = composition)
-    }
-  )
+			# Return as measure object
+			new_measure_tbl(location = location, value = composition)
+		}
+	)
 
-  new_data[[output_col]] <- new_measure_list(comp_list)
+	new_data[[output_col]] <- new_measure_list(comp_list)
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_composition <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- "SEC composition analysis"
-  if (x$trained) {
-    cat(
-      title,
-      " (",
-      x$uv_col,
-      "/",
-      x$ri_col,
-      " -> ",
-      x$output_col,
-      ")",
-      sep = ""
-    )
-  } else {
-    cat(title)
-  }
-  cat("\n")
-  invisible(x)
+	title <- "SEC composition analysis"
+	if (x$trained) {
+		cat(
+			title,
+			" (",
+			x$uv_col,
+			"/",
+			x$ri_col,
+			" -> ",
+			x$output_col,
+			")",
+			sep = ""
+		)
+	} else {
+		cat(title)
+	}
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_composition <- function(x, ...) {
-  tibble::tibble(
-    uv_col = x$uv_col %||% NA_character_,
-    ri_col = x$ri_col %||% NA_character_,
-    output_col = x$output_col,
-    ratio_a = x$ratio_a,
-    ratio_b = x$ratio_b,
-    id = x$id
-  )
+	tibble::tibble(
+		uv_col = x$uv_col %||% NA_character_,
+		ri_col = x$ri_col %||% NA_character_,
+		output_col = x$output_col,
+		ratio_a = x$ratio_a,
+		ratio_b = x$ratio_b,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_composition <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

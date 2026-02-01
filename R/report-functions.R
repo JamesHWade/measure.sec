@@ -111,162 +111,173 @@
 #' )
 #' }
 measure_sec_report <- function(
-  data,
-  template = c("standard", "detailed", "qc"),
-  output_format = c("html", "pdf", "docx"),
-  output_file = NULL,
-  title = NULL,
-  author = "",
-  sample_id = NULL,
-  include_plots = TRUE,
-  include_slice_table = FALSE,
-  specs = NULL,
-  open = interactive(),
-  quiet = FALSE
+	data,
+	template = c("standard", "detailed", "qc"),
+	output_format = c("html", "pdf", "docx"),
+	output_file = NULL,
+	title = NULL,
+	author = "",
+	sample_id = NULL,
+	include_plots = TRUE,
+	include_slice_table = FALSE,
+	specs = NULL,
+	open = interactive(),
+	quiet = FALSE
 ) {
-  # Check for quarto package
-  if (!rlang::is_installed("quarto")) {
-    cli::cli_abort(c(
-      "Package {.pkg quarto} is required for report generation.",
-      "i" = "Install it with {.code install.packages(\"quarto\")}"
-    ))
-  }
+	# Check for quarto package
+	if (!rlang::is_installed("quarto")) {
+		cli::cli_abort(
+			c(
+				"Package {.pkg quarto} is required for report generation.",
+				"i" = "Install it with {.code install.packages(\"quarto\")}"
+			)
+		)
+	}
 
-  # Check that Quarto CLI is available
-  if (!nzchar(Sys.which("quarto"))) {
-    cli::cli_abort(c(
-      "Quarto CLI is not installed or not found in PATH.",
-      "i" = "Install Quarto from {.url https://quarto.org/docs/get-started/}"
-    ))
-  }
+	# Check that Quarto CLI is available
+	if (!nzchar(Sys.which("quarto"))) {
+		cli::cli_abort(
+			c(
+				"Quarto CLI is not installed or not found in PATH.",
+				"i" = "Install Quarto from {.url https://quarto.org/docs/get-started/}"
+			)
+		)
+	}
 
-  # Validate inputs
-  if (!is.data.frame(data)) {
-    cli::cli_abort("{.arg data} must be a data frame.")
-  }
+	# Validate inputs
+	if (!is.data.frame(data)) {
+		cli::cli_abort("{.arg data} must be a data frame.")
+	}
 
-  template <- match.arg(template)
-  output_format <- match.arg(output_format)
+	template <- match.arg(template)
+	output_format <- match.arg(output_format)
 
-  # Set default title based on template
+	# Set default title based on template
 
-  if (is.null(title)) {
-    title <- switch(
-      template,
-      standard = "SEC Analysis Report",
-      detailed = "SEC Analysis Report - Detailed",
-      qc = "SEC System Suitability Report"
-    )
-  }
+	if (is.null(title)) {
+		title <- switch(
+			template,
+			standard = "SEC Analysis Report",
+			detailed = "SEC Analysis Report - Detailed",
+			qc = "SEC System Suitability Report"
+		)
+	}
 
-  # Get template file path
-  template_file <- get_sec_template(template)
+	# Get template file path
+	template_file <- get_sec_template(template)
 
-  # Create output directory
-  output_dir <- tempdir()
+	# Create output directory
+	output_dir <- tempdir()
 
-  # Copy template to temp directory for rendering
-  temp_qmd <- file.path(output_dir, paste0("sec_report_", template, ".qmd"))
-  if (!file.copy(template_file, temp_qmd, overwrite = TRUE)) {
-    cli::cli_abort(c(
-      "Failed to copy template to temporary directory.",
-      "i" = "Template: {.file {template_file}}",
-      "i" = "Destination: {.file {temp_qmd}}",
-      "i" = "Check disk space and permissions."
-    ))
-  }
+	# Copy template to temp directory for rendering
+	temp_qmd <- file.path(output_dir, paste0("sec_report_", template, ".qmd"))
+	if (!file.copy(template_file, temp_qmd, overwrite = TRUE)) {
+		cli::cli_abort(
+			c(
+				"Failed to copy template to temporary directory.",
+				"i" = "Template: {.file {template_file}}",
+				"i" = "Destination: {.file {temp_qmd}}",
+				"i" = "Check disk space and permissions."
+			)
+		)
+	}
 
-  # Determine output file name
-  if (is.null(output_file)) {
-    timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-    output_file <- file.path(
-      getwd(),
-      paste0("sec_report_", template, "_", timestamp, ".", output_format)
-    )
-  }
+	# Determine output file name
+	if (is.null(output_file)) {
+		timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+		output_file <- file.path(
+			getwd(),
+			paste0("sec_report_", template, "_", timestamp, ".", output_format)
+		)
+	}
 
-  # Ensure output directory exists
-  output_dir_final <- dirname(output_file)
-  if (!dir.exists(output_dir_final)) {
-    dir.create(output_dir_final, recursive = TRUE)
-  }
+	# Ensure output directory exists
+	output_dir_final <- dirname(output_file)
+	if (!dir.exists(output_dir_final)) {
+		dir.create(output_dir_final, recursive = TRUE)
+	}
 
-  # Build execute_params
-  execute_params <- list(
-    title = title,
-    author = author,
-    data = data,
-    sample_id = sample_id,
-    include_plots = include_plots
-  )
+	# Build execute_params
+	execute_params <- list(
+		title = title,
+		author = author,
+		data = data,
+		sample_id = sample_id,
+		include_plots = include_plots
+	)
 
-  # Add template-specific params
-  if (template == "detailed") {
-    execute_params$include_slice_table <- include_slice_table
-    execute_params$include_summary <- TRUE
-  } else if (template == "qc") {
-    execute_params$specs <- specs
-  } else {
-    execute_params$include_summary <- TRUE
-  }
+	# Add template-specific params
+	if (template == "detailed") {
+		execute_params$include_slice_table <- include_slice_table
+		execute_params$include_summary <- TRUE
+	} else if (template == "qc") {
+		execute_params$specs <- specs
+	} else {
+		execute_params$include_summary <- TRUE
+	}
 
-  # Render the report
-  cli::cli_progress_step("Generating {template} report...")
+	# Render the report
+	cli::cli_progress_step("Generating {template} report...")
 
-  tryCatch(
-    {
-      quarto::quarto_render(
-        input = temp_qmd,
-        output_format = output_format,
-        output_file = basename(output_file),
-        execute_params = execute_params,
-        quiet = quiet
-      )
+	tryCatch(
+		{
+			quarto::quarto_render(
+				input = temp_qmd,
+				output_format = output_format,
+				output_file = basename(output_file),
+				execute_params = execute_params,
+				quiet = quiet
+			)
 
-      # Move output to final destination
-      # Quarto renders to basename(output_file) in output_dir
-      rendered_file <- file.path(output_dir, basename(output_file))
+			# Move output to final destination
+			# Quarto renders to basename(output_file) in output_dir
+			rendered_file <- file.path(output_dir, basename(output_file))
 
-      if (!file.exists(rendered_file)) {
-        cli::cli_abort(c(
-          "Report rendering succeeded but output file not found.",
-          "i" = "Expected file: {.file {rendered_file}}",
-          "i" = "This may indicate a Quarto version incompatibility."
-        ))
-      }
+			if (!file.exists(rendered_file)) {
+				cli::cli_abort(
+					c(
+						"Report rendering succeeded but output file not found.",
+						"i" = "Expected file: {.file {rendered_file}}",
+						"i" = "This may indicate a Quarto version incompatibility."
+					)
+				)
+			}
 
-      if (!file.copy(rendered_file, output_file, overwrite = TRUE)) {
-        cli::cli_abort(c(
-          "Failed to copy rendered report to final destination.",
-          "i" = "Source: {.file {rendered_file}}",
-          "i" = "Destination: {.file {output_file}}",
-          "i" = "Check disk space and permissions."
-        ))
-      }
-      unlink(rendered_file)
-    },
-    error = function(e) {
-      cli::cli_abort(c(
-        "Report generation failed.",
-        "i" = "Error: {e$message}",
-        "i" = "Ensure Quarto is properly installed and the data format is correct."
-      ))
-    }
-  )
+			if (!file.copy(rendered_file, output_file, overwrite = TRUE)) {
+				cli::cli_abort(
+					c(
+						"Failed to copy rendered report to final destination.",
+						"i" = "Source: {.file {rendered_file}}",
+						"i" = "Destination: {.file {output_file}}",
+						"i" = "Check disk space and permissions."
+					)
+				)
+			}
+			unlink(rendered_file)
+		},
+		error = function(e) {
+			cli::cli_abort(
+				c(
+					"Report generation failed.",
+					"i" = "Error: {e$message}",
+					"i" = "Ensure Quarto is properly installed and the data format is correct."
+				)
+			)
+		}
+	)
 
-  # Clean up temp files
-  unlink(temp_qmd)
+	# Clean up temp files
+	unlink(temp_qmd)
 
-  cli::cli_alert_success("Report saved to {.file {output_file}}")
+	cli::cli_alert_success("Report saved to {.file {output_file}}")
 
-  # Open if requested
-  if (open && file.exists(output_file)) {
-    utils::browseURL(output_file)
-  }
+	# Open if requested
+	if (open && file.exists(output_file)) {
+		utils::browseURL(output_file)
+	}
 
-  invisible(output_file)
+	invisible(output_file)
 }
-
 
 #' Get Path to SEC Report Template
 #'
@@ -279,26 +290,27 @@ measure_sec_report <- function(
 #' @keywords internal
 #' @export
 get_sec_template <- function(template = c("standard", "detailed", "qc")) {
-  template <- match.arg(template)
+	template <- match.arg(template)
 
-  template_name <- paste0("sec_report_", template, ".qmd")
+	template_name <- paste0("sec_report_", template, ".qmd")
 
-  template_path <- system.file(
-    "templates",
-    template_name,
-    package = "measure.sec"
-  )
+	template_path <- system.file(
+		"templates",
+		template_name,
+		package = "measure.sec"
+	)
 
-  if (!nzchar(template_path) || !file.exists(template_path)) {
-    cli::cli_abort(c(
-      "Template {.val {template}} not found.",
-      "i" = "Available templates: standard, detailed, qc"
-    ))
-  }
+	if (!nzchar(template_path) || !file.exists(template_path)) {
+		cli::cli_abort(
+			c(
+				"Template {.val {template}} not found.",
+				"i" = "Available templates: standard, detailed, qc"
+			)
+		)
+	}
 
-  template_path
+	template_path
 }
-
 
 #' List Available SEC Report Templates
 #'
@@ -311,13 +323,13 @@ get_sec_template <- function(template = c("standard", "detailed", "qc")) {
 #' @examples
 #' list_sec_templates()
 list_sec_templates <- function() {
-  tibble::tibble(
-    template = c("standard", "detailed", "qc"),
-    description = c(
-      "Summary table, chromatogram, and MWD plot",
-      "All plots, multi-detector view, optional slice data",
-      "System suitability with pass/fail metrics"
-    ),
-    formats = rep("html, pdf, docx", 3)
-  )
+	tibble::tibble(
+		template = c("standard", "detailed", "qc"),
+		description = c(
+			"Summary table, chromatogram, and MWD plot",
+			"All plots, multi-detector view, optional slice data",
+			"System suitability with pass/fail metrics"
+		),
+		formats = rep("html, pdf, docx", 3)
+	)
 }

@@ -9,9 +9,9 @@
 %   R/step_sec_mw_averages.R, R/step_sec_mw_distribution.R,
 %   R/step_sec_mw_fractions.R, R/step_sec_oligomer.R,
 %   R/step_sec_peaks_deconvolve.R, R/step_sec_peaks_detect.R,
-%   R/step_sec_protein.R, R/step_sec_rals.R, R/step_sec_ri.R,
-%   R/step_sec_universal_cal.R, R/step_sec_uv.R, R/step_sec_uv_ri_ratio.R,
-%   R/step_sec_viscometer.R, R/tidy-methods.R
+%   R/step_sec_peaks_refine.R, R/step_sec_protein.R, R/step_sec_rals.R,
+%   R/step_sec_ri.R, R/step_sec_universal_cal.R, R/step_sec_uv.R,
+%   R/step_sec_uv_ri_ratio.R, R/step_sec_viscometer.R, R/tidy-methods.R
 \name{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_aggregates}
 \alias{tidy.step_sec_band_broadening}
@@ -35,6 +35,7 @@
 \alias{tidy.step_sec_oligomer}
 \alias{tidy.step_sec_peaks_deconvolve}
 \alias{tidy.step_sec_peaks_detect}
+\alias{tidy.step_sec_peaks_refine}
 \alias{tidy.step_sec_protein}
 \alias{tidy.step_sec_rals}
 \alias{tidy.step_sec_ri}
@@ -88,6 +89,8 @@
 \method{tidy}{step_sec_peaks_deconvolve}(x, ...)
 
 \method{tidy}{step_sec_peaks_detect}(x, ...)
+
+\method{tidy}{step_sec_peaks_refine}(x, ...)
 
 \method{tidy}{step_sec_protein}(x, ...)
 

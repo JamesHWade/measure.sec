@@ -81,130 +81,130 @@
 #'   prep()
 #' }
 step_sec_flow_marker <- function(
-  recipe,
-  measures = NULL,
-  marker_range = NULL,
-  target_volume = NULL,
-  auto_detect = TRUE,
-  min_peak_height = NULL,
-  store_correction = TRUE,
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_flow_marker")
+	recipe,
+	measures = NULL,
+	marker_range = NULL,
+	target_volume = NULL,
+	auto_detect = TRUE,
+	min_peak_height = NULL,
+	store_correction = TRUE,
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_flow_marker")
 ) {
-  # Validate marker_range
+	# Validate marker_range
 
-  if (is.null(marker_range)) {
-    cli::cli_abort(
-      c(
-        "{.arg marker_range} is required.",
-        "i" = "Specify the expected elution range for the flow marker, e.g., {.code c(18, 20)}."
-      )
-    )
-  }
+	if (is.null(marker_range)) {
+		cli::cli_abort(
+			c(
+				"{.arg marker_range} is required.",
+				"i" = "Specify the expected elution range for the flow marker, e.g., {.code c(18, 20)}."
+			)
+		)
+	}
 
-  if (!is.numeric(marker_range) || length(marker_range) != 2) {
-    cli::cli_abort(
-      "{.arg marker_range} must be a numeric vector of length 2."
-    )
-  }
+	if (!is.numeric(marker_range) || length(marker_range) != 2) {
+		cli::cli_abort(
+			"{.arg marker_range} must be a numeric vector of length 2."
+		)
+	}
 
-  if (marker_range[1] >= marker_range[2]) {
-    cli::cli_abort(
-      "{.arg marker_range} must be in order: {.code c(min, max)}."
-    )
-  }
+	if (marker_range[1] >= marker_range[2]) {
+		cli::cli_abort(
+			"{.arg marker_range} must be in order: {.code c(min, max)}."
+		)
+	}
 
-  # Set default target volume
-  if (is.null(target_volume)) {
-    target_volume <- marker_range[1]
-  }
+	# Set default target volume
+	if (is.null(target_volume)) {
+		target_volume <- marker_range[1]
+	}
 
-  if (!is.numeric(target_volume) || length(target_volume) != 1) {
-    cli::cli_abort(
-      "{.arg target_volume} must be a single numeric value."
-    )
-  }
+	if (!is.numeric(target_volume) || length(target_volume) != 1) {
+		cli::cli_abort(
+			"{.arg target_volume} must be a single numeric value."
+		)
+	}
 
-  if (!is.null(min_peak_height)) {
-    if (!is.numeric(min_peak_height) || length(min_peak_height) != 1) {
-      cli::cli_abort(
-        "{.arg min_peak_height} must be a single numeric value."
-      )
-    }
-  }
+	if (!is.null(min_peak_height)) {
+		if (!is.numeric(min_peak_height) || length(min_peak_height) != 1) {
+			cli::cli_abort(
+				"{.arg min_peak_height} must be a single numeric value."
+			)
+		}
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_flow_marker_new(
-      measures = measures,
-      marker_range = marker_range,
-      target_volume = target_volume,
-      auto_detect = auto_detect,
-      min_peak_height = min_peak_height,
-      store_correction = store_correction,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_flow_marker_new(
+			measures = measures,
+			marker_range = marker_range,
+			target_volume = target_volume,
+			auto_detect = auto_detect,
+			min_peak_height = min_peak_height,
+			store_correction = store_correction,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_flow_marker_new <- function(
-  measures,
-  marker_range,
-  target_volume,
-  auto_detect,
-  min_peak_height,
-  store_correction,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	marker_range,
+	target_volume,
+	auto_detect,
+	min_peak_height,
+	store_correction,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_flow_marker",
-    measures = measures,
-    marker_range = marker_range,
-    target_volume = target_volume,
-    auto_detect = auto_detect,
-    min_peak_height = min_peak_height,
-    store_correction = store_correction,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_flow_marker",
+		measures = measures,
+		marker_range = marker_range,
+		target_volume = target_volume,
+		auto_detect = auto_detect,
+		min_peak_height = min_peak_height,
+		store_correction = store_correction,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_flow_marker <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  if (is.null(x$measures)) {
-    measures <- find_measure_cols(training)
-  } else {
-    measures <- x$measures
-  }
+	if (is.null(x$measures)) {
+		measures <- find_measure_cols(training)
+	} else {
+		measures <- x$measures
+	}
 
-  if (length(measures) == 0) {
-    cli::cli_abort("No measure columns found in data.")
-  }
+	if (length(measures) == 0) {
+		cli::cli_abort("No measure columns found in data.")
+	}
 
-  step_sec_flow_marker_new(
-    measures = measures,
-    marker_range = x$marker_range,
-    target_volume = x$target_volume,
-    auto_detect = x$auto_detect,
-    min_peak_height = x$min_peak_height,
-    store_correction = x$store_correction,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_flow_marker_new(
+		measures = measures,
+		marker_range = x$marker_range,
+		target_volume = x$target_volume,
+		auto_detect = x$auto_detect,
+		min_peak_height = x$min_peak_height,
+		store_correction = x$store_correction,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' Detect flow marker peak in a chromatogram
@@ -218,177 +218,181 @@ prep.step_sec_flow_marker <- function(x, training, info = NULL, ...) {
 #' @return List with flow_marker_volume, correction, and confidence
 #' @noRd
 .detect_flow_marker <- function(
-  location,
-  value,
-  marker_range,
-  auto_detect = TRUE,
-  min_peak_height = NULL
+	location,
+	value,
+	marker_range,
+	auto_detect = TRUE,
+	min_peak_height = NULL
 ) {
-  # Filter to marker range
-  in_range <- location >= marker_range[1] & location <= marker_range[2]
-  range_location <- location[in_range]
-  range_value <- value[in_range]
+	# Filter to marker range
+	in_range <- location >= marker_range[1] & location <= marker_range[2]
+	range_location <- location[in_range]
+	range_value <- value[in_range]
 
-  if (length(range_location) < 3) {
-    return(list(
-      flow_marker_volume = NA_real_,
-      peak_height = NA_real_,
-      confidence = 0
-    ))
-  }
+	if (length(range_location) < 3) {
+		return(
+			list(
+				flow_marker_volume = NA_real_,
+				peak_height = NA_real_,
+				confidence = 0
+			)
+		)
+	}
 
-  # Apply minimum height filter if specified
-  if (!is.null(min_peak_height)) {
-    valid <- abs(range_value) >= min_peak_height
-    if (sum(valid) < 3) {
-      return(list(
-        flow_marker_volume = NA_real_,
-        peak_height = NA_real_,
-        confidence = 0
-      ))
-    }
-    # Filter to only valid points that meet threshold
-    range_location <- range_location[valid]
-    range_value <- range_value[valid]
-  }
+	# Apply minimum height filter if specified
+	if (!is.null(min_peak_height)) {
+		valid <- abs(range_value) >= min_peak_height
+		if (sum(valid) < 3) {
+			return(
+				list(
+					flow_marker_volume = NA_real_,
+					peak_height = NA_real_,
+					confidence = 0
+				)
+			)
+		}
+		# Filter to only valid points that meet threshold
+		range_location <- range_location[valid]
+		range_value <- range_value[valid]
+	}
 
-  if (auto_detect && length(range_value) >= 10) {
-    # Use second derivative to find sharpest peak
-    # This is more robust for finding the flow marker among other features
-    d2_signal <- diff(diff(range_value))
+	if (auto_detect && length(range_value) >= 10) {
+		# Use second derivative to find sharpest peak
+		# This is more robust for finding the flow marker among other features
+		d2_signal <- diff(diff(range_value))
 
-    if (length(d2_signal) > 0 && !all(is.na(d2_signal))) {
-      # Find the position with largest negative second derivative (peak)
-      peak_idx <- which.min(d2_signal) + 1
+		if (length(d2_signal) > 0 && !all(is.na(d2_signal))) {
+			# Find the position with largest negative second derivative (peak)
+			peak_idx <- which.min(d2_signal) + 1
 
-      # Ensure valid index
-      peak_idx <- max(1, min(peak_idx, length(range_location)))
+			# Ensure valid index
+			peak_idx <- max(1, min(peak_idx, length(range_location)))
 
-      flow_marker_volume <- range_location[peak_idx]
-      peak_height <- range_value[peak_idx]
+			flow_marker_volume <- range_location[peak_idx]
+			peak_height <- range_value[peak_idx]
 
-      # Calculate confidence based on sharpness
-      d2_range <- max(abs(d2_signal), na.rm = TRUE)
-      if (d2_range > 0) {
-        confidence <- abs(d2_signal[max(1, peak_idx - 1)]) / d2_range
-      } else {
-        confidence <- 0.5
-      }
-    } else {
-      # Fallback to simple maximum
-      peak_idx <- which.max(abs(range_value))
-      flow_marker_volume <- range_location[peak_idx]
-      peak_height <- range_value[peak_idx]
-      confidence <- 0.5
-    }
-  } else {
-    # Simple maximum detection
-    peak_idx <- which.max(abs(range_value))
-    flow_marker_volume <- range_location[peak_idx]
-    peak_height <- range_value[peak_idx]
-    confidence <- 0.5
-  }
+			# Calculate confidence based on sharpness
+			d2_range <- max(abs(d2_signal), na.rm = TRUE)
+			if (d2_range > 0) {
+				confidence <- abs(d2_signal[max(1, peak_idx - 1)]) / d2_range
+			} else {
+				confidence <- 0.5
+			}
+		} else {
+			# Fallback to simple maximum
+			peak_idx <- which.max(abs(range_value))
+			flow_marker_volume <- range_location[peak_idx]
+			peak_height <- range_value[peak_idx]
+			confidence <- 0.5
+		}
+	} else {
+		# Simple maximum detection
+		peak_idx <- which.max(abs(range_value))
+		flow_marker_volume <- range_location[peak_idx]
+		peak_height <- range_value[peak_idx]
+		confidence <- 0.5
+	}
 
-  list(
-    flow_marker_volume = flow_marker_volume,
-    peak_height = peak_height,
-    confidence = confidence
-  )
+	list(
+		flow_marker_volume = flow_marker_volume,
+		peak_height = peak_height,
+		confidence = confidence
+	)
 }
 
 #' @export
 bake.step_sec_flow_marker <- function(object, new_data, ...) {
-  measures <- object$measures
-  marker_range <- object$marker_range
-  target_volume <- object$target_volume
-  auto_detect <- object$auto_detect
-  min_peak_height <- object$min_peak_height
-  store_correction <- object$store_correction
+	measures <- object$measures
+	marker_range <- object$marker_range
+	target_volume <- object$target_volume
+	auto_detect <- object$auto_detect
+	min_peak_height <- object$min_peak_height
+	store_correction <- object$store_correction
 
-  # Use the first measure column for flow marker detection
-  detection_col <- measures[1]
+	# Use the first measure column for flow marker detection
+	detection_col <- measures[1]
 
-  # Calculate correction for each sample and apply to all measure columns
-  corrections <- numeric(nrow(new_data))
+	# Calculate correction for each sample and apply to all measure columns
+	corrections <- numeric(nrow(new_data))
 
-  for (i in seq_len(nrow(new_data))) {
-    m <- new_data[[detection_col]][[i]]
+	for (i in seq_len(nrow(new_data))) {
+		m <- new_data[[detection_col]][[i]]
 
-    detection <- .detect_flow_marker(
-      location = m$location,
-      value = m$value,
-      marker_range = marker_range,
-      auto_detect = auto_detect,
-      min_peak_height = min_peak_height
-    )
+		detection <- .detect_flow_marker(
+			location = m$location,
+			value = m$value,
+			marker_range = marker_range,
+			auto_detect = auto_detect,
+			min_peak_height = min_peak_height
+		)
 
-    if (!is.na(detection$flow_marker_volume)) {
-      corrections[i] <- detection$flow_marker_volume - target_volume
-    } else {
-      corrections[i] <- 0
-      cli::cli_warn(
-        "Row {i}: Flow marker not detected in range [{marker_range[1]}, {marker_range[2]}]. No correction applied."
-      )
-    }
-  }
+		if (!is.na(detection$flow_marker_volume)) {
+			corrections[i] <- detection$flow_marker_volume - target_volume
+		} else {
+			corrections[i] <- 0
+			cli::cli_warn(
+				"Row {i}: Flow marker not detected in range [{marker_range[1]}, {marker_range[2]}]. No correction applied."
+			)
+		}
+	}
 
-  # Apply correction to all measure columns
-  for (col in measures) {
-    new_data[[col]] <- purrr::map2(
-      new_data[[col]],
-      corrections,
-      function(m, corr) {
-        new_measure_tbl(
-          location = m$location - corr,
-          value = m$value
-        )
-      }
-    )
-  }
+	# Apply correction to all measure columns
+	for (col in measures) {
+		new_data[[col]] <- purrr::map2(
+			new_data[[col]],
+			corrections,
+			function(m, corr) {
+				new_measure_tbl(
+					location = m$location - corr,
+					value = m$value
+				)
+			}
+		)
+	}
 
-  # Store correction if requested
-  if (store_correction) {
-    new_data$flow_marker_correction <- corrections
-  }
+	# Store correction if requested
+	if (store_correction) {
+		new_data$flow_marker_correction <- corrections
+	}
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_flow_marker <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- glue::glue(
-    "SEC flow marker correction (range: [{x$marker_range[1]}, {x$marker_range[2]}], target: {x$target_volume})"
-  )
+	title <- glue::glue(
+		"SEC flow marker correction (range: [{x$marker_range[1]}, {x$marker_range[2]}], target: {x$target_volume})"
+	)
 
-  if (x$trained) {
-    cat(title, "\n", sep = "")
-  } else {
-    cat(title, " [untrained]\n", sep = "")
-  }
+	if (x$trained) {
+		cat(title, "\n", sep = "")
+	} else {
+		cat(title, " [untrained]\n", sep = "")
+	}
 
-  invisible(x)
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_flow_marker <- function(x, ...) {
-  tibble::tibble(
-    marker_range_min = x$marker_range[1],
-    marker_range_max = x$marker_range[2],
-    target_volume = x$target_volume,
-    auto_detect = x$auto_detect,
-    id = x$id
-  )
+	tibble::tibble(
+		marker_range_min = x$marker_range[1],
+		marker_range_max = x$marker_range[2],
+		target_volume = x$target_volume,
+		auto_detect = x$auto_detect,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_flow_marker <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

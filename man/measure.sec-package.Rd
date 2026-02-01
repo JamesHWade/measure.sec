@@ -6,6 +6,8 @@
 \alias{measure.sec-package}
 \title{measure.sec: SEC/GPC Analysis Extensions for the Measure Package}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Provides preprocessing and analysis recipe steps for Size Exclusion Chromatography (SEC) and Gel Permeation Chromatography (GPC) data. Includes multi-detector support (RI, UV, MALS), inter-detector delay correction, molecular weight calculations (Mn, Mw, Mz, dispersity), and calibration curve fitting. This package is a technique pack for the 'measure' package.
 }
 \seealso{

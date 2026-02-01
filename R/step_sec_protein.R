@@ -123,544 +123,550 @@
 #'   prep()
 #' }
 step_sec_protein <- function(
-  recipe,
-  measures = NULL,
-  type = c("native", "denaturing"),
-  monomer_mw = NULL,
-  monomer_start = NULL,
-  monomer_end = NULL,
-  extinction_coef = NULL,
-  aggregate_threshold = 0.001,
-  baseline_method = c("linear", "median", "spline"),
-  baseline_left_frac = 0.05,
-  baseline_right_frac = 0.05,
-  include_oligomer = NULL,
-  output_prefix = "protein_",
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_protein")
+	recipe,
+	measures = NULL,
+	type = c("native", "denaturing"),
+	monomer_mw = NULL,
+	monomer_start = NULL,
+	monomer_end = NULL,
+	extinction_coef = NULL,
+	aggregate_threshold = 0.001,
+	baseline_method = c("linear", "median", "spline"),
+	baseline_left_frac = 0.05,
+	baseline_right_frac = 0.05,
+	include_oligomer = NULL,
+	output_prefix = "protein_",
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_protein")
 ) {
-  type <- match.arg(type)
-  baseline_method <- match.arg(baseline_method)
+	type <- match.arg(type)
+	baseline_method <- match.arg(baseline_method)
 
-  # Auto-determine oligomer inclusion
-  if (is.null(include_oligomer)) {
-    include_oligomer <- !is.null(monomer_mw)
-  }
+	# Auto-determine oligomer inclusion
+	if (is.null(include_oligomer)) {
+		include_oligomer <- !is.null(monomer_mw)
+	}
 
-  # Validate oligomer requires monomer_mw
-  if (include_oligomer && is.null(monomer_mw)) {
-    cli::cli_abort(
-      c(
-        "Oligomer analysis requires {.arg monomer_mw}.",
-        "i" = "Either provide {.arg monomer_mw} or set {.arg include_oligomer = FALSE}."
-      )
-    )
-  }
+	# Validate oligomer requires monomer_mw
+	if (include_oligomer && is.null(monomer_mw)) {
+		cli::cli_abort(
+			c(
+				"Oligomer analysis requires {.arg monomer_mw}.",
+				"i" = "Either provide {.arg monomer_mw} or set {.arg include_oligomer = FALSE}."
+			)
+		)
+	}
 
-  # Validate monomer_mw if provided
-  if (!is.null(monomer_mw)) {
-    if (!is.numeric(monomer_mw) || monomer_mw <= 0) {
-      cli::cli_abort("{.arg monomer_mw} must be a positive number.")
-    }
-    if (monomer_mw < 10000 || monomer_mw > 1000000) {
-      cli::cli_warn(
-        c(
-          "Monomer MW ({monomer_mw} Da) is outside typical protein range (10-1000 kDa).",
-          "i" = "Verify the molecular weight is correct."
-        )
-      )
-    }
-  }
+	# Validate monomer_mw if provided
+	if (!is.null(monomer_mw)) {
+		if (!is.numeric(monomer_mw) || monomer_mw <= 0) {
+			cli::cli_abort("{.arg monomer_mw} must be a positive number.")
+		}
+		if (monomer_mw < 10000 || monomer_mw > 1000000) {
+			cli::cli_warn(
+				c(
+					"Monomer MW ({monomer_mw} Da) is outside typical protein range (10-1000 kDa).",
+					"i" = "Verify the molecular weight is correct."
+				)
+			)
+		}
+	}
 
-  # Validate aggregate_threshold
-  if (
-    !is.numeric(aggregate_threshold) ||
-      aggregate_threshold < 0 ||
-      aggregate_threshold > 1
-  ) {
-    cli::cli_abort("{.arg aggregate_threshold} must be between 0 and 1.")
-  }
+	# Validate aggregate_threshold
+	if (
+		!is.numeric(aggregate_threshold) ||
+			aggregate_threshold < 0 ||
+			aggregate_threshold > 1
+	) {
+		cli::cli_abort("{.arg aggregate_threshold} must be between 0 and 1.")
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_protein_new(
-      measures = measures,
-      type = type,
-      monomer_mw = monomer_mw,
-      monomer_start = monomer_start,
-      monomer_end = monomer_end,
-      extinction_coef = extinction_coef,
-      aggregate_threshold = aggregate_threshold,
-      baseline_method = baseline_method,
-      baseline_left_frac = baseline_left_frac,
-      baseline_right_frac = baseline_right_frac,
-      include_oligomer = include_oligomer,
-      output_prefix = output_prefix,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_protein_new(
+			measures = measures,
+			type = type,
+			monomer_mw = monomer_mw,
+			monomer_start = monomer_start,
+			monomer_end = monomer_end,
+			extinction_coef = extinction_coef,
+			aggregate_threshold = aggregate_threshold,
+			baseline_method = baseline_method,
+			baseline_left_frac = baseline_left_frac,
+			baseline_right_frac = baseline_right_frac,
+			include_oligomer = include_oligomer,
+			output_prefix = output_prefix,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_protein_new <- function(
-  measures,
-  type,
-  monomer_mw,
-  monomer_start,
-  monomer_end,
-  extinction_coef,
-  aggregate_threshold,
-  baseline_method,
-  baseline_left_frac,
-  baseline_right_frac,
-  include_oligomer,
-  output_prefix,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	type,
+	monomer_mw,
+	monomer_start,
+	monomer_end,
+	extinction_coef,
+	aggregate_threshold,
+	baseline_method,
+	baseline_left_frac,
+	baseline_right_frac,
+	include_oligomer,
+	output_prefix,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_protein",
-    measures = measures,
-    type = type,
-    monomer_mw = monomer_mw,
-    monomer_start = monomer_start,
-    monomer_end = monomer_end,
-    extinction_coef = extinction_coef,
-    aggregate_threshold = aggregate_threshold,
-    baseline_method = baseline_method,
-    baseline_left_frac = baseline_left_frac,
-    baseline_right_frac = baseline_right_frac,
-    include_oligomer = include_oligomer,
-    output_prefix = output_prefix,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_protein",
+		measures = measures,
+		type = type,
+		monomer_mw = monomer_mw,
+		monomer_start = monomer_start,
+		monomer_end = monomer_end,
+		extinction_coef = extinction_coef,
+		aggregate_threshold = aggregate_threshold,
+		baseline_method = baseline_method,
+		baseline_left_frac = baseline_left_frac,
+		baseline_right_frac = baseline_right_frac,
+		include_oligomer = include_oligomer,
+		output_prefix = output_prefix,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_protein <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Find measure columns if not specified
-  if (is.null(x$measures)) {
-    measures <- find_measure_cols(training)
-  } else {
-    measures <- x$measures
-  }
+	# Find measure columns if not specified
+	if (is.null(x$measures)) {
+		measures <- find_measure_cols(training)
+	} else {
+		measures <- x$measures
+	}
 
-  step_sec_protein_new(
-    measures = measures,
-    type = x$type,
-    monomer_mw = x$monomer_mw,
-    monomer_start = x$monomer_start,
-    monomer_end = x$monomer_end,
-    extinction_coef = x$extinction_coef,
-    aggregate_threshold = x$aggregate_threshold,
-    baseline_method = x$baseline_method,
-    baseline_left_frac = x$baseline_left_frac,
-    baseline_right_frac = x$baseline_right_frac,
-    include_oligomer = x$include_oligomer,
-    output_prefix = x$output_prefix,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_protein_new(
+		measures = measures,
+		type = x$type,
+		monomer_mw = x$monomer_mw,
+		monomer_start = x$monomer_start,
+		monomer_end = x$monomer_end,
+		extinction_coef = x$extinction_coef,
+		aggregate_threshold = x$aggregate_threshold,
+		baseline_method = x$baseline_method,
+		baseline_left_frac = x$baseline_left_frac,
+		baseline_right_frac = x$baseline_right_frac,
+		include_oligomer = x$include_oligomer,
+		output_prefix = x$output_prefix,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_protein <- function(object, new_data, ...) {
-  measures <- object$measures
-  type <- object$type
-  monomer_mw <- object$monomer_mw
-  monomer_start <- object$monomer_start
-  monomer_end <- object$monomer_end
-  extinction_coef <- object$extinction_coef
-  aggregate_threshold <- object$aggregate_threshold
-  baseline_method <- object$baseline_method
-  baseline_left_frac <- object$baseline_left_frac
-  baseline_right_frac <- object$baseline_right_frac
-  include_oligomer <- object$include_oligomer
-  output_prefix <- object$output_prefix
+	measures <- object$measures
+	type <- object$type
+	monomer_mw <- object$monomer_mw
+	monomer_start <- object$monomer_start
+	monomer_end <- object$monomer_end
+	extinction_coef <- object$extinction_coef
+	aggregate_threshold <- object$aggregate_threshold
+	baseline_method <- object$baseline_method
+	baseline_left_frac <- object$baseline_left_frac
+	baseline_right_frac <- object$baseline_right_frac
+	include_oligomer <- object$include_oligomer
+	output_prefix <- object$output_prefix
 
-  # Validate measures is not empty
-  if (length(measures) == 0) {
-    cli::cli_abort(
-      c(
-        "No measure columns available for protein SEC analysis.",
-        "i" = "Ensure your recipe includes step_measure_input_*() before this step."
-      )
-    )
-  }
+	# Validate measures is not empty
+	if (length(measures) == 0) {
+		cli::cli_abort(
+			c(
+				"No measure columns available for protein SEC analysis.",
+				"i" = "Ensure your recipe includes step_measure_input_*() before this step."
+			)
+		)
+	}
 
-  n_rows <- nrow(new_data)
-  measure_col <- measures[1]
+	n_rows <- nrow(new_data)
+	measure_col <- measures[1]
 
-  # Inform user about analysis type
-  if (type == "denaturing") {
-    cli::cli_inform(
-      c(
-        "i" = "Running denaturing SEC analysis.",
-        "*" = "HMW species represent covalent aggregates (non-reducible).",
-        "*" = "Native oligomers are disrupted under these conditions."
-      )
-    )
-  }
+	# Inform user about analysis type
+	if (type == "denaturing") {
+		cli::cli_inform(
+			c(
+				"i" = "Running denaturing SEC analysis.",
+				"*" = "HMW species represent covalent aggregates (non-reducible).",
+				"*" = "Native oligomers are disrupted under these conditions."
+			)
+		)
+	}
 
-  # Initialize output columns
-  hmws_pct <- numeric(n_rows)
-  monomer_pct <- numeric(n_rows)
-  lmws_pct <- numeric(n_rows)
-  main_start <- numeric(n_rows)
-  main_end <- numeric(n_rows)
+	# Initialize output columns
+	hmws_pct <- numeric(n_rows)
+	monomer_pct <- numeric(n_rows)
+	lmws_pct <- numeric(n_rows)
+	main_start <- numeric(n_rows)
+	main_end <- numeric(n_rows)
 
-  # Oligomer columns (if requested)
-  if (include_oligomer) {
-    oligo_species <- c("monomer", "dimer", "trimer", "hmw", "lmw")
-    oligo_pct <- list()
-    for (sp in oligo_species) {
-      oligo_pct[[sp]] <- numeric(n_rows)
-    }
-    species_count <- integer(n_rows)
-  }
+	# Oligomer columns (if requested)
+	if (include_oligomer) {
+		oligo_species <- c("monomer", "dimer", "trimer", "hmw", "lmw")
+		oligo_pct <- list()
+		for (sp in oligo_species) {
+			oligo_pct[[sp]] <- numeric(n_rows)
+		}
+		species_count <- integer(n_rows)
+	}
 
-  for (i in seq_len(n_rows)) {
-    m <- new_data[[measure_col]][[i]]
-    location <- m$location
-    value <- m$value
+	for (i in seq_len(n_rows)) {
+		m <- new_data[[measure_col]][[i]]
+		location <- m$location
+		value <- m$value
 
-    # 1. Baseline correction
-    value <- .apply_protein_baseline(
-      location,
-      value,
-      left_frac = baseline_left_frac,
-      right_frac = baseline_right_frac,
-      method = baseline_method
-    )
+		# 1. Baseline correction
+		value <- .apply_protein_baseline(
+			location,
+			value,
+			left_frac = baseline_left_frac,
+			right_frac = baseline_right_frac,
+			method = baseline_method
+		)
 
-    # 2. Apply extinction coefficient (if provided)
-    if (!is.null(extinction_coef)) {
-      value <- value / extinction_coef
-    }
+		# 2. Apply extinction coefficient (if provided)
+		if (!is.null(extinction_coef)) {
+			value <- value / extinction_coef
+		}
 
-    # 3. Aggregate analysis
-    agg_result <- .calculate_aggregates(
-      location,
-      value,
-      monomer_start = monomer_start,
-      monomer_end = monomer_end,
-      threshold = aggregate_threshold
-    )
+		# 3. Aggregate analysis
+		agg_result <- .calculate_aggregates(
+			location,
+			value,
+			monomer_start = monomer_start,
+			monomer_end = monomer_end,
+			threshold = aggregate_threshold
+		)
 
-    hmws_pct[i] <- agg_result$hmws_pct
-    monomer_pct[i] <- agg_result$monomer_pct
-    lmws_pct[i] <- agg_result$lmws_pct
-    main_start[i] <- agg_result$main_start
-    main_end[i] <- agg_result$main_end
+		hmws_pct[i] <- agg_result$hmws_pct
+		monomer_pct[i] <- agg_result$monomer_pct
+		lmws_pct[i] <- agg_result$lmws_pct
+		main_start[i] <- agg_result$main_start
+		main_end[i] <- agg_result$main_end
 
-    # 4. Oligomer analysis (if requested)
-    if (include_oligomer) {
-      oligo_result <- .calculate_oligomers(
-        location,
-        value,
-        monomer_mw = monomer_mw,
-        mw_tolerance = 0.15
-      )
+		# 4. Oligomer analysis (if requested)
+		if (include_oligomer) {
+			oligo_result <- .calculate_oligomers(
+				location,
+				value,
+				monomer_mw = monomer_mw,
+				mw_tolerance = 0.15
+			)
 
-      if (isTRUE(oligo_result$analysis_failed)) {
-        cli::cli_warn(
-          c(
-            "Oligomer analysis failed for row {i}.",
-            "i" = "No peaks detected or zero signal area.",
-            "i" = "Check chromatogram quality for this sample."
-          )
-        )
-      }
+			if (isTRUE(oligo_result$analysis_failed)) {
+				cli::cli_warn(
+					c(
+						"Oligomer analysis failed for row {i}.",
+						"i" = "No peaks detected or zero signal area.",
+						"i" = "Check chromatogram quality for this sample."
+					)
+				)
+			}
 
-      for (sp in oligo_species) {
-        oligo_pct[[sp]][i] <- oligo_result[[paste0(sp, "_pct")]] %||% NA_real_
-      }
-      species_count[i] <- oligo_result$species_count
-    }
-  }
+			for (sp in oligo_species) {
+				oligo_pct[[sp]][i] <- oligo_result[[paste0(sp, "_pct")]] %||% NA_real_
+			}
+			species_count[i] <- oligo_result$species_count
+		}
+	}
 
-  # Add output columns
-  new_data[[paste0(output_prefix, "hmws_pct")]] <- hmws_pct
-  new_data[[paste0(output_prefix, "monomer_pct")]] <- monomer_pct
-  new_data[[paste0(output_prefix, "lmws_pct")]] <- lmws_pct
-  new_data[[paste0(output_prefix, "main_start")]] <- main_start
-  new_data[[paste0(output_prefix, "main_end")]] <- main_end
+	# Add output columns
+	new_data[[paste0(output_prefix, "hmws_pct")]] <- hmws_pct
+	new_data[[paste0(output_prefix, "monomer_pct")]] <- monomer_pct
+	new_data[[paste0(output_prefix, "lmws_pct")]] <- lmws_pct
+	new_data[[paste0(output_prefix, "main_start")]] <- main_start
+	new_data[[paste0(output_prefix, "main_end")]] <- main_end
 
-  if (include_oligomer) {
-    for (sp in oligo_species) {
-      col_name <- if (sp == "monomer") {
-        paste0(output_prefix, "monomer_oligo_pct")
-      } else if (sp == "hmw") {
-        paste0(output_prefix, "hmw_oligo_pct")
-      } else if (sp == "lmw") {
-        paste0(output_prefix, "lmw_oligo_pct")
-      } else {
-        paste0(output_prefix, sp, "_pct")
-      }
-      new_data[[col_name]] <- oligo_pct[[sp]]
-    }
-    new_data[[paste0(output_prefix, "species_count")]] <- species_count
-  }
+	if (include_oligomer) {
+		for (sp in oligo_species) {
+			col_name <- if (sp == "monomer") {
+				paste0(output_prefix, "monomer_oligo_pct")
+			} else if (sp == "hmw") {
+				paste0(output_prefix, "hmw_oligo_pct")
+			} else if (sp == "lmw") {
+				paste0(output_prefix, "lmw_oligo_pct")
+			} else {
+				paste0(output_prefix, sp, "_pct")
+			}
+			new_data[[col_name]] <- oligo_pct[[sp]]
+		}
+		new_data[[paste0(output_prefix, "species_count")]] <- species_count
+	}
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' Apply baseline correction for protein SEC
 #' @noRd
 .apply_protein_baseline <- function(
-  location,
-  value,
-  left_frac,
-  right_frac,
-  method
+	location,
+	value,
+	left_frac,
+	right_frac,
+	method
 ) {
-  n <- length(value)
-  value[is.na(value)] <- 0
+	n <- length(value)
+	value[is.na(value)] <- 0
 
-  left_n <- max(1, floor(n * left_frac))
-  right_n <- max(1, floor(n * right_frac))
+	left_n <- max(1, floor(n * left_frac))
+	right_n <- max(1, floor(n * right_frac))
 
-  left_idx <- seq_len(left_n)
-  right_idx <- seq(n - right_n + 1, n)
+	left_idx <- seq_len(left_n)
+	right_idx <- seq(n - right_n + 1, n)
 
-  if (method == "median") {
-    left_val <- stats::median(value[left_idx], na.rm = TRUE)
-    right_val <- stats::median(value[right_idx], na.rm = TRUE)
-  } else {
-    left_val <- mean(value[left_idx], na.rm = TRUE)
-    right_val <- mean(value[right_idx], na.rm = TRUE)
-  }
+	if (method == "median") {
+		left_val <- stats::median(value[left_idx], na.rm = TRUE)
+		right_val <- stats::median(value[right_idx], na.rm = TRUE)
+	} else {
+		left_val <- mean(value[left_idx], na.rm = TRUE)
+		right_val <- mean(value[right_idx], na.rm = TRUE)
+	}
 
-  if (method == "spline" && n > 10) {
-    # Use spline through baseline regions
-    baseline_x <- c(location[left_idx], location[right_idx])
-    baseline_y <- c(value[left_idx], value[right_idx])
-    spline_fit <- tryCatch(
-      stats::smooth.spline(baseline_x, baseline_y, df = 4),
-      error = function(e) NULL
-    )
-    if (is.null(spline_fit)) {
-      cli::cli_warn(
-        "Spline baseline fit failed; using linear interpolation."
-      )
-      baseline <- seq(left_val, right_val, length.out = n)
-    } else {
-      baseline <- stats::predict(spline_fit, location)$y
-    }
-  } else if (method == "spline" && n <= 10) {
-    cli::cli_warn(
-      "Spline baseline requires > 10 points; using linear interpolation."
-    )
-    baseline <- seq(left_val, right_val, length.out = n)
-  } else {
-    # Linear interpolation
-    baseline <- seq(left_val, right_val, length.out = n)
-  }
+	if (method == "spline" && n > 10) {
+		# Use spline through baseline regions
+		baseline_x <- c(location[left_idx], location[right_idx])
+		baseline_y <- c(value[left_idx], value[right_idx])
+		spline_fit <- tryCatch(
+			stats::smooth.spline(baseline_x, baseline_y, df = 4),
+			error = function(e) NULL
+		)
+		if (is.null(spline_fit)) {
+			cli::cli_warn(
+				"Spline baseline fit failed; using linear interpolation."
+			)
+			baseline <- seq(left_val, right_val, length.out = n)
+		} else {
+			baseline <- stats::predict(spline_fit, location)$y
+		}
+	} else if (method == "spline" && n <= 10) {
+		cli::cli_warn(
+			"Spline baseline requires > 10 points; using linear interpolation."
+		)
+		baseline <- seq(left_val, right_val, length.out = n)
+	} else {
+		# Linear interpolation
+		baseline <- seq(left_val, right_val, length.out = n)
+	}
 
-  pmax(value - baseline, 0)
+	pmax(value - baseline, 0)
 }
 
 #' Calculate aggregate percentages
 #' @noRd
 .calculate_aggregates <- function(
-  location,
-  value,
-  monomer_start,
-  monomer_end,
-  threshold
+	location,
+	value,
+	monomer_start,
+	monomer_end,
+	threshold
 ) {
-  value <- pmax(value, 0)
+	value <- pmax(value, 0)
 
-  # Find main peak if boundaries not specified
-  if (is.null(monomer_start) || is.null(monomer_end)) {
-    peak_info <- .find_main_peak(location, value, threshold_frac = 0.05)
-    m_start <- peak_info$start
-    m_end <- peak_info$end
-  } else {
-    m_start <- monomer_start
-    m_end <- monomer_end
-  }
+	# Find main peak if boundaries not specified
+	if (is.null(monomer_start) || is.null(monomer_end)) {
+		peak_info <- .find_main_peak(location, value, threshold_frac = 0.05)
+		m_start <- peak_info$start
+		m_end <- peak_info$end
+	} else {
+		m_start <- monomer_start
+		m_end <- monomer_end
+	}
 
-  # Calculate total area
-  total_area <- .peak_area(location, value, 1, length(value))
+	# Calculate total area
+	total_area <- .peak_area(location, value, 1, length(value))
 
-  if (total_area <= 0) {
-    return(list(
-      hmws_pct = NA_real_,
-      monomer_pct = NA_real_,
-      lmws_pct = NA_real_,
-      main_start = m_start,
-      main_end = m_end
-    ))
-  }
+	if (total_area <= 0) {
+		return(
+			list(
+				hmws_pct = NA_real_,
+				monomer_pct = NA_real_,
+				lmws_pct = NA_real_,
+				main_start = m_start,
+				main_end = m_end
+			)
+		)
+	}
 
-  # HMWS: before monomer
-  hmws_idx <- which(location < m_start)
-  if (length(hmws_idx) > 1) {
-    hmws_area <- .peak_area(
-      location,
-      value,
-      min(hmws_idx),
-      max(hmws_idx)
-    )
-  } else {
-    hmws_area <- 0
-  }
+	# HMWS: before monomer
+	hmws_idx <- which(location < m_start)
+	if (length(hmws_idx) > 1) {
+		hmws_area <- .peak_area(
+			location,
+			value,
+			min(hmws_idx),
+			max(hmws_idx)
+		)
+	} else {
+		hmws_area <- 0
+	}
 
-  # Monomer
-  mono_idx <- which(location >= m_start & location <= m_end)
-  if (length(mono_idx) > 1) {
-    mono_area <- .peak_area(location, value, min(mono_idx), max(mono_idx))
-  } else {
-    mono_area <- 0
-  }
+	# Monomer
+	mono_idx <- which(location >= m_start & location <= m_end)
+	if (length(mono_idx) > 1) {
+		mono_area <- .peak_area(location, value, min(mono_idx), max(mono_idx))
+	} else {
+		mono_area <- 0
+	}
 
-  # LMWS: after monomer
-  lmws_idx <- which(location > m_end)
-  if (length(lmws_idx) > 1) {
-    lmws_area <- .peak_area(location, value, min(lmws_idx), max(lmws_idx))
-  } else {
-    lmws_area <- 0
-  }
+	# LMWS: after monomer
+	lmws_idx <- which(location > m_end)
+	if (length(lmws_idx) > 1) {
+		lmws_area <- .peak_area(location, value, min(lmws_idx), max(lmws_idx))
+	} else {
+		lmws_area <- 0
+	}
 
-  list(
-    hmws_pct = 100 * hmws_area / total_area,
-    monomer_pct = 100 * mono_area / total_area,
-    lmws_pct = 100 * lmws_area / total_area,
-    main_start = m_start,
-    main_end = m_end
-  )
+	list(
+		hmws_pct = 100 * hmws_area / total_area,
+		monomer_pct = 100 * mono_area / total_area,
+		lmws_pct = 100 * lmws_area / total_area,
+		main_start = m_start,
+		main_end = m_end
+	)
 }
 
 #' Calculate oligomer percentages
 #' @noRd
 .calculate_oligomers <- function(location, value, monomer_mw, mw_tolerance) {
-  value <- pmax(value, 0)
+	value <- pmax(value, 0)
 
-  # Detect peaks
-  peaks <- .detect_peaks(location, value)
+	# Detect peaks
+	peaks <- .detect_peaks(location, value)
 
-  if (length(peaks) == 0) {
-    return(list(
-      monomer_pct = NA_real_,
-      dimer_pct = NA_real_,
-      trimer_pct = NA_real_,
-      hmw_pct = NA_real_,
-      lmw_pct = NA_real_,
-      species_count = 0,
-      analysis_failed = TRUE
-    ))
-  }
+	if (length(peaks) == 0) {
+		return(
+			list(
+				monomer_pct = NA_real_,
+				dimer_pct = NA_real_,
+				trimer_pct = NA_real_,
+				hmw_pct = NA_real_,
+				lmw_pct = NA_real_,
+				species_count = 0,
+				analysis_failed = TRUE
+			)
+		)
+	}
 
-  total_area <- .peak_area(location, value, 1, length(value))
-  if (total_area <= 0) {
-    return(list(
-      monomer_pct = NA_real_,
-      dimer_pct = NA_real_,
-      trimer_pct = NA_real_,
-      hmw_pct = NA_real_,
-      lmw_pct = NA_real_,
-      species_count = 0,
-      analysis_failed = TRUE
-    ))
-  }
+	total_area <- .peak_area(location, value, 1, length(value))
+	if (total_area <= 0) {
+		return(
+			list(
+				monomer_pct = NA_real_,
+				dimer_pct = NA_real_,
+				trimer_pct = NA_real_,
+				hmw_pct = NA_real_,
+				lmw_pct = NA_real_,
+				species_count = 0,
+				analysis_failed = TRUE
+			)
+		)
+	}
 
-  # Calculate peak areas and find largest (assumed monomer)
-  peak_areas <- sapply(peaks, function(p) {
-    .peak_area(location, value, p$start_idx, p$end_idx)
-  })
+	# Calculate peak areas and find largest (assumed monomer)
+	peak_areas <- sapply(peaks, function(p) {
+		.peak_area(location, value, p$start_idx, p$end_idx)
+	})
 
-  monomer_idx <- which.max(peak_areas)
-  monomer_rt <- peaks[[monomer_idx]]$apex_location
+	monomer_idx <- which.max(peak_areas)
+	monomer_rt <- peaks[[monomer_idx]]$apex_location
 
-  # Assign species by retention time (no MW data)
-  species_pct <- list(
-    monomer_pct = 0,
-    dimer_pct = 0,
-    trimer_pct = 0,
-    hmw_pct = 0,
-    lmw_pct = 0
-  )
+	# Assign species by retention time (no MW data)
+	species_pct <- list(
+		monomer_pct = 0,
+		dimer_pct = 0,
+		trimer_pct = 0,
+		hmw_pct = 0,
+		lmw_pct = 0
+	)
 
-  for (j in seq_along(peaks)) {
-    pct <- 100 * peak_areas[j] / total_area
-    rt <- peaks[[j]]$apex_location
+	for (j in seq_along(peaks)) {
+		pct <- 100 * peak_areas[j] / total_area
+		rt <- peaks[[j]]$apex_location
 
-    if (j == monomer_idx) {
-      species_pct$monomer_pct <- species_pct$monomer_pct + pct
-    } else if (rt < monomer_rt) {
-      # Earlier elution = higher MW (aggregate)
-      # Rough estimate: each 2x MW shift corresponds to ~0.3-0.5 min shift
-      # We'll just group as HMW for now without MW data
-      species_pct$hmw_pct <- species_pct$hmw_pct + pct
-    } else {
-      # Later elution = lower MW (fragment)
-      species_pct$lmw_pct <- species_pct$lmw_pct + pct
-    }
-  }
+		if (j == monomer_idx) {
+			species_pct$monomer_pct <- species_pct$monomer_pct + pct
+		} else if (rt < monomer_rt) {
+			# Earlier elution = higher MW (aggregate)
+			# Rough estimate: each 2x MW shift corresponds to ~0.3-0.5 min shift
+			# We'll just group as HMW for now without MW data
+			species_pct$hmw_pct <- species_pct$hmw_pct + pct
+		} else {
+			# Later elution = lower MW (fragment)
+			species_pct$lmw_pct <- species_pct$lmw_pct + pct
+		}
+	}
 
-  species_pct$species_count <- length(peaks)
-  species_pct$analysis_failed <- FALSE
+	species_pct$species_count <- length(peaks)
+	species_pct$analysis_failed <- FALSE
 
-  species_pct
+	species_pct
 }
 
 #' @export
 print.step_sec_protein <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- paste0("SEC protein analysis (", x$type, ")")
-  if (x$trained) {
-    if (!is.null(x$monomer_mw)) {
-      cat(
-        title,
-        ", monomer MW = ",
-        format(x$monomer_mw, big.mark = ","),
-        " Da",
-        sep = ""
-      )
-    } else {
-      cat(title)
-    }
-  } else {
-    cat(title)
-  }
-  cat("\n")
-  invisible(x)
+	title <- paste0("SEC protein analysis (", x$type, ")")
+	if (x$trained) {
+		if (!is.null(x$monomer_mw)) {
+			cat(
+				title,
+				", monomer MW = ",
+				format(x$monomer_mw, big.mark = ","),
+				" Da",
+				sep = ""
+			)
+		} else {
+			cat(title)
+		}
+	} else {
+		cat(title)
+	}
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_protein <- function(x, ...) {
-  tibble::tibble(
-    type = x$type,
-    monomer_mw = x$monomer_mw %||% NA_real_,
-    include_oligomer = x$include_oligomer,
-    baseline_method = x$baseline_method,
-    aggregate_threshold = x$aggregate_threshold,
-    id = x$id
-  )
+	tibble::tibble(
+		type = x$type,
+		monomer_mw = x$monomer_mw %||% NA_real_,
+		include_oligomer = x$include_oligomer,
+		baseline_method = x$baseline_method,
+		aggregate_threshold = x$aggregate_threshold,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_protein <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

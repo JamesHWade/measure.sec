@@ -134,844 +134,844 @@
 #' tidy(rec, number = 3)
 #' }
 step_sec_broad_standard <- function(
-  recipe,
-  measures = NULL,
-  broad_standard = NULL,
-  known_mn = NULL,
-  known_mw = NULL,
-  fit_type = c("linear", "quadratic"),
-  method = c("hamielec", "integral"),
-  reference_mwd = NULL,
-  integration_range = NULL,
-  extrapolation = c("warn", "none"),
-  output_col = "mw",
-  log_output = TRUE,
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_broad_standard")
+	recipe,
+	measures = NULL,
+	broad_standard = NULL,
+	known_mn = NULL,
+	known_mw = NULL,
+	fit_type = c("linear", "quadratic"),
+	method = c("hamielec", "integral"),
+	reference_mwd = NULL,
+	integration_range = NULL,
+	extrapolation = c("warn", "none"),
+	output_col = "mw",
+	log_output = TRUE,
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_broad_standard")
 ) {
-  fit_type <- match.arg(fit_type)
-  method <- match.arg(method)
-  extrapolation <- match.arg(extrapolation)
+	fit_type <- match.arg(fit_type)
+	method <- match.arg(method)
+	extrapolation <- match.arg(extrapolation)
 
-  # Validate required parameters
-  if (is.null(broad_standard)) {
-    cli::cli_abort(
-      "{.arg broad_standard} is required for broad standard calibration."
-    )
-  }
+	# Validate required parameters
+	if (is.null(broad_standard)) {
+		cli::cli_abort(
+			"{.arg broad_standard} is required for broad standard calibration."
+		)
+	}
 
-  if (!is.data.frame(broad_standard)) {
-    cli::cli_abort("{.arg broad_standard} must be a data frame.")
-  }
+	if (!is.data.frame(broad_standard)) {
+		cli::cli_abort("{.arg broad_standard} must be a data frame.")
+	}
 
-  if (is.null(known_mn) || is.null(known_mw)) {
-    cli::cli_abort("Both {.arg known_mn} and {.arg known_mw} are required.")
-  }
+	if (is.null(known_mn) || is.null(known_mw)) {
+		cli::cli_abort("Both {.arg known_mn} and {.arg known_mw} are required.")
+	}
 
-  if (!is.numeric(known_mn) || known_mn <= 0) {
-    cli::cli_abort("{.arg known_mn} must be a positive number.")
-  }
+	if (!is.numeric(known_mn) || known_mn <= 0) {
+		cli::cli_abort("{.arg known_mn} must be a positive number.")
+	}
 
-  if (!is.numeric(known_mw) || known_mw <= 0) {
-    cli::cli_abort("{.arg known_mw} must be a positive number.")
-  }
+	if (!is.numeric(known_mw) || known_mw <= 0) {
+		cli::cli_abort("{.arg known_mw} must be a positive number.")
+	}
 
-  if (known_mw < known_mn) {
-    cli::cli_abort(
-      "{.arg known_mw} must be greater than or equal to {.arg known_mn}."
-    )
-  }
+	if (known_mw < known_mn) {
+		cli::cli_abort(
+			"{.arg known_mw} must be greater than or equal to {.arg known_mn}."
+		)
+	}
 
-  # Validate broad standard has required columns
-  .validate_broad_standard_columns(broad_standard)
+	# Validate broad standard has required columns
+	.validate_broad_standard_columns(broad_standard)
 
-  # Validate reference_mwd for integral method
-  if (method == "integral") {
-    if (is.null(reference_mwd)) {
-      cli::cli_abort(
-        c(
-          "The {.val integral} method requires {.arg reference_mwd}.",
-          "i" = "Provide a data frame with {.field mw} and {.field cumulative} columns.",
-          "i" = "Use {.val hamielec} method if you only have Mn and Mw values."
-        )
-      )
-    }
+	# Validate reference_mwd for integral method
+	if (method == "integral") {
+		if (is.null(reference_mwd)) {
+			cli::cli_abort(
+				c(
+					"The {.val integral} method requires {.arg reference_mwd}.",
+					"i" = "Provide a data frame with {.field mw} and {.field cumulative} columns.",
+					"i" = "Use {.val hamielec} method if you only have Mn and Mw values."
+				)
+			)
+		}
 
-    if (!is.data.frame(reference_mwd)) {
-      cli::cli_abort("{.arg reference_mwd} must be a data frame.")
-    }
+		if (!is.data.frame(reference_mwd)) {
+			cli::cli_abort("{.arg reference_mwd} must be a data frame.")
+		}
 
-    if (!all(c("mw", "cumulative") %in% names(reference_mwd))) {
-      cli::cli_abort(
-        c(
-          "{.arg reference_mwd} must contain {.field mw} and {.field cumulative} columns.",
-          "i" = "{.field mw}: Molecular weight values in Daltons",
-          "i" = "{.field cumulative}: Cumulative weight fraction (0 to 1)"
-        )
-      )
-    }
+		if (!all(c("mw", "cumulative") %in% names(reference_mwd))) {
+			cli::cli_abort(
+				c(
+					"{.arg reference_mwd} must contain {.field mw} and {.field cumulative} columns.",
+					"i" = "{.field mw}: Molecular weight values in Daltons",
+					"i" = "{.field cumulative}: Cumulative weight fraction (0 to 1)"
+				)
+			)
+		}
 
-    if (
-      !is.numeric(reference_mwd$mw) || !is.numeric(reference_mwd$cumulative)
-    ) {
-      cli::cli_abort(
-        "Columns {.field mw} and {.field cumulative} must be numeric."
-      )
-    }
+		if (
+			!is.numeric(reference_mwd$mw) || !is.numeric(reference_mwd$cumulative)
+		) {
+			cli::cli_abort(
+				"Columns {.field mw} and {.field cumulative} must be numeric."
+			)
+		}
 
-    if (
-      any(reference_mwd$cumulative < 0) || any(reference_mwd$cumulative > 1)
-    ) {
-      cli::cli_abort(
-        "{.field cumulative} values must be between 0 and 1."
-      )
-    }
+		if (
+			any(reference_mwd$cumulative < 0) || any(reference_mwd$cumulative > 1)
+		) {
+			cli::cli_abort(
+				"{.field cumulative} values must be between 0 and 1."
+			)
+		}
 
-    if (nrow(reference_mwd) < 5) {
-      cli::cli_abort(
-        "{.arg reference_mwd} must have at least 5 data points."
-      )
-    }
-  }
+		if (nrow(reference_mwd) < 5) {
+			cli::cli_abort(
+				"{.arg reference_mwd} must have at least 5 data points."
+			)
+		}
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_broad_standard_new(
-      measures = measures,
-      broad_standard = broad_standard,
-      known_mn = known_mn,
-      known_mw = known_mw,
-      fit_type = fit_type,
-      method = method,
-      reference_mwd = reference_mwd,
-      integration_range = integration_range,
-      extrapolation = extrapolation,
-      output_col = output_col,
-      log_output = log_output,
-      calibration_coefficients = NULL,
-      calibration_range = NULL,
-      calibration_diagnostics = NULL,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_broad_standard_new(
+			measures = measures,
+			broad_standard = broad_standard,
+			known_mn = known_mn,
+			known_mw = known_mw,
+			fit_type = fit_type,
+			method = method,
+			reference_mwd = reference_mwd,
+			integration_range = integration_range,
+			extrapolation = extrapolation,
+			output_col = output_col,
+			log_output = log_output,
+			calibration_coefficients = NULL,
+			calibration_range = NULL,
+			calibration_diagnostics = NULL,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 #' Validate broad standard data frame has required columns
 #' @noRd
 .validate_broad_standard_columns <- function(broad_standard) {
-  # Check for location column
-  location_cols <- c(
-    "location",
-    "time",
-    "volume",
-    "retention",
-    "elution_time",
-    "elution_volume"
-  )
-  has_location <- any(names(broad_standard) %in% location_cols)
+	# Check for location column
+	location_cols <- c(
+		"location",
+		"time",
+		"volume",
+		"retention",
+		"elution_time",
+		"elution_volume"
+	)
+	has_location <- any(names(broad_standard) %in% location_cols)
 
-  if (!has_location) {
-    cli::cli_abort(
-      c(
-        "Broad standard data frame must have a location column.",
-        "i" = "Expected one of: {.val {location_cols}}"
-      )
-    )
-  }
+	if (!has_location) {
+		cli::cli_abort(
+			c(
+				"Broad standard data frame must have a location column.",
+				"i" = "Expected one of: {.val {location_cols}}"
+			)
+		)
+	}
 
-  # Check for signal column
-  signal_cols <- c("value", "signal", "response", "intensity", "ri", "uv")
-  has_signal <- any(names(broad_standard) %in% signal_cols)
+	# Check for signal column
+	signal_cols <- c("value", "signal", "response", "intensity", "ri", "uv")
+	has_signal <- any(names(broad_standard) %in% signal_cols)
 
-  if (!has_signal) {
-    cli::cli_abort(
-      c(
-        "Broad standard data frame must have a signal column.",
-        "i" = "Expected one of: {.val {signal_cols}}"
-      )
-    )
-  }
+	if (!has_signal) {
+		cli::cli_abort(
+			c(
+				"Broad standard data frame must have a signal column.",
+				"i" = "Expected one of: {.val {signal_cols}}"
+			)
+		)
+	}
 
-  invisible(TRUE)
+	invisible(TRUE)
 }
 
 #' Get location column from broad standard
 #' @noRd
 .get_broad_location_col <- function(broad_standard) {
-  location_cols <- c(
-    "location",
-    "time",
-    "volume",
-    "retention",
-    "elution_time",
-    "elution_volume"
-  )
-  found <- names(broad_standard)[names(broad_standard) %in% location_cols]
-  found[1]
+	location_cols <- c(
+		"location",
+		"time",
+		"volume",
+		"retention",
+		"elution_time",
+		"elution_volume"
+	)
+	found <- names(broad_standard)[names(broad_standard) %in% location_cols]
+	found[1]
 }
 
 #' Get signal column from broad standard
 #' @noRd
 .get_broad_signal_col <- function(broad_standard) {
-  signal_cols <- c("value", "signal", "response", "intensity", "ri", "uv")
-  found <- names(broad_standard)[names(broad_standard) %in% signal_cols]
-  found[1]
+	signal_cols <- c("value", "signal", "response", "intensity", "ri", "uv")
+	found <- names(broad_standard)[names(broad_standard) %in% signal_cols]
+	found[1]
 }
 
 step_sec_broad_standard_new <- function(
-  measures,
-  broad_standard,
-  known_mn,
-  known_mw,
-  fit_type,
-  method,
-  reference_mwd,
-  integration_range,
-  extrapolation,
-  output_col,
-  log_output,
-  calibration_coefficients,
-  calibration_range,
-  calibration_diagnostics,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	broad_standard,
+	known_mn,
+	known_mw,
+	fit_type,
+	method,
+	reference_mwd,
+	integration_range,
+	extrapolation,
+	output_col,
+	log_output,
+	calibration_coefficients,
+	calibration_range,
+	calibration_diagnostics,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_broad_standard",
-    measures = measures,
-    broad_standard = broad_standard,
-    known_mn = known_mn,
-    known_mw = known_mw,
-    fit_type = fit_type,
-    method = method,
-    reference_mwd = reference_mwd,
-    integration_range = integration_range,
-    extrapolation = extrapolation,
-    output_col = output_col,
-    log_output = log_output,
-    calibration_coefficients = calibration_coefficients,
-    calibration_range = calibration_range,
-    calibration_diagnostics = calibration_diagnostics,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_broad_standard",
+		measures = measures,
+		broad_standard = broad_standard,
+		known_mn = known_mn,
+		known_mw = known_mw,
+		fit_type = fit_type,
+		method = method,
+		reference_mwd = reference_mwd,
+		integration_range = integration_range,
+		extrapolation = extrapolation,
+		output_col = output_col,
+		log_output = log_output,
+		calibration_coefficients = calibration_coefficients,
+		calibration_range = calibration_range,
+		calibration_diagnostics = calibration_diagnostics,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' Calculate Mn and Mw for given calibration coefficients
 #' @noRd
 .calc_mw_from_coefficients <- function(
-  location,
-  signal,
-  coefficients,
-  fit_type
+	location,
+	signal,
+	coefficients,
+	fit_type
 ) {
-  # Apply calibration to get log10(MW)
-  if (fit_type == "linear") {
-    log_mw <- coefficients[1] + coefficients[2] * location
-  } else {
-    # quadratic
-    log_mw <- coefficients[1] +
-      coefficients[2] * location +
-      coefficients[3] * location^2
-  }
+	# Apply calibration to get log10(MW)
+	if (fit_type == "linear") {
+		log_mw <- coefficients[1] + coefficients[2] * location
+	} else {
+		# quadratic
+		log_mw <- coefficients[1] +
+			coefficients[2] * location +
+			coefficients[3] * location^2
+	}
 
-  # Convert to MW
-  mw <- 10^log_mw
+	# Convert to MW
+	mw <- 10^log_mw
 
-  # Weight is proportional to signal (ensure non-negative)
-  w <- pmax(signal, 0)
+	# Weight is proportional to signal (ensure non-negative)
+	w <- pmax(signal, 0)
 
-  # Only use positive weights
-  valid <- w > 0 & is.finite(mw) & mw > 0
-  if (sum(valid) < 2) {
-    return(list(mn = NA_real_, mw = NA_real_, dispersity = NA_real_))
-  }
+	# Only use positive weights
+	valid <- w > 0 & is.finite(mw) & mw > 0
+	if (sum(valid) < 2) {
+		return(list(mn = NA_real_, mw = NA_real_, dispersity = NA_real_))
+	}
 
-  mw <- mw[valid]
-  w <- w[valid]
-  sum_w <- sum(w)
+	mw <- mw[valid]
+	w <- w[valid]
+	sum_w <- sum(w)
 
-  # Calculate Mn and Mw
-  mn <- sum_w / sum(w / mw)
-  mw_calc <- sum(w * mw) / sum_w
-  dispersity <- mw_calc / mn
+	# Calculate Mn and Mw
+	mn <- sum_w / sum(w / mw)
+	mw_calc <- sum(w * mw) / sum_w
+	dispersity <- mw_calc / mn
 
-  list(mn = mn, mw = mw_calc, dispersity = dispersity)
+	list(mn = mn, mw = mw_calc, dispersity = dispersity)
 }
 
 #' Objective function for Hamielec optimization
 #' @noRd
 .hamielec_objective <- function(
-  params,
-  location,
-  signal,
-  known_mn,
-  known_mw,
-  fit_type
+	params,
+	location,
+	signal,
+	known_mn,
+	known_mw,
+	fit_type
 ) {
-  result <- .calc_mw_from_coefficients(location, signal, params, fit_type)
+	result <- .calc_mw_from_coefficients(location, signal, params, fit_type)
 
-  if (is.na(result$mn) || is.na(result$mw)) {
-    return(1e10)
-  }
+	if (is.na(result$mn) || is.na(result$mw)) {
+		return(1e10)
+	}
 
-  # Objective: minimize squared relative errors in Mn and Mw
-  err_mn <- ((result$mn - known_mn) / known_mn)^2
-  err_mw <- ((result$mw - known_mw) / known_mw)^2
+	# Objective: minimize squared relative errors in Mn and Mw
+	err_mn <- ((result$mn - known_mn) / known_mn)^2
+	err_mw <- ((result$mw - known_mw) / known_mw)^2
 
-  err_mn + err_mw
+	err_mn + err_mw
 }
 
 #' Fit Hamielec calibration
 #' @noRd
 .fit_hamielec <- function(
-  location,
-  signal,
-  known_mn,
-  known_mw,
-  fit_type,
-  integration_range
+	location,
+	signal,
+	known_mn,
+	known_mw,
+	fit_type,
+	integration_range
 ) {
-  # Apply integration range if specified
-  if (!is.null(integration_range)) {
-    idx <- location >= integration_range[1] & location <= integration_range[2]
-    location <- location[idx]
-    signal <- signal[idx]
-  } else {
-    # Auto-detect peak region (above 5% of max)
-    threshold <- 0.05 * max(signal, na.rm = TRUE)
-    idx <- signal > threshold
-    if (sum(idx) > 10) {
-      location <- location[idx]
-      signal <- signal[idx]
-    }
-  }
+	# Apply integration range if specified
+	if (!is.null(integration_range)) {
+		idx <- location >= integration_range[1] & location <= integration_range[2]
+		location <- location[idx]
+		signal <- signal[idx]
+	} else {
+		# Auto-detect peak region (above 5% of max)
+		threshold <- 0.05 * max(signal, na.rm = TRUE)
+		idx <- signal > threshold
+		if (sum(idx) > 10) {
+			location <- location[idx]
+			signal <- signal[idx]
+		}
+	}
 
-  if (length(location) < 10) {
-    cli::cli_abort("Insufficient data points in broad standard chromatogram.")
-  }
+	if (length(location) < 10) {
+		cli::cli_abort("Insufficient data points in broad standard chromatogram.")
+	}
 
-  known_dispersity <- known_mw / known_mn
-  known_log_mw <- log10(known_mw)
-  known_log_mn <- log10(known_mn)
+	known_dispersity <- known_mw / known_mn
+	known_log_mw <- log10(known_mw)
+	known_log_mn <- log10(known_mn)
 
-  # Initial guess for coefficients
-  # Typical SEC: log(MW) decreases with elution time
-  # Rough estimate: MW range spans calibration range
-  v_range <- range(location)
-  v_mid <- mean(v_range)
+	# Initial guess for coefficients
+	# Typical SEC: log(MW) decreases with elution time
+	# Rough estimate: MW range spans calibration range
+	v_range <- range(location)
+	v_mid <- mean(v_range)
 
-  if (fit_type == "linear") {
-    # log10(M) = C1 + C2*V
-    # At v_mid, estimate log10(MW) as average of log10(Mn) and log10(Mw)
-    # This equals log10(geometric_mean(Mn, Mw)), not log10(arithmetic_mean)
-    avg_log_mw <- (known_log_mn + known_log_mw) / 2
+	if (fit_type == "linear") {
+		# log10(M) = C1 + C2*V
+		# At v_mid, estimate log10(MW) as average of log10(Mn) and log10(Mw)
+		# This equals log10(geometric_mean(Mn, Mw)), not log10(arithmetic_mean)
+		avg_log_mw <- (known_log_mn + known_log_mw) / 2
 
-    # Slope is typically negative (higher MW elutes first)
-    # Estimate slope from MW range and elution range
-    c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
-    c1_init <- avg_log_mw - c2_init * v_mid
+		# Slope is typically negative (higher MW elutes first)
+		# Estimate slope from MW range and elution range
+		c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
+		c1_init <- avg_log_mw - c2_init * v_mid
 
-    initial_params <- c(c1_init, c2_init)
+		initial_params <- c(c1_init, c2_init)
 
-    # Optimize
-    result <- stats::optim(
-      par = initial_params,
-      fn = .hamielec_objective,
-      location = location,
-      signal = signal,
-      known_mn = known_mn,
-      known_mw = known_mw,
-      fit_type = fit_type,
-      method = "Nelder-Mead",
-      control = list(maxit = 1000)
-    )
+		# Optimize
+		result <- stats::optim(
+			par = initial_params,
+			fn = .hamielec_objective,
+			location = location,
+			signal = signal,
+			known_mn = known_mn,
+			known_mw = known_mw,
+			fit_type = fit_type,
+			method = "Nelder-Mead",
+			control = list(maxit = 1000)
+		)
 
-    coefficients <- result$par
-    names(coefficients) <- c("intercept", "slope")
-  } else {
-    # Quadratic fit
-    avg_log_mw <- (known_log_mn + known_log_mw) / 2
-    c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
-    c1_init <- avg_log_mw - c2_init * v_mid
-    c3_init <- 0
+		coefficients <- result$par
+		names(coefficients) <- c("intercept", "slope")
+	} else {
+		# Quadratic fit
+		avg_log_mw <- (known_log_mn + known_log_mw) / 2
+		c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
+		c1_init <- avg_log_mw - c2_init * v_mid
+		c3_init <- 0
 
-    initial_params <- c(c1_init, c2_init, c3_init)
+		initial_params <- c(c1_init, c2_init, c3_init)
 
-    result <- stats::optim(
-      par = initial_params,
-      fn = .hamielec_objective,
-      location = location,
-      signal = signal,
-      known_mn = known_mn,
-      known_mw = known_mw,
-      fit_type = fit_type,
-      method = "Nelder-Mead",
-      control = list(maxit = 2000)
-    )
+		result <- stats::optim(
+			par = initial_params,
+			fn = .hamielec_objective,
+			location = location,
+			signal = signal,
+			known_mn = known_mn,
+			known_mw = known_mw,
+			fit_type = fit_type,
+			method = "Nelder-Mead",
+			control = list(maxit = 2000)
+		)
 
-    coefficients <- result$par
-    names(coefficients) <- c("intercept", "slope", "quadratic")
-  }
+		coefficients <- result$par
+		names(coefficients) <- c("intercept", "slope", "quadratic")
+	}
 
-  # Calculate final MW values with fitted coefficients
-  final_result <- .calc_mw_from_coefficients(
-    location,
-    signal,
-    coefficients,
-    fit_type
-  )
+	# Calculate final MW values with fitted coefficients
+	final_result <- .calc_mw_from_coefficients(
+		location,
+		signal,
+		coefficients,
+		fit_type
+	)
 
-  # Calculate diagnostics
-  mn_error_pct <- 100 * (final_result$mn - known_mn) / known_mn
-  mw_error_pct <- 100 * (final_result$mw - known_mw) / known_mw
-  dispersity_error_pct <- 100 *
-    (final_result$dispersity - known_dispersity) /
-    known_dispersity
+	# Calculate diagnostics
+	mn_error_pct <- 100 * (final_result$mn - known_mn) / known_mn
+	mw_error_pct <- 100 * (final_result$mw - known_mw) / known_mw
+	dispersity_error_pct <- 100 *
+		(final_result$dispersity - known_dispersity) /
+		known_dispersity
 
-  diagnostics <- list(
-    known_mn = known_mn,
-    known_mw = known_mw,
-    known_dispersity = known_dispersity,
-    calculated_mn = final_result$mn,
-    calculated_mw = final_result$mw,
-    calculated_dispersity = final_result$dispersity,
-    mn_error_pct = mn_error_pct,
-    mw_error_pct = mw_error_pct,
-    dispersity_error_pct = dispersity_error_pct,
-    convergence = result$convergence,
-    iterations = result$counts["function"],
-    final_objective = result$value
-  )
+	diagnostics <- list(
+		known_mn = known_mn,
+		known_mw = known_mw,
+		known_dispersity = known_dispersity,
+		calculated_mn = final_result$mn,
+		calculated_mw = final_result$mw,
+		calculated_dispersity = final_result$dispersity,
+		mn_error_pct = mn_error_pct,
+		mw_error_pct = mw_error_pct,
+		dispersity_error_pct = dispersity_error_pct,
+		convergence = result$convergence,
+		iterations = result$counts["function"],
+		final_objective = result$value
+	)
 
-  # Warn if fit is poor
-  if (abs(mn_error_pct) > 5 || abs(mw_error_pct) > 5) {
-    cli::cli_warn(
-      c(
-        "Broad standard calibration fit has >5% error.",
-        "i" = "Mn error: {round(mn_error_pct, 2)}%, Mw error: {round(mw_error_pct, 2)}%",
-        "i" = "Consider adjusting integration range or using different fit type."
-      )
-    )
-  }
+	# Warn if fit is poor
+	if (abs(mn_error_pct) > 5 || abs(mw_error_pct) > 5) {
+		cli::cli_warn(
+			c(
+				"Broad standard calibration fit has >5% error.",
+				"i" = "Mn error: {round(mn_error_pct, 2)}%, Mw error: {round(mw_error_pct, 2)}%",
+				"i" = "Consider adjusting integration range or using different fit type."
+			)
+		)
+	}
 
-  list(
-    coefficients = coefficients,
-    calibration_range = range(location),
-    diagnostics = diagnostics
-  )
+	list(
+		coefficients = coefficients,
+		calibration_range = range(location),
+		diagnostics = diagnostics
+	)
 }
 
 #' Objective function for integral/cumulative match optimization
 #' @noRd
 .integral_objective <- function(
-  params,
-  location,
-  signal,
-  reference_mwd,
-  fit_type
+	params,
+	location,
+	signal,
+	reference_mwd,
+	fit_type
 ) {
-  # Apply calibration to get log10(MW)
-  if (fit_type == "linear") {
-    log_mw <- params[1] + params[2] * location
-  } else {
-    # quadratic
-    log_mw <- params[1] + params[2] * location + params[3] * location^2
-  }
+	# Apply calibration to get log10(MW)
+	if (fit_type == "linear") {
+		log_mw <- params[1] + params[2] * location
+	} else {
+		# quadratic
+		log_mw <- params[1] + params[2] * location + params[3] * location^2
+	}
 
-  # Convert to MW
-  mw <- 10^log_mw
+	# Convert to MW
+	mw <- 10^log_mw
 
-  # Weight is proportional to signal (ensure non-negative)
-  w <- pmax(signal, 0)
+	# Weight is proportional to signal (ensure non-negative)
+	w <- pmax(signal, 0)
 
-  # Only use valid points
+	# Only use valid points
 
-  valid <- w > 0 & is.finite(mw) & mw > 0
-  if (sum(valid) < 5) {
-    return(1e10)
-  }
+	valid <- w > 0 & is.finite(mw) & mw > 0
+	if (sum(valid) < 5) {
+		return(1e10)
+	}
 
-  mw <- mw[valid]
-  w <- w[valid]
+	mw <- mw[valid]
+	w <- w[valid]
 
-  # Sort by MW (ascending) for cumulative calculation
-  ord <- order(mw)
-  mw_sorted <- mw[ord]
-  w_sorted <- w[ord]
+	# Sort by MW (ascending) for cumulative calculation
+	ord <- order(mw)
+	mw_sorted <- mw[ord]
+	w_sorted <- w[ord]
 
-  # Calculate cumulative weight fraction
-  cum_w <- cumsum(w_sorted)
-  cum_frac <- cum_w / sum(w_sorted)
+	# Calculate cumulative weight fraction
+	cum_w <- cumsum(w_sorted)
+	cum_frac <- cum_w / sum(w_sorted)
 
-  # Interpolate reference cumulative at calculated MW values
-  # Use log-scale for interpolation (MW values span orders of magnitude)
-  ref_cum_interp <- stats::approx(
-    x = log10(reference_mwd$mw),
-    y = reference_mwd$cumulative,
-    xout = log10(mw_sorted),
-    rule = 2 # Extrapolate using boundary values
-  )$y
+	# Interpolate reference cumulative at calculated MW values
+	# Use log-scale for interpolation (MW values span orders of magnitude)
+	ref_cum_interp <- stats::approx(
+		x = log10(reference_mwd$mw),
+		y = reference_mwd$cumulative,
+		xout = log10(mw_sorted),
+		rule = 2 # Extrapolate using boundary values
+	)$y
 
-  # Sum of squared differences between calculated and reference cumulative
-  sum((cum_frac - ref_cum_interp)^2)
+	# Sum of squared differences between calculated and reference cumulative
+	sum((cum_frac - ref_cum_interp)^2)
 }
 
 #' Fit integral/cumulative match calibration
 #' @noRd
 .fit_integral <- function(
-  location,
-  signal,
-  reference_mwd,
-  known_mn,
-  known_mw,
-  fit_type,
-  integration_range
+	location,
+	signal,
+	reference_mwd,
+	known_mn,
+	known_mw,
+	fit_type,
+	integration_range
 ) {
-  # Apply integration range if specified
-  if (!is.null(integration_range)) {
-    idx <- location >= integration_range[1] & location <= integration_range[2]
-    location <- location[idx]
-    signal <- signal[idx]
-  } else {
-    # Auto-detect peak region (above 5% of max)
-    threshold <- 0.05 * max(signal, na.rm = TRUE)
-    idx <- signal > threshold
-    if (sum(idx) > 10) {
-      location <- location[idx]
-      signal <- signal[idx]
-    }
-  }
+	# Apply integration range if specified
+	if (!is.null(integration_range)) {
+		idx <- location >= integration_range[1] & location <= integration_range[2]
+		location <- location[idx]
+		signal <- signal[idx]
+	} else {
+		# Auto-detect peak region (above 5% of max)
+		threshold <- 0.05 * max(signal, na.rm = TRUE)
+		idx <- signal > threshold
+		if (sum(idx) > 10) {
+			location <- location[idx]
+			signal <- signal[idx]
+		}
+	}
 
-  if (length(location) < 10) {
-    cli::cli_abort("Insufficient data points in broad standard chromatogram.")
-  }
+	if (length(location) < 10) {
+		cli::cli_abort("Insufficient data points in broad standard chromatogram.")
+	}
 
-  # Sort reference MWD by MW
-  ref_ord <- order(reference_mwd$mw)
-  reference_mwd <- reference_mwd[ref_ord, ]
+	# Sort reference MWD by MW
+	ref_ord <- order(reference_mwd$mw)
+	reference_mwd <- reference_mwd[ref_ord, ]
 
-  known_dispersity <- known_mw / known_mn
-  known_log_mw <- log10(known_mw)
-  known_log_mn <- log10(known_mn)
+	known_dispersity <- known_mw / known_mn
+	known_log_mw <- log10(known_mw)
+	known_log_mn <- log10(known_mn)
 
-  # Initial guess for coefficients (same as Hamielec)
-  v_range <- range(location)
-  v_mid <- mean(v_range)
-  avg_log_mw <- (known_log_mn + known_log_mw) / 2
-  c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
-  c1_init <- avg_log_mw - c2_init * v_mid
+	# Initial guess for coefficients (same as Hamielec)
+	v_range <- range(location)
+	v_mid <- mean(v_range)
+	avg_log_mw <- (known_log_mn + known_log_mw) / 2
+	c2_init <- -(known_log_mw - known_log_mn) / diff(v_range) * 2
+	c1_init <- avg_log_mw - c2_init * v_mid
 
-  if (fit_type == "linear") {
-    initial_params <- c(c1_init, c2_init)
+	if (fit_type == "linear") {
+		initial_params <- c(c1_init, c2_init)
 
-    result <- stats::optim(
-      par = initial_params,
-      fn = .integral_objective,
-      location = location,
-      signal = signal,
-      reference_mwd = reference_mwd,
-      fit_type = fit_type,
-      method = "Nelder-Mead",
-      control = list(maxit = 1000)
-    )
+		result <- stats::optim(
+			par = initial_params,
+			fn = .integral_objective,
+			location = location,
+			signal = signal,
+			reference_mwd = reference_mwd,
+			fit_type = fit_type,
+			method = "Nelder-Mead",
+			control = list(maxit = 1000)
+		)
 
-    coefficients <- result$par
-    names(coefficients) <- c("intercept", "slope")
-  } else {
-    # Quadratic fit
-    c3_init <- 0
-    initial_params <- c(c1_init, c2_init, c3_init)
+		coefficients <- result$par
+		names(coefficients) <- c("intercept", "slope")
+	} else {
+		# Quadratic fit
+		c3_init <- 0
+		initial_params <- c(c1_init, c2_init, c3_init)
 
-    result <- stats::optim(
-      par = initial_params,
-      fn = .integral_objective,
-      location = location,
-      signal = signal,
-      reference_mwd = reference_mwd,
-      fit_type = fit_type,
-      method = "Nelder-Mead",
-      control = list(maxit = 2000)
-    )
+		result <- stats::optim(
+			par = initial_params,
+			fn = .integral_objective,
+			location = location,
+			signal = signal,
+			reference_mwd = reference_mwd,
+			fit_type = fit_type,
+			method = "Nelder-Mead",
+			control = list(maxit = 2000)
+		)
 
-    coefficients <- result$par
-    names(coefficients) <- c("intercept", "slope", "quadratic")
-  }
+		coefficients <- result$par
+		names(coefficients) <- c("intercept", "slope", "quadratic")
+	}
 
-  # Calculate final MW values with fitted coefficients
-  final_result <- .calc_mw_from_coefficients(
-    location,
-    signal,
-    coefficients,
-    fit_type
-  )
+	# Calculate final MW values with fitted coefficients
+	final_result <- .calc_mw_from_coefficients(
+		location,
+		signal,
+		coefficients,
+		fit_type
+	)
 
-  # Calculate diagnostics
-  mn_error_pct <- 100 * (final_result$mn - known_mn) / known_mn
-  mw_error_pct <- 100 * (final_result$mw - known_mw) / known_mw
-  dispersity_error_pct <- 100 *
-    (final_result$dispersity - known_dispersity) /
-    known_dispersity
+	# Calculate diagnostics
+	mn_error_pct <- 100 * (final_result$mn - known_mn) / known_mn
+	mw_error_pct <- 100 * (final_result$mw - known_mw) / known_mw
+	dispersity_error_pct <- 100 *
+		(final_result$dispersity - known_dispersity) /
+		known_dispersity
 
-  diagnostics <- list(
-    known_mn = known_mn,
-    known_mw = known_mw,
-    known_dispersity = known_dispersity,
-    calculated_mn = final_result$mn,
-    calculated_mw = final_result$mw,
-    calculated_dispersity = final_result$dispersity,
-    mn_error_pct = mn_error_pct,
-    mw_error_pct = mw_error_pct,
-    dispersity_error_pct = dispersity_error_pct,
-    convergence = result$convergence,
-    iterations = result$counts["function"],
-    final_objective = result$value,
-    method = "integral"
-  )
+	diagnostics <- list(
+		known_mn = known_mn,
+		known_mw = known_mw,
+		known_dispersity = known_dispersity,
+		calculated_mn = final_result$mn,
+		calculated_mw = final_result$mw,
+		calculated_dispersity = final_result$dispersity,
+		mn_error_pct = mn_error_pct,
+		mw_error_pct = mw_error_pct,
+		dispersity_error_pct = dispersity_error_pct,
+		convergence = result$convergence,
+		iterations = result$counts["function"],
+		final_objective = result$value,
+		method = "integral"
+	)
 
-  # Warn if fit results in poor Mn/Mw match
-  # (integral method prioritizes shape, so Mn/Mw may differ slightly)
-  if (abs(mn_error_pct) > 10 || abs(mw_error_pct) > 10) {
-    cli::cli_warn(
-      c(
-        "Integral calibration has >10% deviation from known Mn/Mw.",
-        "i" = "Mn error: {round(mn_error_pct, 2)}%, Mw error: {round(mw_error_pct, 2)}%",
-        "i" = "This may indicate the reference MWD shape doesn't match the chromatogram."
-      )
-    )
-  }
+	# Warn if fit results in poor Mn/Mw match
+	# (integral method prioritizes shape, so Mn/Mw may differ slightly)
+	if (abs(mn_error_pct) > 10 || abs(mw_error_pct) > 10) {
+		cli::cli_warn(
+			c(
+				"Integral calibration has >10% deviation from known Mn/Mw.",
+				"i" = "Mn error: {round(mn_error_pct, 2)}%, Mw error: {round(mw_error_pct, 2)}%",
+				"i" = "This may indicate the reference MWD shape doesn't match the chromatogram."
+			)
+		)
+	}
 
-  list(
-    coefficients = coefficients,
-    calibration_range = range(location),
-    diagnostics = diagnostics
-  )
+	list(
+		coefficients = coefficients,
+		calibration_range = range(location),
+		diagnostics = diagnostics
+	)
 }
 
 #' @export
 prep.step_sec_broad_standard <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Find measure columns if not specified
-  if (is.null(x$measures)) {
-    measures <- find_measure_cols(training)
-  } else {
-    measures <- x$measures
-  }
+	# Find measure columns if not specified
+	if (is.null(x$measures)) {
+		measures <- find_measure_cols(training)
+	} else {
+		measures <- x$measures
+	}
 
-  # Extract broad standard data
-  broad_standard <- x$broad_standard
-  location_col <- .get_broad_location_col(broad_standard)
-  signal_col <- .get_broad_signal_col(broad_standard)
+	# Extract broad standard data
+	broad_standard <- x$broad_standard
+	location_col <- .get_broad_location_col(broad_standard)
+	signal_col <- .get_broad_signal_col(broad_standard)
 
-  location <- broad_standard[[location_col]]
-  signal <- broad_standard[[signal_col]]
+	location <- broad_standard[[location_col]]
+	signal <- broad_standard[[signal_col]]
 
-  # Fit calibration based on method
-  if (x$method == "integral") {
-    fit_result <- .fit_integral(
-      location = location,
-      signal = signal,
-      reference_mwd = x$reference_mwd,
-      known_mn = x$known_mn,
-      known_mw = x$known_mw,
-      fit_type = x$fit_type,
-      integration_range = x$integration_range
-    )
-  } else {
-    # Default to Hamielec method
-    fit_result <- .fit_hamielec(
-      location = location,
-      signal = signal,
-      known_mn = x$known_mn,
-      known_mw = x$known_mw,
-      fit_type = x$fit_type,
-      integration_range = x$integration_range
-    )
-  }
+	# Fit calibration based on method
+	if (x$method == "integral") {
+		fit_result <- .fit_integral(
+			location = location,
+			signal = signal,
+			reference_mwd = x$reference_mwd,
+			known_mn = x$known_mn,
+			known_mw = x$known_mw,
+			fit_type = x$fit_type,
+			integration_range = x$integration_range
+		)
+	} else {
+		# Default to Hamielec method
+		fit_result <- .fit_hamielec(
+			location = location,
+			signal = signal,
+			known_mn = x$known_mn,
+			known_mw = x$known_mw,
+			fit_type = x$fit_type,
+			integration_range = x$integration_range
+		)
+	}
 
-  step_sec_broad_standard_new(
-    measures = measures,
-    broad_standard = x$broad_standard,
-    known_mn = x$known_mn,
-    known_mw = x$known_mw,
-    fit_type = x$fit_type,
-    method = x$method,
-    reference_mwd = x$reference_mwd,
-    integration_range = x$integration_range,
-    extrapolation = x$extrapolation,
-    output_col = x$output_col,
-    log_output = x$log_output,
-    calibration_coefficients = fit_result$coefficients,
-    calibration_range = fit_result$calibration_range,
-    calibration_diagnostics = fit_result$diagnostics,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_broad_standard_new(
+		measures = measures,
+		broad_standard = x$broad_standard,
+		known_mn = x$known_mn,
+		known_mw = x$known_mw,
+		fit_type = x$fit_type,
+		method = x$method,
+		reference_mwd = x$reference_mwd,
+		integration_range = x$integration_range,
+		extrapolation = x$extrapolation,
+		output_col = x$output_col,
+		log_output = x$log_output,
+		calibration_coefficients = fit_result$coefficients,
+		calibration_range = fit_result$calibration_range,
+		calibration_diagnostics = fit_result$diagnostics,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_broad_standard <- function(object, new_data, ...) {
-  coefficients <- object$calibration_coefficients
-  calibration_range <- object$calibration_range
-  extrapolation <- object$extrapolation
-  output_col <- object$output_col
-  log_output <- object$log_output
-  fit_type <- object$fit_type
-  measures <- object$measures
+	coefficients <- object$calibration_coefficients
+	calibration_range <- object$calibration_range
+	extrapolation <- object$extrapolation
+	output_col <- object$output_col
+	log_output <- object$log_output
+	fit_type <- object$fit_type
+	measures <- object$measures
 
-  # Use first measure column for location data
-  col <- measures[1]
+	# Use first measure column for location data
+	col <- measures[1]
 
-  mw_list <- purrr::map(new_data[[col]], function(m) {
-    location <- m$location
+	mw_list <- purrr::map(new_data[[col]], function(m) {
+		location <- m$location
 
-    # Check for out-of-range values
-    out_of_range <- location < calibration_range[1] |
-      location > calibration_range[2]
+		# Check for out-of-range values
+		out_of_range <- location < calibration_range[1] |
+			location > calibration_range[2]
 
-    if (any(out_of_range) && extrapolation == "warn") {
-      n_out <- sum(out_of_range)
-      pct_out <- round(100 * n_out / length(location), 1)
-      cli::cli_warn(
-        c(
-          "{n_out} points ({pct_out}%) are outside calibration range.",
-          "i" = "Calibration range: {round(calibration_range[1], 2)} to {round(calibration_range[2], 2)}"
-        )
-      )
-    }
+		if (any(out_of_range) && extrapolation == "warn") {
+			n_out <- sum(out_of_range)
+			pct_out <- round(100 * n_out / length(location), 1)
+			cli::cli_warn(
+				c(
+					"{n_out} points ({pct_out}%) are outside calibration range.",
+					"i" = "Calibration range: {round(calibration_range[1], 2)} to {round(calibration_range[2], 2)}"
+				)
+			)
+		}
 
-    # Apply calibration to get log10(MW)
-    if (fit_type == "linear") {
-      log_mw <- coefficients["intercept"] + coefficients["slope"] * location
-    } else {
-      log_mw <- coefficients["intercept"] +
-        coefficients["slope"] * location +
-        coefficients["quadratic"] * location^2
-    }
+		# Apply calibration to get log10(MW)
+		if (fit_type == "linear") {
+			log_mw <- coefficients["intercept"] + coefficients["slope"] * location
+		} else {
+			log_mw <- coefficients["intercept"] +
+				coefficients["slope"] * location +
+				coefficients["quadratic"] * location^2
+		}
 
-    # Handle out-of-range based on extrapolation setting
-    if (extrapolation == "none") {
-      log_mw[out_of_range] <- NA_real_
-    }
+		# Handle out-of-range based on extrapolation setting
+		if (extrapolation == "none") {
+			log_mw[out_of_range] <- NA_real_
+		}
 
-    # Apply reasonable bounds
-    log_mw[log_mw < 1] <- NA_real_ # < 10 Da
-    log_mw[log_mw > 10] <- NA_real_ # > 10^10 Da
+		# Apply reasonable bounds
+		log_mw[log_mw < 1] <- NA_real_ # < 10 Da
+		log_mw[log_mw > 10] <- NA_real_ # > 10^10 Da
 
-    # Convert to MW if requested
-    if (log_output) {
-      value <- as.numeric(log_mw)
-    } else {
-      value <- 10^log_mw
-    }
+		# Convert to MW if requested
+		if (log_output) {
+			value <- as.numeric(log_mw)
+		} else {
+			value <- 10^log_mw
+		}
 
-    new_measure_tbl(location = location, value = value)
-  })
+		new_measure_tbl(location = location, value = value)
+	})
 
-  new_data[[output_col]] <- new_measure_list(mw_list)
+	new_data[[output_col]] <- new_measure_list(mw_list)
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_broad_standard <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- sprintf(
-    "SEC broad standard calibration (%s, %s)",
-    x$method,
-    x$fit_type
-  )
+	title <- sprintf(
+		"SEC broad standard calibration (%s, %s)",
+		x$method,
+		x$fit_type
+	)
 
-  if (x$trained && !is.null(x$calibration_diagnostics)) {
-    diag <- x$calibration_diagnostics
-    title <- sprintf(
-      "%s, Mn err=%.1f%%, Mw err=%.1f%%",
-      title,
-      diag$mn_error_pct,
-      diag$mw_error_pct
-    )
-  }
+	if (x$trained && !is.null(x$calibration_diagnostics)) {
+		diag <- x$calibration_diagnostics
+		title <- sprintf(
+			"%s, Mn err=%.1f%%, Mw err=%.1f%%",
+			title,
+			diag$mn_error_pct,
+			diag$mw_error_pct
+		)
+	}
 
-  if (x$trained) {
-    cat(title, " -> ", x$output_col, sep = "")
-  } else {
-    cat(title)
-  }
+	if (x$trained) {
+		cat(title, " -> ", x$output_col, sep = "")
+	} else {
+		cat(title)
+	}
 
-  cat("\n")
-  invisible(x)
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_broad_standard <- function(x, ...) {
-  if (x$trained && !is.null(x$calibration_diagnostics)) {
-    diag <- x$calibration_diagnostics
-    tibble::tibble(
-      method = x$method,
-      fit_type = x$fit_type,
-      known_mn = diag$known_mn,
-      known_mw = diag$known_mw,
-      known_dispersity = diag$known_dispersity,
-      calculated_mn = diag$calculated_mn,
-      calculated_mw = diag$calculated_mw,
-      calculated_dispersity = diag$calculated_dispersity,
-      mn_error_pct = diag$mn_error_pct,
-      mw_error_pct = diag$mw_error_pct,
-      dispersity_error_pct = diag$dispersity_error_pct,
-      calibration_min = x$calibration_range[1],
-      calibration_max = x$calibration_range[2],
-      coefficients = list(x$calibration_coefficients),
-      convergence = diag$convergence,
-      output_col = x$output_col,
-      id = x$id
-    )
-  } else {
-    tibble::tibble(
-      method = x$method,
-      fit_type = x$fit_type,
-      known_mn = x$known_mn,
-      known_mw = x$known_mw,
-      known_dispersity = if (!is.null(x$known_mw) && !is.null(x$known_mn)) {
-        x$known_mw / x$known_mn
-      } else {
-        NA_real_
-      },
-      calculated_mn = NA_real_,
-      calculated_mw = NA_real_,
-      calculated_dispersity = NA_real_,
-      mn_error_pct = NA_real_,
-      mw_error_pct = NA_real_,
-      dispersity_error_pct = NA_real_,
-      calibration_min = NA_real_,
-      calibration_max = NA_real_,
-      coefficients = list(NULL),
-      convergence = NA_integer_,
-      output_col = x$output_col,
-      id = x$id
-    )
-  }
+	if (x$trained && !is.null(x$calibration_diagnostics)) {
+		diag <- x$calibration_diagnostics
+		tibble::tibble(
+			method = x$method,
+			fit_type = x$fit_type,
+			known_mn = diag$known_mn,
+			known_mw = diag$known_mw,
+			known_dispersity = diag$known_dispersity,
+			calculated_mn = diag$calculated_mn,
+			calculated_mw = diag$calculated_mw,
+			calculated_dispersity = diag$calculated_dispersity,
+			mn_error_pct = diag$mn_error_pct,
+			mw_error_pct = diag$mw_error_pct,
+			dispersity_error_pct = diag$dispersity_error_pct,
+			calibration_min = x$calibration_range[1],
+			calibration_max = x$calibration_range[2],
+			coefficients = list(x$calibration_coefficients),
+			convergence = diag$convergence,
+			output_col = x$output_col,
+			id = x$id
+		)
+	} else {
+		tibble::tibble(
+			method = x$method,
+			fit_type = x$fit_type,
+			known_mn = x$known_mn,
+			known_mw = x$known_mw,
+			known_dispersity = if (!is.null(x$known_mw) && !is.null(x$known_mn)) {
+				x$known_mw / x$known_mn
+			} else {
+				NA_real_
+			},
+			calculated_mn = NA_real_,
+			calculated_mw = NA_real_,
+			calculated_dispersity = NA_real_,
+			mn_error_pct = NA_real_,
+			mw_error_pct = NA_real_,
+			dispersity_error_pct = NA_real_,
+			calibration_min = NA_real_,
+			calibration_max = NA_real_,
+			coefficients = list(NULL),
+			convergence = NA_integer_,
+			output_col = x$output_col,
+			id = x$id
+		)
+	}
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_broad_standard <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }
