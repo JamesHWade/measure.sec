@@ -107,9 +107,10 @@ reference:
   - auto_detect_standards
 
 - title: Peak Detection
-  desc: Peak detection and deconvolution
+  desc: Peak detection, refinement, and deconvolution
   contents:
   - step_sec_peaks_detect
+  - step_sec_peaks_refine
   - step_sec_peaks_deconvolve
 
 - title: Calibration

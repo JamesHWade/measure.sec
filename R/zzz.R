@@ -155,6 +155,13 @@
       "Mark regions for exclusion from baseline/integration"
     ),
 
+    # Peak boundary refinement
+    list(
+      "step_sec_peaks_refine",
+      "peaks",
+      "Refine peak boundaries using height fraction method"
+    ),
+
     # Peak deconvolution
     list(
       "step_sec_peaks_deconvolve",
