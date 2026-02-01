@@ -74,231 +74,231 @@
 #'   prep()
 #' }
 step_sec_concentration <- function(
-  recipe,
-  measures = NULL,
-  detector = c("ri", "uv", "auto"),
-  injection_volume = NULL,
-  injection_mass = NULL,
-  sample_concentration = NULL,
-  flow_rate = 1.0,
-  concentration_units = "mg/mL",
-  normalize_to_mass = TRUE,
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_concentration")
+	recipe,
+	measures = NULL,
+	detector = c("ri", "uv", "auto"),
+	injection_volume = NULL,
+	injection_mass = NULL,
+	sample_concentration = NULL,
+	flow_rate = 1.0,
+	concentration_units = "mg/mL",
+	normalize_to_mass = TRUE,
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_concentration")
 ) {
-  detector <- match.arg(detector)
+	detector <- match.arg(detector)
 
-  # Validate injection parameters
-  if (normalize_to_mass) {
-    if (
-      is.null(injection_mass) &&
-        (is.null(injection_volume) || is.null(sample_concentration))
-    ) {
-      cli::cli_abort(
-        c(
-          "For mass normalization, provide either:",
-          "*" = "{.arg injection_mass}",
-          "*" = "Both {.arg injection_volume} and {.arg sample_concentration}"
-        )
-      )
-    }
+	# Validate injection parameters
+	if (normalize_to_mass) {
+		if (
+			is.null(injection_mass) &&
+				(is.null(injection_volume) || is.null(sample_concentration))
+		) {
+			cli::cli_abort(
+				c(
+					"For mass normalization, provide either:",
+					"*" = "{.arg injection_mass}",
+					"*" = "Both {.arg injection_volume} and {.arg sample_concentration}"
+				)
+			)
+		}
 
-    # Calculate injection mass if not provided
-    if (is.null(injection_mass)) {
-      # injection_volume is in uL, sample_concentration in mg/mL
-      # injection_mass in mg = volume (uL) * conc (mg/mL) / 1000
-      injection_mass <- injection_volume * sample_concentration / 1000
-    }
-  }
+		# Calculate injection mass if not provided
+		if (is.null(injection_mass)) {
+			# injection_volume is in uL, sample_concentration in mg/mL
+			# injection_mass in mg = volume (uL) * conc (mg/mL) / 1000
+			injection_mass <- injection_volume * sample_concentration / 1000
+		}
+	}
 
-  if (!is.null(flow_rate) && (!is.numeric(flow_rate) || flow_rate <= 0)) {
-    cli::cli_abort("{.arg flow_rate} must be a positive number.")
-  }
+	if (!is.null(flow_rate) && (!is.numeric(flow_rate) || flow_rate <= 0)) {
+		cli::cli_abort("{.arg flow_rate} must be a positive number.")
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_concentration_new(
-      measures = measures,
-      detector = detector,
-      injection_volume = injection_volume,
-      injection_mass = injection_mass,
-      sample_concentration = sample_concentration,
-      flow_rate = flow_rate,
-      concentration_units = concentration_units,
-      normalize_to_mass = normalize_to_mass,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_concentration_new(
+			measures = measures,
+			detector = detector,
+			injection_volume = injection_volume,
+			injection_mass = injection_mass,
+			sample_concentration = sample_concentration,
+			flow_rate = flow_rate,
+			concentration_units = concentration_units,
+			normalize_to_mass = normalize_to_mass,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_concentration_new <- function(
-  measures,
-  detector,
-  injection_volume,
-  injection_mass,
-  sample_concentration,
-  flow_rate,
-  concentration_units,
-  normalize_to_mass,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	detector,
+	injection_volume,
+	injection_mass,
+	sample_concentration,
+	flow_rate,
+	concentration_units,
+	normalize_to_mass,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_concentration",
-    measures = measures,
-    detector = detector,
-    injection_volume = injection_volume,
-    injection_mass = injection_mass,
-    sample_concentration = sample_concentration,
-    flow_rate = flow_rate,
-    concentration_units = concentration_units,
-    normalize_to_mass = normalize_to_mass,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_concentration",
+		measures = measures,
+		detector = detector,
+		injection_volume = injection_volume,
+		injection_mass = injection_mass,
+		sample_concentration = sample_concentration,
+		flow_rate = flow_rate,
+		concentration_units = concentration_units,
+		normalize_to_mass = normalize_to_mass,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_concentration <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Find measure columns if not specified
-  if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
+	# Find measure columns if not specified
+	if (is.null(x$measures)) {
+		measure_cols <- find_measure_cols(training)
 
-    if (x$detector == "auto") {
-      # Try to find RI or UV columns
-      ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
-      uv_cols <- measure_cols[grepl("uv", measure_cols, ignore.case = TRUE)]
-      measures <- c(ri_cols, uv_cols)
-      if (length(measures) == 0) {
-        measures <- measure_cols
-      }
-    } else {
-      measures <- measure_cols
-    }
-  } else {
-    measures <- x$measures
-  }
+		if (x$detector == "auto") {
+			# Try to find RI or UV columns
+			ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
+			uv_cols <- measure_cols[grepl("uv", measure_cols, ignore.case = TRUE)]
+			measures <- c(ri_cols, uv_cols)
+			if (length(measures) == 0) {
+				measures <- measure_cols
+			}
+		} else {
+			measures <- measure_cols
+		}
+	} else {
+		measures <- x$measures
+	}
 
-  step_sec_concentration_new(
-    measures = measures,
-    detector = x$detector,
-    injection_volume = x$injection_volume,
-    injection_mass = x$injection_mass,
-    sample_concentration = x$sample_concentration,
-    flow_rate = x$flow_rate,
-    concentration_units = x$concentration_units,
-    normalize_to_mass = x$normalize_to_mass,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_concentration_new(
+		measures = measures,
+		detector = x$detector,
+		injection_volume = x$injection_volume,
+		injection_mass = x$injection_mass,
+		sample_concentration = x$sample_concentration,
+		flow_rate = x$flow_rate,
+		concentration_units = x$concentration_units,
+		normalize_to_mass = x$normalize_to_mass,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_concentration <- function(object, new_data, ...) {
-  measures <- object$measures
-  injection_mass <- object$injection_mass
-  flow_rate <- object$flow_rate
-  normalize_to_mass <- object$normalize_to_mass
+	measures <- object$measures
+	injection_mass <- object$injection_mass
+	flow_rate <- object$flow_rate
+	normalize_to_mass <- object$normalize_to_mass
 
-  for (col in measures) {
-    new_data[[col]] <- new_measure_list(
-      purrr::map(new_data[[col]], function(m) {
-        location <- m$location
-        value <- m$value
-        n <- length(location)
+	for (col in measures) {
+		new_data[[col]] <- new_measure_list(
+			purrr::map(new_data[[col]], function(m) {
+				location <- m$location
+				value <- m$value
+				n <- length(location)
 
-        if (n < 2) {
-          return(m)
-        }
+				if (n < 2) {
+					return(m)
+				}
 
-        # Calculate time step (assuming uniform spacing)
-        dt <- mean(diff(location))
+				# Calculate time step (assuming uniform spacing)
+				dt <- mean(diff(location))
 
-        if (
-          normalize_to_mass && !is.null(injection_mass) && injection_mass > 0
-        ) {
-          # Calculate total area under the curve
-          # Area = sum(signal * dt) in signal*min units
-          # For concentration: area should equal injected mass / flow_rate
+				if (
+					normalize_to_mass && !is.null(injection_mass) && injection_mass > 0
+				) {
+					# Calculate total area under the curve
+					# Area = sum(signal * dt) in signal*min units
+					# For concentration: area should equal injected mass / flow_rate
 
-          # Ensure non-negative values for integration
-          pos_value <- pmax(value, 0)
-          total_area <- sum(pos_value) * dt
+					# Ensure non-negative values for integration
+					pos_value <- pmax(value, 0)
+					total_area <- sum(pos_value) * dt
 
-          if (total_area > 0) {
-            # Normalize so that integral of c(t) * F * dt = m_inj
-            # c(t) = value * m_inj / (total_area * F)
-            # But since total_area is in signal*min and F in mL/min,
-            # we get c(t) in mg/mL if m_inj in mg
+					if (total_area > 0) {
+						# Normalize so that integral of c(t) * F * dt = m_inj
+						# c(t) = value * m_inj / (total_area * F)
+						# But since total_area is in signal*min and F in mL/min,
+						# we get c(t) in mg/mL if m_inj in mg
 
-            m$value <- value * injection_mass / (total_area * flow_rate)
-          }
-        }
+						m$value <- value * injection_mass / (total_area * flow_rate)
+					}
+				}
 
-        m
-      })
-    )
-  }
+				m
+			})
+		)
+	}
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_concentration <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- "SEC concentration conversion"
-  if (!is.null(x$injection_mass)) {
-    title <- paste0(
-      title,
-      " (",
-      round(x$injection_mass * 1000, 1),
-      " ug injected)"
-    )
-  }
+	title <- "SEC concentration conversion"
+	if (!is.null(x$injection_mass)) {
+		title <- paste0(
+			title,
+			" (",
+			round(x$injection_mass * 1000, 1),
+			" ug injected)"
+		)
+	}
 
-  if (x$trained) {
-    cols_str <- paste(x$measures, collapse = ", ")
-    cat(title, " on ", cols_str, sep = "")
-  } else {
-    cat(title)
-  }
-  cat("\n")
-  invisible(x)
+	if (x$trained) {
+		cols_str <- paste(x$measures, collapse = ", ")
+		cat(title, " on ", cols_str, sep = "")
+	} else {
+		cat(title)
+	}
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_concentration <- function(x, ...) {
-  tibble::tibble(
-    measures = list(x$measures),
-    detector = x$detector,
-    injection_mass = x$injection_mass %||% NA_real_,
-    flow_rate = x$flow_rate,
-    concentration_units = x$concentration_units,
-    id = x$id
-  )
+	tibble::tibble(
+		measures = list(x$measures),
+		detector = x$detector,
+		injection_mass = x$injection_mass %||% NA_real_,
+		flow_rate = x$flow_rate,
+		concentration_units = x$concentration_units,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_concentration <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

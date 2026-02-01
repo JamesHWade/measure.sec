@@ -69,192 +69,192 @@
 #'   prep()
 #' }
 step_sec_ri <- function(
-  recipe,
-  measures = NULL,
-  dn_dc = NULL,
-  dn_dc_column = NULL,
-  instrument_constant = 1.0,
-  output_col = NULL,
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_ri")
+	recipe,
+	measures = NULL,
+	dn_dc = NULL,
+	dn_dc_column = NULL,
+	instrument_constant = 1.0,
+	output_col = NULL,
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_ri")
 ) {
-  # Validate inputs
-  if (!is.null(dn_dc) && !is.null(dn_dc_column)) {
-    cli::cli_warn(
-      "{.arg dn_dc_column} takes precedence over {.arg dn_dc}."
-    )
-  }
+	# Validate inputs
+	if (!is.null(dn_dc) && !is.null(dn_dc_column)) {
+		cli::cli_warn(
+			"{.arg dn_dc_column} takes precedence over {.arg dn_dc}."
+		)
+	}
 
-  if (!is.null(dn_dc)) {
-    if (!is.numeric(dn_dc) || length(dn_dc) != 1 || dn_dc <= 0) {
-      cli::cli_abort("{.arg dn_dc} must be a positive numeric value.")
-    }
-  }
+	if (!is.null(dn_dc)) {
+		if (!is.numeric(dn_dc) || length(dn_dc) != 1 || dn_dc <= 0) {
+			cli::cli_abort("{.arg dn_dc} must be a positive numeric value.")
+		}
+	}
 
-  if (!is.numeric(instrument_constant) || instrument_constant <= 0) {
-    cli::cli_abort(
-      "{.arg instrument_constant} must be a positive numeric value."
-    )
-  }
+	if (!is.numeric(instrument_constant) || instrument_constant <= 0) {
+		cli::cli_abort(
+			"{.arg instrument_constant} must be a positive numeric value."
+		)
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_ri_new(
-      measures = measures,
-      dn_dc = dn_dc,
-      dn_dc_column = dn_dc_column,
-      instrument_constant = instrument_constant,
-      output_col = output_col,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_ri_new(
+			measures = measures,
+			dn_dc = dn_dc,
+			dn_dc_column = dn_dc_column,
+			instrument_constant = instrument_constant,
+			output_col = output_col,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_ri_new <- function(
-  measures,
-  dn_dc,
-  dn_dc_column,
-  instrument_constant,
-  output_col,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	dn_dc,
+	dn_dc_column,
+	instrument_constant,
+	output_col,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_ri",
-    measures = measures,
-    dn_dc = dn_dc,
-    dn_dc_column = dn_dc_column,
-    instrument_constant = instrument_constant,
-    output_col = output_col,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_ri",
+		measures = measures,
+		dn_dc = dn_dc,
+		dn_dc_column = dn_dc_column,
+		instrument_constant = instrument_constant,
+		output_col = output_col,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_ri <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Find RI columns if not specified
-  if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
-    # Look for columns containing "ri" (case insensitive)
-    ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
-    if (length(ri_cols) == 0) {
-      cli::cli_abort(
-        "No RI detector columns found. Specify {.arg measures} explicitly."
-      )
-    }
-    measures <- ri_cols
-  } else {
-    measures <- x$measures
-  }
+	# Find RI columns if not specified
+	if (is.null(x$measures)) {
+		measure_cols <- find_measure_cols(training)
+		# Look for columns containing "ri" (case insensitive)
+		ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
+		if (length(ri_cols) == 0) {
+			cli::cli_abort(
+				"No RI detector columns found. Specify {.arg measures} explicitly."
+			)
+		}
+		measures <- ri_cols
+	} else {
+		measures <- x$measures
+	}
 
-  # Validate dn_dc_column exists if specified
-  if (!is.null(x$dn_dc_column)) {
-    if (!x$dn_dc_column %in% names(training)) {
-      cli::cli_abort(
-        "Column {.val {x$dn_dc_column}} not found in training data."
-      )
-    }
-  }
+	# Validate dn_dc_column exists if specified
+	if (!is.null(x$dn_dc_column)) {
+		if (!x$dn_dc_column %in% names(training)) {
+			cli::cli_abort(
+				"Column {.val {x$dn_dc_column}} not found in training data."
+			)
+		}
+	}
 
-  step_sec_ri_new(
-    measures = measures,
-    dn_dc = x$dn_dc,
-    dn_dc_column = x$dn_dc_column,
-    instrument_constant = x$instrument_constant,
-    output_col = x$output_col,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_ri_new(
+		measures = measures,
+		dn_dc = x$dn_dc,
+		dn_dc_column = x$dn_dc_column,
+		instrument_constant = x$instrument_constant,
+		output_col = x$output_col,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_ri <- function(object, new_data, ...) {
-  measures <- object$measures
-  dn_dc <- object$dn_dc
-  dn_dc_column <- object$dn_dc_column
-  instrument_constant <- object$instrument_constant
+	measures <- object$measures
+	dn_dc <- object$dn_dc
+	dn_dc_column <- object$dn_dc_column
+	instrument_constant <- object$instrument_constant
 
-  for (col in measures) {
-    # Get dn/dc values for each sample
-    if (!is.null(dn_dc_column)) {
-      dn_dc_values <- new_data[[dn_dc_column]]
-    } else if (!is.null(dn_dc)) {
-      dn_dc_values <- rep(dn_dc, nrow(new_data))
-    } else {
-      dn_dc_values <- rep(1.0, nrow(new_data)) # No normalization
-    }
+	for (col in measures) {
+		# Get dn/dc values for each sample
+		if (!is.null(dn_dc_column)) {
+			dn_dc_values <- new_data[[dn_dc_column]]
+		} else if (!is.null(dn_dc)) {
+			dn_dc_values <- rep(dn_dc, nrow(new_data))
+		} else {
+			dn_dc_values <- rep(1.0, nrow(new_data)) # No normalization
+		}
 
-    # Process each sample
-    new_data[[col]] <- new_measure_list(
-      purrr::map2(new_data[[col]], dn_dc_values, function(m, dndc) {
-        # Apply instrument constant and dn/dc normalization
-        # Dividing by dn/dc converts from RI signal to concentration-proportional
-        if (!is.na(dndc) && dndc > 0) {
-          m$value <- m$value * instrument_constant / dndc
-        } else {
-          m$value <- m$value * instrument_constant
-        }
-        m
-      })
-    )
-  }
+		# Process each sample
+		new_data[[col]] <- new_measure_list(
+			purrr::map2(new_data[[col]], dn_dc_values, function(m, dndc) {
+				# Apply instrument constant and dn/dc normalization
+				# Dividing by dn/dc converts from RI signal to concentration-proportional
+				if (!is.na(dndc) && dndc > 0) {
+					m$value <- m$value * instrument_constant / dndc
+				} else {
+					m$value <- m$value * instrument_constant
+				}
+				m
+			})
+		)
+	}
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_ri <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- "SEC RI detector processing"
-  if (!is.null(x$dn_dc)) {
-    title <- paste0(title, " (dn/dc = ", x$dn_dc, ")")
-  } else if (!is.null(x$dn_dc_column)) {
-    title <- paste0(title, " (dn/dc from ", x$dn_dc_column, ")")
-  }
+	title <- "SEC RI detector processing"
+	if (!is.null(x$dn_dc)) {
+		title <- paste0(title, " (dn/dc = ", x$dn_dc, ")")
+	} else if (!is.null(x$dn_dc_column)) {
+		title <- paste0(title, " (dn/dc from ", x$dn_dc_column, ")")
+	}
 
-  if (x$trained) {
-    cols_str <- paste(x$measures, collapse = ", ")
-    cat(title, " on ", cols_str, sep = "")
-  } else {
-    cat(title)
-  }
-  cat("\n")
-  invisible(x)
+	if (x$trained) {
+		cols_str <- paste(x$measures, collapse = ", ")
+		cat(title, " on ", cols_str, sep = "")
+	} else {
+		cat(title)
+	}
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_ri <- function(x, ...) {
-  tibble::tibble(
-    measures = list(x$measures),
-    dn_dc = x$dn_dc %||% NA_real_,
-    dn_dc_column = x$dn_dc_column %||% NA_character_,
-    instrument_constant = x$instrument_constant,
-    id = x$id
-  )
+	tibble::tibble(
+		measures = list(x$measures),
+		dn_dc = x$dn_dc %||% NA_real_,
+		dn_dc_column = x$dn_dc_column %||% NA_character_,
+		instrument_constant = x$instrument_constant,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_ri <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

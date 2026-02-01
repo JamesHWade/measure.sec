@@ -103,304 +103,304 @@
 #'   prep()
 #' }
 step_sec_aggregates <- function(
-  recipe,
-  measures = NULL,
-  monomer_start = NULL,
-  monomer_end = NULL,
-  method = c("tallest", "manual"),
-  hmws_threshold = 0.001,
-  include_main_peak = TRUE,
-  output_prefix = "purity_",
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_aggregates")
+	recipe,
+	measures = NULL,
+	monomer_start = NULL,
+	monomer_end = NULL,
+	method = c("tallest", "manual"),
+	hmws_threshold = 0.001,
+	include_main_peak = TRUE,
+	output_prefix = "purity_",
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_aggregates")
 ) {
-  method <- match.arg(method)
+	method <- match.arg(method)
 
-  # Validate manual method requires boundaries
-  if (method == "manual" && (is.null(monomer_start) || is.null(monomer_end))) {
-    cli::cli_abort(
-      "Method {.val manual} requires both {.arg monomer_start} and {.arg monomer_end}."
-    )
-  }
+	# Validate manual method requires boundaries
+	if (method == "manual" && (is.null(monomer_start) || is.null(monomer_end))) {
+		cli::cli_abort(
+			"Method {.val manual} requires both {.arg monomer_start} and {.arg monomer_end}."
+		)
+	}
 
-  if (!is.numeric(hmws_threshold) || hmws_threshold < 0 || hmws_threshold > 1) {
-    cli::cli_abort("{.arg hmws_threshold} must be between 0 and 1.")
-  }
+	if (!is.numeric(hmws_threshold) || hmws_threshold < 0 || hmws_threshold > 1) {
+		cli::cli_abort("{.arg hmws_threshold} must be between 0 and 1.")
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_aggregates_new(
-      measures = measures,
-      monomer_start = monomer_start,
-      monomer_end = monomer_end,
-      method = method,
-      hmws_threshold = hmws_threshold,
-      include_main_peak = include_main_peak,
-      output_prefix = output_prefix,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_aggregates_new(
+			measures = measures,
+			monomer_start = monomer_start,
+			monomer_end = monomer_end,
+			method = method,
+			hmws_threshold = hmws_threshold,
+			include_main_peak = include_main_peak,
+			output_prefix = output_prefix,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_aggregates_new <- function(
-  measures,
-  monomer_start,
-  monomer_end,
-  method,
-  hmws_threshold,
-  include_main_peak,
-  output_prefix,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	monomer_start,
+	monomer_end,
+	method,
+	hmws_threshold,
+	include_main_peak,
+	output_prefix,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_aggregates",
-    measures = measures,
-    monomer_start = monomer_start,
-    monomer_end = monomer_end,
-    method = method,
-    hmws_threshold = hmws_threshold,
-    include_main_peak = include_main_peak,
-    output_prefix = output_prefix,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_aggregates",
+		measures = measures,
+		monomer_start = monomer_start,
+		monomer_end = monomer_end,
+		method = method,
+		hmws_threshold = hmws_threshold,
+		include_main_peak = include_main_peak,
+		output_prefix = output_prefix,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_aggregates <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Find measure columns if not specified
-  if (is.null(x$measures)) {
-    measures <- find_measure_cols(training)
-  } else {
-    measures <- x$measures
-  }
+	# Find measure columns if not specified
+	if (is.null(x$measures)) {
+		measures <- find_measure_cols(training)
+	} else {
+		measures <- x$measures
+	}
 
-  step_sec_aggregates_new(
-    measures = measures,
-    monomer_start = x$monomer_start,
-    monomer_end = x$monomer_end,
-    method = x$method,
-    hmws_threshold = x$hmws_threshold,
-    include_main_peak = x$include_main_peak,
-    output_prefix = x$output_prefix,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_aggregates_new(
+		measures = measures,
+		monomer_start = x$monomer_start,
+		monomer_end = x$monomer_end,
+		method = x$method,
+		hmws_threshold = x$hmws_threshold,
+		include_main_peak = x$include_main_peak,
+		output_prefix = x$output_prefix,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' Find the tallest peak boundaries
 #' @noRd
 .find_main_peak <- function(location, value, threshold_frac = 0.05) {
-  # Find the maximum and define peak region
-  max_idx <- which.max(value)
-  max_val <- value[max_idx]
-  threshold <- threshold_frac * max_val
+	# Find the maximum and define peak region
+	max_idx <- which.max(value)
+	max_val <- value[max_idx]
+	threshold <- threshold_frac * max_val
 
-  n <- length(value)
+	n <- length(value)
 
-  # Find start of peak (going backwards from max)
-  start_idx <- max_idx
-  for (i in seq(max_idx, 1, -1)) {
-    if (value[i] < threshold) {
-      start_idx <- i
-      break
-    }
-    if (i == 1) start_idx <- 1
-  }
+	# Find start of peak (going backwards from max)
+	start_idx <- max_idx
+	for (i in seq(max_idx, 1, -1)) {
+		if (value[i] < threshold) {
+			start_idx <- i
+			break
+		}
+		if (i == 1) start_idx <- 1
+	}
 
-  # Find end of peak (going forward from max)
-  end_idx <- max_idx
-  for (i in seq(max_idx, n)) {
-    if (value[i] < threshold) {
-      end_idx <- i
-      break
-    }
-    if (i == n) end_idx <- n
-  }
+	# Find end of peak (going forward from max)
+	end_idx <- max_idx
+	for (i in seq(max_idx, n)) {
+		if (value[i] < threshold) {
+			end_idx <- i
+			break
+		}
+		if (i == n) end_idx <- n
+	}
 
-  list(
-    start = location[start_idx],
-    end = location[end_idx],
-    start_idx = start_idx,
-    end_idx = end_idx
-  )
+	list(
+		start = location[start_idx],
+		end = location[end_idx],
+		start_idx = start_idx,
+		end_idx = end_idx
+	)
 }
 
 #' @export
 bake.step_sec_aggregates <- function(object, new_data, ...) {
-  measures <- object$measures
-  monomer_start <- object$monomer_start
-  monomer_end <- object$monomer_end
-  method <- object$method
-  hmws_threshold <- object$hmws_threshold
-  include_main_peak <- object$include_main_peak
-  output_prefix <- object$output_prefix
+	measures <- object$measures
+	monomer_start <- object$monomer_start
+	monomer_end <- object$monomer_end
+	method <- object$method
+	hmws_threshold <- object$hmws_threshold
+	include_main_peak <- object$include_main_peak
+	output_prefix <- object$output_prefix
 
-  # Initialize output columns
-  n_rows <- nrow(new_data)
-  hmws_pct <- numeric(n_rows)
-  monomer_pct <- numeric(n_rows)
-  lmws_pct <- numeric(n_rows)
-  main_start <- numeric(n_rows)
-  main_end <- numeric(n_rows)
+	# Initialize output columns
+	n_rows <- nrow(new_data)
+	hmws_pct <- numeric(n_rows)
+	monomer_pct <- numeric(n_rows)
+	lmws_pct <- numeric(n_rows)
+	main_start <- numeric(n_rows)
+	main_end <- numeric(n_rows)
 
-  # Use first measure column for analysis
-  measure_col <- measures[1]
+	# Use first measure column for analysis
+	measure_col <- measures[1]
 
-  for (i in seq_len(n_rows)) {
-    m <- new_data[[measure_col]][[i]]
-    location <- m$location
-    value <- m$value
+	for (i in seq_len(n_rows)) {
+		m <- new_data[[measure_col]][[i]]
+		location <- m$location
+		value <- m$value
 
-    # Handle NA values
-    value[is.na(value)] <- 0
+		# Handle NA values
+		value[is.na(value)] <- 0
 
-    # Ensure non-negative
-    value <- pmax(value, 0)
+		# Ensure non-negative
+		value <- pmax(value, 0)
 
-    # Determine peak boundaries
-    if (
-      method == "tallest" && (is.null(monomer_start) || is.null(monomer_end))
-    ) {
-      peak_info <- .find_main_peak(location, value, threshold_frac = 0.05)
-      m_start <- peak_info$start
-      m_end <- peak_info$end
-    } else {
-      m_start <- monomer_start
-      m_end <- monomer_end
-    }
+		# Determine peak boundaries
+		if (
+			method == "tallest" && (is.null(monomer_start) || is.null(monomer_end))
+		) {
+			peak_info <- .find_main_peak(location, value, threshold_frac = 0.05)
+			m_start <- peak_info$start
+			m_end <- peak_info$end
+		} else {
+			m_start <- monomer_start
+			m_end <- monomer_end
+		}
 
-    # Calculate areas using trapezoidal integration
-    dt <- diff(location)
+		# Calculate areas using trapezoidal integration
+		dt <- diff(location)
 
-    # Total area (simple sum approximation)
-    total_area <- sum(value[-1] * dt + value[-length(value)] * dt) / 2
+		# Total area (simple sum approximation)
+		total_area <- sum(value[-1] * dt + value[-length(value)] * dt) / 2
 
-    if (total_area > 0) {
-      # HMWS: area before monomer_start
-      hmws_idx <- location < m_start
-      if (any(hmws_idx)) {
-        hmws_vals <- value[hmws_idx]
-        hmws_locs <- location[hmws_idx]
-        if (length(hmws_vals) > 1) {
-          hmws_dt <- diff(hmws_locs)
-          hmws_area <- sum(
-            hmws_vals[-1] * hmws_dt + hmws_vals[-length(hmws_vals)] * hmws_dt
-          ) /
-            2
-        } else {
-          hmws_area <- 0
-        }
-      } else {
-        hmws_area <- 0
-      }
+		if (total_area > 0) {
+			# HMWS: area before monomer_start
+			hmws_idx <- location < m_start
+			if (any(hmws_idx)) {
+				hmws_vals <- value[hmws_idx]
+				hmws_locs <- location[hmws_idx]
+				if (length(hmws_vals) > 1) {
+					hmws_dt <- diff(hmws_locs)
+					hmws_area <- sum(
+						hmws_vals[-1] * hmws_dt + hmws_vals[-length(hmws_vals)] * hmws_dt
+					) /
+						2
+				} else {
+					hmws_area <- 0
+				}
+			} else {
+				hmws_area <- 0
+			}
 
-      # Monomer: area between monomer_start and monomer_end
-      mono_idx <- location >= m_start & location <= m_end
-      if (any(mono_idx)) {
-        mono_vals <- value[mono_idx]
-        mono_locs <- location[mono_idx]
-        if (length(mono_vals) > 1) {
-          mono_dt <- diff(mono_locs)
-          mono_area <- sum(
-            mono_vals[-1] * mono_dt + mono_vals[-length(mono_vals)] * mono_dt
-          ) /
-            2
-        } else {
-          mono_area <- 0
-        }
-      } else {
-        mono_area <- 0
-      }
+			# Monomer: area between monomer_start and monomer_end
+			mono_idx <- location >= m_start & location <= m_end
+			if (any(mono_idx)) {
+				mono_vals <- value[mono_idx]
+				mono_locs <- location[mono_idx]
+				if (length(mono_vals) > 1) {
+					mono_dt <- diff(mono_locs)
+					mono_area <- sum(
+						mono_vals[-1] * mono_dt + mono_vals[-length(mono_vals)] * mono_dt
+					) /
+						2
+				} else {
+					mono_area <- 0
+				}
+			} else {
+				mono_area <- 0
+			}
 
-      # LMWS: area after monomer_end
-      lmws_idx <- location > m_end
-      if (any(lmws_idx)) {
-        lmws_vals <- value[lmws_idx]
-        lmws_locs <- location[lmws_idx]
-        if (length(lmws_vals) > 1) {
-          lmws_dt <- diff(lmws_locs)
-          lmws_area <- sum(
-            lmws_vals[-1] * lmws_dt + lmws_vals[-length(lmws_vals)] * lmws_dt
-          ) /
-            2
-        } else {
-          lmws_area <- 0
-        }
-      } else {
-        lmws_area <- 0
-      }
+			# LMWS: area after monomer_end
+			lmws_idx <- location > m_end
+			if (any(lmws_idx)) {
+				lmws_vals <- value[lmws_idx]
+				lmws_locs <- location[lmws_idx]
+				if (length(lmws_vals) > 1) {
+					lmws_dt <- diff(lmws_locs)
+					lmws_area <- sum(
+						lmws_vals[-1] * lmws_dt + lmws_vals[-length(lmws_vals)] * lmws_dt
+					) /
+						2
+				} else {
+					lmws_area <- 0
+				}
+			} else {
+				lmws_area <- 0
+			}
 
-      # Calculate percentages
-      hmws_pct[i] <- 100 * hmws_area / total_area
-      monomer_pct[i] <- 100 * mono_area / total_area
-      lmws_pct[i] <- 100 * lmws_area / total_area
-    }
+			# Calculate percentages
+			hmws_pct[i] <- 100 * hmws_area / total_area
+			monomer_pct[i] <- 100 * mono_area / total_area
+			lmws_pct[i] <- 100 * lmws_area / total_area
+		}
 
-    main_start[i] <- m_start
-    main_end[i] <- m_end
-  }
+		main_start[i] <- m_start
+		main_end[i] <- m_end
+	}
 
-  # Add output columns
-  new_data[[paste0(output_prefix, "hmws")]] <- hmws_pct
-  new_data[[paste0(output_prefix, "monomer")]] <- monomer_pct
-  new_data[[paste0(output_prefix, "lmws")]] <- lmws_pct
+	# Add output columns
+	new_data[[paste0(output_prefix, "hmws")]] <- hmws_pct
+	new_data[[paste0(output_prefix, "monomer")]] <- monomer_pct
+	new_data[[paste0(output_prefix, "lmws")]] <- lmws_pct
 
-  if (include_main_peak) {
-    new_data[[paste0(output_prefix, "main_start")]] <- main_start
-    new_data[[paste0(output_prefix, "main_end")]] <- main_end
-  }
+	if (include_main_peak) {
+		new_data[[paste0(output_prefix, "main_start")]] <- main_start
+		new_data[[paste0(output_prefix, "main_end")]] <- main_end
+	}
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_aggregates <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  title <- "SEC aggregate quantitation"
-  if (x$trained) {
-    cols_str <- paste(x$measures, collapse = ", ")
-    cat(title, " on ", cols_str, sep = "")
-  } else {
-    cat(title)
-  }
-  cat("\n")
-  invisible(x)
+	title <- "SEC aggregate quantitation"
+	if (x$trained) {
+		cols_str <- paste(x$measures, collapse = ", ")
+		cat(title, " on ", cols_str, sep = "")
+	} else {
+		cat(title)
+	}
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_aggregates <- function(x, ...) {
-  tibble::tibble(
-    measures = list(x$measures),
-    monomer_start = x$monomer_start %||% NA_real_,
-    monomer_end = x$monomer_end %||% NA_real_,
-    method = x$method,
-    id = x$id
-  )
+	tibble::tibble(
+		measures = list(x$measures),
+		monomer_start = x$monomer_start %||% NA_real_,
+		monomer_end = x$monomer_end %||% NA_real_,
+		method = x$method,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_aggregates <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

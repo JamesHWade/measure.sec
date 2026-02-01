@@ -106,214 +106,214 @@
 #'   prep()
 #' }
 step_sec_exclude_regions <- function(
-  recipe,
-  measures = NULL,
-  regions = NULL,
-  purpose = c("both", "baseline", "integration"),
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_exclude_regions")
+	recipe,
+	measures = NULL,
+	regions = NULL,
+	purpose = c("both", "baseline", "integration"),
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_exclude_regions")
 ) {
-  purpose <- rlang::arg_match(purpose)
+	purpose <- rlang::arg_match(purpose)
 
-  # Validate regions
+	# Validate regions
 
-  if (!is.null(regions)) {
-    if (!is.data.frame(regions)) {
-      cli::cli_abort("{.arg regions} must be a data frame or tibble.")
-    }
-    if (!all(c("start", "end") %in% names(regions))) {
-      cli::cli_abort(
-        "{.arg regions} must contain columns {.field start} and {.field end}."
-      )
-    }
-    if (!is.numeric(regions$start) || !is.numeric(regions$end)) {
-      cli::cli_abort(
-        "Columns {.field start} and {.field end} must be numeric."
-      )
-    }
-    # Check start < end for each region
-    invalid_regions <- regions$start >= regions$end
-    if (any(invalid_regions)) {
-      n_invalid <- sum(invalid_regions)
-      cli::cli_abort(
-        c(
-          "{n_invalid} region{?s} ha{?s/ve} {.field start} >= {.field end}.",
-          "i" = "Each region's {.field start} must be less than {.field end}."
-        )
-      )
-    }
-  }
+	if (!is.null(regions)) {
+		if (!is.data.frame(regions)) {
+			cli::cli_abort("{.arg regions} must be a data frame or tibble.")
+		}
+		if (!all(c("start", "end") %in% names(regions))) {
+			cli::cli_abort(
+				"{.arg regions} must contain columns {.field start} and {.field end}."
+			)
+		}
+		if (!is.numeric(regions$start) || !is.numeric(regions$end)) {
+			cli::cli_abort(
+				"Columns {.field start} and {.field end} must be numeric."
+			)
+		}
+		# Check start < end for each region
+		invalid_regions <- regions$start >= regions$end
+		if (any(invalid_regions)) {
+			n_invalid <- sum(invalid_regions)
+			cli::cli_abort(
+				c(
+					"{n_invalid} region{?s} ha{?s/ve} {.field start} >= {.field end}.",
+					"i" = "Each region's {.field start} must be less than {.field end}."
+				)
+			)
+		}
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_exclude_regions_new(
-      measures = measures,
-      regions = regions,
-      purpose = purpose,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_exclude_regions_new(
+			measures = measures,
+			regions = regions,
+			purpose = purpose,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_exclude_regions_new <- function(
-  measures,
-  regions,
-  purpose,
-  role,
-  trained,
-  skip,
-  id
+	measures,
+	regions,
+	purpose,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_exclude_regions",
-    measures = measures,
-    regions = regions,
-    purpose = purpose,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_exclude_regions",
+		measures = measures,
+		regions = regions,
+		purpose = purpose,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_exclude_regions <- function(x, training, info = NULL, ...) {
-  check_for_measure(training)
+	check_for_measure(training)
 
-  # Resolve which columns to process
-  if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
-  } else {
-    measure_cols <- x$measures
-  }
+	# Resolve which columns to process
+	if (is.null(x$measures)) {
+		measure_cols <- find_measure_cols(training)
+	} else {
+		measure_cols <- x$measures
+	}
 
-  step_sec_exclude_regions_new(
-    measures = measure_cols,
-    regions = x$regions,
-    purpose = x$purpose,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_exclude_regions_new(
+		measures = measure_cols,
+		regions = x$regions,
+		purpose = x$purpose,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_exclude_regions <- function(object, new_data, ...) {
-  regions <- object$regions
-  purpose <- object$purpose
+	regions <- object$regions
+	purpose <- object$purpose
 
-  n_rows <- nrow(new_data)
+	n_rows <- nrow(new_data)
 
-  # Check if data has sample_id column for per-sample exclusions
-  has_sample_id <- "sample_id" %in% names(new_data)
+	# Check if data has sample_id column for per-sample exclusions
+	has_sample_id <- "sample_id" %in% names(new_data)
 
-  # Build exclusion list for each row
-  exclusion_list <- lapply(seq_len(n_rows), function(i) {
-    if (is.null(regions) || nrow(regions) == 0) {
-      # Return empty tibble with correct structure
-      return(
-        tibble::tibble(
-          start = numeric(0),
-          end = numeric(0),
-          purpose = character(0),
-          reason = character(0)
-        )
-      )
-    }
+	# Build exclusion list for each row
+	exclusion_list <- lapply(seq_len(n_rows), function(i) {
+		if (is.null(regions) || nrow(regions) == 0) {
+			# Return empty tibble with correct structure
+			return(
+				tibble::tibble(
+					start = numeric(0),
+					end = numeric(0),
+					purpose = character(0),
+					reason = character(0)
+				)
+			)
+		}
 
-    # Determine which exclusions apply to this row
-    if (has_sample_id && "sample_id" %in% names(regions)) {
-      sample_id_val <- new_data$sample_id[i]
-      # Include global exclusions (NA sample_id) and sample-specific ones
-      applicable <- is.na(regions$sample_id) |
-        regions$sample_id == sample_id_val
-      row_regions <- regions[applicable, , drop = FALSE]
-    } else {
-      # All regions apply
-      row_regions <- regions
-    }
+		# Determine which exclusions apply to this row
+		if (has_sample_id && "sample_id" %in% names(regions)) {
+			sample_id_val <- new_data$sample_id[i]
+			# Include global exclusions (NA sample_id) and sample-specific ones
+			applicable <- is.na(regions$sample_id) |
+				regions$sample_id == sample_id_val
+			row_regions <- regions[applicable, , drop = FALSE]
+		} else {
+			# All regions apply
+			row_regions <- regions
+		}
 
-    if (nrow(row_regions) == 0) {
-      return(
-        tibble::tibble(
-          start = numeric(0),
-          end = numeric(0),
-          purpose = character(0),
-          reason = character(0)
-        )
-      )
-    }
+		if (nrow(row_regions) == 0) {
+			return(
+				tibble::tibble(
+					start = numeric(0),
+					end = numeric(0),
+					purpose = character(0),
+					reason = character(0)
+				)
+			)
+		}
 
-    # Build output tibble
-    tibble::tibble(
-      start = row_regions$start,
-      end = row_regions$end,
-      purpose = rep(purpose, nrow(row_regions)),
-      reason = if ("reason" %in% names(row_regions)) {
-        row_regions$reason
-      } else {
-        rep(NA_character_, nrow(row_regions))
-      }
-    )
-  })
+		# Build output tibble
+		tibble::tibble(
+			start = row_regions$start,
+			end = row_regions$end,
+			purpose = rep(purpose, nrow(row_regions)),
+			reason = if ("reason" %in% names(row_regions)) {
+				row_regions$reason
+			} else {
+				rep(NA_character_, nrow(row_regions))
+			}
+		)
+	})
 
-  new_data[[".excluded_regions"]] <- exclusion_list
+	new_data[[".excluded_regions"]] <- exclusion_list
 
-  tibble::as_tibble(new_data)
+	tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_exclude_regions <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  n_regions <- if (is.null(x$regions)) 0L else nrow(x$regions)
+	n_regions <- if (is.null(x$regions)) 0L else nrow(x$regions)
 
-  if (n_regions == 0) {
-    cat("SEC exclude regions [no regions defined]")
-  } else {
-    cat(
-      glue::glue(
-        "SEC exclude {n_regions} region{if (n_regions > 1) 's' else ''} ",
-        "(purpose: {x$purpose})"
-      )
-    )
-  }
-  cat("\n")
+	if (n_regions == 0) {
+		cat("SEC exclude regions [no regions defined]")
+	} else {
+		cat(
+			glue::glue(
+				"SEC exclude {n_regions} region{if (n_regions > 1) 's' else ''} ",
+				"(purpose: {x$purpose})"
+			)
+		)
+	}
+	cat("\n")
 
-  invisible(x)
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_exclude_regions <- function(x, ...) {
-  if (recipes::is_trained(x)) {
-    terms_val <- x$measures
-  } else {
-    terms_val <- "<all measure columns>"
-  }
+	if (recipes::is_trained(x)) {
+		terms_val <- x$measures
+	} else {
+		terms_val <- "<all measure columns>"
+	}
 
-  n_regions <- if (is.null(x$regions)) 0L else nrow(x$regions)
+	n_regions <- if (is.null(x$regions)) 0L else nrow(x$regions)
 
-  tibble::tibble(
-    terms = terms_val,
-    n_regions = n_regions,
-    purpose = x$purpose,
-    id = x$id
-  )
+	tibble::tibble(
+		terms = terms_val,
+		n_regions = n_regions,
+		purpose = x$purpose,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_exclude_regions <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

@@ -7,7 +7,6 @@
 #' @importFrom tidyr pivot_wider pivot_longer
 NULL
 
-
 # ==============================================================================
 # sec_results Class
 # ==============================================================================
@@ -70,77 +69,82 @@ NULL
 #' autoplot(results, type = "chromatogram", normalize = TRUE)
 #' }
 sec_results <- function(data, sample_id = NULL) {
-  if (!is.data.frame(data)) {
-    cli::cli_abort("{.arg data} must be a data frame.")
-  }
+	if (!is.data.frame(data)) {
+		cli::cli_abort("{.arg data} must be a data frame.")
+	}
 
-  # Validate that we have measure columns
-  measure_cols <- find_measure_cols(data)
-  if (length(measure_cols) == 0) {
-    cli::cli_abort(c(
-      "No measure columns found in {.arg data}.",
-      "i" = "SEC results should contain processed measure columns.",
-      "i" = "Use {.fn bake} on a prepped SEC recipe to create processed data."
-    ))
-  }
+	# Validate that we have measure columns
+	measure_cols <- find_measure_cols(data)
+	if (length(measure_cols) == 0) {
+		cli::cli_abort(
+			c(
+				"No measure columns found in {.arg data}.",
+				"i" = "SEC results should contain processed measure columns.",
+				"i" = "Use {.fn bake} on a prepped SEC recipe to create processed data."
+			)
+		)
+	}
 
-  # Auto-detect sample_id if not provided
-  if (is.null(sample_id)) {
-    potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
-    for (col in potential_ids) {
-      if (col %in% names(data)) {
-        sample_id <- col
-        break
-      }
-    }
-  } else {
-    # Validate explicit sample_id exists
-    if (!sample_id %in% names(data)) {
-      cli::cli_abort(c(
-        "Column {.val {sample_id}} not found in {.arg data}.",
-        "i" = "Available columns: {.val {names(data)}}"
-      ))
-    }
-  }
+	# Auto-detect sample_id if not provided
+	if (is.null(sample_id)) {
+		potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
+		for (col in potential_ids) {
+			if (col %in% names(data)) {
+				sample_id <- col
+				break
+			}
+		}
+	} else {
+		# Validate explicit sample_id exists
+		if (!sample_id %in% names(data)) {
+			cli::cli_abort(
+				c(
+					"Column {.val {sample_id}} not found in {.arg data}.",
+					"i" = "Available columns: {.val {names(data)}}"
+				)
+			)
+		}
+	}
 
-  # Construct the object
-  new_sec_results(data, sample_id = sample_id, measure_cols = measure_cols)
+	# Construct the object
+	new_sec_results(data, sample_id = sample_id, measure_cols = measure_cols)
 }
 
 #' Low-level constructor for sec_results
 #' @noRd
 new_sec_results <- function(
-  x,
-  sample_id = NULL,
-  measure_cols = character()
+	x,
+	sample_id = NULL,
+	measure_cols = character()
 ) {
-  stopifnot(is.data.frame(x))
+	stopifnot(is.data.frame(x))
 
-  structure(
-    tibble::as_tibble(x),
-    class = c("sec_results", class(tibble::tibble())),
-    sample_id = sample_id,
-    measure_cols = measure_cols
-  )
+	structure(
+		tibble::as_tibble(x),
+		class = c("sec_results", class(tibble::tibble())),
+		sample_id = sample_id,
+		measure_cols = measure_cols
+	)
 }
 
 #' @export
 print.sec_results <- function(x, ...) {
-  sample_id_col <- attr(x, "sample_id")
-  measure_cols <- attr(x, "measure_cols")
+	sample_id_col <- attr(x, "sample_id")
+	measure_cols <- attr(x, "measure_cols")
 
-  cli::cli_h1("SEC Analysis Results")
-  cli::cli_bullets(c(
-    "*" = "Samples: {nrow(x)}",
-    "*" = "Measure columns: {.val {measure_cols}}",
-    "*" = "Sample ID column: {.val {sample_id_col %||% 'none'}}"
-  ))
-  cli::cli_text("")
+	cli::cli_h1("SEC Analysis Results")
+	cli::cli_bullets(
+		c(
+			"*" = "Samples: {nrow(x)}",
+			"*" = "Measure columns: {.val {measure_cols}}",
+			"*" = "Sample ID column: {.val {sample_id_col %||% 'none'}}"
+		)
+	)
+	cli::cli_text("")
 
-  # Print as tibble
-  NextMethod()
+	# Print as tibble
+	NextMethod()
 }
-
 
 # ==============================================================================
 # autoplot Method
@@ -208,199 +212,203 @@ print.sec_results <- function(x, ...) {
 #'   labs(title = "Molecular Weight Distribution")
 #' }
 autoplot.sec_results <- function(
-  object,
-  type = c("auto", "chromatogram", "mwd", "conformation", "composition"),
-  overlay_mw = TRUE,
-  detectors = c("ri", "uv", "mals"),
-  log_scale = c("x", "none", "y", "both"),
-  ...
+	object,
+	type = c("auto", "chromatogram", "mwd", "conformation", "composition"),
+	overlay_mw = TRUE,
+	detectors = c("ri", "uv", "mals"),
+	log_scale = c("x", "none", "y", "both"),
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  type <- match.arg(type)
-  log_scale <- match.arg(log_scale)
+	type <- match.arg(type)
+	log_scale <- match.arg(log_scale)
 
-  # Get measure columns from attributes
-  measure_cols <- attr(object, "measure_cols")
-  sample_id <- attr(object, "sample_id")
+	# Get measure columns from attributes
+	measure_cols <- attr(object, "measure_cols")
+	sample_id <- attr(object, "sample_id")
 
-  if (is.null(measure_cols) || length(measure_cols) == 0) {
-    measure_cols <- find_measure_cols(object)
-  }
+	if (is.null(measure_cols) || length(measure_cols) == 0) {
+		measure_cols <- find_measure_cols(object)
+	}
 
-  # Auto-detect plot type
-  if (type == "auto") {
-    type <- detect_plot_type(measure_cols)
-  }
+	# Auto-detect plot type
+	if (type == "auto") {
+		type <- detect_plot_type(measure_cols)
+	}
 
-  # Dispatch to appropriate plot function
-  p <- switch(
-    type,
-    "chromatogram" = autoplot_chromatogram(
-      object,
-      sample_id = sample_id,
-      overlay_mw = overlay_mw,
-      detectors = detectors,
-      ...
-    ),
-    "mwd" = autoplot_mwd(
-      object,
-      sample_id = sample_id,
-      log_scale = log_scale,
-      ...
-    ),
-    "conformation" = autoplot_conformation(
-      object,
-      sample_id = sample_id,
-      ...
-    ),
-    "composition" = autoplot_composition(
-      object,
-      sample_id = sample_id,
-      ...
-    ),
-    cli::cli_abort("Unknown plot type: {.val {type}}")
-  )
+	# Dispatch to appropriate plot function
+	p <- switch(
+		type,
+		"chromatogram" = autoplot_chromatogram(
+			object,
+			sample_id = sample_id,
+			overlay_mw = overlay_mw,
+			detectors = detectors,
+			...
+		),
+		"mwd" = autoplot_mwd(
+			object,
+			sample_id = sample_id,
+			log_scale = log_scale,
+			...
+		),
+		"conformation" = autoplot_conformation(
+			object,
+			sample_id = sample_id,
+			...
+		),
+		"composition" = autoplot_composition(
+			object,
+			sample_id = sample_id,
+			...
+		),
+		cli::cli_abort("Unknown plot type: {.val {type}}")
+	)
 
-  p
+	p
 }
 
 #' Detect best plot type based on available measures
 #' @noRd
 detect_plot_type <- function(measure_cols) {
-  # Check for MW-related columns -> MWD plot
-  if ("mw" %in% measure_cols) {
-    return("mwd")
-  }
+	# Check for MW-related columns -> MWD plot
+	if ("mw" %in% measure_cols) {
+		return("mwd")
+	}
 
-  # Check for conformation data -> conformation plot
-  if ("rg" %in% measure_cols || "intrinsic_visc" %in% measure_cols) {
-    return("conformation")
-  }
+	# Check for conformation data -> conformation plot
+	if ("rg" %in% measure_cols || "intrinsic_visc" %in% measure_cols) {
+		return("conformation")
+	}
 
-  # Check for composition data
-  if ("composition" %in% measure_cols || "uv_ri_ratio" %in% measure_cols) {
-    return("composition")
-  }
+	# Check for composition data
+	if ("composition" %in% measure_cols || "uv_ri_ratio" %in% measure_cols) {
+		return("composition")
+	}
 
-  # Default to chromatogram
-  "chromatogram"
+	# Default to chromatogram
+	"chromatogram"
 }
 
 #' Internal: Chromatogram plot for autoplot
 #' @noRd
 autoplot_chromatogram <- function(
-  object,
-  sample_id = NULL,
-  overlay_mw = TRUE,
-  detectors = c("ri", "uv", "mals"),
-  ...
+	object,
+	sample_id = NULL,
+	overlay_mw = TRUE,
+	detectors = c("ri", "uv", "mals"),
+	...
 ) {
-  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+	measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
 
-  # Find available detectors
-  available_detectors <- intersect(detectors, measure_cols)
+	# Find available detectors
+	available_detectors <- intersect(detectors, measure_cols)
 
-  if (length(available_detectors) == 0) {
-    # Use first available measure
-    available_detectors <- measure_cols[1]
-  }
+	if (length(available_detectors) == 0) {
+		# Use first available measure
+		available_detectors <- measure_cols[1]
+	}
 
-  if (length(available_detectors) > 1) {
-    # Multi-detector overlay
-    plot_sec_multidetector(
-      object,
-      detectors = available_detectors,
-      sample_id = sample_id,
-      ...
-    )
-  } else {
-    # Single detector chromatogram
-    plot_sec_chromatogram(
-      object,
-      measures = available_detectors,
-      sample_id = sample_id,
-      ...
-    )
-  }
+	if (length(available_detectors) > 1) {
+		# Multi-detector overlay
+		plot_sec_multidetector(
+			object,
+			detectors = available_detectors,
+			sample_id = sample_id,
+			...
+		)
+	} else {
+		# Single detector chromatogram
+		plot_sec_chromatogram(
+			object,
+			measures = available_detectors,
+			sample_id = sample_id,
+			...
+		)
+	}
 }
 
 #' Internal: MWD plot for autoplot
 #' @noRd
 autoplot_mwd <- function(object, sample_id = NULL, log_scale = "x", ...) {
-  # Use existing MWD plot function
-  p <- plot_sec_mwd(
-    object,
-    sample_id = sample_id,
-    log_mw = log_scale %in% c("x", "both"),
-    ...
-  )
+	# Use existing MWD plot function
+	p <- plot_sec_mwd(
+		object,
+		sample_id = sample_id,
+		log_mw = log_scale %in% c("x", "both"),
+		...
+	)
 
-  # Apply y log scale if requested
-  if (log_scale %in% c("y", "both")) {
-    p <- p + ggplot2::scale_y_log10()
-  }
+	# Apply y log scale if requested
+	if (log_scale %in% c("y", "both")) {
+		p <- p + ggplot2::scale_y_log10()
+	}
 
-  p
+	p
 }
 
 #' Internal: Conformation plot for autoplot
 #' @noRd
 autoplot_conformation <- function(object, sample_id = NULL, ...) {
-  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+	measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
 
-  # Determine conformation plot type
-  if ("rg" %in% measure_cols && "mw" %in% measure_cols) {
-    type <- "rg_mw"
-  } else if ("intrinsic_visc" %in% measure_cols && "mw" %in% measure_cols) {
-    type <- "eta_mw"
-  } else if ("rh" %in% measure_cols && "mw" %in% measure_cols) {
-    type <- "rh_mw"
-  } else {
-    cli::cli_abort(c(
-      "Cannot create conformation plot.",
-      "i" = "Need both MW and conformation data (rg, intrinsic_visc, or rh).",
-      "i" = "Available measures: {.val {measure_cols}}"
-    ))
-  }
+	# Determine conformation plot type
+	if ("rg" %in% measure_cols && "mw" %in% measure_cols) {
+		type <- "rg_mw"
+	} else if ("intrinsic_visc" %in% measure_cols && "mw" %in% measure_cols) {
+		type <- "eta_mw"
+	} else if ("rh" %in% measure_cols && "mw" %in% measure_cols) {
+		type <- "rh_mw"
+	} else {
+		cli::cli_abort(
+			c(
+				"Cannot create conformation plot.",
+				"i" = "Need both MW and conformation data (rg, intrinsic_visc, or rh).",
+				"i" = "Available measures: {.val {measure_cols}}"
+			)
+		)
+	}
 
-  plot_sec_conformation(
-    object,
-    type = type,
-    sample_id = sample_id,
-    ...
-  )
+	plot_sec_conformation(
+		object,
+		type = type,
+		sample_id = sample_id,
+		...
+	)
 }
 
 #' Internal: Composition plot for autoplot
 #' @noRd
 autoplot_composition <- function(object, sample_id = NULL, ...) {
-  measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
+	measure_cols <- attr(object, "measure_cols") %||% find_measure_cols(object)
 
-  # Check for composition column
-  comp_col <- NULL
-  if ("composition" %in% measure_cols) {
-    comp_col <- "composition"
-  } else if ("uv_ri_ratio" %in% measure_cols) {
-    comp_col <- "uv_ri_ratio"
-  }
+	# Check for composition column
+	comp_col <- NULL
+	if ("composition" %in% measure_cols) {
+		comp_col <- "composition"
+	} else if ("uv_ri_ratio" %in% measure_cols) {
+		comp_col <- "uv_ri_ratio"
+	}
 
-  if (is.null(comp_col)) {
-    cli::cli_abort(c(
-      "Cannot create composition plot.",
-      "i" = "Need composition or uv_ri_ratio measure column.",
-      "i" = "Available measures: {.val {measure_cols}}"
-    ))
-  }
+	if (is.null(comp_col)) {
+		cli::cli_abort(
+			c(
+				"Cannot create composition plot.",
+				"i" = "Need composition or uv_ri_ratio measure column.",
+				"i" = "Available measures: {.val {measure_cols}}"
+			)
+		)
+	}
 
-  # Use chromatogram plot for composition
-  plot_sec_chromatogram(
-    object,
-    measures = comp_col,
-    sample_id = sample_id,
-    y_label = if (comp_col == "composition") "Composition" else "UV/RI Ratio",
-    ...
-  )
+	# Use chromatogram plot for composition
+	plot_sec_chromatogram(
+		object,
+		measures = comp_col,
+		sample_id = sample_id,
+		y_label = if (comp_col == "composition") "Composition" else "UV/RI Ratio",
+		...
+	)
 }
 
 #' Plot SEC Chromatogram
@@ -463,85 +471,86 @@ autoplot_composition <- function(object, sample_id = NULL, ...) {
 #' plot_sec_chromatogram(processed, facet_by = "sample")
 #' }
 plot_sec_chromatogram <- function(
-  data,
-  measures = NULL,
+	data,
+	measures = NULL,
 
-  sample_id = NULL,
-  x_label = "Elution Time (min)",
-  y_label = "Signal",
-  normalize = FALSE,
-  facet_by = c("none", "measure", "sample"),
-  color_by = c("sample", "measure"),
-  ...
+	sample_id = NULL,
+	x_label = "Elution Time (min)",
+	y_label = "Signal",
+	normalize = FALSE,
+	facet_by = c("none", "measure", "sample"),
+	color_by = c("sample", "measure"),
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  facet_by <- match.arg(facet_by)
-  color_by <- match.arg(color_by)
+	facet_by <- match.arg(facet_by)
+	color_by <- match.arg(color_by)
 
-  # Convert to slice table if needed
-  slice_data <- prepare_plot_data(
-    data,
-    measures = measures,
-    sample_id = sample_id
-  )
+	# Convert to slice table if needed
+	slice_data <- prepare_plot_data(
+		data,
+		measures = measures,
+		sample_id = sample_id
+	)
 
-  if (nrow(slice_data) == 0) {
-    cli::cli_abort("No data to plot after extraction.")
-  }
+	if (nrow(slice_data) == 0) {
+		cli::cli_abort("No data to plot after extraction.")
+	}
 
-  # Normalize if requested
-  if (normalize) {
-    slice_data <- slice_data |>
-      dplyr::group_by(.data$sample_id, .data$measure) |>
-      dplyr::mutate(
-        value = (.data$value - min(.data$value, na.rm = TRUE)) /
-          (max(.data$value, na.rm = TRUE) -
-            min(.data$value, na.rm = TRUE) +
-            1e-10)
-      ) |>
-      dplyr::ungroup()
-    y_label <- paste0(y_label, " (normalized)")
-  }
+	# Normalize if requested
+	if (normalize) {
+		slice_data <- slice_data |>
+			dplyr::group_by(.data$sample_id, .data$measure) |>
+			dplyr::mutate(
+				value = (.data$value - min(.data$value, na.rm = TRUE)) /
+					(
+						max(.data$value, na.rm = TRUE) -
+							min(.data$value, na.rm = TRUE) +
+							1e-10
+					)
+			) |>
+			dplyr::ungroup()
+		y_label <- paste0(y_label, " (normalized)")
+	}
 
-  # Build the plot
-  if (color_by == "sample") {
-    p <- ggplot2::ggplot(
-      slice_data,
-      ggplot2::aes(
-        x = .data$location,
-        y = .data$value,
-        color = .data$sample_id,
-        group = interaction(.data$sample_id, .data$measure)
-      )
-    )
-  } else {
-    p <- ggplot2::ggplot(
-      slice_data,
-      ggplot2::aes(
-        x = .data$location,
-        y = .data$value,
-        color = .data$measure,
-        group = interaction(.data$sample_id, .data$measure)
-      )
-    )
-  }
+	# Build the plot
+	if (color_by == "sample") {
+		p <- ggplot2::ggplot(
+			slice_data,
+			ggplot2::aes(
+				x = .data$location,
+				y = .data$value,
+				color = .data$sample_id,
+				group = interaction(.data$sample_id, .data$measure)
+			)
+		)
+	} else {
+		p <- ggplot2::ggplot(
+			slice_data,
+			ggplot2::aes(
+				x = .data$location,
+				y = .data$value,
+				color = .data$measure,
+				group = interaction(.data$sample_id, .data$measure)
+			)
+		)
+	}
 
-  p <- p +
-    ggplot2::geom_line(...) +
-    ggplot2::labs(x = x_label, y = y_label) +
-    ggplot2::theme_minimal()
+	p <- p +
+		ggplot2::geom_line(...) +
+		ggplot2::labs(x = x_label, y = y_label) +
+		ggplot2::theme_minimal()
 
-  # Add faceting
-  if (facet_by == "measure") {
-    p <- p + ggplot2::facet_wrap(~measure, scales = "free_y")
-  } else if (facet_by == "sample") {
-    p <- p + ggplot2::facet_wrap(~sample_id, scales = "free_y")
-  }
+	# Add faceting
+	if (facet_by == "measure") {
+		p <- p + ggplot2::facet_wrap(~measure, scales = "free_y")
+	} else if (facet_by == "sample") {
+		p <- p + ggplot2::facet_wrap(~sample_id, scales = "free_y")
+	}
 
-  p
+	p
 }
-
 
 #' Plot Molecular Weight Distribution
 #'
@@ -591,154 +600,153 @@ plot_sec_chromatogram <- function(
 #' plot_sec_mwd(processed_data, show_averages = FALSE)
 #' }
 plot_sec_mwd <- function(
-  data,
-  mw_col = "mw",
-  concentration_col = NULL,
-  sample_id = NULL,
-  type = c("differential", "cumulative", "both"),
-  show_averages = TRUE,
-  log_mw = TRUE,
-  x_label = NULL,
-  y_label = NULL,
-  ...
+	data,
+	mw_col = "mw",
+	concentration_col = NULL,
+	sample_id = NULL,
+	type = c("differential", "cumulative", "both"),
+	show_averages = TRUE,
+	log_mw = TRUE,
+	x_label = NULL,
+	y_label = NULL,
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  type <- match.arg(type)
+	type <- match.arg(type)
 
-  # Set default axis labels
-  if (is.null(x_label)) {
-    x_label <- if (log_mw) expression(log[10](M)) else "Molecular Weight (Da)"
-  }
-  if (is.null(y_label)) {
-    y_label <- switch(
-      type,
-      "differential" = expression(dW / d ~ log ~ M),
-      "cumulative" = "Cumulative Weight Fraction",
-      "both" = "Distribution"
-    )
-  }
+	# Set default axis labels
+	if (is.null(x_label)) {
+		x_label <- if (log_mw) expression(log[10](M)) else "Molecular Weight (Da)"
+	}
+	if (is.null(y_label)) {
+		y_label <- switch(
+			type,
+			"differential" = expression(dW / d ~ log ~ M),
+			"cumulative" = "Cumulative Weight Fraction",
+			"both" = "Distribution"
+		)
+	}
 
-  # Check for MW column
-  if (!mw_col %in% names(data)) {
-    cli::cli_abort(
-      "Molecular weight column {.val {mw_col}} not found in data."
-    )
-  }
+	# Check for MW column
+	if (!mw_col %in% names(data)) {
+		cli::cli_abort(
+			"Molecular weight column {.val {mw_col}} not found in data."
+		)
+	}
 
-  # Extract slice data
-  measures_to_get <- mw_col
-  if (!is.null(concentration_col) && concentration_col %in% names(data)) {
-    measures_to_get <- c(measures_to_get, concentration_col)
-  }
+	# Extract slice data
+	measures_to_get <- mw_col
+	if (!is.null(concentration_col) && concentration_col %in% names(data)) {
+		measures_to_get <- c(measures_to_get, concentration_col)
+	}
 
-  slice_data <- prepare_plot_data(
-    data,
-    measures = measures_to_get,
-    sample_id = sample_id
-  )
+	slice_data <- prepare_plot_data(
+		data,
+		measures = measures_to_get,
+		sample_id = sample_id
+	)
 
-  # Pivot to wide if we have multiple measures
-  if (length(measures_to_get) > 1) {
-    slice_data <- tidyr::pivot_wider(
-      slice_data,
-      names_from = "measure",
-      values_from = "value"
-    )
-  } else {
-    # Rename value to mw_col name for consistency
-    names(slice_data)[names(slice_data) == "value"] <- mw_col
-    slice_data$measure <- NULL
-  }
+	# Pivot to wide if we have multiple measures
+	if (length(measures_to_get) > 1) {
+		slice_data <- tidyr::pivot_wider(
+			slice_data,
+			names_from = "measure",
+			values_from = "value"
+		)
+	} else {
+		# Rename value to mw_col name for consistency
+		names(slice_data)[names(slice_data) == "value"] <- mw_col
+		slice_data$measure <- NULL
+	}
 
-  # Calculate distribution
-  slice_data <- slice_data |>
-    dplyr::filter(!is.na(.data[[mw_col]]) & .data[[mw_col]] > 0) |>
-    dplyr::mutate(log_mw = log10(.data[[mw_col]]))
+	# Calculate distribution
+	slice_data <- slice_data |>
+		dplyr::filter(!is.na(.data[[mw_col]]) & .data[[mw_col]] > 0) |>
+		dplyr::mutate(log_mw = log10(.data[[mw_col]]))
 
-  # If no concentration column, use uniform weighting
-  if (is.null(concentration_col) || !concentration_col %in% names(slice_data)) {
-    slice_data$weight <- 1
-  } else {
-    slice_data$weight <- slice_data[[concentration_col]]
-  }
+	# If no concentration column, use uniform weighting
+	if (is.null(concentration_col) || !concentration_col %in% names(slice_data)) {
+		slice_data$weight <- 1
+	} else {
+		slice_data$weight <- slice_data[[concentration_col]]
+	}
 
-  # Calculate differential distribution per sample
-  slice_data <- slice_data |>
-    dplyr::group_by(.data$sample_id) |>
-    dplyr::arrange(.data$log_mw) |>
-    dplyr::mutate(
-      # Normalize weights
-      weight_norm = .data$weight / sum(.data$weight, na.rm = TRUE),
-      # Cumulative
-      cumulative = cumsum(.data$weight_norm),
-      # Differential (dW/d log M approximation)
-      d_log_mw = c(diff(.data$log_mw), NA),
-      differential = .data$weight_norm / abs(.data$d_log_mw)
-    ) |>
-    dplyr::ungroup()
+	# Calculate differential distribution per sample
+	slice_data <- slice_data |>
+		dplyr::group_by(.data$sample_id) |>
+		dplyr::arrange(.data$log_mw) |>
+		dplyr::mutate(
+			# Normalize weights
+			weight_norm = .data$weight / sum(.data$weight, na.rm = TRUE),
+			# Cumulative
+			cumulative = cumsum(.data$weight_norm),
+			# Differential (dW/d log M approximation)
+			d_log_mw = c(diff(.data$log_mw), NA),
+			differential = .data$weight_norm / abs(.data$d_log_mw)
+		) |>
+		dplyr::ungroup()
 
-  # Set x values based on log_mw preference
-  if (log_mw) {
-    slice_data$x_val <- slice_data$log_mw
-  } else {
-    slice_data$x_val <- slice_data[[mw_col]]
-  }
+	# Set x values based on log_mw preference
+	if (log_mw) {
+		slice_data$x_val <- slice_data$log_mw
+	} else {
+		slice_data$x_val <- slice_data[[mw_col]]
+	}
 
-  # Build plot based on type
-  if (type == "differential") {
-    p <- ggplot2::ggplot(
-      slice_data,
-      ggplot2::aes(
-        x = .data$x_val,
-        y = .data$differential,
-        color = .data$sample_id
-      )
-    ) +
-      ggplot2::geom_line(...)
-  } else if (type == "cumulative") {
-    p <- ggplot2::ggplot(
-      slice_data,
-      ggplot2::aes(
-        x = .data$x_val,
-        y = .data$cumulative,
-        color = .data$sample_id
-      )
-    ) +
-      ggplot2::geom_line(...)
-  } else {
-    # Both - pivot longer and facet
-    plot_data <- slice_data |>
-      tidyr::pivot_longer(
-        cols = c("differential", "cumulative"),
-        names_to = "dist_type",
-        values_to = "y_val"
-      )
+	# Build plot based on type
+	if (type == "differential") {
+		p <- ggplot2::ggplot(
+			slice_data,
+			ggplot2::aes(
+				x = .data$x_val,
+				y = .data$differential,
+				color = .data$sample_id
+			)
+		) +
+			ggplot2::geom_line(...)
+	} else if (type == "cumulative") {
+		p <- ggplot2::ggplot(
+			slice_data,
+			ggplot2::aes(
+				x = .data$x_val,
+				y = .data$cumulative,
+				color = .data$sample_id
+			)
+		) +
+			ggplot2::geom_line(...)
+	} else {
+		# Both - pivot longer and facet
+		plot_data <- slice_data |>
+			tidyr::pivot_longer(
+				cols = c("differential", "cumulative"),
+				names_to = "dist_type",
+				values_to = "y_val"
+			)
 
-    p <- ggplot2::ggplot(
-      plot_data,
-      ggplot2::aes(
-        x = .data$x_val,
-        y = .data$y_val,
-        color = .data$sample_id
-      )
-    ) +
-      ggplot2::geom_line(...) +
-      ggplot2::facet_wrap(~dist_type, scales = "free_y")
-  }
+		p <- ggplot2::ggplot(
+			plot_data,
+			ggplot2::aes(
+				x = .data$x_val,
+				y = .data$y_val,
+				color = .data$sample_id
+			)
+		) +
+			ggplot2::geom_line(...) +
+			ggplot2::facet_wrap(~dist_type, scales = "free_y")
+	}
 
-  p <- p +
-    ggplot2::labs(x = x_label, y = y_label, color = "Sample") +
-    ggplot2::theme_minimal()
+	p <- p +
+		ggplot2::labs(x = x_label, y = y_label, color = "Sample") +
+		ggplot2::theme_minimal()
 
-  # Add MW average lines if available and requested
-  if (show_averages && type != "both") {
-    p <- add_mw_average_lines(p, data, sample_id, log_mw)
-  }
+	# Add MW average lines if available and requested
+	if (show_averages && type != "both") {
+		p <- add_mw_average_lines(p, data, sample_id, log_mw)
+	}
 
-  p
+	p
 }
-
 
 #' Plot Multi-Detector SEC Overlay
 #'
@@ -793,111 +801,112 @@ plot_sec_mwd <- function(
 #' )
 #' }
 plot_sec_multidetector <- function(
-  data,
-  detectors,
-  sample_id = NULL,
-  samples = NULL,
-  normalize = TRUE,
-  x_label = "Elution Time (min)",
-  facet = FALSE,
-  ...
+	data,
+	detectors,
+	sample_id = NULL,
+	samples = NULL,
+	normalize = TRUE,
+	x_label = "Elution Time (min)",
+	facet = FALSE,
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  if (missing(detectors) || length(detectors) == 0) {
-    cli::cli_abort(
-      "{.arg detectors} must specify at least one detector column."
-    )
-  }
+	if (missing(detectors) || length(detectors) == 0) {
+		cli::cli_abort(
+			"{.arg detectors} must specify at least one detector column."
+		)
+	}
 
-  # Check detectors exist
-  available_measures <- find_measure_cols(data)
-  missing_det <- setdiff(detectors, available_measures)
-  if (length(missing_det) > 0) {
-    cli::cli_warn(
-      "Detector columns not found: {.val {missing_det}}. Skipping."
-    )
-    detectors <- intersect(detectors, available_measures)
-    if (length(detectors) == 0) {
-      cli::cli_abort("No valid detector columns found.")
-    }
-  }
+	# Check detectors exist
+	available_measures <- find_measure_cols(data)
+	missing_det <- setdiff(detectors, available_measures)
+	if (length(missing_det) > 0) {
+		cli::cli_warn(
+			"Detector columns not found: {.val {missing_det}}. Skipping."
+		)
+		detectors <- intersect(detectors, available_measures)
+		if (length(detectors) == 0) {
+			cli::cli_abort("No valid detector columns found.")
+		}
+	}
 
-  # Extract slice data
-  slice_data <- prepare_plot_data(
-    data,
-    measures = detectors,
-    sample_id = sample_id
-  )
+	# Extract slice data
+	slice_data <- prepare_plot_data(
+		data,
+		measures = detectors,
+		sample_id = sample_id
+	)
 
-  # Filter to specific samples if requested
-  if (!is.null(samples)) {
-    slice_data <- dplyr::filter(slice_data, .data$sample_id %in% samples)
-    if (nrow(slice_data) == 0) {
-      cli::cli_abort("No data found for samples: {.val {samples}}")
-    }
-  }
+	# Filter to specific samples if requested
+	if (!is.null(samples)) {
+		slice_data <- dplyr::filter(slice_data, .data$sample_id %in% samples)
+		if (nrow(slice_data) == 0) {
+			cli::cli_abort("No data found for samples: {.val {samples}}")
+		}
+	}
 
-  # Normalize if requested
-  if (normalize) {
-    slice_data <- slice_data |>
-      dplyr::group_by(.data$sample_id, .data$measure) |>
-      dplyr::mutate(
-        value = (.data$value - min(.data$value, na.rm = TRUE)) /
-          (max(.data$value, na.rm = TRUE) -
-            min(.data$value, na.rm = TRUE) +
-            1e-10)
-      ) |>
-      dplyr::ungroup()
-  }
+	# Normalize if requested
+	if (normalize) {
+		slice_data <- slice_data |>
+			dplyr::group_by(.data$sample_id, .data$measure) |>
+			dplyr::mutate(
+				value = (.data$value - min(.data$value, na.rm = TRUE)) /
+					(
+						max(.data$value, na.rm = TRUE) -
+							min(.data$value, na.rm = TRUE) +
+							1e-10
+					)
+			) |>
+			dplyr::ungroup()
+	}
 
-  # Create prettier detector labels
-  detector_labels <- c(
-    "ri" = "RI",
-    "uv" = "UV",
-    "mals" = "MALS",
-    "visc" = "Viscometer",
-    "viscometer" = "Viscometer",
-    "dad" = "DAD",
-    "lals" = "LALS",
-    "rals" = "RALS",
-    "dls" = "DLS"
-  )
+	# Create prettier detector labels
+	detector_labels <- c(
+		"ri" = "RI",
+		"uv" = "UV",
+		"mals" = "MALS",
+		"visc" = "Viscometer",
+		"viscometer" = "Viscometer",
+		"dad" = "DAD",
+		"lals" = "LALS",
+		"rals" = "RALS",
+		"dls" = "DLS"
+	)
 
-  slice_data <- slice_data |>
-    dplyr::mutate(
-      detector = dplyr::if_else(
-        .data$measure %in% names(detector_labels),
-        detector_labels[.data$measure],
-        .data$measure
-      )
-    )
+	slice_data <- slice_data |>
+		dplyr::mutate(
+			detector = dplyr::if_else(
+				.data$measure %in% names(detector_labels),
+				detector_labels[.data$measure],
+				.data$measure
+			)
+		)
 
-  # Build plot
-  p <- ggplot2::ggplot(
-    slice_data,
-    ggplot2::aes(
-      x = .data$location,
-      y = .data$value,
-      color = .data$detector,
-      group = interaction(.data$sample_id, .data$measure)
-    )
-  ) +
-    ggplot2::geom_line(...) +
-    ggplot2::labs(
-      x = x_label,
-      y = if (normalize) "Normalized Signal" else "Signal",
-      color = "Detector"
-    ) +
-    ggplot2::theme_minimal()
+	# Build plot
+	p <- ggplot2::ggplot(
+		slice_data,
+		ggplot2::aes(
+			x = .data$location,
+			y = .data$value,
+			color = .data$detector,
+			group = interaction(.data$sample_id, .data$measure)
+		)
+	) +
+		ggplot2::geom_line(...) +
+		ggplot2::labs(
+			x = x_label,
+			y = if (normalize) "Normalized Signal" else "Signal",
+			color = "Detector"
+		) +
+		ggplot2::theme_minimal()
 
-  if (facet) {
-    p <- p + ggplot2::facet_wrap(~sample_id)
-  }
+	if (facet) {
+		p <- p + ggplot2::facet_wrap(~sample_id)
+	}
 
-  p
+	p
 }
-
 
 #' Plot SEC Conformation Data
 #'
@@ -957,220 +966,219 @@ plot_sec_multidetector <- function(
 #' )
 #' }
 plot_sec_conformation <- function(
-  data,
-  type = c("rg_mw", "eta_mw", "rh_mw"),
-  mw_col = "mw",
-  y_col = NULL,
-  sample_id = NULL,
-  show_fit = TRUE,
-  show_exponent = TRUE,
-  compare_linear = NULL,
-  ...
+	data,
+	type = c("rg_mw", "eta_mw", "rh_mw"),
+	mw_col = "mw",
+	y_col = NULL,
+	sample_id = NULL,
+	show_fit = TRUE,
+	show_exponent = TRUE,
+	compare_linear = NULL,
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  type <- match.arg(type)
+	type <- match.arg(type)
 
-  # Auto-detect y column based on type
-  if (is.null(y_col)) {
-    y_col <- switch(
-      type,
-      "rg_mw" = "rg",
-      "eta_mw" = "intrinsic_visc",
-      "rh_mw" = "rh"
-    )
-  }
+	# Auto-detect y column based on type
+	if (is.null(y_col)) {
+		y_col <- switch(
+			type,
+			"rg_mw" = "rg",
+			"eta_mw" = "intrinsic_visc",
+			"rh_mw" = "rh"
+		)
+	}
 
-  # Set axis labels
-  axis_labels <- list(
-    "rg_mw" = list(
-      x = expression(log[10](M)),
-      y = expression(log[10](R[g] ~ "(nm)"))
-    ),
-    "eta_mw" = list(
-      x = expression(log[10](M)),
-      y = expression(log[10](group("[", eta, "]") ~ "(mL/g)"))
-    ),
-    "rh_mw" = list(
-      x = expression(log[10](M)),
-      y = expression(log[10](R[h] ~ "(nm)"))
-    )
-  )
+	# Set axis labels
+	axis_labels <- list(
+		"rg_mw" = list(
+			x = expression(log[10](M)),
+			y = expression(log[10](R[g] ~ "(nm)"))
+		),
+		"eta_mw" = list(
+			x = expression(log[10](M)),
+			y = expression(log[10](group("[", eta, "]") ~ "(mL/g)"))
+		),
+		"rh_mw" = list(
+			x = expression(log[10](M)),
+			y = expression(log[10](R[h] ~ "(nm)"))
+		)
+	)
 
-  # Check columns exist - try measure columns first, fall back to regular columns
-  measure_cols <- find_measure_cols(data)
-  has_measure_cols <- length(measure_cols) > 0
+	# Check columns exist - try measure columns first, fall back to regular columns
+	measure_cols <- find_measure_cols(data)
+	has_measure_cols <- length(measure_cols) > 0
 
-  if (has_measure_cols) {
-    available <- measure_cols
-  } else {
-    available <- names(data)
-  }
+	if (has_measure_cols) {
+		available <- measure_cols
+	} else {
+		available <- names(data)
+	}
 
-  if (!mw_col %in% available) {
-    cli::cli_abort("MW column {.val {mw_col}} not found.")
-  }
-  if (!y_col %in% available) {
-    cli::cli_abort("Y column {.val {y_col}} not found for type {.val {type}}.")
-  }
+	if (!mw_col %in% available) {
+		cli::cli_abort("MW column {.val {mw_col}} not found.")
+	}
+	if (!y_col %in% available) {
+		cli::cli_abort("Y column {.val {y_col}} not found for type {.val {type}}.")
+	}
 
-  # Extract and prepare data based on format
-  if (has_measure_cols) {
-    # Data has measure columns - extract via slice table
-    slice_data <- prepare_plot_data(
-      data,
-      measures = c(mw_col, y_col),
-      sample_id = sample_id
-    )
-    # Pivot to wide format
-    slice_data <- tidyr::pivot_wider(
-      slice_data,
-      names_from = "measure",
-      values_from = "value"
-    )
-  } else {
-    # Data has regular columns - use directly
-    slice_data <- data
-    # Handle sample_id column naming
-    if (!is.null(sample_id)) {
-      if (sample_id %in% names(slice_data)) {
-        if (sample_id != "sample_id") {
-          # Rename the specified column to sample_id, dropping existing if present
-          slice_data <- slice_data |>
-            dplyr::select(-dplyr::any_of("sample_id")) |>
-            dplyr::rename(sample_id = !!rlang::sym(sample_id))
-        }
-      } else {
-        cli::cli_warn(
-          c(
-            "Sample ID column {.val {sample_id}} not found.",
-            "i" = "Using default sample identifier."
-          )
-        )
-        slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
-      }
-    } else if (!"sample_id" %in% names(slice_data)) {
-      # No sample_id column exists - create one
-      slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
-    }
-  }
+	# Extract and prepare data based on format
+	if (has_measure_cols) {
+		# Data has measure columns - extract via slice table
+		slice_data <- prepare_plot_data(
+			data,
+			measures = c(mw_col, y_col),
+			sample_id = sample_id
+		)
+		# Pivot to wide format
+		slice_data <- tidyr::pivot_wider(
+			slice_data,
+			names_from = "measure",
+			values_from = "value"
+		)
+	} else {
+		# Data has regular columns - use directly
+		slice_data <- data
+		# Handle sample_id column naming
+		if (!is.null(sample_id)) {
+			if (sample_id %in% names(slice_data)) {
+				if (sample_id != "sample_id") {
+					# Rename the specified column to sample_id, dropping existing if present
+					slice_data <- slice_data |>
+						dplyr::select(-dplyr::any_of("sample_id")) |>
+						dplyr::rename(sample_id = !!rlang::sym(sample_id))
+				}
+			} else {
+				cli::cli_warn(
+					c(
+						"Sample ID column {.val {sample_id}} not found.",
+						"i" = "Using default sample identifier."
+					)
+				)
+				slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
+			}
+		} else if (!"sample_id" %in% names(slice_data)) {
+			# No sample_id column exists - create one
+			slice_data <- dplyr::mutate(slice_data, sample_id = "Sample")
+		}
+	}
 
-  # Filter valid data and compute log values
-  slice_data <- slice_data |>
-    dplyr::filter(
-      !is.na(.data[[mw_col]]) &
-        .data[[mw_col]] > 0 &
-        !is.na(.data[[y_col]]) &
-        .data[[y_col]] > 0
-    ) |>
-    dplyr::mutate(
-      log_mw = log10(.data[[mw_col]]),
-      log_y = log10(.data[[y_col]]),
-      source = "Sample"
-    )
+	# Filter valid data and compute log values
+	slice_data <- slice_data |>
+		dplyr::filter(
+			!is.na(.data[[mw_col]]) &
+				.data[[mw_col]] > 0 &
+				!is.na(.data[[y_col]]) &
+				.data[[y_col]] > 0
+		) |>
+		dplyr::mutate(
+			log_mw = log10(.data[[mw_col]]),
+			log_y = log10(.data[[y_col]]),
+			source = "Sample"
+		)
 
-  # Add linear reference if provided
-  if (!is.null(compare_linear)) {
-    ref_measure_cols <- find_measure_cols(compare_linear)
-    ref_has_measure <- length(ref_measure_cols) > 0
+	# Add linear reference if provided
+	if (!is.null(compare_linear)) {
+		ref_measure_cols <- find_measure_cols(compare_linear)
+		ref_has_measure <- length(ref_measure_cols) > 0
 
-    if (ref_has_measure) {
-      ref_data <- prepare_plot_data(
-        compare_linear,
-        measures = c(mw_col, y_col),
-        sample_id = sample_id
-      )
-      ref_data <- tidyr::pivot_wider(
-        ref_data,
-        names_from = "measure",
-        values_from = "value"
-      )
-    } else {
-      ref_data <- compare_linear
-      ref_data <- dplyr::mutate(ref_data, sample_id = "Linear Reference")
-    }
+		if (ref_has_measure) {
+			ref_data <- prepare_plot_data(
+				compare_linear,
+				measures = c(mw_col, y_col),
+				sample_id = sample_id
+			)
+			ref_data <- tidyr::pivot_wider(
+				ref_data,
+				names_from = "measure",
+				values_from = "value"
+			)
+		} else {
+			ref_data <- compare_linear
+			ref_data <- dplyr::mutate(ref_data, sample_id = "Linear Reference")
+		}
 
-    ref_data <- ref_data |>
-      dplyr::filter(
-        !is.na(.data[[mw_col]]) &
-          .data[[mw_col]] > 0 &
-          !is.na(.data[[y_col]]) &
-          .data[[y_col]] > 0
-      ) |>
-      dplyr::mutate(
-        log_mw = log10(.data[[mw_col]]),
-        log_y = log10(.data[[y_col]]),
-        source = "Linear Reference"
-      )
-    slice_data <- dplyr::bind_rows(slice_data, ref_data)
-  }
+		ref_data <- ref_data |>
+			dplyr::filter(
+				!is.na(.data[[mw_col]]) &
+					.data[[mw_col]] > 0 &
+					!is.na(.data[[y_col]]) &
+					.data[[y_col]] > 0
+			) |>
+			dplyr::mutate(
+				log_mw = log10(.data[[mw_col]]),
+				log_y = log10(.data[[y_col]]),
+				source = "Linear Reference"
+			)
+		slice_data <- dplyr::bind_rows(slice_data, ref_data)
+	}
 
-  # Build plot
-  p <- ggplot2::ggplot(
-    slice_data,
-    ggplot2::aes(x = .data$log_mw, y = .data$log_y, color = .data$sample_id)
-  ) +
-    ggplot2::geom_point(alpha = 0.5, ...) +
-    ggplot2::labs(
-      x = axis_labels[[type]]$x,
-      y = axis_labels[[type]]$y,
-      color = "Sample"
-    ) +
-    ggplot2::theme_minimal()
+	# Build plot
+	p <- ggplot2::ggplot(
+		slice_data,
+		ggplot2::aes(x = .data$log_mw, y = .data$log_y, color = .data$sample_id)
+	) +
+		ggplot2::geom_point(alpha = 0.5, ...) +
+		ggplot2::labs(
+			x = axis_labels[[type]]$x,
+			y = axis_labels[[type]]$y,
+			color = "Sample"
+		) +
+		ggplot2::theme_minimal()
 
-  # Add fit line
-  if (show_fit) {
-    p <- p +
-      ggplot2::geom_smooth(
-        method = "lm",
-        formula = y ~ x,
-        se = FALSE,
-        linetype = "dashed"
-      )
+	# Add fit line
+	if (show_fit) {
+		p <- p +
+			ggplot2::geom_smooth(
+				method = "lm",
+				formula = y ~ x,
+				se = FALSE,
+				linetype = "dashed"
+			)
 
-    # Add exponent annotation
-    if (show_exponent) {
-      # Calculate slope for annotation with error handling
-      fit_data <- slice_data |>
-        dplyr::group_by(.data$sample_id) |>
-        dplyr::summarise(
-          slope = tryCatch(
-            stats::coef(stats::lm(.data$log_y ~ .data$log_mw))[2],
-            error = function(e) NA_real_
-          ),
-          max_x = max(.data$log_mw, na.rm = TRUE),
-          max_y = max(.data$log_y, na.rm = TRUE),
-          .groups = "drop"
-        ) |>
-        dplyr::filter(!is.na(.data$slope))
+		# Add exponent annotation
+		if (show_exponent) {
+			# Calculate slope for annotation with error handling
+			fit_data <- slice_data |>
+				dplyr::group_by(.data$sample_id) |>
+				dplyr::summarise(
+					slope = tryCatch(
+						stats::coef(stats::lm(.data$log_y ~ .data$log_mw))[2],
+						error = function(e) NA_real_
+					),
+					max_x = max(.data$log_mw, na.rm = TRUE),
+					max_y = max(.data$log_y, na.rm = TRUE),
+					.groups = "drop"
+				) |>
+				dplyr::filter(!is.na(.data$slope))
 
-      p <- p +
-        ggplot2::geom_text(
-          data = fit_data,
-          ggplot2::aes(
-            x = .data$max_x,
-            y = .data$max_y,
-            label = sprintf("slope = %.2f", .data$slope)
-          ),
-          hjust = 1,
-          vjust = 0,
-          size = 3
-        )
-    }
-  }
+			p <- p +
+				ggplot2::geom_text(
+					data = fit_data,
+					ggplot2::aes(
+						x = .data$max_x,
+						y = .data$max_y,
+						label = sprintf("slope = %.2f", .data$slope)
+					),
+					hjust = 1,
+					vjust = 0,
+					size = 3
+				)
+		}
+	}
 
-  # Style for linear reference comparison
-  if (!is.null(compare_linear)) {
-    p <- p +
-      ggplot2::aes(shape = .data$source) +
-      ggplot2::scale_shape_manual(
-        values = c("Sample" = 16, "Linear Reference" = 1)
-      )
-  }
+	# Style for linear reference comparison
+	if (!is.null(compare_linear)) {
+		p <- p +
+			ggplot2::aes(shape = .data$source) +
+			ggplot2::scale_shape_manual(
+				values = c("Sample" = 16, "Linear Reference" = 1)
+			)
+	}
 
-  p
+	p
 }
-
 
 #' Plot SEC Calibration Curve
 #'
@@ -1201,119 +1209,122 @@ plot_sec_conformation <- function(
 #' plot_sec_calibration(sec_ps_standards, show_residuals = TRUE)
 #' }
 plot_sec_calibration <- function(
-  data,
-  retention_col = "retention_time",
-  mw_col = "log_mp",
-  show_residuals = FALSE,
-  show_r_squared = TRUE,
-  ...
+	data,
+	retention_col = "retention_time",
+	mw_col = "log_mp",
+	show_residuals = FALSE,
+	show_r_squared = TRUE,
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  # Handle recipe input
-  if (inherits(data, "recipe")) {
-    cli::cli_abort(
-      "Recipe input not yet supported. Please provide standards data frame."
-    )
-  }
+	# Handle recipe input
+	if (inherits(data, "recipe")) {
+		cli::cli_abort(
+			"Recipe input not yet supported. Please provide standards data frame."
+		)
+	}
 
-  # Check columns
-  if (!retention_col %in% names(data)) {
-    cli::cli_abort("Retention column {.val {retention_col}} not found.")
-  }
-  if (!mw_col %in% names(data)) {
-    cli::cli_abort("MW column {.val {mw_col}} not found.")
-  }
+	# Check columns
+	if (!retention_col %in% names(data)) {
+		cli::cli_abort("Retention column {.val {retention_col}} not found.")
+	}
+	if (!mw_col %in% names(data)) {
+		cli::cli_abort("MW column {.val {mw_col}} not found.")
+	}
 
-  # Validate sufficient data points for polynomial fit
-  n_standards <- nrow(data)
-  if (n_standards < 4) {
-    cli::cli_abort(c(
-      "Insufficient data for calibration curve.",
-      "x" = "Found {n_standards} standard{?s}, need at least 4 for cubic fit.",
-      "i" = "Provide more calibration standards or use a lower polynomial."
-    ))
-  }
+	# Validate sufficient data points for polynomial fit
+	n_standards <- nrow(data)
+	if (n_standards < 4) {
+		cli::cli_abort(
+			c(
+				"Insufficient data for calibration curve.",
+				"x" = "Found {n_standards} standard{?s}, need at least 4 for cubic fit.",
+				"i" = "Provide more calibration standards or use a lower polynomial."
+			)
+		)
+	}
 
-  # Fit calibration
-  fit <- stats::lm(
-    stats::as.formula(paste(mw_col, "~ poly(", retention_col, ", 3)")),
-    data = data
-  )
+	# Fit calibration
+	fit <- stats::lm(
+		stats::as.formula(paste(mw_col, "~ poly(", retention_col, ", 3)")),
+		data = data
+	)
 
-  # Add predictions
-  data$predicted <- stats::predict(fit)
-  data$residual <- data[[mw_col]] - data$predicted
+	# Add predictions
+	data$predicted <- stats::predict(fit)
+	data$residual <- data[[mw_col]] - data$predicted
 
-  # Main calibration plot
-  p_main <- ggplot2::ggplot(
-    data,
-    ggplot2::aes(x = .data[[retention_col]], y = .data[[mw_col]])
-  ) +
-    ggplot2::geom_point(size = 3, ...) +
-    ggplot2::geom_line(
-      ggplot2::aes(y = .data$predicted),
-      color = "blue",
-      linewidth = 1
-    ) +
-    ggplot2::labs(
-      x = "Retention Time (min)",
-      y = expression(log[10](M[p])),
-      title = "SEC Calibration Curve"
-    ) +
-    ggplot2::theme_minimal()
+	# Main calibration plot
+	p_main <- ggplot2::ggplot(
+		data,
+		ggplot2::aes(x = .data[[retention_col]], y = .data[[mw_col]])
+	) +
+		ggplot2::geom_point(size = 3, ...) +
+		ggplot2::geom_line(
+			ggplot2::aes(y = .data$predicted),
+			color = "blue",
+			linewidth = 1
+		) +
+		ggplot2::labs(
+			x = "Retention Time (min)",
+			y = expression(log[10](M[p])),
+			title = "SEC Calibration Curve"
+		) +
+		ggplot2::theme_minimal()
 
-  # Add equation and R-squared annotations
-  r_sq <- summary(fit)$r.squared
-  annotations <- character()
+	# Add equation and R-squared annotations
+	r_sq <- summary(fit)$r.squared
+	annotations <- character()
 
-  if (show_r_squared) {
-    annotations <- c(annotations, sprintf("R\u00B2 = %.5f", r_sq))
-  }
+	if (show_r_squared) {
+		annotations <- c(annotations, sprintf("R\u00B2 = %.5f", r_sq))
+	}
 
-  if (length(annotations) > 0) {
-    p_main <- p_main +
-      ggplot2::annotate(
-        "text",
-        x = max(data[[retention_col]]),
-        y = max(data[[mw_col]]),
-        label = paste(annotations, collapse = "\n"),
-        hjust = 1,
-        vjust = 1,
-        size = 3.5
-      )
-  }
+	if (length(annotations) > 0) {
+		p_main <- p_main +
+			ggplot2::annotate(
+				"text",
+				x = max(data[[retention_col]]),
+				y = max(data[[mw_col]]),
+				label = paste(annotations, collapse = "\n"),
+				hjust = 1,
+				vjust = 1,
+				size = 3.5
+			)
+	}
 
-  if (show_residuals) {
-    p_resid <- ggplot2::ggplot(
-      data,
-      ggplot2::aes(x = .data[[retention_col]], y = .data$residual)
-    ) +
-      ggplot2::geom_hline(
-        yintercept = 0,
-        linetype = "dashed",
-        color = "gray50"
-      ) +
-      ggplot2::geom_point(size = 2) +
-      ggplot2::labs(x = "Retention Time (min)", y = "Residual (log M)") +
-      ggplot2::theme_minimal()
+	if (show_residuals) {
+		p_resid <- ggplot2::ggplot(
+			data,
+			ggplot2::aes(x = .data[[retention_col]], y = .data$residual)
+		) +
+			ggplot2::geom_hline(
+				yintercept = 0,
+				linetype = "dashed",
+				color = "gray50"
+			) +
+			ggplot2::geom_point(size = 2) +
+			ggplot2::labs(x = "Retention Time (min)", y = "Residual (log M)") +
+			ggplot2::theme_minimal()
 
-    # Combine with patchwork if available
-    if (requireNamespace("patchwork", quietly = TRUE)) {
-      return(p_main / p_resid + patchwork::plot_layout(heights = c(3, 1)))
-    } else {
-      cli::cli_warn(c(
-        "Install {.pkg patchwork} for combined residual plots.",
-        "i" = "Returning main plot only.",
-        "i" = "Install with {.code install.packages(\"patchwork\")}"
-      ))
-      return(p_main)
-    }
-  }
+		# Combine with patchwork if available
+		if (requireNamespace("patchwork", quietly = TRUE)) {
+			return(p_main / p_resid + patchwork::plot_layout(heights = c(3, 1)))
+		} else {
+			cli::cli_warn(
+				c(
+					"Install {.pkg patchwork} for combined residual plots.",
+					"i" = "Returning main plot only.",
+					"i" = "Install with {.code install.packages(\"patchwork\")}"
+				)
+			)
+			return(p_main)
+		}
+	}
 
-  p_main
+	p_main
 }
-
 
 #' Quick SEC Plot
 #'
@@ -1356,47 +1367,46 @@ plot_sec_calibration <- function(
 #' plot_sec(processed_sec_data, type = "mwd")
 #' }
 plot_sec <- function(
-  data,
-  type = c("auto", "chromatogram", "mwd", "multidetector", "conformation"),
-  ...
+	data,
+	type = c("auto", "chromatogram", "mwd", "multidetector", "conformation"),
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  type <- match.arg(type)
+	type <- match.arg(type)
 
-  # Find available measure columns
-  measure_cols <- find_measure_cols(data)
+	# Find available measure columns
+	measure_cols <- find_measure_cols(data)
 
-  if (length(measure_cols) == 0) {
-    cli::cli_abort("No measure columns found in data for plotting.")
-  }
+	if (length(measure_cols) == 0) {
+		cli::cli_abort("No measure columns found in data for plotting.")
+	}
 
-  # Auto-detect appropriate plot type
-  if (type == "auto") {
-    if ("mw" %in% measure_cols) {
-      type <- "mwd"
-    } else if (length(measure_cols) >= 2) {
-      type <- "multidetector"
-    } else {
-      type <- "chromatogram"
-    }
-  }
+	# Auto-detect appropriate plot type
+	if (type == "auto") {
+		if ("mw" %in% measure_cols) {
+			type <- "mwd"
+		} else if (length(measure_cols) >= 2) {
+			type <- "multidetector"
+		} else {
+			type <- "chromatogram"
+		}
+	}
 
-  # Dispatch to appropriate function
-  switch(
-    type,
-    "chromatogram" = plot_sec_chromatogram(data, ...),
-    "mwd" = plot_sec_mwd(data, ...),
-    "multidetector" = plot_sec_multidetector(
-      data,
-      detectors = measure_cols,
-      ...
-    ),
-    "conformation" = plot_sec_conformation(data, ...),
-    cli::cli_abort("Unknown plot type: {.val {type}}")
-  )
+	# Dispatch to appropriate function
+	switch(
+		type,
+		"chromatogram" = plot_sec_chromatogram(data, ...),
+		"mwd" = plot_sec_mwd(data, ...),
+		"multidetector" = plot_sec_multidetector(
+			data,
+			detectors = measure_cols,
+			...
+		),
+		"conformation" = plot_sec_conformation(data, ...),
+		cli::cli_abort("Unknown plot type: {.val {type}}")
+	)
 }
-
 
 #' Plot SEC Composition Distribution
 #'
@@ -1488,188 +1498,191 @@ plot_sec <- function(
 #'   labs(title = "Styrene-Acrylate Copolymer Composition")
 #' }
 plot_sec_composition <- function(
-  data,
-  composition_col = "composition_a",
-  x_axis = c("mw", "retention"),
-  mw_col = "mw",
-  sample_id = NULL,
-  show_average = TRUE,
-  component_names = NULL,
-  show_distribution = TRUE,
-  show_points = FALSE,
-  y_limits = c(0, 1),
-  log_mw = TRUE,
-  ...
+	data,
+	composition_col = "composition_a",
+	x_axis = c("mw", "retention"),
+	mw_col = "mw",
+	sample_id = NULL,
+	show_average = TRUE,
+	component_names = NULL,
+	show_distribution = TRUE,
+	show_points = FALSE,
+	y_limits = c(0, 1),
+	log_mw = TRUE,
+	...
 ) {
-  check_ggplot2_available()
+	check_ggplot2_available()
 
-  x_axis <- match.arg(x_axis)
+	x_axis <- match.arg(x_axis)
 
-  # Get measure columns
-  measure_cols <- find_measure_cols(data)
+	# Get measure columns
+	measure_cols <- find_measure_cols(data)
 
-  # Check composition column exists
-  if (!composition_col %in% measure_cols) {
-    cli::cli_abort(c(
-      "Composition column {.val {composition_col}} not found.",
-      "i" = "Available measure columns: {.val {measure_cols}}",
-      "i" = "Use {.fn step_sec_composition} to calculate composition first."
-    ))
-  }
+	# Check composition column exists
+	if (!composition_col %in% measure_cols) {
+		cli::cli_abort(
+			c(
+				"Composition column {.val {composition_col}} not found.",
+				"i" = "Available measure columns: {.val {measure_cols}}",
+				"i" = "Use {.fn step_sec_composition} to calculate composition first."
+			)
+		)
+	}
 
-  # Check MW column if needed
-  if (x_axis == "mw" && !mw_col %in% measure_cols) {
-    cli::cli_warn(c(
-      "MW column {.val {mw_col}} not found. Using retention time instead.",
-      "i" = "Apply calibration with {.fn step_sec_conventional_cal} for MW axis."
-    ))
-    x_axis <- "retention"
-  }
+	# Check MW column if needed
+	if (x_axis == "mw" && !mw_col %in% measure_cols) {
+		cli::cli_warn(
+			c(
+				"MW column {.val {mw_col}} not found. Using retention time instead.",
+				"i" = "Apply calibration with {.fn step_sec_conventional_cal} for MW axis."
+			)
+		)
+		x_axis <- "retention"
+	}
 
-  # Set up component names
-  if (is.null(component_names)) {
-    component_names <- c(a = "Component A", b = "Component B")
-  }
+	# Set up component names
+	if (is.null(component_names)) {
+		component_names <- c(a = "Component A", b = "Component B")
+	}
 
-  # Auto-detect sample_id column
-  if (is.null(sample_id)) {
-    potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
-    for (col in potential_ids) {
-      if (col %in% names(data)) {
-        sample_id <- col
-        break
-      }
-    }
-  }
+	# Auto-detect sample_id column
+	if (is.null(sample_id)) {
+		potential_ids <- c("sample_id", "sample", "id", "sample_name", "name")
+		for (col in potential_ids) {
+			if (col %in% names(data)) {
+				sample_id <- col
+				break
+			}
+		}
+	}
 
-  # Prepare slice data for composition
-  slice_data <- prepare_plot_data(
-    data,
-    measures = composition_col,
-    sample_id = sample_id
-  )
+	# Prepare slice data for composition
+	slice_data <- prepare_plot_data(
+		data,
+		measures = composition_col,
+		sample_id = sample_id
+	)
 
-  if (nrow(slice_data) == 0) {
-    cli::cli_abort("No composition data to plot.")
-  }
+	if (nrow(slice_data) == 0) {
+		cli::cli_abort("No composition data to plot.")
+	}
 
-  # Add MW data if needed
-  if (x_axis == "mw") {
-    mw_data <- prepare_plot_data(
-      data,
-      measures = mw_col,
-      sample_id = sample_id
-    )
-    # Merge MW values by location and sample
-    slice_data <- dplyr::left_join(
-      slice_data,
-      mw_data |>
-        dplyr::select("sample_id", "location", mw_value = "value"),
-      by = c("sample_id", "location")
-    )
-    # Filter out invalid MW values (0, negative, or NA)
-    slice_data <- slice_data |>
-      dplyr::filter(.data$mw_value > 0, !is.na(.data$mw_value))
-    x_var <- "mw_value"
-    x_label <- expression(M[w] ~ "(g/mol)")
-  } else {
-    x_var <- "location"
-    x_label <- "Elution Time (min)"
-  }
+	# Add MW data if needed
+	if (x_axis == "mw") {
+		mw_data <- prepare_plot_data(
+			data,
+			measures = mw_col,
+			sample_id = sample_id
+		)
+		# Merge MW values by location and sample
+		slice_data <- dplyr::left_join(
+			slice_data,
+			mw_data |>
+				dplyr::select("sample_id", "location", mw_value = "value"),
+			by = c("sample_id", "location")
+		)
+		# Filter out invalid MW values (0, negative, or NA)
+		slice_data <- slice_data |>
+			dplyr::filter(.data$mw_value > 0, !is.na(.data$mw_value))
+		x_var <- "mw_value"
+		x_label <- expression(M[w] ~ "(g/mol)")
+	} else {
+		x_var <- "location"
+		x_label <- "Elution Time (min)"
+	}
 
-  # Filter out NA composition values
-  slice_data <- slice_data |>
-    dplyr::filter(!is.na(.data$value))
+	# Filter out NA composition values
+	slice_data <- slice_data |>
+		dplyr::filter(!is.na(.data$value))
 
-  if (nrow(slice_data) == 0) {
-    cli::cli_abort("No valid composition data after filtering.")
-  }
+	if (nrow(slice_data) == 0) {
+		cli::cli_abort("No valid composition data after filtering.")
+	}
 
-  # Calculate average composition per sample
-  avg_comp <- slice_data |>
-    dplyr::group_by(.data$sample_id) |>
-    dplyr::summarize(
-      avg_composition = mean(.data$value, na.rm = TRUE),
-      .groups = "drop"
-    )
+	# Calculate average composition per sample
+	avg_comp <- slice_data |>
+		dplyr::group_by(.data$sample_id) |>
+		dplyr::summarize(
+			avg_composition = mean(.data$value, na.rm = TRUE),
+			.groups = "drop"
+		)
 
-  # Build y-axis label
-  y_label <- paste0(component_names["a"], " Weight Fraction")
+	# Build y-axis label
+	y_label <- paste0(component_names["a"], " Weight Fraction")
 
-  # Build the plot
-  p <- ggplot2::ggplot(
-    slice_data,
-    ggplot2::aes(
-      x = .data[[x_var]],
-      y = .data$value,
-      color = .data$sample_id,
-      group = .data$sample_id
-    )
-  )
+	# Build the plot
+	p <- ggplot2::ggplot(
+		slice_data,
+		ggplot2::aes(
+			x = .data[[x_var]],
+			y = .data$value,
+			color = .data$sample_id,
+			group = .data$sample_id
+		)
+	)
 
-  # Add distribution ribbon if requested
-  if (show_distribution) {
-    p <- p + ggplot2::geom_line(alpha = 0.8, ...)
-  }
+	# Add distribution ribbon if requested
+	if (show_distribution) {
+		p <- p + ggplot2::geom_line(alpha = 0.8, ...)
+	}
 
-  # Add points if requested
-  if (show_points) {
-    p <- p + ggplot2::geom_point(alpha = 0.5, size = 1)
-  }
+	# Add points if requested
+	if (show_points) {
+		p <- p + ggplot2::geom_point(alpha = 0.5, size = 1)
+	}
 
-  # Add average composition lines if requested
-  if (show_average) {
-    p <- p +
-      ggplot2::geom_hline(
-        data = avg_comp,
-        ggplot2::aes(
-          yintercept = .data$avg_composition,
-          color = .data$sample_id
-        ),
-        linetype = "dashed",
-        alpha = 0.7
-      )
-  }
+	# Add average composition lines if requested
+	if (show_average) {
+		p <- p +
+			ggplot2::geom_hline(
+				data = avg_comp,
+				ggplot2::aes(
+					yintercept = .data$avg_composition,
+					color = .data$sample_id
+				),
+				linetype = "dashed",
+				alpha = 0.7
+			)
+	}
 
-  # Apply scales and labels
-  p <- p +
-    ggplot2::labs(
-      x = x_label,
-      y = y_label,
-      color = "Sample"
-    ) +
-    ggplot2::theme_minimal()
+	# Apply scales and labels
+	p <- p +
+		ggplot2::labs(
+			x = x_label,
+			y = y_label,
+			color = "Sample"
+		) +
+		ggplot2::theme_minimal()
 
-  # Apply log scale for MW if requested
-  if (x_axis == "mw" && log_mw) {
-    if (rlang::is_installed("scales")) {
-      p <- p +
-        ggplot2::scale_x_log10(
-          labels = scales::label_scientific()
-        )
-    } else {
-      p <- p + ggplot2::scale_x_log10()
-    }
-  }
+	# Apply log scale for MW if requested
+	if (x_axis == "mw" && log_mw) {
+		if (rlang::is_installed("scales")) {
+			p <- p +
+				ggplot2::scale_x_log10(
+					labels = scales::label_scientific()
+				)
+		} else {
+			p <- p + ggplot2::scale_x_log10()
+		}
+	}
 
-  # Add y-axis with secondary axis for component B
-  component_b_label <- component_names["b"]
-  if (!is.null(component_b_label)) {
-    p <- p +
-      ggplot2::scale_y_continuous(
-        limits = y_limits,
-        sec.axis = ggplot2::sec_axis(
-          ~ 1 - .,
-          name = paste0(component_b_label, " Weight Fraction")
-        )
-      )
-  } else if (!is.null(y_limits)) {
-    p <- p + ggplot2::scale_y_continuous(limits = y_limits)
-  }
+	# Add y-axis with secondary axis for component B
+	component_b_label <- component_names["b"]
+	if (!is.null(component_b_label)) {
+		p <- p +
+			ggplot2::scale_y_continuous(
+				limits = y_limits,
+				sec.axis = ggplot2::sec_axis(
+					~1 - .,
+					name = paste0(component_b_label, " Weight Fraction")
+				)
+			)
+	} else if (!is.null(y_limits)) {
+		p <- p + ggplot2::scale_y_continuous(limits = y_limits)
+	}
 
-  p
+	p
 }
-
 
 # ==============================================================================
 # Helper Functions
@@ -1678,53 +1691,55 @@ plot_sec_composition <- function(
 #' Check if ggplot2 is available
 #' @noRd
 check_ggplot2_available <- function() {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cli::cli_abort(
-      c(
-        "Package {.pkg ggplot2} is required for plotting.",
-        "i" = "Install it with {.code install.packages(\"ggplot2\")}"
-      )
-    )
-  }
+	if (!requireNamespace("ggplot2", quietly = TRUE)) {
+		cli::cli_abort(
+			c(
+				"Package {.pkg ggplot2} is required for plotting.",
+				"i" = "Install it with {.code install.packages(\"ggplot2\")}"
+			)
+		)
+	}
 }
 
 #' Find measure columns in a data frame
 #' @noRd
 detect_measure_cols <- function(data) {
-  # Use measure package function if available
-  if (requireNamespace("measure", quietly = TRUE)) {
-    return(measure::find_measure_cols(data))
-  }
+	# Use measure package function if available
+	if (requireNamespace("measure", quietly = TRUE)) {
+		return(measure::find_measure_cols(data))
+	}
 
-  # Warn about fallback behavior
-  cli::cli_warn(c(
-    "Package {.pkg measure} is not available.",
-    "i" = "Using fallback detection which may produce different results.",
-    "i" = "Install {.pkg measure} with {.code install.packages(\"measure\")}"
-  ))
+	# Warn about fallback behavior
+	cli::cli_warn(
+		c(
+			"Package {.pkg measure} is not available.",
+			"i" = "Using fallback detection which may produce different results.",
+			"i" = "Install {.pkg measure} with {.code install.packages(\"measure\")}"
+		)
+	)
 
-  # Fallback: look for list columns with specific structure
-  list_cols <- names(data)[vapply(data, is.list, logical(1))]
+	# Fallback: look for list columns with specific structure
+	list_cols <- names(data)[vapply(data, is.list, logical(1))]
 
-  # Check each list column for measure_tbl structure
-  measure_cols <- character()
-  for (col in list_cols) {
-    if (length(data[[col]]) == 0) {
-      next
-    }
-    first_elem <- data[[col]][[1]]
-    if (is.null(first_elem)) {
-      next
-    }
-    if (
-      is.list(first_elem) &&
-        all(c("location", "value") %in% names(first_elem))
-    ) {
-      measure_cols <- c(measure_cols, col)
-    }
-  }
+	# Check each list column for measure_tbl structure
+	measure_cols <- character()
+	for (col in list_cols) {
+		if (length(data[[col]]) == 0) {
+			next
+		}
+		first_elem <- data[[col]][[1]]
+		if (is.null(first_elem)) {
+			next
+		}
+		if (
+			is.list(first_elem) &&
+				all(c("location", "value") %in% names(first_elem))
+		) {
+			measure_cols <- c(measure_cols, col)
+		}
+	}
 
-  measure_cols
+	measure_cols
 }
 
 # Alias for backwards compatibility within package
@@ -1736,108 +1751,110 @@ find_measure_cols <- detect_measure_cols
 #' for ggplot2.
 #' @noRd
 prepare_plot_data <- function(data, measures = NULL, sample_id = NULL) {
-  # If already in slice table format, return as-is
-  if (all(c("sample_id", "location", "value") %in% names(data))) {
-    if (!is.null(measures) && "measure" %in% names(data)) {
-      data <- dplyr::filter(data, .data$measure %in% measures)
-    }
-    return(data)
-  }
+	# If already in slice table format, return as-is
+	if (all(c("sample_id", "location", "value") %in% names(data))) {
+		if (!is.null(measures) && "measure" %in% names(data)) {
+			data <- dplyr::filter(data, .data$measure %in% measures)
+		}
+		return(data)
+	}
 
-  # Otherwise, extract from measure columns
-  measure_sec_slice_table(
-    data,
-    measures = measures,
-    sample_id = sample_id,
-    include_location = TRUE,
-    pivot = FALSE
-  )
+	# Otherwise, extract from measure columns
+	measure_sec_slice_table(
+		data,
+		measures = measures,
+		sample_id = sample_id,
+		include_location = TRUE,
+		pivot = FALSE
+	)
 }
 
 #' Add MW average vertical lines to a plot
 #' @noRd
 add_mw_average_lines <- function(p, data, sample_id, log_mw) {
-  # Look for MW average columns
-  mw_cols <- c("mw_mn", "mw_mw", "mw_mz", "Mn", "Mw", "Mz")
-  available <- intersect(mw_cols, names(data))
+	# Look for MW average columns
+	mw_cols <- c("mw_mn", "mw_mw", "mw_mz", "Mn", "Mw", "Mz")
+	available <- intersect(mw_cols, names(data))
 
-  if (length(available) == 0) {
-    cli::cli_warn(c(
-      "Cannot add MW average lines.",
-      "i" = "No MW average columns found. Expected one of: {.val {mw_cols}}"
-    ))
-    return(p)
-  }
+	if (length(available) == 0) {
+		cli::cli_warn(
+			c(
+				"Cannot add MW average lines.",
+				"i" = "No MW average columns found. Expected one of: {.val {mw_cols}}"
+			)
+		)
+		return(p)
+	}
 
-  # Determine sample ID column
-  if (!is.null(sample_id) && sample_id %in% names(data)) {
-    id_col <- sample_id
-  } else {
-    id_col <- NULL
-  }
+	# Determine sample ID column
+	if (!is.null(sample_id) && sample_id %in% names(data)) {
+		id_col <- sample_id
+	} else {
+		id_col <- NULL
+	}
 
-  # Create data for vertical lines
-  line_data <- list()
-  line_colors <- c(
-    "mw_mn" = "#E69F00",
-    "Mn" = "#E69F00",
-    "mw_mw" = "#56B4E9",
-    "Mw" = "#56B4E9",
-    "mw_mz" = "#009E73",
-    "Mz" = "#009E73"
-  )
-  line_labels <- c(
-    "mw_mn" = "Mn",
-    "Mn" = "Mn",
-    "mw_mw" = "Mw",
-    "Mw" = "Mw",
-    "mw_mz" = "Mz",
-    "Mz" = "Mz"
-  )
+	# Create data for vertical lines
+	line_data <- list()
+	line_colors <- c(
+		"mw_mn" = "#E69F00",
+		"Mn" = "#E69F00",
+		"mw_mw" = "#56B4E9",
+		"Mw" = "#56B4E9",
+		"mw_mz" = "#009E73",
+		"Mz" = "#009E73"
+	)
+	line_labels <- c(
+		"mw_mn" = "Mn",
+		"Mn" = "Mn",
+		"mw_mw" = "Mw",
+		"Mw" = "Mw",
+		"mw_mz" = "Mz",
+		"Mz" = "Mz"
+	)
 
-  for (col in available) {
-    vals <- data[[col]]
-    if (all(is.na(vals))) {
-      next
-    }
+	for (col in available) {
+		vals <- data[[col]]
+		if (all(is.na(vals))) {
+			next
+		}
 
-    if (log_mw) {
-      vals <- log10(vals)
-    }
+		if (log_mw) {
+			vals <- log10(vals)
+		}
 
-    for (i in seq_along(vals)) {
-      if (!is.na(vals[i])) {
-        line_data <- c(
-          line_data,
-          list(
-            data.frame(
-              xintercept = vals[i],
-              average_type = line_labels[col],
-              color = line_colors[col],
-              sample_id = if (!is.null(id_col)) data[[id_col]][i] else i
-            )
-          )
-        )
-      }
-    }
-  }
+		for (i in seq_along(vals)) {
+			if (!is.na(vals[i])) {
+				line_data <- c(
+					line_data,
+					list(
+						data.frame(
+							xintercept = vals[i],
+							average_type = line_labels[col],
+							color = line_colors[col],
+							sample_id = if (!is.null(id_col)) data[[id_col]][i] else i
+						)
+					)
+				)
+			}
+		}
+	}
 
-  if (length(line_data) > 0) {
-    line_df <- dplyr::bind_rows(line_data)
-    p <- p +
-      ggplot2::geom_vline(
-        data = line_df,
-        ggplot2::aes(
-          xintercept = .data$xintercept,
-          linetype = .data$average_type
-        ),
-        alpha = 0.7
-      ) +
-      ggplot2::scale_linetype_manual(
-        values = c("Mn" = "dotted", "Mw" = "dashed", "Mz" = "dotdash"),
-        name = "MW Average"
-      )
-  }
+	if (length(line_data) > 0) {
+		line_df <- dplyr::bind_rows(line_data)
+		p <- p +
+			ggplot2::geom_vline(
+				data = line_df,
+				ggplot2::aes(
+					xintercept = .data$xintercept,
+					linetype = .data$average_type
+				),
+				alpha = 0.7
+			) +
+			ggplot2::scale_linetype_manual(
+				values = c("Mn" = "dotted", "Mw" = "dashed", "Mz" = "dotdash"),
+				name = "MW Average"
+			)
+	}
 
-  p
+	p
 }

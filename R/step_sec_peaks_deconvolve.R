@@ -110,217 +110,217 @@
 #'   prep()
 #' }
 step_sec_peaks_deconvolve <- function(
-  recipe,
-  model = "emg",
-  optimizer = "auto",
-  max_iter = 500L,
-  quality_threshold = 0.9,
-  smart_init = TRUE,
-  constrain_positions = TRUE,
-  peaks_col = ".peaks",
-  measures_col = ".measures",
-  role = NA,
-  trained = FALSE,
-  skip = FALSE,
-  id = recipes::rand_id("sec_peaks_deconvolve")
+	recipe,
+	model = "emg",
+	optimizer = "auto",
+	max_iter = 500L,
+	quality_threshold = 0.9,
+	smart_init = TRUE,
+	constrain_positions = TRUE,
+	peaks_col = ".peaks",
+	measures_col = ".measures",
+	role = NA,
+	trained = FALSE,
+	skip = FALSE,
+	id = recipes::rand_id("sec_peaks_deconvolve")
 ) {
-  # Validate model - SEC supports gaussian, emg, bigaussian
-  valid_models <- c("gaussian", "emg", "bigaussian")
-  if (is.character(model)) {
-    model <- rlang::arg_match(model, valid_models)
-  }
+	# Validate model - SEC supports gaussian, emg, bigaussian
+	valid_models <- c("gaussian", "emg", "bigaussian")
+	if (is.character(model)) {
+		model <- rlang::arg_match(model, valid_models)
+	}
 
-  # Validate optimizer
-  valid_optimizers <- c("auto", "lbfgsb", "multistart", "nelder_mead")
-  optimizer <- rlang::arg_match(optimizer, valid_optimizers)
+	# Validate optimizer
+	valid_optimizers <- c("auto", "lbfgsb", "multistart", "nelder_mead")
+	optimizer <- rlang::arg_match(optimizer, valid_optimizers)
 
-  # Validate other parameters
-  if (!is.numeric(max_iter) || length(max_iter) != 1 || max_iter < 1) {
-    cli::cli_abort("{.arg max_iter} must be a positive integer.")
-  }
-  if (
-    !is.numeric(quality_threshold) ||
-      length(quality_threshold) != 1 ||
-      quality_threshold < 0 ||
-      quality_threshold > 1
-  ) {
-    cli::cli_abort("{.arg quality_threshold} must be between 0 and 1.")
-  }
-  if (!is.logical(smart_init) || length(smart_init) != 1) {
-    cli::cli_abort("{.arg smart_init} must be TRUE or FALSE.")
-  }
-  if (!is.logical(constrain_positions) || length(constrain_positions) != 1) {
-    cli::cli_abort("{.arg constrain_positions} must be TRUE or FALSE.")
-  }
+	# Validate other parameters
+	if (!is.numeric(max_iter) || length(max_iter) != 1 || max_iter < 1) {
+		cli::cli_abort("{.arg max_iter} must be a positive integer.")
+	}
+	if (
+		!is.numeric(quality_threshold) ||
+			length(quality_threshold) != 1 ||
+			quality_threshold < 0 ||
+			quality_threshold > 1
+	) {
+		cli::cli_abort("{.arg quality_threshold} must be between 0 and 1.")
+	}
+	if (!is.logical(smart_init) || length(smart_init) != 1) {
+		cli::cli_abort("{.arg smart_init} must be TRUE or FALSE.")
+	}
+	if (!is.logical(constrain_positions) || length(constrain_positions) != 1) {
+		cli::cli_abort("{.arg constrain_positions} must be TRUE or FALSE.")
+	}
 
-  recipes::add_step(
-    recipe,
-    step_sec_peaks_deconvolve_new(
-      model = model,
-      optimizer = optimizer,
-      max_iter = as.integer(max_iter),
-      quality_threshold = quality_threshold,
-      smart_init = smart_init,
-      constrain_positions = constrain_positions,
-      peaks_col = peaks_col,
-      measures_col = measures_col,
-      role = role,
-      trained = trained,
-      skip = skip,
-      id = id
-    )
-  )
+	recipes::add_step(
+		recipe,
+		step_sec_peaks_deconvolve_new(
+			model = model,
+			optimizer = optimizer,
+			max_iter = as.integer(max_iter),
+			quality_threshold = quality_threshold,
+			smart_init = smart_init,
+			constrain_positions = constrain_positions,
+			peaks_col = peaks_col,
+			measures_col = measures_col,
+			role = role,
+			trained = trained,
+			skip = skip,
+			id = id
+		)
+	)
 }
 
 step_sec_peaks_deconvolve_new <- function(
-  model,
-  optimizer,
-  max_iter,
-  quality_threshold,
-  smart_init,
-  constrain_positions,
-  peaks_col,
-  measures_col,
-  role,
-  trained,
-  skip,
-  id
+	model,
+	optimizer,
+	max_iter,
+	quality_threshold,
+	smart_init,
+	constrain_positions,
+	peaks_col,
+	measures_col,
+	role,
+	trained,
+	skip,
+	id
 ) {
-  recipes::step(
-    subclass = "sec_peaks_deconvolve",
-    model = model,
-    optimizer = optimizer,
-    max_iter = max_iter,
-    quality_threshold = quality_threshold,
-    smart_init = smart_init,
-    constrain_positions = constrain_positions,
-    peaks_col = peaks_col,
-    measures_col = measures_col,
-    role = role,
-    trained = trained,
-    skip = skip,
-    id = id
-  )
+	recipes::step(
+		subclass = "sec_peaks_deconvolve",
+		model = model,
+		optimizer = optimizer,
+		max_iter = max_iter,
+		quality_threshold = quality_threshold,
+		smart_init = smart_init,
+		constrain_positions = constrain_positions,
+		peaks_col = peaks_col,
+		measures_col = measures_col,
+		role = role,
+		trained = trained,
+		skip = skip,
+		id = id
+	)
 }
 
 #' @export
 prep.step_sec_peaks_deconvolve <- function(x, training, info = NULL, ...) {
-  # Verify peaks column exists
-  if (!x$peaks_col %in% names(training)) {
-    cli::cli_abort(
-      c(
-        "Column {.val {x$peaks_col}} not found.",
-        "i" = "Run {.fn step_sec_peaks_detect} first to detect peaks."
-      )
-    )
-  }
+	# Verify peaks column exists
+	if (!x$peaks_col %in% names(training)) {
+		cli::cli_abort(
+			c(
+				"Column {.val {x$peaks_col}} not found.",
+				"i" = "Run {.fn step_sec_peaks_detect} first to detect peaks."
+			)
+		)
+	}
 
-  # Check for measures column - allow common SEC naming patterns
-  measures_col <- x$measures_col
-  if (!measures_col %in% names(training)) {
-    # Check for common SEC measure column names
-    measure_cols <- find_measure_cols(training)
-    if (length(measure_cols) > 0) {
-      measures_col <- measure_cols[1]
-      cli::cli_inform(
-        c(
-          "i" = "Column {.val {x$measures_col}} not found.",
-          "i" = "Using {.val {measures_col}} instead."
-        )
-      )
-    } else {
-      cli::cli_abort("No measure columns found in data.")
-    }
-  }
+	# Check for measures column - allow common SEC naming patterns
+	measures_col <- x$measures_col
+	if (!measures_col %in% names(training)) {
+		# Check for common SEC measure column names
+		measure_cols <- find_measure_cols(training)
+		if (length(measure_cols) > 0) {
+			measures_col <- measure_cols[1]
+			cli::cli_inform(
+				c(
+					"i" = "Column {.val {x$measures_col}} not found.",
+					"i" = "Using {.val {measures_col}} instead."
+				)
+			)
+		} else {
+			cli::cli_abort("No measure columns found in data.")
+		}
+	}
 
-  step_sec_peaks_deconvolve_new(
-    model = x$model,
-    optimizer = x$optimizer,
-    max_iter = x$max_iter,
-    quality_threshold = x$quality_threshold,
-    smart_init = x$smart_init,
-    constrain_positions = x$constrain_positions,
-    peaks_col = x$peaks_col,
-    measures_col = measures_col,
-    role = x$role,
-    trained = TRUE,
-    skip = x$skip,
-    id = x$id
-  )
+	step_sec_peaks_deconvolve_new(
+		model = x$model,
+		optimizer = x$optimizer,
+		max_iter = x$max_iter,
+		quality_threshold = x$quality_threshold,
+		smart_init = x$smart_init,
+		constrain_positions = x$constrain_positions,
+		peaks_col = x$peaks_col,
+		measures_col = measures_col,
+		role = x$role,
+		trained = TRUE,
+		skip = x$skip,
+		id = x$id
+	)
 }
 
 #' @export
 bake.step_sec_peaks_deconvolve <- function(object, new_data, ...) {
-  # Delegate to measure's deconvolution step
-  # We create a temporary recipe step and bake it
-  model <- object$model
-  optimizer <- object$optimizer
-  max_iter <- object$max_iter
-  quality_threshold <- object$quality_threshold
-  smart_init <- object$smart_init
-  constrain_positions <- object$constrain_positions
-  peaks_col <- object$peaks_col
-  measures_col <- object$measures_col
+	# Delegate to measure's deconvolution step
+	# We create a temporary recipe step and bake it
+	model <- object$model
+	optimizer <- object$optimizer
+	max_iter <- object$max_iter
+	quality_threshold <- object$quality_threshold
+	smart_init <- object$smart_init
+	constrain_positions <- object$constrain_positions
+	peaks_col <- object$peaks_col
+	measures_col <- object$measures_col
 
-  # Call measure's bake directly with our parameters
-  # Create a temporary step object with measure's class
-  temp_step <- list(
-    model = model,
-    optimizer = optimizer,
-    max_iter = max_iter,
-    tol = 1e-6, # Use measure's default
-    n_starts = 5L, # Use measure's default for multistart
-    quality_threshold = quality_threshold,
-    constrain_positions = constrain_positions,
-    store_components = FALSE,
-    smart_init = smart_init,
-    peaks_col = peaks_col,
-    measures_col = measures_col,
-    trained = TRUE,
-    skip = FALSE,
-    id = object$id
-  )
-  class(temp_step) <- c("step_measure_peaks_deconvolve", "step")
+	# Call measure's bake directly with our parameters
+	# Create a temporary step object with measure's class
+	temp_step <- list(
+		model = model,
+		optimizer = optimizer,
+		max_iter = max_iter,
+		tol = 1e-6, # Use measure's default
+		n_starts = 5L, # Use measure's default for multistart
+		quality_threshold = quality_threshold,
+		constrain_positions = constrain_positions,
+		store_components = FALSE,
+		smart_init = smart_init,
+		peaks_col = peaks_col,
+		measures_col = measures_col,
+		trained = TRUE,
+		skip = FALSE,
+		id = object$id
+	)
+	class(temp_step) <- c("step_measure_peaks_deconvolve", "step")
 
-  # Use measure's bake method
-  measure:::bake.step_measure_peaks_deconvolve(temp_step, new_data, ...)
+	# Use measure's bake method
+	measure:::bake.step_measure_peaks_deconvolve(temp_step, new_data, ...)
 }
 
 #' @export
 print.step_sec_peaks_deconvolve <- function(
-  x,
-  width = max(20, options()$width - 30),
-  ...
+	x,
+	width = max(20, options()$width - 30),
+	...
 ) {
-  model_name <- if (is.character(x$model)) x$model else x$model$name
-  cat(
-    glue::glue(
-      "SEC peak deconvolution ({model_name}, {x$optimizer})"
-    )
-  )
-  cat("\n")
-  invisible(x)
+	model_name <- if (is.character(x$model)) x$model else x$model$name
+	cat(
+		glue::glue(
+			"SEC peak deconvolution ({model_name}, {x$optimizer})"
+		)
+	)
+	cat("\n")
+	invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_peaks_deconvolve <- function(x, ...) {
-  model_name <- if (is.character(x$model)) x$model else "custom"
+	model_name <- if (is.character(x$model)) x$model else "custom"
 
-  tibble::tibble(
-    model = model_name,
-    optimizer = x$optimizer,
-    max_iter = x$max_iter,
-    quality_threshold = x$quality_threshold,
-    smart_init = x$smart_init,
-    id = x$id
-  )
+	tibble::tibble(
+		model = model_name,
+		optimizer = x$optimizer,
+		max_iter = x$max_iter,
+		quality_threshold = x$quality_threshold,
+		smart_init = x$smart_init,
+		id = x$id
+	)
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_peaks_deconvolve <- function(x, ...) {
-  c("measure.sec", "measure")
+	c("measure.sec", "measure")
 }

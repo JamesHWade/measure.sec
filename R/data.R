@@ -90,7 +90,6 @@
 #' @source Synthetic data generated for package testing and examples.
 "sec_triple_detect"
 
-
 # ==============================================================================
 # Calibration Standards Datasets
 # ==============================================================================
@@ -186,7 +185,6 @@
 #'   for PLgel Mixed-C columns in THF at 1.0 mL/min.
 "sec_calibration_standards"
 
-
 #' SEC Polystyrene Calibration Standards
 #'
 #' Polystyrene narrow molecular weight standards for SEC/GPC conventional
@@ -264,7 +262,6 @@
 #' @source Synthetic data based on typical commercial narrow PS standards.
 "sec_ps_standards"
 
-
 #' SEC PMMA Calibration Standards
 #'
 #' Poly(methyl methacrylate) narrow molecular weight standards for SEC/GPC
@@ -339,7 +336,6 @@
 #' @source Synthetic data based on typical commercial narrow PMMA standards.
 "sec_pmma_standards"
 
-
 # ==============================================================================
 # Additional Example Datasets
 # ==============================================================================
@@ -403,7 +399,6 @@
 #'
 #' @source Synthetic data generated for package testing and examples.
 "sec_copolymer"
-
 
 #' Protein SEC Data with Aggregates
 #'
@@ -474,7 +469,6 @@
 #'
 #' @source Synthetic data generated for package testing and examples.
 "sec_protein"
-
 
 #' Branched Polymer SEC Data
 #'
@@ -550,7 +544,6 @@
 #' @source Synthetic data generated for package testing and examples.
 "sec_branched"
 
-
 #' System Suitability Test Data
 #'
 #' A synthetic dataset containing SEC system suitability test (SST) runs
@@ -620,7 +613,6 @@
 #'
 #' @source Synthetic data generated for package testing and examples.
 "sec_system_suitability"
-
 
 # ==============================================================================
 # Raw Chromatogram Datasets for Tutorials
@@ -700,7 +692,6 @@
 #' @source Synthetic data generated for package tutorials.
 "sec_raw_standards"
 
-
 #' Raw SEC Unknown Samples with Known Molecular Weights
 #'
 #' A dataset containing raw SEC chromatograms of polymer samples with known
@@ -771,7 +762,6 @@
 #'
 #' @source Synthetic data generated for package tutorials.
 "sec_raw_unknowns"
-
 
 #' Raw Multi-Detector SEC Data
 #'
