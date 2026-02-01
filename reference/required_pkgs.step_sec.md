@@ -71,6 +71,9 @@ required_pkgs(x, ...)
 # S3 method for class 'step_sec_peaks_detect'
 required_pkgs(x, ...)
 
+# S3 method for class 'step_sec_peaks_refine'
+required_pkgs(x, ...)
+
 # S3 method for class 'step_sec_protein'
 required_pkgs(x, ...)
 

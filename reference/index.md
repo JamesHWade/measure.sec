@@ -86,10 +86,12 @@ Functions for matching and normalizing calibration standard names
 
 ## Peak Detection
 
-Peak detection and deconvolution
+Peak detection, refinement, and deconvolution
 
 - [`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
   : SEC/GPC Peak Detection
+- [`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+  : Refine SEC/GPC Peak Boundaries
 - [`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md)
   : SEC/GPC Peak Deconvolution
 

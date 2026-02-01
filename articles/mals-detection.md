@@ -392,10 +392,10 @@ sessionInfo()
 #> [4] recipes_1.3.1          dplyr_1.1.4           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.55           bslib_0.9.0        
-#>  [4] lattice_0.22-7      vctrs_0.6.5         tools_4.5.2        
+#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
+#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
 #>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.0  
+#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
 #> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
 #> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
 #> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
@@ -404,14 +404,14 @@ sessionInfo()
 #> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
 #> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
 #> [34] nlme_3.1-168        parallelly_1.46.1   lava_1.8.2         
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.68.0      
+#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.69.0      
 #> [40] purrr_1.2.1         listenv_0.10.0      labeling_0.4.3     
 #> [43] splines_4.5.2       fastmap_1.2.0       grid_4.5.2         
 #> [46] cli_3.6.5           magrittr_2.0.4      utf8_1.2.6         
 #> [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        
-#> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.3.0   
+#> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   
 #> [55] rmarkdown_2.30      globals_0.18.0      nnet_7.3-20        
-#> [58] timeDate_4051.111   ragg_1.5.0          evaluate_1.0.5     
+#> [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     
 #> [61] knitr_1.51          hardhat_1.4.2       mgcv_1.9-3         
 #> [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
 #> [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           

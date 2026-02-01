@@ -72,6 +72,9 @@ tidy(x, ...)
 # S3 method for class 'step_sec_peaks_detect'
 tidy(x, ...)
 
+# S3 method for class 'step_sec_peaks_refine'
+tidy(x, ...)
+
 # S3 method for class 'step_sec_protein'
 tidy(x, ...)
 
