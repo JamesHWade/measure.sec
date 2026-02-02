@@ -290,46 +290,46 @@ test_that("higher cutoff produces tighter boundaries", {
 # -- Baseline robustness tests -------------------------------------------------
 
 test_that("step_sec_peaks_refine handles non-zero baseline correctly", {
-	skip_if_not_installed("measure")
+  skip_if_not_installed("measure")
 
-	# Simulate a peak on a -20 mV baseline (common in real SEC data)
-	time <- seq(10, 25, by = 0.05)
-	baseline <- -20
-	peak <- 160 * dnorm(time, mean = 16, sd = 1.0)
-	signal <- baseline + peak
+  # Simulate a peak on a -20 mV baseline (common in real SEC data)
+  time <- seq(10, 25, by = 0.05)
+  baseline <- -20
+  peak <- 160 * dnorm(time, mean = 16, sd = 1.0)
+  signal <- baseline + peak
 
-	test_data <- tibble::tibble(sample_id = "test")
-	test_data$ri <- measure::new_measure_list(
-		list(measure::new_measure_tbl(location = time, value = signal))
-	)
+  test_data <- tibble::tibble(sample_id = "test")
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = signal))
+  )
 
-	peaks <- measure:::new_peaks_tbl(
-		peak_id = 1L,
-		location = 16.0,
-		height = max(peak),
-		left_base = 10.0,
-		right_base = 25.0,
-		area = NA_real_
-	)
-	test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  peaks <- measure:::new_peaks_tbl(
+    peak_id = 1L,
+    location = 16.0,
+    height = max(peak),
+    left_base = 10.0,
+    right_base = 25.0,
+    area = NA_real_
+  )
+  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
 
-	rec <- recipes::recipe(~., data = test_data) |>
-		step_sec_peaks_refine(measures_col = "ri", cutoff = 0.005)
+  rec <- recipes::recipe(~., data = test_data) |>
+    step_sec_peaks_refine(measures_col = "ri", cutoff = 0.005)
 
-	result <- recipes::prep(rec) |>
-		recipes::bake(new_data = NULL)
+  result <- recipes::prep(rec) |>
+    recipes::bake(new_data = NULL)
 
-	peaks_out <- result$.peaks[[1]]
+  peaks_out <- result$.peaks[[1]]
 
-	# Boundaries should be tightened but still wide — the peak extends from
-	# ~12.5 to ~19.5 mL at 0.5% of apex height. Without local baseline
-	# correction, boundaries would be excessively tight (~14-18 mL).
-	peak_width <- peaks_out$right_base[1] - peaks_out$left_base[1]
-	expect_gt(peak_width, 5.0)
+  # Boundaries should be tightened but still wide — the peak extends from
+  # ~12.5 to ~19.5 mL at 0.5% of apex height. Without local baseline
+  # correction, boundaries would be excessively tight (~14-18 mL).
+  peak_width <- peaks_out$right_base[1] - peaks_out$left_base[1]
+  expect_gt(peak_width, 5.0)
 
-	# Boundaries should be symmetric around the apex (±~3 sd at 0.5%)
-	expect_lt(peaks_out$left_base[1], 14.0)
-	expect_gt(peaks_out$right_base[1], 18.0)
+  # Boundaries should be symmetric around the apex (±~3 sd at 0.5%)
+  expect_lt(peaks_out$left_base[1], 14.0)
+  expect_gt(peaks_out$right_base[1], 18.0)
 })
 
 # -- Edge case tests -----------------------------------------------------------
