@@ -118,7 +118,7 @@ save_sec_calibration(
     notes = "Monthly calibration - January 2024"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpLhKQrQ/file27523f254fbd.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpnCnUxt/file284c38a1b389.rds
 ```
 
 ### Format Options
@@ -166,7 +166,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-02-01 01:56:08
+#> Created: 2026-02-02 17:16:55
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -234,7 +234,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-02-01 01:56:08
+#> Created: 2026-02-02 17:16:55
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -453,7 +453,7 @@ sessionInfo()
 #> [46] magrittr_2.0.4      patchwork_1.3.2     utf8_1.2.6         
 #> [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        
 #> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   
-#> [55] rmarkdown_2.30      globals_0.18.0      nnet_7.3-20        
+#> [55] rmarkdown_2.30      globals_0.19.0      nnet_7.3-20        
 #> [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     
 #> [61] knitr_1.51          hardhat_1.4.2       rlang_1.1.7        
 #> [64] Rcpp_1.1.1          glue_1.8.0          ipred_0.9-15       
