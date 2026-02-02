@@ -276,13 +276,16 @@ required_pkgs.step_sec_peaks_refine <- function(x, ...) {
 
 #' Refine peak boundaries using height fraction method
 #'
-#' For each peak, walks inward from the current boundaries until the signal
-#' exceeds `cutoff * apex_height`. Preserves original boundaries as
-#' `original_left_base` and `original_right_base`.
+#' For each peak, subtracts a local linear baseline (interpolated between the
+#' signal values at the left and right boundaries), then walks inward until
+#' the corrected signal exceeds `cutoff * apex_height`. This makes the step
+#' robust whether or not a global baseline correction has been applied.
+#' Preserves original boundaries as `original_left_base` and
+#' `original_right_base`.
 #'
 #' @param peaks A `peaks_tbl` from peak detection.
 #' @param location Numeric vector of x-axis values (elution volume).
-#' @param value Numeric vector of y-axis values (baseline-corrected signal).
+#' @param value Numeric vector of y-axis values (raw or baseline-corrected).
 #' @param cutoff Fraction of apex height for boundary threshold.
 #'
 #' @return Modified `peaks_tbl` with refined boundaries and original boundary
@@ -305,16 +308,34 @@ required_pkgs.step_sec_peaks_refine <- function(x, ...) {
 		region_values <- value[in_region]
 		region_locations <- location[in_region]
 
-		# Find apex height within this region
-		apex_height <- max(region_values, na.rm = TRUE)
+		# Subtract local baseline so the cutoff works on corrected signal.
+		# Without this, a non-zero baseline (e.g., -20 mV) inflates the apex
+		# height and shifts the threshold, producing boundaries that are far
+		# too tight. Linear interpolation between boundary values is a robust
+		# local estimate that works whether or not step_sec_baseline() was run.
+		# When the signal is already baseline-corrected, boundary values are
+		# near zero and this is effectively a no-op.
+		left_val <- region_values[1]
+		right_val <- region_values[length(region_values)]
+		span <- region_locations[length(region_locations)] - region_locations[1]
+		if (span > 0) {
+			local_baseline <- left_val + (right_val - left_val) *
+				(region_locations - region_locations[1]) / span
+		} else {
+			local_baseline <- rep(left_val, length(region_locations))
+		}
+		corrected <- region_values - local_baseline
+
+		# Find apex height above local baseline
+		apex_height <- max(corrected, na.rm = TRUE)
 
 		# Skip if apex height is non-positive
 		if (is.na(apex_height) || apex_height <= 0) next
 
 		threshold <- cutoff * apex_height
 
-		# Find points above threshold
-		above <- region_values >= threshold
+		# Find points above threshold (using corrected signal)
+		above <- corrected >= threshold
 		if (!any(above)) next
 
 		# Walk inward from left: first point >= threshold
