@@ -44,7 +44,9 @@ concentration calculation.}
 
 \item{flow_rate}{Flow rate in mL/min for peak area calculations.}
 
-\item{concentration_units}{Output concentration units. Default is \code{"mg/mL"}.}
+\item{concentration_units}{Output concentration units: \code{"mg/mL"} (default)
+or \code{"g/mL"}. Units are recorded on the output measure column when mass
+normalization is performed.}
 
 \item{normalize_to_mass}{Logical. If \code{TRUE}, normalize the chromatogram
 so that the total area equals the injected mass. Default is \code{TRUE}.}

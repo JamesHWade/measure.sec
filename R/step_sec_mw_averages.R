@@ -17,6 +17,14 @@
 #'   - A numeric vector of length 2: Linear calibration `c(slope, intercept)`
 #'     where `log10(MW) = slope * x + intercept`
 #'   - `"auto"`: Estimate from data range (assumes typical polymer range)
+#' @param mw_col Optional name of a measure column containing molecular weight
+#'   at each concentration slice. A curve created by
+#'   [step_sec_conventional_cal()] for the selected signal is used automatically
+#'   when it is unambiguous. Do not combine this with `calibration`.
+#' @param mw_scale Scale of `mw_col`: `"log10"` or `"absolute"` (g/mol).
+#'   Required for a manually supplied curve; inferred for a tagged calibration
+#'   curve. When no MW curve or calibration is supplied, the signal location is
+#'   interpreted as log10(MW) for backwards compatibility.
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
 #'   the x-axis range for integration. If `NULL`, uses full range.
 #' @param output_cols Character vector of metrics to calculate. Default
@@ -48,12 +56,18 @@
 #'
 #' The detector signal is assumed to be proportional to weight concentration.
 #' For RI detection, this is typically valid. For UV detection, response factors
-#' may need to be applied first.
+#' may need to be applied first. Slice weights use trapezoidal integration on
+#' the original elution axis, including for unevenly spaced data. A positive
+#' signal without a valid molecular weight is an error, rather than silently
+#' discarded. `calibration = "auto"` generates an illustrative synthetic axis,
+#' not an experimental calibration.
 #'
 #' **Uncertainty Propagation:**
 #'
-#' When `include_uncertainty = TRUE`, the step calculates uncertainty estimates
-#' based on calibration error propagation. The uncertainties account for:
+#' When `include_uncertainty = TRUE`, the step calculates an approximate
+#' calibration-RMSE-based estimate. It is not a complete uncertainty budget and
+#' does not include baseline, integration, detector, sample preparation, or
+#' correlated calibration uncertainty. The estimates account for:
 #' - Calibration curve fit error (RMSE in log10 MW units)
 #' - MW distribution width effects on different averages
 #'
@@ -105,7 +119,9 @@ step_sec_mw_averages <- function(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_averages")
+  id = recipes::rand_id("sec_mw_averages"),
+  mw_col = NULL,
+  mw_scale = NULL
 ) {
   valid_cols <- c("mn", "mw", "mz", "mp", "dispersity")
   if (!all(output_cols %in% valid_cols)) {
@@ -155,6 +171,8 @@ step_sec_mw_averages <- function(
       output_cols = output_cols,
       include_uncertainty = include_uncertainty,
       calibration_error = calibration_error,
+      mw_col = mw_col,
+      mw_scale = mw_scale,
       prefix = prefix,
       role = role,
       trained = trained,
@@ -171,6 +189,8 @@ step_sec_mw_averages_new <- function(
   output_cols,
   include_uncertainty,
   calibration_error,
+  mw_col,
+  mw_scale,
   prefix,
   role,
   trained,
@@ -185,6 +205,8 @@ step_sec_mw_averages_new <- function(
     output_cols = output_cols,
     include_uncertainty = include_uncertainty,
     calibration_error = calibration_error,
+    mw_col = mw_col,
+    mw_scale = mw_scale,
     prefix = prefix,
     role = role,
     trained = trained,
@@ -197,19 +219,23 @@ step_sec_mw_averages_new <- function(
 prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
 
-  if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
-  } else {
-    measure_cols <- x$measures
-  }
+  resolved <- .sec_resolve_mw_input(
+    training,
+    x$measures,
+    x$mw_col,
+    x$mw_scale,
+    x$calibration
+  )
 
   step_sec_mw_averages_new(
-    measures = measure_cols,
+    measures = resolved$measures,
     calibration = x$calibration,
     integration_range = x$integration_range,
     output_cols = x$output_cols,
     include_uncertainty = x$include_uncertainty,
     calibration_error = x$calibration_error,
+    mw_col = resolved$mw_col,
+    mw_scale = resolved$mw_scale,
     prefix = x$prefix,
     role = x$role,
     trained = TRUE,
@@ -283,7 +309,9 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
   integration_range,
   output_cols,
   include_uncertainty = FALSE,
-  calibration_error = NULL
+  calibration_error = NULL,
+  mw_measure = NULL,
+  mw_scale = NULL
 ) {
   # Build full list of output column names (including uncertainties if requested)
   all_output_cols <- output_cols
@@ -297,14 +325,14 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
     )
   }
 
-  # Apply integration range
-  if (!is.null(integration_range)) {
-    idx <- location >= integration_range[1] & location <= integration_range[2]
-    location <- location[idx]
-    value <- value[idx]
-  }
-
-  if (length(location) < 2) {
+  slices <- .sec_mw_slices(
+    list(location = location, value = value),
+    mw_measure,
+    mw_scale,
+    calibration,
+    integration_range
+  )
+  if (length(slices$location) < 2) {
     result <- stats::setNames(
       rep(NA_real_, length(all_output_cols)),
       all_output_cols
@@ -312,28 +340,11 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
     return(result)
   }
 
-  # Convert x-axis to log10(MW) if calibration provided
-  if (is.null(calibration)) {
-    log_mw <- location
-  } else if (is.numeric(calibration) && length(calibration) == 2) {
-    # Linear calibration: log10(MW) = slope * x + intercept
-    log_mw <- calibration[1] * location + calibration[2]
-  } else if (identical(calibration, "auto")) {
-    # Auto-calibration: assume typical polymer range (1e2 to 1e7)
-    log_mw <- seq(7, 2, length.out = length(location))
-  } else {
-    log_mw <- location
-  }
-
-  # Convert to MW
-  mw <- 10^log_mw
-
-  # Weight is proportional to signal (assuming RI detector)
-  # Ensure non-negative
-  w <- pmax(value, 0)
+  mw <- slices$mw
+  w <- slices$weight
 
   # Remove zero weights
-  valid <- w > 0
+  valid <- w > 0 & is.finite(mw) & mw > 0
   if (sum(valid) < 2) {
     result <- stats::setNames(
       rep(NA_real_, length(all_output_cols)),
@@ -368,7 +379,7 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
 
   if ("mp" %in% output_cols) {
     # Mp = MW at peak maximum
-    peak_idx <- which.max(w)
+    peak_idx <- which.max(slices$signal[valid])
     result["mp"] <- mw[peak_idx]
   }
 
@@ -423,17 +434,28 @@ bake.step_sec_mw_averages <- function(object, new_data, ...) {
   prefix <- object$prefix
 
   # Calculate MW averages for each sample
-  all_results <- purrr::map(new_data[[object$measures[1]]], function(m) {
-    .calc_mw_averages(
-      m$location,
-      m$value,
-      calibration,
-      integration_range,
-      output_cols,
-      include_uncertainty = include_uncertainty,
-      calibration_error = calibration_error
-    )
-  })
+  mw_curves <- if (is.null(object$mw_col)) {
+    rep(list(NULL), nrow(new_data))
+  } else {
+    new_data[[object$mw_col]]
+  }
+  all_results <- purrr::map2(
+    new_data[[object$measures[1]]],
+    mw_curves,
+    function(m, mw_curve) {
+      .calc_mw_averages(
+        m$location,
+        m$value,
+        calibration,
+        integration_range,
+        output_cols,
+        include_uncertainty = include_uncertainty,
+        calibration_error = calibration_error,
+        mw_measure = mw_curve,
+        mw_scale = object$mw_scale
+      )
+    }
+  )
 
   # Convert to data frame
   result_df <- do.call(rbind, all_results)
@@ -476,6 +498,8 @@ tidy.step_sec_mw_averages <- function(x, ...) {
     output_cols = list(x$output_cols),
     include_uncertainty = x$include_uncertainty,
     calibration_error = x$calibration_error %||% NA_real_,
+    mw_col = x$mw_col %||% NA_character_,
+    mw_scale = x$mw_scale %||% NA_character_,
     prefix = x$prefix,
     id = x$id
   )

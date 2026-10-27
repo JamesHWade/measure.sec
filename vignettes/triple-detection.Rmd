@@ -18,6 +18,9 @@ knitr::opts_chunk$set(
 
 ## Overview
 
+> **Implementation status:** `step_sec_mals()` currently uses a single-angle approximation. Its output is relative without a scattering calibration constant; multi-angle extrapolation and Rg are not implemented. Validate all detector workflows against instrument-specific reference data.
+
+
 Multi-detector SEC combines concentration detectors (RI, UV) with molecular weight detectors (light scattering) and/or viscometers to provide absolute molecular weight and structural information. This vignette focuses on **integrating multiple detectors** into a unified workflow.
 
 This vignette covers:
@@ -30,7 +33,7 @@ This vignette covers:
 
 For detailed information on specific light scattering detectors, see:
 
-- [MALS Detection](mals-detection.html) - Multi-angle analysis for Rg and large molecules
+- [MALS Detection](mals-detection.html) - scattering theory and current single-angle approximation
 - [LALS/RALS Detection](lals-rals-detection.html) - Single-angle alternatives
 
 ## Why Multi-Detector SEC?
@@ -280,7 +283,7 @@ rec_triple <- recipe(
 prepped_triple <- prep(rec_triple)
 result_triple <- bake(prepped_triple, new_data = NULL)
 
-# View results - MALS provides absolute MW at each slice
+# View results - output is relative without a scattering calibration constant
 # For MW averages, you would integrate over the chromatogram
 result_triple |>
   select(sample_id, starts_with("mw_"))

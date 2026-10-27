@@ -15,6 +15,10 @@
 #'   calculates the weight fraction below and above that value.
 #' @param calibration Calibration method for converting x-axis to log(MW).
 #'   See [step_sec_mw_averages()] for details.
+#' @param mw_col Optional per-slice molecular-weight measure column. A matching
+#'   curve produced by [step_sec_conventional_cal()] is detected automatically.
+#' @param mw_scale Scale of `mw_col`: `"log10"` or `"absolute"`. Required for
+#'   untagged curves; see [step_sec_mw_averages()].
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
 #'   the x-axis range for integration. If `NULL`, uses full range.
 #' @param prefix Prefix for output column names. Default is `"frac_"`.
@@ -30,7 +34,9 @@
 #' - `frac_below_C`: Weight fraction with MW < C
 #' - `frac_above_C`: Weight fraction with MW >= C
 #'
-#' These fractions sum to 1.0 and are useful for characterizing polymer
+#' Slice weights use trapezoidal integration on the elution axis. The cutoff is
+#' applied to the sampled molecular-weight values, so accuracy near a cutoff
+#' depends on the sampling resolution. These fractions sum to 1.0 and are useful for characterizing polymer
 #' distributions. Common cutoffs include:
 #' - 1000 Da for oligomer content
 #' - 10000 Da for low MW fraction
@@ -61,7 +67,9 @@ step_sec_mw_fractions <- function(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_fractions")
+  id = recipes::rand_id("sec_mw_fractions"),
+  mw_col = NULL,
+  mw_scale = NULL
 ) {
   if (!is.numeric(cutoffs) || length(cutoffs) < 1) {
     cli::cli_abort(
@@ -87,6 +95,8 @@ step_sec_mw_fractions <- function(
       measures = measures,
       cutoffs = sort(cutoffs),
       calibration = calibration,
+      mw_col = mw_col,
+      mw_scale = mw_scale,
       integration_range = integration_range,
       prefix = prefix,
       role = role,
@@ -101,6 +111,8 @@ step_sec_mw_fractions_new <- function(
   measures,
   cutoffs,
   calibration,
+  mw_col,
+  mw_scale,
   integration_range,
   prefix,
   role,
@@ -113,6 +125,8 @@ step_sec_mw_fractions_new <- function(
     measures = measures,
     cutoffs = cutoffs,
     calibration = calibration,
+    mw_col = mw_col,
+    mw_scale = mw_scale,
     integration_range = integration_range,
     prefix = prefix,
     role = role,
@@ -126,16 +140,20 @@ step_sec_mw_fractions_new <- function(
 prep.step_sec_mw_fractions <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
 
-  if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
-  } else {
-    measure_cols <- x$measures
-  }
+  resolved <- .sec_resolve_mw_input(
+    training,
+    x$measures,
+    x$mw_col,
+    x$mw_scale,
+    x$calibration
+  )
 
   step_sec_mw_fractions_new(
-    measures = measure_cols,
+    measures = resolved$measures,
     cutoffs = x$cutoffs,
     calibration = x$calibration,
+    mw_col = resolved$mw_col,
+    mw_scale = resolved$mw_scale,
     integration_range = x$integration_range,
     prefix = x$prefix,
     role = x$role,
@@ -152,14 +170,17 @@ prep.step_sec_mw_fractions <- function(x, training, info = NULL, ...) {
   value,
   cutoffs,
   calibration,
-  integration_range
+  integration_range,
+  mw_measure = NULL,
+  mw_scale = NULL
 ) {
-  # Apply integration range
-  if (!is.null(integration_range)) {
-    idx <- location >= integration_range[1] & location <= integration_range[2]
-    location <- location[idx]
-    value <- value[idx]
-  }
+  slices <- .sec_mw_slices(
+    list(location = location, value = value),
+    mw_measure,
+    mw_scale,
+    calibration,
+    integration_range
+  )
 
   n_cutoffs <- length(cutoffs)
   result <- numeric(n_cutoffs * 2)
@@ -168,30 +189,20 @@ prep.step_sec_mw_fractions <- function(x, training, info = NULL, ...) {
     paste0("above_", cutoffs)
   )
 
-  if (length(location) < 2) {
-    return(rep(NA_real_, length(result)))
+  if (length(slices$location) < 2) {
+    result[] <- NA_real_
+    return(result)
   }
-
-  # Convert x-axis to log10(MW) if calibration provided
-  if (is.null(calibration)) {
-    log_mw <- location
-  } else if (is.numeric(calibration) && length(calibration) == 2) {
-    log_mw <- calibration[1] * location + calibration[2]
-  } else if (identical(calibration, "auto")) {
-    log_mw <- seq(7, 2, length.out = length(location))
-  } else {
-    log_mw <- location
-  }
-
-  # Convert to MW
-  mw <- 10^log_mw
-
-  # Weight is proportional to signal
-  w <- pmax(value, 0)
+  mw <- slices$mw
+  w <- slices$weight
+  valid <- is.finite(mw) & mw > 0 & w > 0
+  mw <- mw[valid]
+  w <- w[valid]
   total_w <- sum(w)
 
   if (total_w <= 0) {
-    return(rep(NA_real_, length(result)))
+    result[] <- NA_real_
+    return(result)
   }
 
   # Calculate fractions for each cutoff
@@ -214,15 +225,26 @@ bake.step_sec_mw_fractions <- function(object, new_data, ...) {
   prefix <- object$prefix
 
   # Calculate MW fractions for each sample
-  all_results <- purrr::map(new_data[[object$measures[1]]], function(m) {
-    .calc_mw_fractions(
-      m$location,
-      m$value,
-      cutoffs,
-      calibration,
-      integration_range
-    )
-  })
+  mw_curves <- if (is.null(object$mw_col)) {
+    rep(list(NULL), nrow(new_data))
+  } else {
+    new_data[[object$mw_col]]
+  }
+  all_results <- purrr::map2(
+    new_data[[object$measures[1]]],
+    mw_curves,
+    function(m, mw_curve) {
+      .calc_mw_fractions(
+        m$location,
+        m$value,
+        cutoffs,
+        calibration,
+        integration_range,
+        mw_measure = mw_curve,
+        mw_scale = object$mw_scale
+      )
+    }
+  )
 
   # Convert to data frame
   result_df <- do.call(rbind, all_results)
@@ -262,6 +284,8 @@ print.step_sec_mw_fractions <- function(
 tidy.step_sec_mw_fractions <- function(x, ...) {
   tibble::tibble(
     cutoffs = list(x$cutoffs),
+    mw_col = x$mw_col %||% NA_character_,
+    mw_scale = x$mw_scale %||% NA_character_,
     prefix = x$prefix,
     id = x$id
   )

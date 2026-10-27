@@ -99,7 +99,7 @@ result <- bake(prepped, new_data = NULL)
 | `step_sec_ri()` | RI detector with dn/dc normalization |
 | `step_sec_uv()` | UV detector with extinction coefficient |
 | `step_sec_dad()` | Diode array detector processing (multi-wavelength UV) |
-| `step_sec_mals()` | Multi-angle light scattering for absolute MW |
+| `step_sec_mals()` | Single-angle light-scattering approximation; multi-angle fits and Rg are not implemented |
 | `step_sec_lals()` | Low-angle light scattering for absolute MW |
 | `step_sec_rals()` | Right-angle light scattering for absolute MW |
 | `step_sec_dls()` | Dynamic light scattering for Rh and diffusion |

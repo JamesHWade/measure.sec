@@ -18,6 +18,9 @@ knitr::opts_chunk$set(
 
 ## Overview
 
+> **Implementation status:** The theory below describes multi-angle light scattering. `step_sec_mals()` currently implements only a single-angle approximation, does not fit Zimm/Debye/Berry angular models, and does not calculate Rg. Its output is uncalibrated unless an instrument calibration constant is supplied.
+
+
 Multi-Angle Light Scattering (MALS) is a powerful technique that provides **absolute molecular weight** without calibration standards. Unlike conventional calibration (which gives MW relative to polymer standards), MALS measures the actual molecular weight of your sample based on fundamental light scattering physics.
 This vignette covers:
 
@@ -288,7 +291,7 @@ glimpse(mals_samples)
 ### Basic MALS Analysis
 
 ```{r mals-workflow}
-# Complete MALS workflow for absolute MW
+# Illustrative single-angle workflow; without a scattering calibration constant, output is relative
 rec_mals <- recipe(
   ri_signal + mals_signal + elution_time + dn_dc ~ sample_id,
   data = mals_samples
@@ -308,7 +311,7 @@ rec_mals <- recipe(
     injection_volume = 100,       # µL
     sample_concentration = 2.0    # mg/mL
   ) |>
-  # MALS processing for absolute MW
+  # Single-angle scattering estimate (relative without a calibration constant)
   step_sec_mals(
     mals_col = "mals",
     dn_dc_column = "dn_dc",
@@ -333,8 +336,8 @@ result_mals |>
 | `dn_dc` | Refractive index increment | 0.185 (PS/THF), 0.084 (PMMA/THF) |
 | `wavelength` | Laser wavelength (nm) | 658, 690, 785 |
 | `solvent_ri` | Solvent refractive index | 1.333 (water), 1.407 (THF) |
-| `angles` | Detection angle(s) | 90 (single), c(35, 50, 75, 90, 105, 120, 145) (multi) |
-| `formalism` | Extrapolation method | "zimm", "debye", "berry" |
+| `angles` | One detection angle | 90 (single) |
+| `formalism` | Reserved for future angular fits | Default only; no angular fit is performed |
 
 ## The Critical Role of dn/dc
 
@@ -368,7 +371,7 @@ For accurate MALS, measure dn/dc using:
 
 ### Setting Up Multi-Angle Analysis
 
-For Rg determination, provide multiple detection angles:
+Multi-angle fitting and Rg determination are not yet implemented. The following illustrates a future API and currently returns an error:
 
 ```{r multi-angle, eval = FALSE}
 # Multi-angle MALS for MW and Rg

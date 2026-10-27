@@ -7,29 +7,31 @@
 #' Multi-Angle Light Scattering Processing for SEC
 #'
 #' `step_sec_mals()` creates a *specification* of a recipe step that processes
-#' multi-angle light scattering (MALS) detector signals to determine absolute
-#' molecular weight and radius of gyration at each elution slice.
+#' one light-scattering detector signal using a single-angle approximation.
+#' Multi-angle extrapolation and radius of gyration are not yet implemented.
 #'
 #' @param recipe A recipe object.
 #' @param mals_col Name of the MALS detector measure column. For single-angle
 #'   detectors (RALS/LALS), this is the only signal needed.
 #' @param concentration_col Name of the concentration measure column (from
 #'   `step_sec_concentration()` or similar).
+#' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
+#'   `"g/mL"`. When omitted, the unit must be recorded by a preceding
+#'   [step_sec_concentration()] step; an untagged curve requires an explicit unit.
 #' @param dn_dc Refractive index increment (mL/g). Required for absolute MW.
 #' @param dn_dc_column Column containing sample-specific dn/dc values.
 #' @param wavelength Laser wavelength in nm. Default is 658 (common for MALS).
 #' @param solvent_ri Solvent refractive index. Default is 1.333 (water).
 #'   Common values: water = 1.333, THF = 1.407, toluene = 1.497.
-#' @param angles Numeric vector of detection angles in degrees. For single-angle
-#'   detectors, provide just one value (e.g., `90` for RALS). Default assumes
-#'   a 90-degree detector.
-#' @param formalism Angular extrapolation method for multi-angle data:
-#'   `"zimm"` (default), `"debye"`, or `"berry"`.
-#' @param calibration_constant MALS instrument calibration constant. If `NULL`,
-#'   results are in relative units. Obtain from toluene standard calibration.
+#' @param angles One detection angle in degrees, default 90. The calculation
+#'   assumes the particle form factor is approximately 1 at this angle.
+#' @param formalism Reserved for future angular extrapolation. Only the default
+#'   `"zimm"` is accepted; no angular fit is performed by this approximation.
+#' @param calibration_constant Factor converting the detector signal to excess
+#'   Rayleigh ratio (cm^-1). If `NULL`, results are relative and uncalibrated.
+#'   The appropriate factor depends on the instrument's signal convention.
 #' @param output_mw Name for the molecular weight output column. Default is `"mw_mals"`.
-#' @param output_rg Name for the radius of gyration output column. Default is `"rg"`.
-#'   Only calculated if multiple angles are provided.
+#' @param output_rg Must be `NULL`; radius of gyration is not yet implemented.
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
 #'   MW is set to NA. Default is 0.01.
 #' @param role Role for generated columns.
@@ -37,12 +39,13 @@
 #' @param skip Logical. Should the step be skipped when baking?
 #' @param id Unique step identifier.
 #'
-#' @return An updated recipe with the new step added, containing absolute MW
-#'   (and optionally Rg) at each elution point.
+#' @return An updated recipe with a single-angle MW estimate at each elution
+#'   point. With no calibration constant the output is explicitly uncalibrated.
 #'
 #' @details
-#' Light scattering provides absolute molecular weight without calibration
-#' standards. The fundamental relationship is:
+#' Calibrated light scattering can estimate molecular weight without polymer
+#' standards. This approximation also requires an instrument calibration
+#' constant and a concentration signal with known units. The relationship is:
 #'
 #' \deqn{\frac{K \cdot c}{R(\theta)} = \frac{1}{M_w} \cdot P(\theta) + 2A_2 c}
 #'
@@ -59,18 +62,8 @@
 #' The optical constant K is calculated as:
 #' \deqn{K = \frac{4\pi^2 n_0^2 (dn/dc)^2}{N_A \lambda^4}}
 #'
-#' **Formalisms for Angular Extrapolation:**
-#' \itemize{
-#'   \item Zimm: Kc/R vs sin^2(theta/2) - best for random coils
-#'   \item Debye: Kc/R vs sin^2(theta/2) - similar to Zimm
-#'   \item Berry: sqrt(Kc/R) vs sin^2(theta/2) - better for large particles
-#' }
-#'
-#' **Single-Angle vs Multi-Angle:**
-#' \itemize{
-#'   \item Single angle (RALS/LALS): Provides Mw only, assumes P(theta) ~ 1
-#'   \item Multi-angle (MALS): Provides both Mw and Rg from angular dependence
-#' }
+#' The implementation uses a single-angle approximation with P(theta) ~ 1;
+#' it does not calculate an angular extrapolation or Rg.
 #'
 #' @note
 #' Accurate results require:
@@ -117,12 +110,13 @@ step_sec_mals <- function(
   formalism = c("zimm", "debye", "berry"),
   calibration_constant = NULL,
   output_mw = "mw_mals",
-  output_rg = "rg",
+  output_rg = NULL,
   min_signal = 0.01,
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mals")
+  id = recipes::rand_id("sec_mals"),
+  concentration_unit = NULL
 ) {
   formalism <- match.arg(formalism)
 
@@ -133,16 +127,79 @@ step_sec_mals <- function(
     )
   }
 
-  if (!is.numeric(wavelength) || wavelength <= 0) {
+  if (
+    !is.numeric(wavelength) ||
+      length(wavelength) != 1 ||
+      !is.finite(wavelength) ||
+      wavelength <= 0
+  ) {
     cli::cli_abort("{.arg wavelength} must be a positive number (in nm).")
   }
 
-  if (!is.numeric(solvent_ri) || solvent_ri <= 0) {
+  if (
+    !is.numeric(solvent_ri) ||
+      length(solvent_ri) != 1 ||
+      !is.finite(solvent_ri) ||
+      solvent_ri <= 0
+  ) {
     cli::cli_abort("{.arg solvent_ri} must be a positive number.")
   }
 
-  if (!is.numeric(angles) || any(angles <= 0) || any(angles >= 180)) {
+  if (
+    !is.numeric(angles) ||
+      !all(is.finite(angles)) ||
+      any(angles <= 0) ||
+      any(angles >= 180)
+  ) {
     cli::cli_abort("{.arg angles} must be between 0 and 180 degrees.")
+  }
+  if (length(angles) != 1) {
+    cli::cli_abort(
+      "Multi-angle extrapolation is not implemented; provide exactly one angle."
+    )
+  }
+  if (
+    !is.numeric(min_signal) ||
+      length(min_signal) != 1 ||
+      !is.finite(min_signal) ||
+      min_signal < 0 ||
+      min_signal >= 1
+  ) {
+    cli::cli_abort(
+      "{.arg min_signal} must be a finite fraction from 0 up to but not including 1."
+    )
+  }
+  if (!identical(formalism, "zimm")) {
+    cli::cli_abort(
+      "Angular formalisms are not implemented for the single-angle approximation."
+    )
+  }
+  if (!is.null(output_rg)) {
+    cli::cli_abort("Radius of gyration (Rg) is not implemented by this step.")
+  }
+  if (
+    !is.null(concentration_unit) &&
+      (!is.character(concentration_unit) ||
+        length(concentration_unit) != 1 ||
+        !concentration_unit %in% c("mg/mL", "g/mL"))
+  ) {
+    cli::cli_abort(
+      "{.arg concentration_unit} must be {.val mg/mL} or {.val g/mL}."
+    )
+  }
+  if (is.null(calibration_constant)) {
+    cli::cli_warn(
+      "No scattering calibration constant supplied; output is relative and uncalibrated."
+    )
+  } else if (
+    !is.numeric(calibration_constant) ||
+      length(calibration_constant) != 1 ||
+      !is.finite(calibration_constant) ||
+      calibration_constant <= 0
+  ) {
+    cli::cli_abort(
+      "{.arg calibration_constant} must be a positive finite number."
+    )
   }
 
   recipes::add_step(
@@ -150,6 +207,7 @@ step_sec_mals <- function(
     step_sec_mals_new(
       mals_col = mals_col,
       concentration_col = concentration_col,
+      concentration_unit = concentration_unit,
       dn_dc = dn_dc,
       dn_dc_column = dn_dc_column,
       wavelength = wavelength,
@@ -171,6 +229,7 @@ step_sec_mals <- function(
 step_sec_mals_new <- function(
   mals_col,
   concentration_col,
+  concentration_unit,
   dn_dc,
   dn_dc_column,
   wavelength,
@@ -190,6 +249,7 @@ step_sec_mals_new <- function(
     subclass = "sec_mals",
     mals_col = mals_col,
     concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
     dn_dc = dn_dc,
     dn_dc_column = dn_dc_column,
     wavelength = wavelength,
@@ -277,6 +337,23 @@ prep.step_sec_mals <- function(x, training, info = NULL, ...) {
     }
   }
 
+  unit_tag <- attr(
+    training[[concentration_col]],
+    "sec_concentration_unit",
+    exact = TRUE
+  )
+  concentration_unit <- x$concentration_unit %||% unit_tag
+  if (is.null(concentration_unit)) {
+    cli::cli_abort(
+      "Specify {.arg concentration_unit} for an untagged concentration curve."
+    )
+  }
+  if (!is.null(unit_tag) && !identical(unit_tag, concentration_unit)) {
+    cli::cli_abort(
+      "{.arg concentration_unit} conflicts with the concentration curve's recorded units."
+    )
+  }
+
   # Validate dn_dc_column exists if specified
   if (!is.null(x$dn_dc_column)) {
     if (!x$dn_dc_column %in% names(training)) {
@@ -289,6 +366,7 @@ prep.step_sec_mals <- function(x, training, info = NULL, ...) {
   step_sec_mals_new(
     mals_col = mals_col,
     concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
     dn_dc = x$dn_dc,
     dn_dc_column = x$dn_dc_column,
     wavelength = x$wavelength,
@@ -310,6 +388,7 @@ prep.step_sec_mals <- function(x, training, info = NULL, ...) {
 bake.step_sec_mals <- function(object, new_data, ...) {
   mals_col <- object$mals_col
   concentration_col <- object$concentration_col
+  concentration_unit <- object$concentration_unit
   dn_dc <- object$dn_dc
   dn_dc_column <- object$dn_dc_column
   wavelength <- object$wavelength
@@ -342,6 +421,21 @@ bake.step_sec_mals <- function(object, new_data, ...) {
       mals_val <- mals_m$value
       conc_val <- conc_m$value
       location <- mals_m$location
+      if (
+        !isTRUE(all.equal(
+          location,
+          conc_m$location,
+          tolerance = 1e-9,
+          check.attributes = FALSE
+        ))
+      ) {
+        cli::cli_abort(
+          "Scattering and concentration curve locations must align."
+        )
+      }
+      if (length(dndc) != 1 || !is.finite(dndc) || dndc <= 0) {
+        cli::cli_abort("Each dn/dc value must be positive and finite.")
+      }
 
       # Calculate optical constant
       K <- .optical_constant(dndc, solvent_ri, wavelength)
@@ -352,7 +446,7 @@ bake.step_sec_mals <- function(object, new_data, ...) {
 
       # Calculate MW at each point
       mw <- rep(NA_real_, length(mals_val))
-      valid <- abs(conc_val) > threshold &
+      valid <- conc_val > threshold &
         mals_val > 0 &
         !is.na(mals_val) &
         !is.na(conc_val)
@@ -362,11 +456,12 @@ bake.step_sec_mals <- function(object, new_data, ...) {
         # Mw = R(theta) / (K * c)
         # With calibration: R = signal * calibration_constant
         R_theta <- mals_val[valid] * calibration_constant
-        mw[valid] <- R_theta / (K * conc_val[valid])
-
-        # Ensure reasonable MW values (filter out noise)
-        mw[valid][mw[valid] < 100] <- NA_real_ # MW < 100 is unrealistic
-        mw[valid][mw[valid] > 1e10] <- NA_real_ # MW > 10 billion is unrealistic
+        conc_g_per_ml <- if (identical(concentration_unit, "mg/mL")) {
+          conc_val[valid] / 1000
+        } else {
+          conc_val[valid]
+        }
+        mw[valid] <- R_theta / (K * conc_g_per_ml)
       }
 
       # Return as measure object
@@ -374,7 +469,23 @@ bake.step_sec_mals <- function(object, new_data, ...) {
     }
   )
 
-  new_data[[output_mw]] <- new_measure_list(mw_list)
+  output <- new_measure_list(mw_list)
+  attr(output, "sec_scattering_basis") <- if (
+    is.null(object$calibration_constant)
+  ) {
+    "relative_uncalibrated"
+  } else {
+    "calibrated_single_angle"
+  }
+  attr(output, "sec_scattering_source") <- concentration_col
+  if (!is.null(object$calibration_constant)) {
+    output <- .sec_tag_mw_curve(
+      output,
+      source = concentration_col,
+      scale = "absolute"
+    )
+  }
+  new_data[[output_mw]] <- output
 
   tibble::as_tibble(new_data)
 }
@@ -408,6 +519,7 @@ tidy.step_sec_mals <- function(x, ...) {
   tibble::tibble(
     mals_col = x$mals_col %||% NA_character_,
     concentration_col = x$concentration_col %||% NA_character_,
+    concentration_unit = x$concentration_unit %||% NA_character_,
     dn_dc = x$dn_dc %||% NA_real_,
     wavelength = x$wavelength,
     angles = list(x$angles),

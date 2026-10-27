@@ -353,7 +353,7 @@ ggplot(sec_raw_unknowns, aes(time_min, ri_mv, color = sample_id)) +
 
 ## Analyze Unknowns with Calibration
 
-Now we apply our calibration to calculate molecular weights:
+Now we apply our calibration to calculate molecular weights. Each example integrates only the portion within the standards’ retention range; signal outside that range is excluded, so the reported values may not represent the entire sample.
 
 ```{r analyze-unknowns}
 # Process all unknowns at once
@@ -374,7 +374,7 @@ rec_unknown <- recipe(ri_mv + time_min ~ sample_id, data = unknown_a) |>
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
-  step_sec_mw_averages()
+  step_sec_mw_averages(integration_range = range(ps_cal$retention))
 
 # Process
 result_a <- prep(rec_unknown) |> bake(new_data = NULL)
@@ -404,7 +404,7 @@ analyze_unknown <- function(sample_data) {
       standards = ps_cal,
       fit_type = "cubic"
     ) |>
-    step_sec_mw_averages()
+    step_sec_mw_averages(integration_range = range(ps_cal$retention))
 
   result <- prep(rec) |> bake(new_data = NULL)
 
@@ -465,8 +465,8 @@ ggplot(validation, aes(true_mw, mw_mw)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
   geom_point(size = 4, color = "#2E86AB") +
   geom_text(aes(label = sample_id), hjust = -0.2, vjust = 0.5, size = 3) +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
-  scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_y_log10(labels = scales::label_comma()) +
   labs(
     x = "True Mw (Da)",
     y = "Calculated Mw (Da)",
@@ -500,7 +500,7 @@ rec_bimodal <- recipe(ri_mv + time_min ~ sample_id, data = bimodal) |>
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
-  step_sec_mw_averages()
+  step_sec_mw_averages(integration_range = range(ps_cal$retention))
 
 result_bimodal <- prep(rec_bimodal) |> bake(new_data = NULL)
 
@@ -511,15 +511,19 @@ cat("  Dispersity =", round(result_bimodal$mw_dispersity, 2), "\n")
 cat("\nNote: High dispersity indicates the bimodal nature!\n")
 
 # Plot the bimodal chromatogram with MW scale
-bimodal_chrom <- result_bimodal$ri[[1]]
-ggplot(bimodal_chrom, aes(10^location, value)) +
+bimodal_chrom <- tibble::tibble(
+  mw = 10^result_bimodal$mw[[1]]$value,
+  value = result_bimodal$ri[[1]]$value
+) |>
+  filter(is.finite(mw))
+ggplot(bimodal_chrom, aes(mw, value)) +
   geom_line(color = "#2E86AB", linewidth = 1) +
   geom_vline(xintercept = c(50000, 200000), linetype = "dashed", color = "#A23B72") +
   annotate("text", x = 50000, y = max(bimodal_chrom$value) * 0.8,
            label = "50K", hjust = 1.2, color = "#A23B72") +
   annotate("text", x = 200000, y = max(bimodal_chrom$value) * 0.8,
            label = "200K", hjust = -0.2, color = "#A23B72") +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
   labs(
     x = "Molecular Weight (Da)",
     y = "RI Signal (processed)",

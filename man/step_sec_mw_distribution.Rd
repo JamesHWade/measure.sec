@@ -15,7 +15,10 @@ step_sec_mw_distribution(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_distribution")
+  id = recipes::rand_id("sec_mw_distribution"),
+  mw_col = NULL,
+  mw_scale = NULL,
+  integration_range = NULL
 )
 }
 \arguments{
@@ -49,6 +52,14 @@ to integrate to 1? Default is \code{TRUE}.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{mw_col}{Optional per-slice molecular-weight measure column. A matching
+curve produced by \code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}} is detected automatically.}
+
+\item{mw_scale}{Scale of \code{mw_col}: \code{"log10"} or \code{"absolute"}. Required for
+untagged curves; see \code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}}.}
+
+\item{integration_range}{Optional limits on the original elution axis.}
 }
 \value{
 An updated recipe with the new step added.
@@ -68,10 +79,18 @@ MW range.
 
 \strong{Cumulative Distribution:}
 The cumulative weight fraction from low to high MW. Values range from 0 to 1.
+Weight is integrated on the original elution axis before transforming to
+log(MW), so a nonlinear calibration is handled without treating the signal
+as a density on the molecular-weight axis. The selected MW curve must be
+strictly monotonic and valid over the integration range. When \code{mw_range}
+restricts the plotted range, it displays a portion of the full distribution;
+it does not renormalize that portion to 1.
 
-The output replaces the \code{.measures} column with the distribution data,
-where \code{location} contains log10(MW) values and \code{value} contains the
-distribution values.
+The selected measure column is replaced by the requested distribution.
+With \code{type = "both"}, two additional columns, \verb{<measure>_differential} and
+\verb{<measure>_cumulative}, are added and the selected column is replaced by the
+differential curve. Their \code{location} values are log10(MW), and their
+\code{value} entries are the corresponding distribution values.
 }
 \examples{
 \dontrun{

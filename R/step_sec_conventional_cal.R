@@ -54,7 +54,7 @@
 #' **Calibration Curve Fitting:**
 #'
 #' The calibration is fit using orthogonal polynomials for numerical stability.
-#' At least 3 standards are required for cubic fits, 4 for quadratic, etc.
+#' At least 2 standards are required for linear fits, 3 for quadratic fits, and 4 for cubic fits. Additional standards are needed to estimate residual variation.
 #'
 #' **Important Considerations:**
 #' \itemize{
@@ -573,15 +573,34 @@ bake.step_sec_conventional_cal <- function(object, new_data, ...) {
     pred_data <- data.frame(location = location)
     log_mw <- stats::predict(cal_fit, newdata = pred_data)
 
-    # Handle out-of-range based on extrapolation setting
+    # Handle out-of-range based on extrapolation setting. For the linear
+    # option, extend each boundary tangent rather than the fitted polynomial.
     if (extrapolation == "none") {
       log_mw[out_of_range] <- NA_real_
+    } else if (extrapolation == "linear" && any(out_of_range)) {
+      delta <- max(diff(calibration_range), 1) * 1e-6
+      for (side in c("lower", "upper")) {
+        boundary <- if (side == "lower") {
+          calibration_range[1]
+        } else {
+          calibration_range[2]
+        }
+        outside <- if (side == "lower") {
+          location < boundary
+        } else {
+          location > boundary
+        }
+        if (!any(outside)) {
+          next
+        }
+        probe <- data.frame(
+          location = c(boundary - delta, boundary, boundary + delta)
+        )
+        pred <- as.numeric(stats::predict(cal_fit, newdata = probe))
+        slope <- (pred[3] - pred[1]) / (2 * delta)
+        log_mw[outside] <- pred[2] + slope * (location[outside] - boundary)
+      }
     }
-    # For "warn" and "linear", allow extrapolation (poly already extrapolates)
-
-    # Apply reasonable bounds
-    log_mw[log_mw < 1] <- NA_real_ # < 10 Da
-    log_mw[log_mw > 10] <- NA_real_ # > 10^10 Da
 
     # Convert to MW if requested
     if (log_output) {
@@ -593,7 +612,11 @@ bake.step_sec_conventional_cal <- function(object, new_data, ...) {
     new_measure_tbl(location = location, value = value)
   })
 
-  new_data[[output_col]] <- new_measure_list(mw_list)
+  new_data[[output_col]] <- .sec_tag_mw_curve(
+    new_measure_list(mw_list),
+    source = col,
+    scale = if (log_output) "log10" else "absolute"
+  )
 
   tibble::as_tibble(new_data)
 }

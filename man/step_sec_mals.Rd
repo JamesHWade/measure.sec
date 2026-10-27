@@ -16,12 +16,13 @@ step_sec_mals(
   formalism = c("zimm", "debye", "berry"),
   calibration_constant = NULL,
   output_mw = "mw_mals",
-  output_rg = "rg",
+  output_rg = NULL,
   min_signal = 0.01,
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mals")
+  id = recipes::rand_id("sec_mals"),
+  concentration_unit = NULL
 )
 }
 \arguments{
@@ -42,20 +43,19 @@ detectors (RALS/LALS), this is the only signal needed.}
 \item{solvent_ri}{Solvent refractive index. Default is 1.333 (water).
 Common values: water = 1.333, THF = 1.407, toluene = 1.497.}
 
-\item{angles}{Numeric vector of detection angles in degrees. For single-angle
-detectors, provide just one value (e.g., \code{90} for RALS). Default assumes
-a 90-degree detector.}
+\item{angles}{One detection angle in degrees, default 90. The calculation
+assumes the particle form factor is approximately 1 at this angle.}
 
-\item{formalism}{Angular extrapolation method for multi-angle data:
-\code{"zimm"} (default), \code{"debye"}, or \code{"berry"}.}
+\item{formalism}{Reserved for future angular extrapolation. Only the default
+\code{"zimm"} is accepted; no angular fit is performed by this approximation.}
 
-\item{calibration_constant}{MALS instrument calibration constant. If \code{NULL},
-results are in relative units. Obtain from toluene standard calibration.}
+\item{calibration_constant}{Factor converting the detector signal to excess
+Rayleigh ratio (cm^-1). If \code{NULL}, results are relative and uncalibrated.
+The appropriate factor depends on the instrument's signal convention.}
 
 \item{output_mw}{Name for the molecular weight output column. Default is \code{"mw_mals"}.}
 
-\item{output_rg}{Name for the radius of gyration output column. Default is \code{"rg"}.
-Only calculated if multiple angles are provided.}
+\item{output_rg}{Must be \code{NULL}; radius of gyration is not yet implemented.}
 
 \item{min_signal}{Minimum signal threshold (as fraction of max) below which
 MW is set to NA. Default is 0.01.}
@@ -67,19 +67,24 @@ MW is set to NA. Default is 0.01.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{concentration_unit}{Unit of the concentration curve: \code{"mg/mL"} or
+\code{"g/mL"}. When omitted, the unit must be recorded by a preceding
+\code{\link[=step_sec_concentration]{step_sec_concentration()}} step; an untagged curve requires an explicit unit.}
 }
 \value{
-An updated recipe with the new step added, containing absolute MW
-(and optionally Rg) at each elution point.
+An updated recipe with a single-angle MW estimate at each elution
+point. With no calibration constant the output is explicitly uncalibrated.
 }
 \description{
 \code{step_sec_mals()} creates a \emph{specification} of a recipe step that processes
-multi-angle light scattering (MALS) detector signals to determine absolute
-molecular weight and radius of gyration at each elution slice.
+one light-scattering detector signal using a single-angle approximation.
+Multi-angle extrapolation and radius of gyration are not yet implemented.
 }
 \details{
-Light scattering provides absolute molecular weight without calibration
-standards. The fundamental relationship is:
+Calibrated light scattering can estimate molecular weight without polymer
+standards. This approximation also requires an instrument calibration
+constant and a concentration signal with known units. The relationship is:
 
 \deqn{\frac{K \cdot c}{R(\theta)} = \frac{1}{M_w} \cdot P(\theta) + 2A_2 c}
 
@@ -96,18 +101,8 @@ where:
 The optical constant K is calculated as:
 \deqn{K = \frac{4\pi^2 n_0^2 (dn/dc)^2}{N_A \lambda^4}}
 
-\strong{Formalisms for Angular Extrapolation:}
-\itemize{
-\item Zimm: Kc/R vs sin^2(theta/2) - best for random coils
-\item Debye: Kc/R vs sin^2(theta/2) - similar to Zimm
-\item Berry: sqrt(Kc/R) vs sin^2(theta/2) - better for large particles
-}
-
-\strong{Single-Angle vs Multi-Angle:}
-\itemize{
-\item Single angle (RALS/LALS): Provides Mw only, assumes P(theta) ~ 1
-\item Multi-angle (MALS): Provides both Mw and Rg from angular dependence
-}
+The implementation uses a single-angle approximation with P(theta) ~ 1;
+it does not calculate an angular extrapolation or Rg.
 }
 \note{
 Accurate results require:

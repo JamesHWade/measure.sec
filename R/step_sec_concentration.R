@@ -24,7 +24,9 @@
 #' @param sample_concentration Sample concentration in mg/mL. Used with
 #'   `injection_volume` to calculate injected mass.
 #' @param flow_rate Flow rate in mL/min for peak area calculations.
-#' @param concentration_units Output concentration units. Default is `"mg/mL"`.
+#' @param concentration_units Output concentration units: `"mg/mL"` (default)
+#'   or `"g/mL"`. Units are recorded on the output measure column when mass
+#'   normalization is performed.
 #' @param normalize_to_mass Logical. If `TRUE`, normalize the chromatogram
 #'   so that the total area equals the injected mass. Default is `TRUE`.
 #' @param role Role for generated columns.
@@ -89,6 +91,15 @@ step_sec_concentration <- function(
   id = recipes::rand_id("sec_concentration")
 ) {
   detector <- match.arg(detector)
+  if (
+    !is.character(concentration_units) ||
+      length(concentration_units) != 1 ||
+      !concentration_units %in% c("mg/mL", "g/mL")
+  ) {
+    cli::cli_abort(
+      "{.arg concentration_units} must be {.val mg/mL} or {.val g/mL}."
+    )
+  }
 
   # Validate injection parameters
   if (normalize_to_mass) {
@@ -111,9 +122,24 @@ step_sec_concentration <- function(
       # injection_mass in mg = volume (uL) * conc (mg/mL) / 1000
       injection_mass <- injection_volume * sample_concentration / 1000
     }
+    if (
+      !is.numeric(injection_mass) ||
+        length(injection_mass) != 1 ||
+        !is.finite(injection_mass) ||
+        injection_mass <= 0
+    ) {
+      cli::cli_abort(
+        "{.arg injection_mass} must be a positive finite mass in mg."
+      )
+    }
   }
 
-  if (!is.null(flow_rate) && (!is.numeric(flow_rate) || flow_rate <= 0)) {
+  if (
+    !is.numeric(flow_rate) ||
+      length(flow_rate) != 1 ||
+      !is.finite(flow_rate) ||
+      flow_rate <= 0
+  ) {
     cli::cli_abort("{.arg flow_rate} must be a positive number.")
   }
 
@@ -212,31 +238,39 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
   injection_mass <- object$injection_mass
   flow_rate <- object$flow_rate
   normalize_to_mass <- object$normalize_to_mass
+  concentration_units <- object$concentration_units
 
   for (col in measures) {
-    new_data[[col]] <- new_measure_list(
+    output <- new_measure_list(
       purrr::map(new_data[[col]], function(m) {
         location <- m$location
         value <- m$value
         n <- length(location)
 
-        if (n < 2) {
+        if (!normalize_to_mass) {
           return(m)
         }
-
-        # Calculate time step (assuming uniform spacing)
-        dt <- mean(diff(location))
+        if (
+          n < 2 ||
+            !all(is.finite(location)) ||
+            !all(is.finite(value)) ||
+            !(all(diff(location) > 0) || all(diff(location) < 0))
+        ) {
+          cli::cli_abort(
+            "Concentration normalization requires finite values on a strictly monotonic elution-time axis with at least two points."
+          )
+        }
 
         if (
           normalize_to_mass && !is.null(injection_mass) && injection_mass > 0
         ) {
-          # Calculate total area under the curve
-          # Area = sum(signal * dt) in signal*min units
-          # For concentration: area should equal injected mass / flow_rate
-
           # Ensure non-negative values for integration
           pos_value <- pmax(value, 0)
-          total_area <- sum(pos_value) * dt
+          total_area <- sum(
+            abs(diff(location)) *
+              (utils::head(pos_value, -1) + utils::tail(pos_value, -1)) /
+              2
+          )
 
           if (total_area > 0) {
             # Normalize so that integral of c(t) * F * dt = m_inj
@@ -245,12 +279,23 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
             # we get c(t) in mg/mL if m_inj in mg
 
             m$value <- value * injection_mass / (total_area * flow_rate)
+            if (identical(concentration_units, "g/mL")) {
+              m$value <- m$value / 1000
+            }
+          } else {
+            cli::cli_abort(
+              "Cannot normalize a concentration signal with nonpositive integrated area."
+            )
           }
         }
 
         m
       })
     )
+    if (normalize_to_mass) {
+      attr(output, "sec_concentration_unit") <- concentration_units
+    }
+    new_data[[col]] <- output
   }
 
   tibble::as_tibble(new_data)

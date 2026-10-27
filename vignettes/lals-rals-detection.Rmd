@@ -18,6 +18,9 @@ knitr::opts_chunk$set(
 
 ## Overview
 
+> **Implementation status:** The MALS step is a single-angle approximation, not a multi-angle fit or Rg calculation. LALS/RALS calculations and calibration assumptions need independent validation for each instrument.
+
+
 Single-angle light scattering detectors (LALS and RALS) provide a simpler, cost-effective alternative to multi-angle detection (MALS) for determining absolute molecular weight. While they don't provide radius of gyration (Rg) information, they can be excellent choices for routine analysis of smaller molecules.
 
 This vignette covers:
