@@ -1,5 +1,12 @@
 # measure.sec 0.0.0.9000
 
+* `step_sec_intrinsic_visc()` now converts recorded or explicit concentration
+  units before calculating dL/g or mL/g. Composition uses calibrated two-channel
+  responses to recover component mass fractions; UV/RI ratios distinguish raw
+  detector responses from normalized concentrations. Inferred unit tags must
+  persist when baking new data, and ratio smoothing preserves invalid points
+  (#60).
+
 * `step_sec_concentration()` reports the count and percentage of negative
   detector values excluded during mass normalization, and sets those values to
   zero in the normalized curve (#60).
