@@ -13,8 +13,9 @@ Provides preprocessing and analysis recipe steps for Size Exclusion Chromatograp
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/JamesHWade/measure-sec}
-  \item Report bugs at \url{https://github.com/JamesHWade/measure-sec/issues}
+  \item \url{https://github.com/JamesHWade/measure.sec}
+  \item \url{https://jameshwade.github.io/measure.sec}
+  \item Report bugs at \url{https://github.com/JamesHWade/measure.sec/issues}
 }
 
 }

@@ -10,8 +10,9 @@ Description: Provides preprocessing and analysis recipe steps for Size Exclusion
     molecular weight calculations (Mn, Mw, Mz, dispersity), and calibration
     curve fitting. This package is a technique pack for the 'measure' package.
 License: MIT + file LICENSE
-URL: https://github.com/JamesHWade/measure-sec
-BugReports: https://github.com/JamesHWade/measure-sec/issues
+URL: https://github.com/JamesHWade/measure.sec,
+    https://jameshwade.github.io/measure.sec
+BugReports: https://github.com/JamesHWade/measure.sec/issues
 Depends:
     R (>= 4.1.0),
     measure (>= 0.0.1.9003)
