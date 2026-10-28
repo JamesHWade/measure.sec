@@ -14,14 +14,19 @@
 #'   step searches for measure columns containing "lals".
 #' @param concentration_col Name of the concentration measure column (from
 #'   `step_sec_concentration()` or similar).
+#' @param concentration_unit Unit of the concentration curve: "mg/mL" or
+#'   "g/mL". When omitted, the unit must be recorded on the curve or set by
+#'   step_sec_concentration() or step_sec_ri().
 #' @param angle Detection angle in degrees (must be < 20 for LALS).
 #' @param laser_wavelength Laser wavelength in nm.
 #' @param dn_dc Refractive index increment (mL/g). Required unless
 #'   `optical_constant` is provided.
 #' @param solvent_ri Solvent refractive index. Default is 1.333 (water).
-#' @param optical_constant Optional optical constant K; overrides dn/dc.
-#' @param calibration_constant LALS instrument calibration constant. If `NULL`,
-#'   results are in relative units.
+#' @param optical_constant Optional optical constant K; overrides dn/dc. K
+#'   includes (dn/dc)^2 and uses units mol*cm^2/g^2.
+#' @param calibration_constant LALS instrument calibration constant. If
+#'   `NULL`, results are in relative units. Otherwise it converts the detector
+#'   signal to excess Rayleigh ratio in cm^-1.
 #' @param output_mw Name for the molecular weight output column.
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
 #'   MW is set to NA.
@@ -35,7 +40,13 @@
 #' @details
 #' LALS provides absolute MW using a low-angle detector (e.g., ~7 degrees).
 #' It assumes P(theta) ~ 1 for small particles and is most accurate when
-#' angular dependence is minimal.
+#' angular dependence is minimal. For a calibrated signal, the estimate is
+#' \deqn{M = R(\theta)/(Kc)}
+#' where K = 4 pi^2 n_0^2 (dn/dc)^2/(N_A lambda_0^4), c is converted to g/mL,
+#' and lambda_0 is in cm when calculating K. This is a single-angle estimate;
+#' it does not fit multiple angles, extrapolate to zero angle, or estimate Rg.
+#' Without a detector calibration constant, the result is relative and must
+#' not be interpreted as a molar mass.
 #'
 #' **When to use LALS vs MALS:**
 #' \itemize{
@@ -62,258 +73,306 @@
 #'   prep()
 #' }
 step_sec_lals <- function(
-	recipe,
-	measures = NULL,
-	concentration_col = NULL,
-	angle = 7,
-	laser_wavelength = 670,
-	dn_dc = NULL,
-	solvent_ri = 1.333,
-	optical_constant = NULL,
-	calibration_constant = NULL,
-	output_mw = "mw_lals",
-	min_signal = 0.01,
-	role = NA,
-	trained = FALSE,
-	skip = FALSE,
-	id = recipes::rand_id("sec_lals")
+  recipe,
+  measures = NULL,
+  concentration_col = NULL,
+  angle = 7,
+  laser_wavelength = 670,
+  dn_dc = NULL,
+  solvent_ri = 1.333,
+  optical_constant = NULL,
+  calibration_constant = NULL,
+  output_mw = "mw_lals",
+  min_signal = 0.01,
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_lals"),
+  concentration_unit = NULL
 ) {
-	if (!is.null(optical_constant) && !is.null(dn_dc)) {
-		cli::cli_warn(
-			"{.arg optical_constant} takes precedence over {.arg dn_dc}."
-		)
-	}
+  if (!is.null(optical_constant) && !is.null(dn_dc)) {
+    cli::cli_warn(
+      "{.arg optical_constant} takes precedence over {.arg dn_dc}."
+    )
+  }
 
-	if (!is.numeric(angle) || angle <= 0 || angle >= 20) {
-		cli::cli_abort("{.arg angle} must be between 0 and 20 degrees for LALS.")
-	}
+  if (
+    !is.numeric(angle) ||
+      length(angle) != 1 ||
+      !is.finite(angle) ||
+      angle <= 0 ||
+      angle >= 20
+  ) {
+    cli::cli_abort("{.arg angle} must be between 0 and 20 degrees for LALS.")
+  }
+  .sec_validate_positive_scalar(laser_wavelength, "laser_wavelength")
+  .sec_validate_positive_scalar(solvent_ri, "solvent_ri")
+  .sec_validate_concentration_unit(concentration_unit)
+  if (!is.null(dn_dc)) {
+    .sec_validate_positive_scalar(dn_dc, "dn_dc")
+  }
+  if (!is.null(optical_constant)) {
+    .sec_validate_positive_scalar(optical_constant, "optical_constant")
+  }
+  if (!is.null(calibration_constant)) {
+    .sec_validate_positive_scalar(calibration_constant, "calibration_constant")
+  }
+  if (
+    !is.numeric(min_signal) ||
+      length(min_signal) != 1 ||
+      !is.finite(min_signal) ||
+      min_signal < 0 ||
+      min_signal >= 1
+  ) {
+    cli::cli_abort(
+      "{.arg min_signal} must be a finite fraction from 0 up to but not including 1."
+    )
+  }
 
-	if (is.null(optical_constant) && is.null(dn_dc)) {
-		cli::cli_abort(
-			"Either {.arg dn_dc} or {.arg optical_constant} must be provided."
-		)
-	}
+  if (is.null(optical_constant) && is.null(dn_dc)) {
+    cli::cli_abort(
+      "Either {.arg dn_dc} or {.arg optical_constant} must be provided."
+    )
+  }
 
-	recipes::add_step(
-		recipe,
-		step_sec_lals_new(
-			measures = measures,
-			concentration_col = concentration_col,
-			angle = angle,
-			laser_wavelength = laser_wavelength,
-			dn_dc = dn_dc,
-			solvent_ri = solvent_ri,
-			optical_constant = optical_constant,
-			calibration_constant = calibration_constant,
-			output_mw = output_mw,
-			min_signal = min_signal,
-			role = role,
-			trained = trained,
-			skip = skip,
-			id = id
-		)
-	)
+  recipes::add_step(
+    recipe,
+    step_sec_lals_new(
+      measures = measures,
+      concentration_col = concentration_col,
+      concentration_unit = concentration_unit,
+      angle = angle,
+      laser_wavelength = laser_wavelength,
+      dn_dc = dn_dc,
+      solvent_ri = solvent_ri,
+      optical_constant = optical_constant,
+      calibration_constant = calibration_constant,
+      output_mw = output_mw,
+      min_signal = min_signal,
+      role = role,
+      trained = trained,
+      skip = skip,
+      id = id
+    )
+  )
 }
 
 step_sec_lals_new <- function(
-	measures,
-	concentration_col,
-	angle,
-	laser_wavelength,
-	dn_dc,
-	solvent_ri,
-	optical_constant,
-	calibration_constant,
-	output_mw,
-	min_signal,
-	role,
-	trained,
-	skip,
-	id
+  measures,
+  concentration_col,
+  concentration_unit,
+  angle,
+  laser_wavelength,
+  dn_dc,
+  solvent_ri,
+  optical_constant,
+  calibration_constant,
+  output_mw,
+  min_signal,
+  role,
+  trained,
+  skip,
+  id
 ) {
-	recipes::step(
-		subclass = "sec_lals",
-		measures = measures,
-		concentration_col = concentration_col,
-		angle = angle,
-		laser_wavelength = laser_wavelength,
-		dn_dc = dn_dc,
-		solvent_ri = solvent_ri,
-		optical_constant = optical_constant,
-		calibration_constant = calibration_constant,
-		output_mw = output_mw,
-		min_signal = min_signal,
-		role = role,
-		trained = trained,
-		skip = skip,
-		id = id
-	)
+  recipes::step(
+    subclass = "sec_lals",
+    measures = measures,
+    concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
+    angle = angle,
+    laser_wavelength = laser_wavelength,
+    dn_dc = dn_dc,
+    solvent_ri = solvent_ri,
+    optical_constant = optical_constant,
+    calibration_constant = calibration_constant,
+    output_mw = output_mw,
+    min_signal = min_signal,
+    role = role,
+    trained = trained,
+    skip = skip,
+    id = id
+  )
 }
 
 #' @export
 prep.step_sec_lals <- function(x, training, info = NULL, ...) {
-	check_for_measure(training)
+  check_for_measure(training)
 
-	measure_cols <- find_measure_cols(training)
+  measure_cols <- find_measure_cols(training)
 
-	if (is.null(x$measures)) {
-		lals_cols <- measure_cols[grepl("lals", measure_cols, ignore.case = TRUE)]
-		if (length(lals_cols) == 0) {
-			cli::cli_abort(
-				"No LALS column found. Specify {.arg measures} explicitly."
-			)
-		}
-		measures <- lals_cols[1]
-	} else {
-		measures <- x$measures
-	}
+  if (is.null(x$measures)) {
+    lals_cols <- measure_cols[grepl("lals", measure_cols, ignore.case = TRUE)]
+    if (length(lals_cols) == 0) {
+      cli::cli_abort(
+        "No LALS column found. Specify {.arg measures} explicitly."
+      )
+    }
+    measures <- lals_cols[1]
+  } else {
+    measures <- x$measures
+  }
 
-	if (length(measures) != 1) {
-		cli::cli_abort("{.arg measures} must specify a single LALS column.")
-	}
+  if (length(measures) != 1) {
+    cli::cli_abort("{.arg measures} must specify a single LALS column.")
+  }
 
-	if (!measures %in% measure_cols) {
-		cli::cli_abort(
-			"LALS column {.val {measures}} not found in measure columns."
-		)
-	}
+  if (!measures %in% measure_cols) {
+    cli::cli_abort(
+      "LALS column {.val {measures}} not found in measure columns."
+    )
+  }
 
-	if (is.null(x$concentration_col)) {
-		conc_cols <- measure_cols[
-			grepl(
-				"ri|conc",
-				measure_cols,
-				ignore.case = TRUE
-			)
-		]
-		if (length(conc_cols) == 0) {
-			cli::cli_abort(
-				"No concentration column found. Specify {.arg concentration_col} explicitly."
-			)
-		}
-		concentration_col <- conc_cols[1]
-	} else {
-		concentration_col <- x$concentration_col
-		if (!concentration_col %in% measure_cols) {
-			cli::cli_abort(
-				"Concentration column {.val {concentration_col}} not found in measure columns."
-			)
-		}
-	}
+  if (is.null(x$concentration_col)) {
+    conc_cols <- measure_cols[
+      grepl(
+        "ri|conc",
+        measure_cols,
+        ignore.case = TRUE
+      )
+    ]
+    if (length(conc_cols) == 0) {
+      cli::cli_abort(
+        "No concentration column found. Specify {.arg concentration_col} explicitly."
+      )
+    }
+    concentration_col <- conc_cols[1]
+  } else {
+    concentration_col <- x$concentration_col
+    if (!concentration_col %in% measure_cols) {
+      cli::cli_abort(
+        "Concentration column {.val {concentration_col}} not found in measure columns."
+      )
+    }
+  }
 
-	step_sec_lals_new(
-		measures = measures,
-		concentration_col = concentration_col,
-		angle = x$angle,
-		laser_wavelength = x$laser_wavelength,
-		dn_dc = x$dn_dc,
-		solvent_ri = x$solvent_ri,
-		optical_constant = x$optical_constant,
-		calibration_constant = x$calibration_constant,
-		output_mw = x$output_mw,
-		min_signal = x$min_signal,
-		role = x$role,
-		trained = TRUE,
-		skip = x$skip,
-		id = x$id
-	)
+  concentration_unit <- .sec_resolve_concentration_unit(
+    x$concentration_unit,
+    training[[concentration_col]]
+  )
+
+  step_sec_lals_new(
+    measures = measures,
+    concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
+    angle = x$angle,
+    laser_wavelength = x$laser_wavelength,
+    dn_dc = x$dn_dc,
+    solvent_ri = x$solvent_ri,
+    optical_constant = x$optical_constant,
+    calibration_constant = x$calibration_constant,
+    output_mw = x$output_mw,
+    min_signal = x$min_signal,
+    role = x$role,
+    trained = TRUE,
+    skip = x$skip,
+    id = x$id
+  )
 }
 
 #' @export
 bake.step_sec_lals <- function(object, new_data, ...) {
-	lals_col <- object$measures
-	concentration_col <- object$concentration_col
-	dn_dc <- object$dn_dc
-	solvent_ri <- object$solvent_ri
-	laser_wavelength <- object$laser_wavelength
-	calibration_constant <- object$calibration_constant
-	min_signal <- object$min_signal
-	output_mw <- object$output_mw
+  lals_col <- object$measures
+  concentration_col <- object$concentration_col
+  concentration_unit <- object$concentration_unit
+  .sec_resolve_concentration_unit(
+    concentration_unit,
+    new_data[[concentration_col]]
+  )
+  dn_dc <- object$dn_dc
+  solvent_ri <- object$solvent_ri
+  laser_wavelength <- object$laser_wavelength
+  calibration_constant <- object$calibration_constant
+  min_signal <- object$min_signal
+  output_mw <- object$output_mw
 
-	if (is.null(calibration_constant)) {
-		cli::cli_warn(
-			c(
-				"No {.arg calibration_constant} provided.",
-				"i" = "Results will be in relative units, not absolute MW.",
-				"i" = "Provide a calibration constant for absolute values."
-			)
-		)
-		calibration_constant <- 1.0
-	}
+  if (is.null(calibration_constant)) {
+    cli::cli_warn(
+      c(
+        "No {.arg calibration_constant} provided.",
+        "i" = "Results will be in relative units, not absolute MW.",
+        "i" = "Provide a calibration constant for absolute values."
+      )
+    )
+    calibration_constant <- 1.0
+  }
 
-	if (is.null(object$optical_constant)) {
-		K <- .optical_constant(dn_dc, solvent_ri, laser_wavelength)
-	} else {
-		K <- object$optical_constant
-	}
+  if (is.null(object$optical_constant)) {
+    K <- .optical_constant(dn_dc, solvent_ri, laser_wavelength)
+  } else {
+    K <- object$optical_constant
+  }
 
-	mw_list <- purrr::pmap(
-		list(new_data[[lals_col]], new_data[[concentration_col]]),
-		function(lals_m, conc_m) {
-			lals_val <- lals_m$value
-			conc_val <- conc_m$value
-			location <- lals_m$location
+  mw_list <- purrr::pmap(
+    list(new_data[[lals_col]], new_data[[concentration_col]]),
+    function(lals_m, conc_m) {
+      .sec_single_angle_mw(
+        lals_m,
+        conc_m,
+        concentration_unit,
+        K,
+        calibration_constant,
+        min_signal,
+        "LALS"
+      )
+    }
+  )
 
-			max_conc <- max(abs(conc_val), na.rm = TRUE)
-			threshold <- min_signal * max_conc
+  output <- new_measure_list(mw_list)
+  attr(output, "sec_scattering_basis") <- if (
+    is.null(object$calibration_constant)
+  ) {
+    "relative_uncalibrated"
+  } else {
+    "calibrated_single_angle"
+  }
+  attr(output, "sec_scattering_source") <- concentration_col
+  if (!is.null(object$calibration_constant)) {
+    output <- .sec_tag_mw_curve(
+      output,
+      source = concentration_col,
+      scale = "absolute"
+    )
+  }
+  new_data[[output_mw]] <- output
 
-			mw <- rep(NA_real_, length(lals_val))
-			valid <- abs(conc_val) > threshold &
-				lals_val > 0 &
-				!is.na(lals_val) &
-				!is.na(conc_val)
-
-			if (any(valid)) {
-				R_theta <- lals_val[valid] * calibration_constant
-				mw[valid] <- R_theta / (K * conc_val[valid])
-
-				mw[valid][mw[valid] < 100] <- NA_real_
-				mw[valid][mw[valid] > 1e10] <- NA_real_
-			}
-
-			new_measure_tbl(location = location, value = mw)
-		}
-	)
-
-	new_data[[output_mw]] <- new_measure_list(mw_list)
-
-	tibble::as_tibble(new_data)
+  tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_lals <- function(
-	x,
-	width = max(20, options()$width - 30),
-	...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
-	title <- "SEC LALS processing"
-	if (x$trained) {
-		cat(title, " on ", x$measures, " -> ", x$output_mw, sep = "")
-	} else {
-		cat(title)
-	}
-	cat("\n")
-	invisible(x)
+  title <- "SEC LALS processing"
+  if (x$trained) {
+    cat(title, " on ", x$measures, " -> ", x$output_mw, sep = "")
+  } else {
+    cat(title)
+  }
+  cat("\n")
+  invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_lals <- function(x, ...) {
-	tibble::tibble(
-		lals_col = x$measures %||% NA_character_,
-		concentration_col = x$concentration_col %||% NA_character_,
-		angle = x$angle,
-		laser_wavelength = x$laser_wavelength,
-		dn_dc = x$dn_dc %||% NA_real_,
-		output_mw = x$output_mw,
-		id = x$id
-	)
+  tibble::tibble(
+    lals_col = x$measures %||% NA_character_,
+    concentration_col = x$concentration_col %||% NA_character_,
+    concentration_unit = x$concentration_unit %||% NA_character_,
+    angle = x$angle,
+    laser_wavelength = x$laser_wavelength,
+    dn_dc = x$dn_dc %||% NA_real_,
+    output_mw = x$output_mw,
+    id = x$id
+  )
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_lals <- function(x, ...) {
-	c("measure.sec", "measure")
+  c("measure.sec", "measure")
 }

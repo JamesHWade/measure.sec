@@ -136,15 +136,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

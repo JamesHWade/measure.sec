@@ -347,7 +347,8 @@ For more accurate molecular weight determination, multi-detector SEC uses RI for
 # Note: MALS processing requires additional detector configuration
 rec_multi <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = sec_triple_detect
+  # UV normalization requires a positive extinction coefficient.
+  data = dplyr::filter(sec_triple_detect, extinction_coef > 0)
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Convert each detector to measure format
@@ -381,7 +382,8 @@ rec_multi <- recipe(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,       # µL
-    sample_concentration = 2.0    # mg/mL
+    sample_concentration = 2.0,   # mg/mL
+    concentration_units = "mg/mL"
   ) |>
   # No scattering calibration supplied: output is relative and uncalibrated
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
@@ -629,7 +631,8 @@ Here's a complete workflow for analyzing polymer standards:
 # Create comprehensive recipe with explicit formula
 rec_complete <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef + polymer_type ~ sample_id,
-  data = sec_triple_detect
+  # UV normalization requires a positive extinction coefficient.
+  data = dplyr::filter(sec_triple_detect, extinction_coef > 0)
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Input conversion - all three detectors
@@ -646,7 +649,8 @@ rec_complete <- recipe(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,
-    sample_concentration = 2.0
+    sample_concentration = 2.0,
+    concentration_units = "mg/mL"
   ) |>
   # No scattering calibration supplied: output is relative and uncalibrated
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
@@ -680,8 +684,8 @@ result_complete |>
 | `step_sec_uv()` | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient |
 | `step_sec_dad()` | `measures`, `wavelengths` | Multi-wavelength diode array detection |
 | `step_sec_mals()` | `mals_col`, `dn_dc_column`, `wavelength` | Single-angle scattering approximation; no Rg or angular fit |
-| `step_sec_lals()` | `lals_col`, `dn_dc_column` | Low-angle LS for Mw without extrapolation |
-| `step_sec_rals()` | `rals_col`, `dn_dc_column` | Right-angle LS (90°) |
+| `step_sec_lals()` | `measures`, `concentration_col`, `concentration_unit`, `dn_dc` | Low-angle single-angle estimate; calibration required for absolute MW |
+| `step_sec_rals()` | `measures`, `concentration_col`, `concentration_unit`, `dn_dc` | Right-angle single-angle estimate; calibration required for absolute MW |
 | `step_sec_dls()` | `dls_col` | Dynamic LS for hydrodynamic radius |
 | `step_sec_viscometer()` | `visc_col`, `dp_column` | Differential viscometer for intrinsic viscosity |
 

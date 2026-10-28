@@ -14,7 +14,8 @@ step_sec_ri(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_ri")
+  id = recipes::rand_id("sec_ri"),
+  concentration_units = "g/mL"
 )
 }
 \arguments{
@@ -30,7 +31,7 @@ If \code{NULL}, will look for columns containing "ri" in the name.}
 }}
 
 \item{dn_dc_column}{Character name of a column containing sample-specific
-dn/dc values. Overrides \code{dn_dc} if provided.}
+positive finite dn/dc values. Overrides \code{dn_dc} if provided.}
 
 \item{instrument_constant}{RI detector instrument constant. Default is 1.0
 (no adjustment). This converts raw detector response to refractive index
@@ -45,6 +46,10 @@ units.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{concentration_units}{Units for the signal after dn/dc normalization:
+g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
+This is ignored when dn/dc normalization is skipped.}
 }
 \value{
 An updated recipe with the new step added.
@@ -64,9 +69,14 @@ concentration and dn/dc:
 where:
 \itemize{
 \item K is the instrument constant
-\item c is the concentration (mg/mL)
+\item c is mass concentration in g/mL when dn/dc is in mL/g
 \item dn/dc is the refractive index increment (mL/g)
 }
+
+Therefore dividing a calibrated refractive-index response by dn/dc gives
+concentration in g/mL. Set concentration_units to mg/mL to scale those
+values by 1000. The default preserves the current numeric behavior and can
+be read directly by scattering steps that use a tagged concentration curve.
 
 \strong{Common dn/dc values (in water at 25°C, 633 nm):}
 \itemize{
@@ -96,15 +106,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_mals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_mals]{step_sec_mals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

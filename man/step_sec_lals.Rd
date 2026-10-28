@@ -19,7 +19,8 @@ step_sec_lals(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_lals")
+  id = recipes::rand_id("sec_lals"),
+  concentration_unit = NULL
 )
 }
 \arguments{
@@ -40,10 +41,12 @@ step searches for measure columns containing "lals".}
 
 \item{solvent_ri}{Solvent refractive index. Default is 1.333 (water).}
 
-\item{optical_constant}{Optional optical constant K; overrides dn/dc.}
+\item{optical_constant}{Optional optical constant K; overrides dn/dc. K
+includes (dn/dc)^2 and uses units mol*cm^2/g^2.}
 
-\item{calibration_constant}{LALS instrument calibration constant. If \code{NULL},
-results are in relative units.}
+\item{calibration_constant}{LALS instrument calibration constant. If
+\code{NULL}, results are in relative units. Otherwise it converts the detector
+signal to excess Rayleigh ratio in cm^-1.}
 
 \item{output_mw}{Name for the molecular weight output column.}
 
@@ -57,6 +60,10 @@ MW is set to NA.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{concentration_unit}{Unit of the concentration curve: "mg/mL" or
+"g/mL". When omitted, the unit must be recorded on the curve or set by
+step_sec_concentration() or step_sec_ri().}
 }
 \value{
 An updated recipe with the new step added.
@@ -68,7 +75,13 @@ low-angle light scattering (LALS) signals for absolute molecular weight.
 \details{
 LALS provides absolute MW using a low-angle detector (e.g., ~7 degrees).
 It assumes P(theta) ~ 1 for small particles and is most accurate when
-angular dependence is minimal.
+angular dependence is minimal. For a calibrated signal, the estimate is
+\deqn{M = R(\theta)/(Kc)}
+where K = 4 pi^2 n_0^2 (dn/dc)^2/(N_A lambda_0^4), c is converted to g/mL,
+and lambda_0 is in cm when calculating K. This is a single-angle estimate;
+it does not fit multiple angles, extrapolate to zero angle, or estimate Rg.
+Without a detector calibration constant, the result is relative and must
+not be interpreted as a molar mass.
 
 \strong{When to use LALS vs MALS:}
 \itemize{
@@ -93,15 +106,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_mals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_mals]{step_sec_mals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

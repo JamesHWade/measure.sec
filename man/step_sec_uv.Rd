@@ -15,7 +15,8 @@ step_sec_uv(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_uv")
+  id = recipes::rand_id("sec_uv"),
+  concentration_units = "mg/mL"
 )
 }
 \arguments{
@@ -32,7 +33,9 @@ Can be:
 }}
 
 \item{extinction_column}{Character name of a column containing sample-specific
-extinction coefficients. Overrides \code{extinction_coef} if provided.}
+extinction coefficients. Overrides \code{extinction_coef} if provided. Values
+must be positive and finite because a zero coefficient cannot be inverted
+to determine concentration from absorbance.}
 
 \item{wavelength}{UV detection wavelength in nm. For documentation only.}
 
@@ -47,6 +50,10 @@ extinction coefficients. Overrides \code{extinction_coef} if provided.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{concentration_units}{Units for the signal after extinction
+normalization: mg/mL (default) or g/mL. This is ignored when extinction
+normalization is skipped.}
 }
 \value{
 An updated recipe with the new step added.
@@ -64,13 +71,15 @@ The UV detector measures absorbance according to the Beer-Lambert law:
 where:
 \itemize{
 \item A is absorbance (AU)
-\item epsilon is the molar extinction coefficient in mL/(mg*cm)
-\item c is the concentration (mg/mL)
+\item epsilon is a mass-specific extinction coefficient in mL/(mg*cm)
+\item c is the concentration in mg/mL
 \item l is the path length (cm)
 }
 
 This step can convert UV absorbance to concentration-proportional signals
-by dividing by the extinction coefficient and path length.
+by dividing by the extinction coefficient and path length. With the
+documented coefficient units, the result is mg/mL; set concentration_units
+to g/mL to divide by 1000.
 
 \strong{Common UV applications in SEC:}
 \itemize{
@@ -107,15 +116,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_mals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_mals]{step_sec_mals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}
