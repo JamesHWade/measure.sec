@@ -1,7 +1,7 @@
 # Load SEC Calibration Parameters
 
 Loads previously saved SEC calibration parameters for use in
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md).
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md).
 This enables reusing established calibrations without refitting.
 
 ## Usage
@@ -20,7 +20,7 @@ load_sec_calibration(file)
 
 A `sec_calibration` object that can be passed to the `calibration`
 argument of
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md).
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md).
 
 ## Details
 
@@ -36,17 +36,17 @@ The loaded calibration can be used in two ways:
 
 ## See also
 
-[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`save_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/save_sec_calibration.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 
 Other sec-calibration:
-[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md),
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md),
-[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+[`save_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/save_sec_calibration.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`step_sec_broad_standard()`](https://jameshwade.github.io/measure.sec/reference/step_sec_broad_standard.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

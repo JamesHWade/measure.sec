@@ -14,16 +14,17 @@ guide covers:
 
 ## Quick Reference: Export Functions
 
-| Function                                                                                                         | Purpose                 | Output                              |
-|------------------------------------------------------------------------------------------------------------------|-------------------------|-------------------------------------|
-| [`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md) | Per-sample MW averages  | Tibble with Mn, Mw, Mz, dispersity  |
-| [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)     | Point-by-point data     | Long or wide format tibble          |
-| [`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md)             | Multi-sample comparison | Summary, differences, optional plot |
-| [`measure_sec_report()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_report.md)               | Automated reports       | HTML, PDF, or Word document         |
+| Function | Purpose | Output |
+|----|----|----|
+| [`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md) | Per-sample MW averages | Tibble with Mn, Mw, Mz, dispersity |
+| [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md) | Point-by-point data | Long or wide format tibble |
+| [`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md) | Multi-sample comparison | Summary, differences, optional plot |
+| [`measure_sec_report()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_report.md) | Automated reports | HTML, PDF, or Word document |
 
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -50,11 +51,12 @@ library(ggplot2)
 
 In a real workflow, you’d process SEC data through calibration and MW
 averaging steps (see the [Getting
-Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md)
+Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md)
 vignette). Here, we’ll create representative processed data to
 demonstrate the export functions.
 
 ``` r
+
 # Simulate processed SEC results with realistic MW values
 # In practice, these columns come from step_sec_mw_averages()
 
@@ -85,6 +87,7 @@ For multi-sample comparisons, let’s create data for different polymer
 types:
 
 ``` r
+
 # Three batches with slight variations (typical QC scenario)
 batch1 <- tibble::tibble(
   sample_id = "Batch-001",
@@ -106,10 +109,11 @@ batch3 <- tibble::tibble(
 
 ### Basic Summary Table
 
-[`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md)
+[`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
 creates a one-row-per-sample table with key metrics:
 
 ``` r
+
 # Create summary table - automatically finds MW columns
 summary_tbl <- measure_sec_summary_table(
   processed,
@@ -134,6 +138,7 @@ print(summary_tbl)
 You can include any numeric column from your data:
 
 ``` r
+
 # Include method metadata alongside MW results
 summary_with_meta <- measure_sec_summary_table(
   processed,
@@ -159,6 +164,7 @@ print(summary_with_meta)
 For regulatory submissions that require specific precision:
 
 ``` r
+
 # Higher precision for documentation
 summary_precise <- measure_sec_summary_table(
   processed,
@@ -186,7 +192,7 @@ print(summary_precise)
 SEC analysis works on a point-by-point basis across the chromatogram.
 Each “slice” represents one data point with its elution time and
 corresponding signal values. Use
-[`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)
+[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md)
 to extract this detailed data from recipes that produce `measure_list`
 columns.
 
@@ -196,6 +202,7 @@ First, let’s process actual chromatogram data to demonstrate slice
 extraction:
 
 ``` r
+
 # Load and process actual chromatogram data
 data(sec_triple_detect)
 
@@ -223,6 +230,7 @@ chromatogram_data <- prep(rec) |> bake(new_data = NULL)
 Long format is best for plotting with ggplot2:
 
 ``` r
+
 # Extract slice data in long format
 slices_long <- measure_sec_slice_table(
   chromatogram_data,
@@ -248,6 +256,7 @@ head(slices_long, 10)
 ```
 
 ``` r
+
 # Plot using the slice table
 ggplot(slices_long, aes(x = location, y = value)) +
   geom_line(color = "#2E86AB") +
@@ -267,6 +276,7 @@ Wide format is better for spreadsheet export or correlating multiple
 measures:
 
 ``` r
+
 # Wide format puts each measure in its own column
 slices_wide <- measure_sec_slice_table(
   chromatogram_data,
@@ -290,6 +300,7 @@ head(slices_wide)
 ### Exporting Slice Data to CSV
 
 ``` r
+
 # Export for external analysis
 write.csv(slices_long, "sec_slice_data.csv", row.names = FALSE)
 
@@ -301,10 +312,11 @@ readr::write_csv(slices_long, "sec_slice_data.csv")
 
 ### Basic Comparison
 
-[`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md)
+[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md)
 provides side-by-side comparison with differences from a reference:
 
 ``` r
+
 # Compare the three batches we created earlier
 comparison <- measure_sec_compare(
   batch1, batch2, batch3,
@@ -347,6 +359,7 @@ The comparison object contains:
 - **`$reference`**: Which sample is the reference
 
 ``` r
+
 # Access individual components
 comparison$summary      # Metrics for all samples
 comparison$differences  # Differences from reference
@@ -358,6 +371,7 @@ comparison$reference    # Reference sample name
 By default, the first sample is the reference. You can change this:
 
 ``` r
+
 # Use PS 500K as reference
 comparison_ref <- measure_sec_compare(
   ps100k, ps500k, pmma,
@@ -371,6 +385,7 @@ comparison_ref <- measure_sec_compare(
 A common use case is comparing production batches to a reference lot:
 
 ``` r
+
 # Compare production batches
 batch_comparison <- measure_sec_compare(
   reference_lot,
@@ -391,6 +406,7 @@ batch_comparison$differences |>
 ### Available Templates
 
 ``` r
+
 # See available report templates
 list_sec_templates()
 #> # A tibble: 3 × 3
@@ -407,6 +423,7 @@ The standard template includes: - Summary table with MW averages -
 Chromatogram overlay - Molecular weight distribution plot
 
 ``` r
+
 # Generate HTML report
 measure_sec_report(
   processed,
@@ -422,6 +439,7 @@ measure_sec_report(
 For more comprehensive documentation:
 
 ``` r
+
 measure_sec_report(
   processed,
   template = "detailed",
@@ -437,6 +455,7 @@ measure_sec_report(
 For system suitability testing:
 
 ``` r
+
 measure_sec_report(
   sst_data,
   template = "qc",
@@ -453,6 +472,7 @@ measure_sec_report(
 ### Saving Reports to Specific Locations
 
 ``` r
+
 # Save to a specific path
 measure_sec_report(
   processed,
@@ -469,6 +489,7 @@ measure_sec_report(
 For spreadsheet-based workflows:
 
 ``` r
+
 # Requires writexl package
 library(writexl)
 
@@ -487,6 +508,7 @@ write_xlsx(
 For LIMS integration:
 
 ``` r
+
 # Using DBI for database connection
 library(DBI)
 
@@ -503,6 +525,7 @@ dbDisconnect(con)
 Prism prefers wide format with specific column arrangements:
 
 ``` r
+
 # Create Prism-friendly format
 prism_data <- slices_long |>
   select(location, sample_id, value) |>
@@ -516,6 +539,7 @@ write.csv(prism_data, "sec_for_prism.csv", row.names = FALSE)
 For interoperability with Python workflows:
 
 ``` r
+
 # Save as feather for fast Python loading
 arrow::write_feather(slices_long, "sec_data.feather")
 
@@ -530,6 +554,7 @@ arrow::write_parquet(slices_long, "sec_data.parquet")
 Always include metadata for regulatory compliance:
 
 ``` r
+
 # Add audit trail information
 summary_with_audit <- summary_tbl |>
   mutate(
@@ -546,6 +571,7 @@ summary_with_audit <- summary_tbl |>
 Use descriptive, consistent file names:
 
 ``` r
+
 # Good: includes key information
 "sec_summary_batch123_2024-01-15.xlsx"
 "mwd_comparison_stability_t12m.pdf"
@@ -560,6 +586,7 @@ Use descriptive, consistent file names:
 Save report parameters for reproducibility:
 
 ``` r
+
 # Save analysis parameters alongside results
 analysis_params <- list(
   date = Sys.time(),
@@ -580,6 +607,7 @@ If MW columns are missing from your summary table, check that you’ve run
 the calibration and MW averaging steps:
 
 ``` r
+
 # Ensure you have MW data
 names(processed)  # Should include Mn, Mw, Mz, or mw_mn, mw_mw, mw_mz
 ```
@@ -587,10 +615,11 @@ names(processed)  # Should include Mn, Mw, Mz, or mw_mn, mw_mw, mw_mz
 ### Empty Slice Tables
 
 If
-[`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)
+[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md)
 returns no data:
 
 ``` r
+
 # Check that measure columns exist
 find_measure_cols <- function(data) {
   names(data)[vapply(data, inherits, logical(1), "measure_list")]
@@ -601,7 +630,7 @@ find_measure_cols(processed)
 ### Report Generation Fails
 
 If
-[`measure_sec_report()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_report.md)
+[`measure_sec_report()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_report.md)
 fails:
 
 1.  Verify Quarto is installed:
@@ -612,25 +641,26 @@ fails:
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow and concepts
 - [Calibration
-  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
   Save and reuse calibrations
 - [System
-  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
   QC metrics and column performance
 - [Comprehensive SEC
-  Analysis](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md) -
+  Analysis](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md) -
   Complete reference with all functions
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -649,31 +679,32 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] parallelly_1.46.1   lava_1.8.2          tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.69.0       purrr_1.2.1        
-#> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
-#> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      utf8_1.2.6          survival_3.8-3     
-#> [49] future.apply_1.20.1 withr_3.0.2         scales_1.4.0       
-#> [52] lubridate_1.9.4     timechange_0.4.0    rmarkdown_2.30     
-#> [55] globals_0.19.0      nnet_7.3-20         timeDate_4052.112  
-#> [58] ragg_1.5.0          evaluate_1.0.5      knitr_1.51         
-#> [61] hardhat_1.4.2       rlang_1.1.7         Rcpp_1.1.1         
-#> [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
-#> [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
+#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
+#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        
+#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
+#> [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      
+#> [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          
+#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-6     
+#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
+#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
+#> [55] globals_0.20.0      otel_0.2.0          nnet_7.3-20        
+#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
+#> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [70] fs_2.1.0
 ```

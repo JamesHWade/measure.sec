@@ -22,7 +22,8 @@ step_sec_lals(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_lals")
+  id = recipes::rand_id("sec_lals"),
+  concentration_unit = NULL
 )
 ```
 
@@ -40,7 +41,7 @@ step_sec_lals(
 - concentration_col:
 
   Name of the concentration measure column (from
-  [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)
+  [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
   or similar).
 
 - angle:
@@ -53,8 +54,9 @@ step_sec_lals(
 
 - dn_dc:
 
-  Refractive index increment (mL/g). Required unless `optical_constant`
-  is provided.
+  Refractive index increment (mL/g). May be signed but must be finite
+  and nonzero because the optical constant uses its square. Required
+  unless `optical_constant` is provided.
 
 - solvent_ri:
 
@@ -62,12 +64,14 @@ step_sec_lals(
 
 - optical_constant:
 
-  Optional optical constant K; overrides dn/dc.
+  Optional optical constant K; overrides dn/dc. K includes (dn/dc)^2 and
+  uses units mol\*cm^2/g^2.
 
 - calibration_constant:
 
   LALS instrument calibration constant. If `NULL`, results are in
-  relative units.
+  relative units. Otherwise it converts the detector signal to excess
+  Rayleigh ratio in cm^-1.
 
 - output_mw:
 
@@ -94,6 +98,12 @@ step_sec_lals(
 
   Unique step identifier.
 
+- concentration_unit:
+
+  Unit of the concentration curve: "mg/mL" or "g/mL". When omitted, the
+  unit must be recorded on the curve or set by step_sec_concentration()
+  or step_sec_ri().
+
 ## Value
 
 An updated recipe with the new step added.
@@ -102,7 +112,13 @@ An updated recipe with the new step added.
 
 LALS provides absolute MW using a low-angle detector (e.g., ~7 degrees).
 It assumes P(theta) ~ 1 for small particles and is most accurate when
-angular dependence is minimal.
+angular dependence is minimal. For a calibrated signal, the estimate is
+\$\$M = R(\theta)/(Kc)\$\$ where K = 4 pi^2 n_0^2 (dn/dc)^2/(N_A
+lambda_0^4), c is converted to g/mL, and lambda_0 is in cm when
+calculating K. This is a single-angle estimate; it does not fit multiple
+angles, extrapolate to zero angle, or estimate Rg. Without a detector
+calibration constant, the result is relative and must not be interpreted
+as a molar mass.
 
 **When to use LALS vs MALS:**
 
@@ -116,15 +132,15 @@ angular dependence is minimal.
 ## See also
 
 Other sec-detectors:
-[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
-[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
-[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
-[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
-[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
-[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
-[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md),
-[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md),
+[`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

@@ -11,9 +11,11 @@ calibration curve fitting. This package is a technique pack for the
 
 Useful links:
 
-- <https://github.com/JamesHWade/measure-sec>
+- <https://github.com/JamesHWade/measure.sec>
 
-- Report bugs at <https://github.com/JamesHWade/measure-sec/issues>
+- <https://jameshwade.github.io/measure.sec>
+
+- Report bugs at <https://github.com/JamesHWade/measure.sec/issues>
 
 ## Author
 

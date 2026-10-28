@@ -2,6 +2,12 @@
 
 ## Overview
 
+> The branching calculations in this vignette use supplied
+> molecular-weight and radius-of-gyration values. The current
+> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+> implementation does not fit multi-angle data or calculate radius of
+> gyration.
+
 This guide shows how to analyze polymer branching using multi-detector
 SEC data. You’ll learn to:
 
@@ -14,6 +20,7 @@ SEC data. You’ll learn to:
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -55,6 +62,7 @@ The package includes `sec_branched`, a dataset with linear, branched,
 and star polymers:
 
 ``` r
+
 data(sec_branched)
 
 # Sample overview
@@ -99,13 +107,16 @@ sec_branched |>
 The branching index **g** compares the radius of gyration of a branched
 polymer to a linear reference at the same molecular weight:
 
-$$g = \frac{R_{g}^{2}\left( \text{branched} \right)}{R_{g}^{2}\left( \text{linear} \right)}$$
+``` math
+g = \frac{R_g^2(\text{branched})}{R_g^2(\text{linear})}
+```
 
 Values of g \< 1 indicate branching (branched chains are more compact).
 
 ### Using Linear Reference Data
 
 ``` r
+
 # Extract linear and branched samples
 linear_ref <- sec_branched |>
   filter(topology == "linear") |>
@@ -160,6 +171,7 @@ print(g_result)
 | \< 0.4  | Highly branched (star, hyperbranched) |
 
 ``` r
+
 # Visualize g across MW distribution
 branched_with_g <- branched_sample |>
   mutate(g = g_result$g)
@@ -168,7 +180,7 @@ ggplot(branched_with_g, aes(x = mw, y = g)) +
 
 geom_point(alpha = 0.5, color = "#2E86AB") +
   geom_hline(yintercept = 1, linetype = "dashed", color = "gray50") +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
   labs(
     x = "Molecular Weight (Da)",
     y = "Branching Index (g)",
@@ -186,6 +198,7 @@ The branching frequency (branches per molecule) can be estimated from g
 using Zimm-Stockmayer theory:
 
 ``` r
+
 # Calculate branching frequency assuming random branching
 freq <- measure_branching_frequency(
   g = g_result$g,
@@ -226,6 +239,7 @@ The relationship between g and branching frequency depends on polymer
 architecture:
 
 ``` r
+
 # Compare architectures for the same g value
 g_test <- 0.6
 
@@ -253,7 +267,9 @@ data.frame(
 Mark-Houwink parameters (K and α) describe the relationship between
 intrinsic viscosity and molecular weight:
 
-$$\lbrack\eta\rbrack = K \cdot M^{\alpha}$$
+``` math
+[\eta] = K \cdot M^\alpha
+```
 
 The exponent α provides conformational information:
 
@@ -265,6 +281,7 @@ The exponent α provides conformational information:
 | \< 0.5  | Branched/compact             |
 
 ``` r
+
 # Extract MW and intrinsic viscosity data
 linear_data <- sec_branched |>
   filter(topology == "linear", !is.na(intrinsic_visc), intrinsic_visc > 0)
@@ -292,6 +309,7 @@ print(mh)
 ### Comparing Linear vs Branched
 
 ``` r
+
 # Compare Mark-Houwink plots
 comparison_data <- sec_branched |>
   filter(!is.na(intrinsic_visc), intrinsic_visc > 0) |>
@@ -300,7 +318,7 @@ comparison_data <- sec_branched |>
 ggplot(comparison_data, aes(x = mw, y = intrinsic_visc, color = topology)) +
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
   scale_y_log10() +
   scale_color_manual(values = c("linear" = "#2E86AB", "branched" = "#A23B72")) +
   labs(
@@ -322,11 +340,14 @@ ggplot(comparison_data, aes(x = mw, y = intrinsic_visc, color = topology)) +
 The relationship between radius of gyration and molecular weight
 follows:
 
-$$R_{g} = K_{Rg} \cdot M^{\nu}$$
+``` math
+R_g = K_{Rg} \cdot M^\nu
+```
 
 The exponent ν provides conformational information similar to α.
 
 ``` r
+
 # Calculate Rg-MW scaling parameters
 rg_scaling <- measure_rg_mw_scaling(
   mw = linear_data$mw,
@@ -357,6 +378,7 @@ theoretical predictions to identify the most likely branching
 architecture:
 
 ``` r
+
 # Compare experimental data to branching models
 branched_data <- sec_branched |>
   filter(topology == "branched", !is.na(branching_index))
@@ -374,7 +396,7 @@ print(comparison)
 #> ------------------------------------------------------------ 
 #>          model   parameter r_squared       rmse        aic
 #>         random 0.066439282 0.9545604 0.01740491 -11066.463
-#>           star 1.657330906 0.6361160 0.04925336  -6691.276
+#>           star 1.657330898 0.6361160 0.04925336  -6691.276
 #>           comb 0.007454604 0.7363526 0.04192433  -7368.910
 #>  hyperbranched 0.132485444 0.9303057 0.02155524 -10166.940
 #> ------------------------------------------------------------ 
@@ -391,10 +413,11 @@ print(comparison)
 ## Conformation Plots
 
 Visualize structure-MW relationships with
-[`plot_sec_conformation()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_conformation.md).
+[`plot_sec_conformation()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_conformation.md).
 The slope reveals polymer conformation:
 
 ``` r
+
 # Prepare data for conformation plot
 plot_data <- sec_branched |>
   filter(!is.na(rg), rg > 0, !is.na(mw), mw > 0)
@@ -422,6 +445,7 @@ in good solvent - **ν \< 0.5**: Branched or compact structures - **ν \>
 Here’s a complete workflow for analyzing an unknown branched sample:
 
 ``` r
+
 # Step 1: Load and prepare data
 unknown_sample <- sec_branched |>
   filter(sample_id == "Branch-200K")
@@ -467,34 +491,35 @@ cat("(α < 0.5 suggests branching)\n")
 
 ## Summary
 
-| Analysis            | Function                                                                                                                           | Key Output                 |
-|---------------------|------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| Branching index     | [`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md)                       | g ratio (\< 1 = branched)  |
-| Branching frequency | [`measure_branching_frequency()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.md)               | Branches per molecule      |
-| Mark-Houwink        | [`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md)                           | K, α (α \< 0.5 = branched) |
-| Rg scaling          | [`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure-sec/reference/measure_rg_mw_scaling.md)                           | ν exponent                 |
-| Model comparison    | [`measure_branching_model_comparison()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_model_comparison.md) | Best-fit architecture      |
-| Visualization       | [`plot_sec_conformation()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_conformation.md)                           | Conformation plots         |
+| Analysis | Function | Key Output |
+|----|----|----|
+| Branching index | [`measure_branching_index()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md) | g ratio (\< 1 = branched) |
+| Branching frequency | [`measure_branching_frequency()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_frequency.md) | Branches per molecule |
+| Mark-Houwink | [`measure_mh_parameters()`](https://jameshwade.github.io/measure.sec/reference/measure_mh_parameters.md) | K, α (α \< 0.5 = branched) |
+| Rg scaling | [`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure.sec/reference/measure_rg_mw_scaling.md) | ν exponent |
+| Model comparison | [`measure_branching_model_comparison()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_model_comparison.md) | Best-fit architecture |
+| Visualization | [`plot_sec_conformation()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_conformation.md) | Conformation plots |
 
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow
 - [Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
   MALS and viscometry setup
 - [SEC Analysis
-  Reference](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md) -
+  Reference](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md) -
   Complete function reference
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -513,32 +538,33 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
-#> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] nlme_3.1-168        parallelly_1.46.1   lava_1.8.2         
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.69.0      
-#> [40] purrr_1.2.1         listenv_0.10.0      labeling_0.4.3     
-#> [43] splines_4.5.2       fastmap_1.2.0       grid_4.5.2         
-#> [46] cli_3.6.5           magrittr_2.0.4      utf8_1.2.6         
-#> [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        
-#> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   
-#> [55] rmarkdown_2.30      globals_0.19.0      nnet_7.3-20        
-#> [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     
-#> [61] knitr_1.51          hardhat_1.4.2       mgcv_1.9-3         
-#> [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
-#> [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [70] systemfonts_1.3.1   fs_1.6.6
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      stats4_4.6.1        parallel_4.6.1     
+#> [10] tibble_3.3.1        pkgconfig_2.0.3     Matrix_1.7-5       
+#> [13] data.table_1.18.6.1 RColorBrewer_1.1-3  S7_0.2.2           
+#> [16] desc_1.4.3          lifecycle_1.0.5     compiler_4.6.1     
+#> [19] farver_2.1.2        textshaping_1.0.5   codetools_0.2-20   
+#> [22] htmltools_0.5.9     class_7.3-23        sass_0.4.10        
+#> [25] yaml_2.3.12         prodlim_2026.03.11  tidyr_1.3.2        
+#> [28] pillar_1.11.1       pkgdown_2.2.1       jquerylib_0.1.4    
+#> [31] MASS_7.3-65         cachem_1.1.0        gower_1.0.2        
+#> [34] rpart_4.1.27        nlme_3.1-169        parallelly_1.48.0  
+#> [37] lava_1.10           tidyselect_1.2.1    digest_0.6.39      
+#> [40] future_1.80.0       purrr_1.2.2         listenv_1.1.0      
+#> [43] labeling_0.4.3      splines_4.6.1       fastmap_1.2.0      
+#> [46] grid_4.6.1          cli_3.6.6           magrittr_2.0.5     
+#> [49] utf8_1.2.6          survival_3.8-6      future.apply_1.21.0
+#> [52] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [55] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [58] otel_0.2.0          nnet_7.3-20         timeDate_4052.112  
+#> [61] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [64] hardhat_1.4.3       mgcv_1.9-4          rlang_1.3.0        
+#> [67] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [70] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [73] fs_2.1.0
 ```

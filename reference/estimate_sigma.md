@@ -2,7 +2,7 @@
 
 Estimates the instrumental spreading parameter (sigma) from a narrow
 molecular weight standard peak. This sigma value can then be used in
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md)
 to correct for band broadening.
 
 ## Usage

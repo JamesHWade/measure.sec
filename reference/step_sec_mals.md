@@ -1,9 +1,9 @@
 # Multi-Angle Light Scattering Processing for SEC
 
 `step_sec_mals()` creates a *specification* of a recipe step that
-processes multi-angle light scattering (MALS) detector signals to
-determine absolute molecular weight and radius of gyration at each
-elution slice.
+processes one light-scattering detector signal using a single-angle
+approximation. Multi-angle extrapolation and radius of gyration are not
+yet implemented.
 
 ## Usage
 
@@ -20,12 +20,13 @@ step_sec_mals(
   formalism = c("zimm", "debye", "berry"),
   calibration_constant = NULL,
   output_mw = "mw_mals",
-  output_rg = "rg",
+  output_rg = NULL,
   min_signal = 0.01,
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mals")
+  id = recipes::rand_id("sec_mals"),
+  concentration_unit = NULL
 )
 ```
 
@@ -43,16 +44,19 @@ step_sec_mals(
 - concentration_col:
 
   Name of the concentration measure column (from
-  [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)
+  [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
   or similar).
 
 - dn_dc:
 
-  Refractive index increment (mL/g). Required for absolute MW.
+  Refractive index increment (mL/g). May be signed but must be finite
+  and nonzero because the optical constant uses its square. Required for
+  absolute MW unless `dn_dc_column` is provided.
 
 - dn_dc_column:
 
-  Column containing sample-specific dn/dc values.
+  Column containing sample-specific finite, nonzero dn/dc values; either
+  sign is valid.
 
 - wavelength:
 
@@ -65,19 +69,19 @@ step_sec_mals(
 
 - angles:
 
-  Numeric vector of detection angles in degrees. For single-angle
-  detectors, provide just one value (e.g., `90` for RALS). Default
-  assumes a 90-degree detector.
+  One detection angle in degrees, default 90. The calculation assumes
+  the particle form factor is approximately 1 at this angle.
 
 - formalism:
 
-  Angular extrapolation method for multi-angle data: `"zimm"` (default),
-  `"debye"`, or `"berry"`.
+  Reserved for future angular extrapolation. Only the default `"zimm"`
+  is accepted; no angular fit is performed by this approximation.
 
 - calibration_constant:
 
-  MALS instrument calibration constant. If `NULL`, results are in
-  relative units. Obtain from toluene standard calibration.
+  Factor converting the detector signal to excess Rayleigh ratio
+  (cm^-1). If `NULL`, results are relative and uncalibrated. The
+  appropriate factor depends on the instrument's signal convention.
 
 - output_mw:
 
@@ -85,8 +89,7 @@ step_sec_mals(
 
 - output_rg:
 
-  Name for the radius of gyration output column. Default is `"rg"`. Only
-  calculated if multiple angles are provided.
+  Must be `NULL`; radius of gyration is not yet implemented.
 
 - min_signal:
 
@@ -109,15 +112,24 @@ step_sec_mals(
 
   Unique step identifier.
 
+- concentration_unit:
+
+  Unit of the concentration curve: `"mg/mL"` or `"g/mL"`. When omitted,
+  the unit must be recorded by a preceding
+  [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
+  step; an untagged curve requires an explicit unit.
+
 ## Value
 
-An updated recipe with the new step added, containing absolute MW (and
-optionally Rg) at each elution point.
+An updated recipe with a single-angle MW estimate at each elution point.
+With no calibration constant the output is explicitly uncalibrated.
 
 ## Details
 
-Light scattering provides absolute molecular weight without calibration
-standards. The fundamental relationship is:
+Calibrated light scattering can estimate molecular weight without
+polymer standards. This approximation also requires an instrument
+calibration constant and a concentration signal with known units. The
+relationship is:
 
 \$\$\frac{K \cdot c}{R(\theta)} = \frac{1}{M_w} \cdot P(\theta) + 2A_2
 c\$\$
@@ -139,19 +151,8 @@ where:
 The optical constant K is calculated as: \$\$K = \frac{4\pi^2 n_0^2
 (dn/dc)^2}{N_A \lambda^4}\$\$
 
-**Formalisms for Angular Extrapolation:**
-
-- Zimm: Kc/R vs sin^2(theta/2) - best for random coils
-
-- Debye: Kc/R vs sin^2(theta/2) - similar to Zimm
-
-- Berry: sqrt(Kc/R) vs sin^2(theta/2) - better for large particles
-
-**Single-Angle vs Multi-Angle:**
-
-- Single angle (RALS/LALS): Provides Mw only, assumes P(theta) ~ 1
-
-- Multi-angle (MALS): Provides both Mw and Rg from angular dependence
+The implementation uses a single-angle approximation with P(theta) ~ 1;
+it does not calculate an angular extrapolation or Rg.
 
 ## Note
 
@@ -168,15 +169,15 @@ Accurate results require:
 ## See also
 
 Other sec-detectors:
-[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
-[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
-[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
-[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
-[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
-[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md),
-[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md),
+[`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

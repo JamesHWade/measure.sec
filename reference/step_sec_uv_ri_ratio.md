@@ -109,13 +109,13 @@ detector response factors, which depend on chemical composition.
 
 Both UV and RI signals should be baseline-corrected and properly aligned
 (using
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md))
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md))
 before calculating the ratio.
 
 ## See also
 
 Other sec-composition:
-[`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md)
+[`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md)
 
 ## Examples
 

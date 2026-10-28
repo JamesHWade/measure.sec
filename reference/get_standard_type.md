@@ -22,12 +22,12 @@ Character string of the standard type: "PS", "PMMA", "PEG", "Pullulan",
 ## See also
 
 Other standards:
-[`auto_detect_standards()`](https://jameshwade.github.io/measure-sec/reference/auto_detect_standards.md),
-[`get_recognized_standards()`](https://jameshwade.github.io/measure-sec/reference/get_recognized_standards.md),
-[`get_standard_names()`](https://jameshwade.github.io/measure-sec/reference/get_standard_names.md),
-[`is_standard()`](https://jameshwade.github.io/measure-sec/reference/is_standard.md),
-[`match_standards()`](https://jameshwade.github.io/measure-sec/reference/match_standards.md),
-[`normalize_standard_name()`](https://jameshwade.github.io/measure-sec/reference/normalize_standard_name.md)
+[`auto_detect_standards()`](https://jameshwade.github.io/measure.sec/reference/auto_detect_standards.md),
+[`get_recognized_standards()`](https://jameshwade.github.io/measure.sec/reference/get_recognized_standards.md),
+[`get_standard_names()`](https://jameshwade.github.io/measure.sec/reference/get_standard_names.md),
+[`is_standard()`](https://jameshwade.github.io/measure.sec/reference/is_standard.md),
+[`match_standards()`](https://jameshwade.github.io/measure.sec/reference/match_standards.md),
+[`normalize_standard_name()`](https://jameshwade.github.io/measure.sec/reference/normalize_standard_name.md)
 
 ## Examples
 

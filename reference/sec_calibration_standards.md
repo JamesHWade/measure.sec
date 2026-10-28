@@ -103,7 +103,7 @@ This dataset enables several key calibration workflows:
 
 **Conventional Calibration:** Use `retention_time` (or
 `retention_volume`) and `log_mp` with
-[`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`step_sec_conventional_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 to build a calibration curve.
 
 **Universal Calibration:** Use `log_hydrodynamic_vol` vs retention for
@@ -128,35 +128,35 @@ Dispersity values confirm standards are suitably narrow.
 
 ## See also
 
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md)
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md)
 for polystyrene-only subset
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md)
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md)
 for PMMA-only subset
-[`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`step_sec_conventional_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 for conventional calibration
-[`step_sec_universal_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+[`step_sec_universal_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md)
 for universal calibration
 
 Other sec-data:
-[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
-[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
+[`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_protein`](https://jameshwade.github.io/measure.sec/reference/sec_protein.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure.sec/reference/sec_system_suitability.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
 
 Other sec-calibration:
-[`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md),
-[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md),
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md),
-[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+[`load_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/load_sec_calibration.md),
+[`save_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/save_sec_calibration.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`step_sec_broad_standard()`](https://jameshwade.github.io/measure.sec/reference/step_sec_broad_standard.md),
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

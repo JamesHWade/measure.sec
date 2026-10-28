@@ -100,31 +100,31 @@ analysis:
 **Typical SEC Workflow:** 1 . Convert to measure format with
 [`step_measure_input_long`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
 2. Correct inter-detector delays with
-[`step_sec_detector_delay`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+[`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
 3. Apply baseline correction with
-[`step_sec_baseline`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+[`step_sec_baseline`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
 4. Process detectors with
-[`step_sec_ri`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)
+[`step_sec_ri`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md)
 or
-[`step_sec_uv`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)
+[`step_sec_uv`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md)
 5. Convert to concentration with
-[`step_sec_concentration`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)
+[`step_sec_concentration`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
 6. Calculate MW averages with
-[`step_sec_mw_averages`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+[`step_sec_mw_averages`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
 
 ## See also
 
 Other sec-data:
-[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md)
+[`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_protein`](https://jameshwade.github.io/measure.sec/reference/sec_protein.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure.sec/reference/sec_system_suitability.md)
 
 ## Examples
 

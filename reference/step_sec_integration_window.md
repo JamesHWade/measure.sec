@@ -4,7 +4,7 @@
 step that defines the integration window (start and end x-axis bounds)
 for molecular weight calculations. This step adds an
 `.integration_window` column that downstream steps like
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
 can use.
 
 ## Usage
@@ -137,22 +137,22 @@ and `id` is returned.
 
 ## See also
 
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
 which uses the integration window,
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 for calibration.
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
-[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md),
-[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md),
+[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_refine.md)
 
 ## Examples
 

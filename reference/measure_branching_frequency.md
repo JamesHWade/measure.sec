@@ -90,11 +90,11 @@ Molecules Containing Branches and Rings." J. Chem. Phys., 17, 1301-1314.
 ## See also
 
 Other sec-polymer:
-[`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md),
-[`measure_branching_model_comparison()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_model_comparison.md),
-[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md),
-[`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md),
-[`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure-sec/reference/measure_rg_mw_scaling.md)
+[`measure_branching_index()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md),
+[`measure_branching_model_comparison()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_model_comparison.md),
+[`measure_conformation_data()`](https://jameshwade.github.io/measure.sec/reference/measure_conformation_data.md),
+[`measure_mh_parameters()`](https://jameshwade.github.io/measure.sec/reference/measure_mh_parameters.md),
+[`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure.sec/reference/measure_rg_mw_scaling.md)
 
 ## Examples
 

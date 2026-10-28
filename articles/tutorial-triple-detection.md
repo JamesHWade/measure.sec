@@ -14,7 +14,7 @@ results** against known values
 ## Prerequisites
 
 - Completed [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md)
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md)
   tutorial
 - Familiarity with conventional SEC calibration
 - Basic understanding of light scattering (optional but helpful)
@@ -38,6 +38,7 @@ measure MW directly. The “triple” refers to:
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -68,6 +69,7 @@ signals are **NOT aligned**. Each detector is at a different position in
 the flow path, so they see the same molecules at different times.
 
 ``` r
+
 # Load raw multi-detector data
 data(sec_raw_multidetector)
 
@@ -87,6 +89,7 @@ sec_raw_multidetector |>
 Let’s visualize the delay standard to see the misalignment:
 
 ``` r
+
 # Extract delay standard
 delay_std <- sec_raw_multidetector |>
   filter(sample_id == "PS-DelayStd")
@@ -133,6 +136,7 @@ offset between detectors. We find the peak maximum in each detector and
 calculate the difference.
 
 ``` r
+
 # Find peak time for each detector
 find_peak_time <- function(time, signal) {
   # Simple peak finding: maximum after smoothing
@@ -181,10 +185,11 @@ cat("  MALS: ", round(delay_mals * flow_rate, 3), "mL\n")
 ## Step 2: Apply Delay Correction
 
 Now we align all signals to the RI reference. The
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
 function handles this:
 
 ``` r
+
 # Process delay standard with correction
 # Note: delay_volumes are in mL; our delays are in minutes, so convert
 # Using flow_rate = 1.0 mL/min, time in min = volume in mL
@@ -211,6 +216,7 @@ aligned <- prep(rec_aligned) |> bake(new_data = NULL)
 ```
 
 ``` r
+
 # Extract and normalize aligned signals
 ri_chrom <- aligned$ri[[1]]
 uv_chrom <- aligned$uv[[1]]
@@ -253,6 +259,7 @@ The peaks now align across all detectors.
 Let’s analyze the unknown samples using our determined delays:
 
 ``` r
+
 # Select a sample
 sample_1 <- sec_raw_multidetector |>
   filter(sample_id == "Sample-1")
@@ -292,15 +299,18 @@ result_sample |>
 ## Step 4: Calculate Absolute MW from MALS
 
 In a full workflow, you would use
-[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
 to calculate molecular weight from the light scattering signal combined
 with concentration. The basic relationship is:
 
-$$M_{w} = \frac{R_{\theta}}{K^{*} \cdot c \cdot P(\theta)}$$
+``` math
+M_w = \frac{R_\theta}{K^* \cdot c \cdot P(\theta)}
+```
 
-Where: - $R_{\theta}$ = excess Rayleigh ratio (from MALS signal) -
-$K^{*}$ = optical constant (depends on dn/dc, wavelength) - $c$ =
-concentration (from RI) - $P(\theta)$ = form factor (angular dependence)
+Where: - $`R_\theta`$ = excess Rayleigh ratio (from MALS signal) -
+$`K^*`$ = optical constant (depends on dn/dc, wavelength) - $`c`$ =
+concentration (from RI) - $`P(\theta)`$ = form factor (angular
+dependence)
 
 ![](tutorial-triple-detection_files/figure-html/mals-concept-1.png)![](tutorial-triple-detection_files/figure-html/mals-concept-2.png)
 
@@ -309,6 +319,7 @@ concentration (from RI) - $P(\theta)$ = form factor (angular dependence)
 Let’s process all samples and compare results to known values:
 
 ``` r
+
 analyze_sample <- function(sample_data) {
   sample_id <- unique(sample_data$sample_id)
   known_mw <- unique(sample_data$mw)
@@ -363,6 +374,7 @@ print(all_results)
 ## Comparison: Overlay All Processed Chromatograms
 
 ``` r
+
 # Process all samples for plotting
 process_for_plot <- function(sample_data) {
   sid <- unique(sample_data$sample_id)
@@ -412,24 +424,24 @@ ggplot(plot_data, aes(location, value, color = label)) +
 
 ## When to Use Triple Detection vs Conventional Calibration
 
-| Scenario                                   | Recommended Method                 |
-|--------------------------------------------|------------------------------------|
-| Known polymer with available standards     | Conventional calibration           |
-| Unknown polymer type                       | Triple detection                   |
-| Need absolute MW for regulatory submission | Triple detection                   |
-| Branching analysis                         | Triple detection (with viscometer) |
-| Routine QC of known products               | Conventional calibration           |
-| Copolymers with variable composition       | Triple detection                   |
+| Scenario | Recommended Method |
+|----|----|
+| Known polymer with available standards | Conventional calibration |
+| Unknown polymer type | Triple detection |
+| Need absolute MW for regulatory submission | Triple detection |
+| Branching analysis | Triple detection (with viscometer) |
+| Routine QC of known products | Conventional calibration |
+| Copolymers with variable composition | Triple detection |
 
 ## Troubleshooting Common Issues
 
-| Problem                | Possible Cause                       | Solution                                |
-|------------------------|--------------------------------------|-----------------------------------------|
-| MALS signal very noisy | Low concentration or small molecules | Increase injection, use LALS/RALS       |
-| MW values too high     | Aggregates or dust in sample         | Filter sample, check for aggregates     |
-| MW values too low      | Incorrect dn/dc                      | Measure dn/dc or use literature value   |
-| Peaks still misaligned | Wrong delay values                   | Re-run delay determination              |
-| Negative MW at edges   | Low S/N ratio                        | Use integration limits to exclude edges |
+| Problem | Possible Cause | Solution |
+|----|----|----|
+| MALS signal very noisy | Low concentration or small molecules | Increase injection, use LALS/RALS |
+| MW values too high | Aggregates or dust in sample | Filter sample, check for aggregates |
+| MW values too low | Incorrect dn/dc | Measure dn/dc or use literature value |
+| Peaks still misaligned | Wrong delay values | Re-run delay determination |
+| Negative MW at edges | Low S/N ratio | Use integration limits to exclude edges |
 
 ## Summary
 
@@ -439,7 +451,7 @@ You’ve completed a triple detection workflow:
     aligned
 2.  **Determined delays** using a narrow standard
 3.  **Applied corrections** with
-    [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+    [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
 4.  **Processed samples** through the complete workflow
 
 ### Key Takeaways
@@ -454,20 +466,21 @@ You’ve completed a triple detection workflow:
 
 ## Next Steps
 
-| Topic                            | Resource                                                                                                                    |
-|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| MALS theory and angular analysis | [MALS Detection Guide](https://jameshwade.github.io/measure-sec/articles/mals-detection.md)                                 |
-| Single-angle alternatives        | [LALS/RALS Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md)                             |
-| Adding viscometer for \[η\]      | [Multi-Detector SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)                                 |
-| Conventional calibration         | [Conventional Calibration Tutorial](https://jameshwade.github.io/measure-sec/articles/tutorial-conventional-calibration.md) |
+| Topic | Resource |
+|----|----|
+| MALS theory and angular analysis | [MALS Detection Guide](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
+| Single-angle alternatives | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
+| Adding viscometer for \[η\] | [Multi-Detector SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) |
+| Conventional calibration | [Conventional Calibration Tutorial](https://jameshwade.github.io/measure.sec/articles/tutorial-conventional-calibration.md) |
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -486,31 +499,32 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          tidyr_1.3.2            measure.sec_0.0.0.9000
-#> [4] measure_0.0.1.9002     recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          tidyr_1.3.2            measure.sec_0.0.0.9000
+#> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  pillar_1.11.1       pkgdown_2.2.0      
+#> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
 #> [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       
-#> [31] gower_1.0.2         rpart_4.1.24        parallelly_1.46.1  
-#> [34] lava_1.8.2          tidyselect_1.2.1    digest_0.6.39      
-#> [37] future_1.69.0       purrr_1.2.1         listenv_0.10.0     
-#> [40] labeling_0.4.3      splines_4.5.2       fastmap_1.2.0      
-#> [43] grid_4.5.2          cli_3.6.5           magrittr_2.0.4     
-#> [46] utf8_1.2.6          survival_3.8-3      future.apply_1.20.1
-#> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
-#> [52] timechange_0.4.0    rmarkdown_2.30      globals_0.19.0     
-#> [55] nnet_7.3-20         timeDate_4052.112   ragg_1.5.0         
-#> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] viridisLite_0.4.2   rlang_1.1.7         Rcpp_1.1.1         
-#> [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
-#> [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
+#> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.48.0  
+#> [34] lava_1.10           tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.80.0       purrr_1.2.2         listenv_1.1.0      
+#> [40] labeling_0.4.3      splines_4.6.1       fastmap_1.2.0      
+#> [43] grid_4.6.1          cli_3.6.6           magrittr_2.0.5     
+#> [46] utf8_1.2.6          survival_3.8-6      future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.2.0          nnet_7.3-20         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       viridisLite_0.4.3   rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [70] fs_2.1.0
 ```

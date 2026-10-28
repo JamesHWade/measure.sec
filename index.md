@@ -41,20 +41,23 @@ You can install the development version of measure.sec from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 # install.packages("pak")
-pak::pak("JamesHWade/measure-sec")
+pak::pak("JamesHWade/measure.sec")
 ```
 
 Note: measure.sec requires the
 [measure](https://github.com/JamesHWade/measure) package:
 
 ``` r
+
 pak::pak("JamesHWade/measure")
 ```
 
 ## Quick Start
 
 ``` r
+
 library(measure)
 library(measure.sec)
 library(recipes)
@@ -89,54 +92,55 @@ result <- bake(prepped, new_data = NULL)
 
 ### Detector Processing
 
-| Step                                                                                                         | Description                                           |
-|--------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
-| [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md)                         | RI detector with dn/dc normalization                  |
-| [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md)                         | UV detector with extinction coefficient               |
-| [`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md)                       | Diode array detector processing (multi-wavelength UV) |
-| [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)                     | Multi-angle light scattering for absolute MW          |
-| [`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md)                     | Low-angle light scattering for absolute MW            |
-| [`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md)                     | Right-angle light scattering for absolute MW          |
-| [`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md)                       | Dynamic light scattering for Rh and diffusion         |
-| [`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)         | Differential viscometer processing                    |
-| [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)   | Convert signal to concentration                       |
-| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation                       |
+| Step | Description |
+|----|----|
+| [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md) | RI detector with dn/dc normalization |
+| [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md) | UV detector with extinction coefficient |
+| [`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md) | Diode array detector processing (multi-wavelength UV) |
+| [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md) | Single-angle light-scattering approximation; multi-angle fits and Rg are not implemented |
+| [`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md) | Low-angle light scattering for absolute MW |
+| [`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md) | Right-angle light scattering for absolute MW |
+| [`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md) | Dynamic light scattering for Rh and diffusion |
+| [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md) | Differential viscometer processing |
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | Convert signal to concentration |
+| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md) | Intrinsic viscosity calculation |
 
 ### Preprocessing
 
-| Step                                                                                                         | Description                          |
-|--------------------------------------------------------------------------------------------------------------|--------------------------------------|
-| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md) | Correct inter-detector volume delays |
-| [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)             | SEC-optimized baseline correction    |
+| Step | Description |
+|----|----|
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | Correct inter-detector volume delays |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | SEC-optimized baseline correction |
 
 ### Molecular Weight
 
-| Step                                                                                                             | Description                                   |
-|------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
-| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)           | Calculate Mn, Mw, Mz, dispersity              |
-| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)         | Calculate MW fractions above/below cutoffs    |
-| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md)   | Generate differential/cumulative MWD          |
-| [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md) | Narrow standard calibration (polynomial fits) |
-| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)       | Universal calibration with Mark-Houwink       |
+| Step | Description |
+|----|----|
+| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md) | Calculate Mn, Mw, Mz, dispersity |
+| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md) | Calculate MW fractions above/below cutoffs |
+| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md) | Generate differential/cumulative MWD |
+| [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md) | Narrow standard calibration (polynomial fits) |
+| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md) | Universal calibration with Mark-Houwink |
 
 ### Composition Analysis
 
-| Step                                                                                                   | Description                             |
-|--------------------------------------------------------------------------------------------------------|-----------------------------------------|
-| [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md) | UV/RI ratio for heterogeneity detection |
-| [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md) | Copolymer composition from UV/RI        |
+| Step | Description |
+|----|----|
+| [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv_ri_ratio.md) | UV/RI ratio for heterogeneity detection |
+| [`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md) | Copolymer composition from UV/RI |
 
 ### Protein SEC
 
-| Step                                                                                                 | Description                                                       |
-|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| [`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md)       | Complete protein SEC workflow (baseline + aggregates + oligomers) |
-| [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md) | HMWS/monomer/LMWS quantitation                                    |
-| [`step_sec_oligomer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.md)     | Detailed oligomer species analysis                                |
+| Step | Description |
+|----|----|
+| [`step_sec_protein()`](https://jameshwade.github.io/measure.sec/reference/step_sec_protein.md) | Complete protein SEC workflow (baseline + aggregates + oligomers) |
+| [`step_sec_aggregates()`](https://jameshwade.github.io/measure.sec/reference/step_sec_aggregates.md) | HMWS/monomer/LMWS quantitation |
+| [`step_sec_oligomer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_oligomer.md) | Detailed oligomer species analysis |
 
 ## Quality Control Functions
 
 ``` r
+
 # Peak resolution
 Rs <- measure_sec_resolution(
   retention_1 = 8.5,
@@ -166,6 +170,7 @@ print(sst)
 ## Polymer Analysis Functions
 
 ``` r
+
 # Estimate Mark-Houwink parameters
 mw <- c(10000, 25000, 50000, 100000, 250000)
 iv <- c(0.15, 0.28, 0.45, 0.72, 1.2)
@@ -186,6 +191,7 @@ g <- measure_branching_index(
 ## Data Export
 
 ``` r
+
 # Extract slice-by-slice data
 slices <- measure_sec_slice_table(result, measures = c("ri", "mw"))
 
@@ -204,6 +210,7 @@ dataset with:
 - Sample-specific dn/dc and extinction coefficients
 
 ``` r
+
 data(sec_triple_detect)
 head(sec_triple_detect)
 ```
@@ -213,6 +220,7 @@ head(sec_triple_detect)
 measure.sec automatically registers with the measure package on load:
 
 ``` r
+
 library(measure)
 library(measure.sec)
 
@@ -225,25 +233,25 @@ measure_steps(techniques = "SEC/GPC")
 For detailed workflows and examples, see the package vignettes:
 
 - **[Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.html)**:
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.html)**:
   Basic concepts and your first SEC analysis
 - **[Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.html)**:
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.html)**:
   Triple detection with RI, UV, and MALS
 - **[Protein
-  SEC](https://jameshwade.github.io/measure-sec/articles/protein-sec.html)**:
+  SEC](https://jameshwade.github.io/measure.sec/articles/protein-sec.html)**:
   Aggregate and oligomer analysis for biopharmaceuticals
 - **[Copolymer
-  Analysis](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.html)**:
+  Analysis](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.html)**:
   Composition from UV/RI ratio
 - **[System
-  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.html)**:
+  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.html)**:
   QC functions and SST testing
 
 ## Getting Help
 
-- [Package documentation](https://jameshwade.github.io/measure-sec/)
-- [GitHub Issues](https://github.com/JamesHWade/measure-sec/issues)
+- [Package documentation](https://jameshwade.github.io/measure.sec/)
+- [GitHub Issues](https://github.com/JamesHWade/measure.sec/issues)
 
 ## Code of Conduct
 

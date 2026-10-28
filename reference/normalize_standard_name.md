@@ -33,12 +33,12 @@ Character vector of normalized names.
 ## See also
 
 Other standards:
-[`auto_detect_standards()`](https://jameshwade.github.io/measure-sec/reference/auto_detect_standards.md),
-[`get_recognized_standards()`](https://jameshwade.github.io/measure-sec/reference/get_recognized_standards.md),
-[`get_standard_names()`](https://jameshwade.github.io/measure-sec/reference/get_standard_names.md),
-[`get_standard_type()`](https://jameshwade.github.io/measure-sec/reference/get_standard_type.md),
-[`is_standard()`](https://jameshwade.github.io/measure-sec/reference/is_standard.md),
-[`match_standards()`](https://jameshwade.github.io/measure-sec/reference/match_standards.md)
+[`auto_detect_standards()`](https://jameshwade.github.io/measure.sec/reference/auto_detect_standards.md),
+[`get_recognized_standards()`](https://jameshwade.github.io/measure.sec/reference/get_recognized_standards.md),
+[`get_standard_names()`](https://jameshwade.github.io/measure.sec/reference/get_standard_names.md),
+[`get_standard_type()`](https://jameshwade.github.io/measure.sec/reference/get_standard_type.md),
+[`is_standard()`](https://jameshwade.github.io/measure.sec/reference/is_standard.md),
+[`match_standards()`](https://jameshwade.github.io/measure.sec/reference/match_standards.md)
 
 ## Examples
 

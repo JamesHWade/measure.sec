@@ -19,7 +19,9 @@ step_sec_mw_averages(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_averages")
+  id = recipes::rand_id("sec_mw_averages"),
+  mw_col = NULL,
+  mw_scale = NULL
 )
 ```
 
@@ -66,7 +68,7 @@ step_sec_mw_averages(
   propagation. Required when `include_uncertainty = TRUE`. Can be
   obtained from
   [`tidy()`](https://generics.r-lib.org/reference/tidy.html) output of
-  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md).
+  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md).
 
 - prefix:
 
@@ -88,6 +90,21 @@ step_sec_mw_averages(
 
   Unique step identifier.
 
+- mw_col:
+
+  Optional name of a measure column containing molecular weight at each
+  concentration slice. A curve created by
+  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
+  for the selected signal is used automatically when it is unambiguous.
+  Do not combine this with `calibration`.
+
+- mw_scale:
+
+  Scale of `mw_col`: `"log10"` or `"absolute"` (g/mol). Required for a
+  manually supplied curve; inferred for a tagged calibration curve. When
+  no MW curve or calibration is supplied, the signal location is
+  interpreted as log10(MW) for backwards compatibility.
+
 ## Value
 
 An updated recipe with the new step added.
@@ -108,12 +125,19 @@ data:
 
 The detector signal is assumed to be proportional to weight
 concentration. For RI detection, this is typically valid. For UV
-detection, response factors may need to be applied first.
+detection, response factors may need to be applied first. Slice weights
+use trapezoidal integration on the original elution axis, including for
+unevenly spaced data. A positive signal without a valid molecular weight
+is an error, rather than silently discarded. `calibration = "auto"`
+generates an illustrative synthetic axis, not an experimental
+calibration.
 
 **Uncertainty Propagation:**
 
-When `include_uncertainty = TRUE`, the step calculates uncertainty
-estimates based on calibration error propagation. The uncertainties
+When `include_uncertainty = TRUE`, the step calculates an approximate
+calibration-RMSE-based estimate. It is not a complete uncertainty budget
+and does not include baseline, integration, detector, sample
+preparation, or correlated calibration uncertainty. The estimates
 account for:
 
 - Calibration curve fit error (RMSE in log10 MW units)
@@ -142,16 +166,16 @@ The propagation follows:
 ## See also
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
-[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md),
-[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure.sec/reference/step_sec_integration_window.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md),
+[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_refine.md)
 
 ## Examples
 

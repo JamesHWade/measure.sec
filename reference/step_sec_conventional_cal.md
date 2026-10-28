@@ -46,7 +46,7 @@ step_sec_conventional_cal(
 - calibration:
 
   A pre-loaded calibration object from
-  [`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md).
+  [`load_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/load_sec_calibration.md).
   When provided, skips fitting and uses the saved calibration directly.
   Takes precedence over `standards`.
 
@@ -117,8 +117,9 @@ where f is a polynomial function and V_e is the elution volume or time.
 **Calibration Curve Fitting:**
 
 The calibration is fit using orthogonal polynomials for numerical
-stability. At least 3 standards are required for cubic fits, 4 for
-quadratic, etc.
+stability. At least 2 standards are required for linear fits, 3 for
+quadratic fits, and 4 for cubic fits. Additional standards are needed to
+estimate residual variation.
 
 **Important Considerations:**
 
@@ -128,7 +129,7 @@ quadratic, etc.
   hydrodynamic volumes at the same MW)
 
 - For cross-polymer comparisons, use universal calibration instead
-  ([`step_sec_universal_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md))
+  ([`step_sec_universal_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md))
 
 **Fit Quality Metrics:** The
 [`tidy()`](https://generics.r-lib.org/reference/tidy.html) method
@@ -138,13 +139,13 @@ quality. R² \> 0.999 is typical for good calibrations.
 ## See also
 
 Other sec-calibration:
-[`load_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/load_sec_calibration.md),
-[`save_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/save_sec_calibration.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md),
-[`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)
+[`load_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/load_sec_calibration.md),
+[`save_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/save_sec_calibration.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`step_sec_broad_standard()`](https://jameshwade.github.io/measure.sec/reference/step_sec_broad_standard.md),
+[`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md)
 
 ## Examples
 

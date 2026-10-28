@@ -5,45 +5,45 @@
 Learning-oriented guides to get you started
 
 - [Getting Started with
-  measure.sec](https://jameshwade.github.io/measure-sec/articles/getting-started.md):
+  measure.sec](https://jameshwade.github.io/measure.sec/articles/getting-started.md):
 - [Tutorial: Conventional Calibration from Raw
-  Data](https://jameshwade.github.io/measure-sec/articles/tutorial-conventional-calibration.md):
+  Data](https://jameshwade.github.io/measure.sec/articles/tutorial-conventional-calibration.md):
 - [Tutorial: Triple Detection from Raw
-  Data](https://jameshwade.github.io/measure-sec/articles/tutorial-triple-detection.md):
+  Data](https://jameshwade.github.io/measure.sec/articles/tutorial-triple-detection.md):
 
 ### How-to Guides
 
 Task-oriented guides for specific applications
 
 - [Multi-Detector SEC: Detector Integration and
-  Workflows](https://jameshwade.github.io/measure-sec/articles/triple-detection.md):
+  Workflows](https://jameshwade.github.io/measure.sec/articles/triple-detection.md):
 - [Multi-Angle Light Scattering (MALS) for Absolute Molecular
-  Weight](https://jameshwade.github.io/measure-sec/articles/mals-detection.md):
+  Weight](https://jameshwade.github.io/measure.sec/articles/mals-detection.md):
 - [Single-Angle Light Scattering: LALS and
-  RALS](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md):
+  RALS](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md):
 - [Protein SEC
-  Analysis](https://jameshwade.github.io/measure-sec/articles/protein-sec.md):
+  Analysis](https://jameshwade.github.io/measure.sec/articles/protein-sec.md):
 - [Copolymer Composition
-  Analysis](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md):
+  Analysis](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md):
 - [Calibration
-  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md):
+  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md):
 - [System Suitability and
-  QC](https://jameshwade.github.io/measure-sec/articles/system-suitability.md):
+  QC](https://jameshwade.github.io/measure.sec/articles/system-suitability.md):
 - [Polymer Branching
-  Analysis](https://jameshwade.github.io/measure-sec/articles/branching-analysis.md):
+  Analysis](https://jameshwade.github.io/measure.sec/articles/branching-analysis.md):
 - [Exporting
-  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md):
+  Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md):
 
 ### Explanation
 
 Understanding-oriented guides for SEC concepts
 
 - [SEC Concepts: A Practical
-  Guide](https://jameshwade.github.io/measure-sec/articles/sec-concepts.md):
+  Guide](https://jameshwade.github.io/measure.sec/articles/sec-concepts.md):
 
 ### Reference
 
 Technical reference documentation
 
 - [Size Exclusion Chromatography Analysis with
-  measure.sec](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md):
+  measure.sec](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md):

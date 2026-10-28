@@ -2,7 +2,7 @@
 
 `step_sec_peaks_refine()` creates a *specification* of a recipe step
 that tightens peak boundaries set by
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md).
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md).
 The default `"height_fraction"` method sets boundaries where the
 corrected signal drops below a fraction of each peak's apex height,
 matching the approach used by industry GPC software (e.g., Waters
@@ -85,7 +85,7 @@ of any existing operations. The `.peaks` column will be updated with
 refined `left_base` and `right_base` values. Two new columns are added
 to each `peaks_tbl`: `original_left_base` and `original_right_base`
 preserving the boundaries from
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md).
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md).
 
 ## Details
 
@@ -106,9 +106,9 @@ each boundary until the signal exceeds a fraction of the peak's apex
 height.
 
 This step should run after
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
 and
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md).
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md).
 The signal in `measures_col` should be baseline-corrected for best
 results.
 
@@ -131,22 +131,22 @@ this step, a tibble with columns `method`, `cutoff`, `peaks_col`,
 
 ## See also
 
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md)
 for peak detection,
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
 for baseline correction.
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
-[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure.sec/reference/step_sec_integration_window.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md)
 
 ## Examples
 

@@ -93,11 +93,11 @@ Adv. Polym. Sci., 143, 113-194.
 ## See also
 
 Other sec-polymer:
-[`measure_branching_frequency()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.md),
-[`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md),
-[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md),
-[`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md),
-[`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure-sec/reference/measure_rg_mw_scaling.md)
+[`measure_branching_frequency()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_frequency.md),
+[`measure_branching_index()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md),
+[`measure_conformation_data()`](https://jameshwade.github.io/measure.sec/reference/measure_conformation_data.md),
+[`measure_mh_parameters()`](https://jameshwade.github.io/measure.sec/reference/measure_mh_parameters.md),
+[`measure_rg_mw_scaling()`](https://jameshwade.github.io/measure.sec/reference/measure_rg_mw_scaling.md)
 
 ## Examples
 

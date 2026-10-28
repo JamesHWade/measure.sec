@@ -38,6 +38,7 @@ measurement has a location (elution time or volume) and a value (signal
 intensity).
 
 ``` r
+
 recipe(...) |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv")
@@ -47,13 +48,13 @@ recipe(...) |>
 
 Before calibration, signals need cleaning:
 
-| Step                                                                                                                                                                        | What It Does                   | When to Use                           |
-|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|---------------------------------------|
-| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)                                                                | Aligns multi-detector signals  | Always with multiple detectors        |
-| [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)                                                                            | Removes baseline drift         | Almost always                         |
-| [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md) / [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md) | Normalizes by response factor  | Before concentration calculation      |
-| [`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md)                                                                  | Converts to mass concentration | Before light scattering or viscometry |
-| [`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md)                                                              | Corrects peak spreading        | High-resolution MW distributions      |
+| Step | What It Does | When to Use |
+|----|----|----|
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | Aligns multi-detector signals | Always with multiple detectors |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | Removes baseline drift | Almost always |
+| [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md) / [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md) | Normalizes by response factor | Before concentration calculation |
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | Converts to mass concentration | Before light scattering or viscometry |
+| [`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md) | Corrects peak spreading | High-resolution MW distributions |
 
 **Order matters**: Detector delay correction must come first. Baseline
 correction should precede normalization. Concentration is needed before
@@ -64,30 +65,30 @@ MALS calculations.
 Calibration converts elution time to molecular weight. The right
 approach depends on your standards and goals:
 
-| Method          | Function                                                                                                         | Best For                            |
-|-----------------|------------------------------------------------------------------------------------------------------------------|-------------------------------------|
-| Conventional    | [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md) | Narrow standards, same polymer type |
-| Broad standard  | [`step_sec_broad_standard()`](https://jameshwade.github.io/measure-sec/reference/step_sec_broad_standard.md)     | Single characterized reference      |
-| Universal       | [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md)       | Different polymer types             |
-| Absolute (MALS) | [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)                         | True MW, no standards needed        |
+| Method | Function | Best For |
+|----|----|----|
+| Conventional | [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md) | Narrow standards, same polymer type |
+| Broad standard | [`step_sec_broad_standard()`](https://jameshwade.github.io/measure.sec/reference/step_sec_broad_standard.md) | Single characterized reference |
+| Universal | [`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md) | Different polymer types |
+| Single-angle scattering approximation | [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md) | MW estimate with calibrated scattering and concentration; no Rg |
 
 ### Stage 4: MW Calculation
 
 With calibration complete, calculate molecular weight results:
 
-| Step                                                                                                           | Output                             |
-|----------------------------------------------------------------------------------------------------------------|------------------------------------|
-| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)         | Mn, Mw, Mz, dispersity             |
-| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md) | d(W)/d(log M) curve                |
-| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md)       | Cumulative fractions at MW cutoffs |
+| Step | Output |
+|----|----|
+| [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md) | Mn, Mw, Mz, dispersity |
+| [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md) | d(W)/d(log M) curve |
+| [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md) | Cumulative fractions at MW cutoffs |
 
 ### Stage 5: Export and Visualization
 
 Extract results for reporting:
 
-- [`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md):
+- [`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md):
   Publication-ready summary statistics
-- [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md):
+- [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md):
   Point-by-point data for custom analysis
 - `plot_sec_*()` family: Chromatograms, MWDs, calibration curves
 
@@ -109,6 +110,7 @@ section helps you choose the right approach.
 elution time using standards. Apply this curve to unknown samples.
 
 ``` r
+
 step_sec_conventional_cal(
   standards_data = standards,
   degree = 3              # Polynomial order (usually 3)
@@ -137,6 +139,7 @@ reference material instead of multiple narrow standards.
 MW-elution relationship in a single injection.
 
 ``` r
+
 step_sec_broad_standard(
   reference_mwd = known_distribution,
   reference_mn = 50000,
@@ -161,6 +164,7 @@ than molecular weight directly. Uses Mark-Houwink parameters to convert
 between polymer types.
 
 ``` r
+
 step_sec_universal_cal(
   # Calibration standards (e.g., polystyrene)
   reference_k = 1.14e-4,
@@ -187,10 +191,12 @@ constant.
 **When to use**: You need true molecular weight independent of polymer
 structure, or have no appropriate standards.
 
-**How it works**: Light scattering intensity is directly proportional to
-molecular weight × concentration. No column calibration needed.
+**How it works**: Under the single-angle approximation, scattering
+intensity depends on molecular weight and concentration. A calibrated
+detector and known concentration units are still required.
 
 ``` r
+
 step_sec_mals(
   dn_dc_column = "dn_dc"   # Refractive index increment
 )
@@ -199,9 +205,9 @@ step_sec_mals(
 **Requires**: Light scattering detector (MALS, LALS, or RALS), accurate
 dn/dc value, good signal quality.
 
-**Advantages**: True absolute MW. Works for any polymer type. Reveals
-branching through Rg-MW relationships. Required for proteins and complex
-polymers.
+**Implementation**: The present step estimates MW at one angle, assuming
+a suitable form factor and calibrated scattering. It does not fit
+angular dependence, report Rg, or establish branching.
 
 **Limitations**: More expensive instrumentation. Sensitive to dust and
 bubbles. Low MW samples may have weak scattering signal.
@@ -223,6 +229,7 @@ concentration.
 **Key parameter**: dn/dc (refractive index increment, mL/g)
 
 ``` r
+
 step_sec_ri(dn_dc_column = "dn_dc")
 ```
 
@@ -242,6 +249,7 @@ Essential for MW calculations.
 **Key parameter**: Extinction coefficient (ε, mL/(g·cm))
 
 ``` r
+
 step_sec_uv(extinction_column = "extinction_coef", wavelength = 280)
 ```
 
@@ -259,6 +267,7 @@ with RI for composition analysis.
 **What it measures**: Full UV-Vis spectrum at each point.
 
 ``` r
+
 step_sec_dad(wavelengths = c(254, 280, 320))
 ```
 
@@ -274,10 +283,18 @@ These measure MW directly, independent of calibration.
 
 **What it measures**: Scattered light intensity at multiple angles.
 
-**Provides**: Absolute MW and radius of gyration (Rg) at each slice.
+**Provides**: A single-angle MW estimate when concentration units and
+detector calibration are known. The current step does not fit multiple
+angles or estimate radius of gyration (Rg).
 
 ``` r
-step_sec_mals(dn_dc_column = "dn_dc")
+
+step_sec_mals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc_column = "dn_dc",
+  angles = 90
+)
 ```
 
 | Best for                    | Limitations                     |
@@ -287,14 +304,20 @@ step_sec_mals(dn_dc_column = "dn_dc")
 | Branching analysis          | Expensive                       |
 
 **See also**: [MALS Detection
-vignette](https://jameshwade.github.io/measure-sec/articles/mals-detection.md)
+vignette](https://jameshwade.github.io/measure.sec/articles/mals-detection.md)
 
 #### Low-Angle Light Scattering (LALS)
 
 **What it measures**: Scattered light near 0° angle.
 
 ``` r
-step_sec_lals(dn_dc_column = "dn_dc")
+
+step_sec_lals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc = 0.185,
+  calibration_constant = 1.0
+)
 ```
 
 | Best for          | Limitations                       |
@@ -308,7 +331,13 @@ step_sec_lals(dn_dc_column = "dn_dc")
 **What it measures**: Scattered light at 90°.
 
 ``` r
-step_sec_rals(dn_dc_column = "dn_dc")
+
+step_sec_rals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc = 0.185,
+  calibration_constant = 1.0
+)
 ```
 
 | Best for              | Limitations                |
@@ -318,7 +347,7 @@ step_sec_rals(dn_dc_column = "dn_dc")
 | Lowest cost LS option | Limited to narrow MW range |
 
 **See also**: [LALS/RALS Detection
-vignette](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md)
+vignette](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md)
 
 ### Hydrodynamic Detectors
 
@@ -333,6 +362,7 @@ to solution viscosity.
 concentration.
 
 ``` r
+
 step_sec_viscometer()
 step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
 ```
@@ -351,6 +381,7 @@ Brownian motion.
 **Provides**: Hydrodynamic radius (Rh).
 
 ``` r
+
 step_sec_dls()
 ```
 
@@ -373,10 +404,11 @@ return to zero.
 equilibration, late-eluting contaminants.
 
 **Solution**: Use
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
 with an appropriate method:
 
 ``` r
+
 step_sec_baseline(
   measures = "ri",
   method = "linear",       # Simple start-to-end connection
@@ -403,10 +435,11 @@ delay volume at 1 mL/min means 9 seconds of offset—which can shift MW by
 orders of magnitude.
 
 **Solution**: Use
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
 *before* any MW calculations:
 
 ``` r
+
 step_sec_detector_delay(
   reference = "ri",
   delay_volumes = c(uv = -0.05, mals = 0.15)  # mL
@@ -430,10 +463,11 @@ shoulder.
 or injection effects.
 
 **Solution**: Use
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md)
 to deconvolve the true distribution:
 
 ``` r
+
 step_sec_band_broadening(
   sigma = 0.03  # Peak spreading parameter (mL)
 )
@@ -443,6 +477,7 @@ step_sec_band_broadening(
 entirely from broadening:
 
 ``` r
+
 sigma <- estimate_sigma(
   narrow_standard_data,
   signal_col = "ri"
@@ -458,9 +493,10 @@ very low MW fractions.
 calibration standards.
 
 **Solution**: Options in
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md):
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md):
 
 ``` r
+
 step_sec_conventional_cal(
   standards_data = standards,
   extrapolate = "linear",    # Continue slope beyond range
@@ -494,11 +530,11 @@ results.
 
 SEC produces multiple MW averages. Each tells you something different:
 
-| Average | Formula                         | What It Emphasizes                   |
-|---------|---------------------------------|--------------------------------------|
-| Mn      | Σ(n_(i)M_(i)) / Σn_(i)          | Number of chains—sensitive to low MW |
-| Mw      | Σ(n_(i)M_(i)²) / Σ(n_(i)M_(i))  | Mass of chains—sensitive to high MW  |
-| Mz      | Σ(n_(i)M_(i)³) / Σ(n_(i)M_(i)²) | Very sensitive to high MW tail       |
+| Average | Formula | What It Emphasizes |
+|----|----|----|
+| Mn | Σ(n_(i)M_(i)) / Σn_(i) | Number of chains—sensitive to low MW |
+| Mw | Σ(n_(i)M_(i)²) / Σ(n_(i)M_(i)) | Mass of chains—sensitive to high MW |
+| Mz | Σ(n_(i)M_(i)³) / Σ(n_(i)M_(i)²) | Very sensitive to high MW tail |
 
 **Practical interpretation**:
 
@@ -549,14 +585,14 @@ integration problem.
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Your first SEC analysis
 - [Comprehensive SEC
-  Analysis](https://jameshwade.github.io/measure-sec/articles/sec-analysis.md) -
+  Analysis](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md) -
   Full reference for all features
 - [Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
   Detailed multi-detector workflows
 - [Calibration
-  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
   Saving and reusing calibrations

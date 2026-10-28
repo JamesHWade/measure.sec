@@ -17,7 +17,8 @@ step_sec_ri(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_ri")
+  id = recipes::rand_id("sec_ri"),
+  concentration_units = "g/mL"
 )
 ```
 
@@ -36,15 +37,15 @@ step_sec_ri(
 
   Refractive index increment (mL/g). Can be:
 
-  - A single numeric value applied to all samples
+  - A single positive finite numeric value applied to all samples
 
   - `NULL` to skip dn/dc normalization (signal remains in detector
     units)
 
 - dn_dc_column:
 
-  Character name of a column containing sample-specific dn/dc values.
-  Overrides `dn_dc` if provided.
+  Character name of a column containing sample-specific positive finite
+  dn/dc values. Overrides `dn_dc` if provided.
 
 - instrument_constant:
 
@@ -71,6 +72,13 @@ step_sec_ri(
 
   Unique step identifier.
 
+- concentration_units:
+
+  Units for the signal after dn/dc normalization: g/mL (default, the
+  natural unit from RI divided by dn/dc) or mg/mL. This is ignored when
+  dn/dc normalization is skipped. RI processing keeps its existing
+  positive-only dn/dc contract.
+
 ## Value
 
 An updated recipe with the new step added.
@@ -87,9 +95,15 @@ where:
 
 - K is the instrument constant
 
-- c is the concentration (mg/mL)
+- c is mass concentration in g/mL when dn/dc is in mL/g
 
 - dn/dc is the refractive index increment (mL/g)
+
+Therefore dividing a calibrated refractive-index response by dn/dc gives
+concentration in g/mL. Set concentration_units to mg/mL to scale those
+values by 1000. The default preserves the current numeric behavior and
+can be read directly by scattering steps that use a tagged concentration
+curve.
 
 **Common dn/dc values (in water at 25°C, 633 nm):**
 
@@ -106,15 +120,15 @@ where:
 ## See also
 
 Other sec-detectors:
-[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
-[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
-[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
-[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
-[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
-[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md),
-[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md),
+[`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

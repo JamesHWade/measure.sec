@@ -91,11 +91,11 @@ University Press.
 ## See also
 
 Other sec-polymer:
-[`measure_branching_frequency()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_frequency.md),
-[`measure_branching_index()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md),
-[`measure_branching_model_comparison()`](https://jameshwade.github.io/measure-sec/reference/measure_branching_model_comparison.md),
-[`measure_conformation_data()`](https://jameshwade.github.io/measure-sec/reference/measure_conformation_data.md),
-[`measure_mh_parameters()`](https://jameshwade.github.io/measure-sec/reference/measure_mh_parameters.md)
+[`measure_branching_frequency()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_frequency.md),
+[`measure_branching_index()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md),
+[`measure_branching_model_comparison()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_model_comparison.md),
+[`measure_conformation_data()`](https://jameshwade.github.io/measure.sec/reference/measure_conformation_data.md),
+[`measure_mh_parameters()`](https://jameshwade.github.io/measure.sec/reference/measure_mh_parameters.md)
 
 ## Examples
 

@@ -87,6 +87,7 @@ size.
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -129,6 +130,7 @@ absorbance).
 For simple HMWS/monomer/LMWS quantitation:
 
 ``` r
+
 # Load protein SEC data - mAb samples with reference and stressed conditions
 data(sec_protein, package = "measure.sec")
 
@@ -173,6 +175,7 @@ result_agg |>
 For precise control over integration limits:
 
 ``` r
+
 # When you know the exact monomer elution window
 step_sec_aggregates(
   measures = "uv",
@@ -187,11 +190,12 @@ step_sec_aggregates(
 ### Using step_sec_protein()
 
 The
-[`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md)
+[`step_sec_protein()`](https://jameshwade.github.io/measure.sec/reference/step_sec_protein.md)
 function provides a streamlined workflow combining baseline correction,
 aggregate analysis, and optional oligomer detection:
 
 ``` r
+
 # Analyze all mAb samples with the protein step
 rec_protein <- recipe(
   uv_280_signal + elution_time ~ sample_id,
@@ -233,7 +237,7 @@ result_protein |>
 ### Output Columns
 
 The
-[`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md)
+[`step_sec_protein()`](https://jameshwade.github.io/measure.sec/reference/step_sec_protein.md)
 step creates:
 
 | Column                | Description                     |
@@ -262,6 +266,7 @@ With `include_oligomer = TRUE`:
 Preserves non-covalent interactions:
 
 ``` r
+
 step_sec_protein(
   type = "native",
   monomer_mw = 150000
@@ -276,6 +281,7 @@ Native quaternary structure
 Disrupts non-covalent interactions:
 
 ``` r
+
 step_sec_protein(
   type = "denaturing",
   monomer_mw = 150000
@@ -292,6 +298,7 @@ Heavy/light chain analysis
 For more control over oligomer detection:
 
 ``` r
+
 # Detailed oligomer analysis with explicit control
 rec_oligo <- recipe(
   uv_280_signal + elution_time ~ sample_id,
@@ -377,6 +384,7 @@ The `sec_protein` dataset includes samples under various stress
 conditions, simulating a stability study:
 
 ``` r
+
 # Analyze all samples including stressed conditions
 result_protein |>
   select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
@@ -392,6 +400,7 @@ result_protein |>
 ```
 
 ``` r
+
 # Compare aggregate content across conditions
 library(tidyr)
 
@@ -435,25 +444,26 @@ plot_data |>
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow and concepts
 - [System
-  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
   QC metrics for biopharm compliance
 - [Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
   MALS for absolute MW determination
 - [Exporting
-  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md) -
+  Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md) -
   Summary tables and report generation
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -472,31 +482,31 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] tidyr_1.3.2            ggplot2_4.0.1          measure.sec_0.0.0.9000
-#> [4] measure_0.0.1.9002     recipes_1.3.1          dplyr_1.1.4           
+#> [1] tidyr_1.3.2            ggplot2_4.0.3          measure.sec_0.0.0.9000
+#> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  pillar_1.11.1       pkgdown_2.2.0      
+#> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
 #> [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       
-#> [31] gower_1.0.2         rpart_4.1.24        parallelly_1.46.1  
-#> [34] lava_1.8.2          tidyselect_1.2.1    digest_0.6.39      
-#> [37] future_1.69.0       purrr_1.2.1         listenv_0.10.0     
-#> [40] labeling_0.4.3      splines_4.5.2       fastmap_1.2.0      
-#> [43] grid_4.5.2          cli_3.6.5           magrittr_2.0.4     
-#> [46] utf8_1.2.6          survival_3.8-3      future.apply_1.20.1
-#> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
-#> [52] timechange_0.4.0    rmarkdown_2.30      globals_0.19.0     
-#> [55] nnet_7.3-20         timeDate_4052.112   ragg_1.5.0         
-#> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
-#> [64] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [67] systemfonts_1.3.1   fs_1.6.6
+#> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.48.0  
+#> [34] lava_1.10           tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.80.0       purrr_1.2.2         listenv_1.1.0      
+#> [40] labeling_0.4.3      splines_4.6.1       fastmap_1.2.0      
+#> [43] grid_4.6.1          cli_3.6.6           magrittr_2.0.5     
+#> [46] utf8_1.2.6          survival_3.8-6      future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.2.0          nnet_7.3-20         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       rlang_1.3.0         Rcpp_1.1.2         
+#> [64] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [67] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
 ```

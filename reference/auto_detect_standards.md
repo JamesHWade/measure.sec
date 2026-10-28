@@ -34,12 +34,12 @@ If `add_columns = TRUE`, the original data frame with added columns. If
 ## See also
 
 Other standards:
-[`get_recognized_standards()`](https://jameshwade.github.io/measure-sec/reference/get_recognized_standards.md),
-[`get_standard_names()`](https://jameshwade.github.io/measure-sec/reference/get_standard_names.md),
-[`get_standard_type()`](https://jameshwade.github.io/measure-sec/reference/get_standard_type.md),
-[`is_standard()`](https://jameshwade.github.io/measure-sec/reference/is_standard.md),
-[`match_standards()`](https://jameshwade.github.io/measure-sec/reference/match_standards.md),
-[`normalize_standard_name()`](https://jameshwade.github.io/measure-sec/reference/normalize_standard_name.md)
+[`get_recognized_standards()`](https://jameshwade.github.io/measure.sec/reference/get_recognized_standards.md),
+[`get_standard_names()`](https://jameshwade.github.io/measure.sec/reference/get_standard_names.md),
+[`get_standard_type()`](https://jameshwade.github.io/measure.sec/reference/get_standard_type.md),
+[`is_standard()`](https://jameshwade.github.io/measure.sec/reference/is_standard.md),
+[`match_standards()`](https://jameshwade.github.io/measure.sec/reference/match_standards.md),
+[`normalize_standard_name()`](https://jameshwade.github.io/measure.sec/reference/normalize_standard_name.md)
 
 ## Examples
 

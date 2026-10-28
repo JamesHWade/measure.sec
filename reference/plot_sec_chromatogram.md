@@ -25,7 +25,7 @@ plot_sec_chromatogram(
 
   A data frame containing SEC results with measure columns, or a tibble
   from
-  [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md).
+  [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md).
 
 - measures:
 
@@ -82,19 +82,19 @@ chromatographic data. Works with both:
 - Processed recipe output (data frames with measure_list columns)
 
 - Slice tables from
-  [`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md)
+  [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md)
 
 ## See also
 
 Other sec-visualization:
-[`autoplot.sec_results()`](https://jameshwade.github.io/measure-sec/reference/autoplot.sec_results.md),
-[`plot_sec()`](https://jameshwade.github.io/measure-sec/reference/plot_sec.md),
-[`plot_sec_calibration()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_calibration.md),
-[`plot_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_composition.md),
-[`plot_sec_conformation()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_conformation.md),
-[`plot_sec_multidetector()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_multidetector.md),
-[`plot_sec_mwd()`](https://jameshwade.github.io/measure-sec/reference/plot_sec_mwd.md),
-[`sec_results()`](https://jameshwade.github.io/measure-sec/reference/sec_results.md)
+[`autoplot.sec_results()`](https://jameshwade.github.io/measure.sec/reference/autoplot.sec_results.md),
+[`plot_sec()`](https://jameshwade.github.io/measure.sec/reference/plot_sec.md),
+[`plot_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_calibration.md),
+[`plot_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_composition.md),
+[`plot_sec_conformation()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_conformation.md),
+[`plot_sec_multidetector()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_multidetector.md),
+[`plot_sec_mwd()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_mwd.md),
+[`sec_results()`](https://jameshwade.github.io/measure.sec/reference/sec_results.md)
 
 ## Examples
 

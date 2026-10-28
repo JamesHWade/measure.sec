@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Montserrat-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -65,7 +65,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure-sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure.sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -81,7 +81,7 @@
       <img src="../logo.svg" class="logo" alt=""><h1>Multi-Detector SEC: Detector Integration and Workflows</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure-sec/blob/main/vignettes/triple-detection.Rmd" class="external-link"><code>vignettes/triple-detection.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure.sec/blob/main/vignettes/triple-detection.Rmd" class="external-link"><code>vignettes/triple-detection.Rmd</code></a></small>
       <div class="d-none name"><code>triple-detection.Rmd</code></div>
     </div>
 
@@ -90,6 +90,13 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
+<blockquote>
+<p><strong>Implementation status:</strong> <code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code>
+currently uses a single-angle approximation. Its output is relative
+without a scattering calibration constant; multi-angle extrapolation and
+Rg are not implemented. Validate all detector workflows against
+instrument-specific reference data.</p>
+</blockquote>
 <p>Multi-detector SEC combines concentration detectors (RI, UV) with
 molecular weight detectors (light scattering) and/or viscometers to
 provide absolute molecular weight and structural information. This
@@ -107,8 +114,8 @@ a unified workflow.</p>
 see:</p>
 <ul>
 <li>
-<a href="mals-detection.html">MALS Detection</a> - Multi-angle
-analysis for Rg and large molecules</li>
+<a href="mals-detection.html">MALS Detection</a> - scattering theory
+and current single-angle approximation</li>
 <li>
 <a href="lals-rals-detection.html">LALS/RALS Detection</a> -
 Single-angle alternatives</li>
@@ -192,7 +199,7 @@ polymers, they almost always do.</p>
 <span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     step</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure.sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
@@ -428,7 +435,8 @@ scattering:</p>
 <code class="sourceCode R"><span><span class="co"># Complete triple detection recipe</span></span>
 <span><span class="va">rec_triple</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
 <span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">uv_signal</span> <span class="op">+</span> <span class="va">mals_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">+</span> <span class="va">extinction_coef</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">samples</span></span>
+<span>  <span class="co"># UV normalization requires a positive extinction coefficient.</span></span>
+<span>  data <span class="op">=</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">samples</span>, <span class="va">extinction_coef</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">sample_id</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Step 1: Convert signals to measure format</span></span>
@@ -459,24 +467,26 @@ scattering:</p>
 <span></span>
 <span>  <span class="co"># Step 6: Process MALS (requires concentration for absolute MW)</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_mals.html">step_sec_mals</a></span><span class="op">(</span>mals_col <span class="op">=</span> <span class="st">"mals"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: No scattering calibration constant supplied; output is relative and</span></span>
+<span><span class="co">#&gt; uncalibrated.</span></span>
 <span></span>
 <span><span class="va">prepped_triple</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_triple</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Negative detector values were excluded during mass normalization.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> 1379 of 10005 signal points (13.8%) were set to zero.</span></span>
 <span><span class="va">result_triple</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepped_triple</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View results - MALS provides absolute MW at each slice</span></span>
+<span><span class="co"># View results - output is relative without a scattering calibration constant</span></span>
 <span><span class="co"># For MW averages, you would integrate over the chromatogram</span></span>
 <span><span class="va">result_triple</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with</a></span><span class="op">(</span><span class="st">"mw_"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 7 × 2</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 2</span></span></span>
 <span><span class="co">#&gt;   sample_id     mw_mals</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;meas&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PMMA-Low  <span style="color: #949494;">[2,001 × 2]</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> PMMA-Med  <span style="color: #949494;">[2,001 × 2]</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> PMMA-High <span style="color: #949494;">[2,001 × 2]</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> PEG-5K    <span style="color: #949494;">[2,001 × 2]</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> PEG-20K   <span style="color: #949494;">[2,001 × 2]</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> Copoly-A  <span style="color: #949494;">[2,001 × 2]</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> Copoly-B  <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Copoly-A  <span style="color: #949494;">[2,001 × 2]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Copoly-B  <span style="color: #949494;">[2,001 × 2]</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="viscometer-integration">Viscometer Integration<a class="anchor" aria-label="anchor" href="#viscometer-integration"></a>
@@ -555,7 +565,7 @@ hydrodynamic volume is proportional to [η] × M.</p>
 <div class="section level3">
 <h3 id="the-universal-calibration-principle">The Universal Calibration Principle<a class="anchor" aria-label="anchor" href="#the-universal-calibration-principle"></a>
 </h3>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>log</mo><msub><mrow><mo stretchy="true" form="prefix">(</mo><mrow><mo stretchy="true" form="prefix">[</mo><mi>η</mi><mo stretchy="true" form="postfix">]</mo></mrow><mo>×</mo><mi>M</mi><mo stretchy="true" form="postfix">)</mo></mrow><mtext mathvariant="normal">sample</mtext></msub><mo>=</mo><mo>log</mo><msub><mrow><mo stretchy="true" form="prefix">(</mo><mrow><mo stretchy="true" form="prefix">[</mo><mi>η</mi><mo stretchy="true" form="postfix">]</mo></mrow><mo>×</mo><mi>M</mi><mo stretchy="true" form="postfix">)</mo></mrow><mtext mathvariant="normal">standard</mtext></msub></mrow><annotation encoding="application/x-tex">\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>η</mi><mo stretchy="false" form="postfix">]</mo><mo>×</mo><mi>M</mi><msub><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">sample</mtext></msub><mo>=</mo><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><mo stretchy="false" form="prefix">[</mo><mi>η</mi><mo stretchy="false" form="postfix">]</mo><mo>×</mo><mi>M</mi><msub><mo stretchy="false" form="postfix">)</mo><mtext mathvariant="normal">standard</mtext></msub></mrow><annotation encoding="application/x-tex">\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}</annotation></semantics></math></p>
 <p>This allows you to determine MW for any polymer type using standards
 of a different polymer (typically polystyrene).</p>
 <p><img src="triple-detection_files/figure-html/universal-cal-concept-1.png" class="r-plt" alt="" width="672"></p>
@@ -745,9 +755,9 @@ Multi-detector composition analysis</li>
 </h2>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
+<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.3 LTS</span></span>
+<span><span class="co">#&gt; Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Matrix products: default</span></span>
 <span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -766,33 +776,34 @@ Multi-detector composition analysis</li>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    </span></span>
-<span><span class="co">#&gt; [4] recipes_1.3.1          dplyr_1.1.4           </span></span>
+<span><span class="co">#&gt; [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    </span></span>
+<span><span class="co">#&gt; [4] recipes_1.4.0          dplyr_1.2.1           </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       </span></span>
-<span><span class="co">#&gt;  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        </span></span>
-<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       </span></span>
-<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1</span></span>
-<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         </span></span>
-<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       </span></span>
-<span><span class="co">#&gt; [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    </span></span>
+<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       </span></span>
+<span><span class="co">#&gt;  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        </span></span>
+<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       </span></span>
+<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1</span></span>
+<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         </span></span>
+<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       </span></span>
+<span><span class="co">#&gt; [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    </span></span>
 <span><span class="co">#&gt; [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        </span></span>
-<span><span class="co">#&gt; [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      </span></span>
-<span><span class="co">#&gt; [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        </span></span>
-<span><span class="co">#&gt; [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       </span></span>
-<span><span class="co">#&gt; [34] parallelly_1.46.1   lava_1.8.2          tidyselect_1.2.1   </span></span>
-<span><span class="co">#&gt; [37] digest_0.6.39       future_1.69.0       purrr_1.2.1        </span></span>
-<span><span class="co">#&gt; [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      </span></span>
-<span><span class="co">#&gt; [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          </span></span>
-<span><span class="co">#&gt; [46] magrittr_2.0.4      utf8_1.2.6          survival_3.8-3     </span></span>
-<span><span class="co">#&gt; [49] future.apply_1.20.1 withr_3.0.2         scales_1.4.0       </span></span>
-<span><span class="co">#&gt; [52] lubridate_1.9.4     timechange_0.4.0    rmarkdown_2.30     </span></span>
-<span><span class="co">#&gt; [55] globals_0.19.0      nnet_7.3-20         timeDate_4052.112  </span></span>
-<span><span class="co">#&gt; [58] ragg_1.5.0          evaluate_1.0.5      knitr_1.51         </span></span>
-<span><span class="co">#&gt; [61] hardhat_1.4.2       rlang_1.1.7         Rcpp_1.1.1         </span></span>
-<span><span class="co">#&gt; [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     </span></span>
-<span><span class="co">#&gt; [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6</span></span></code></pre></div>
+<span><span class="co">#&gt; [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      </span></span>
+<span><span class="co">#&gt; [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        </span></span>
+<span><span class="co">#&gt; [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       </span></span>
+<span><span class="co">#&gt; [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   </span></span>
+<span><span class="co">#&gt; [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        </span></span>
+<span><span class="co">#&gt; [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      </span></span>
+<span><span class="co">#&gt; [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          </span></span>
+<span><span class="co">#&gt; [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-6     </span></span>
+<span><span class="co">#&gt; [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       </span></span>
+<span><span class="co">#&gt; [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     </span></span>
+<span><span class="co">#&gt; [55] globals_0.20.0      otel_0.2.0          nnet_7.3-20        </span></span>
+<span><span class="co">#&gt; [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     </span></span>
+<span><span class="co">#&gt; [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        </span></span>
+<span><span class="co">#&gt; [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       </span></span>
+<span><span class="co">#&gt; [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  </span></span>
+<span><span class="co">#&gt; [70] fs_2.1.0</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -805,7 +816,7 @@ Multi-detector composition analysis</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

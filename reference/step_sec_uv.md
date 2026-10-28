@@ -18,7 +18,8 @@ step_sec_uv(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_uv")
+  id = recipes::rand_id("sec_uv"),
+  concentration_units = "mg/mL"
 )
 ```
 
@@ -44,7 +45,9 @@ step_sec_uv(
 - extinction_column:
 
   Character name of a column containing sample-specific extinction
-  coefficients. Overrides `extinction_coef` if provided.
+  coefficients. Overrides `extinction_coef` if provided. Values must be
+  positive and finite because a zero coefficient cannot be inverted to
+  determine concentration from absorbance.
 
 - wavelength:
 
@@ -74,6 +77,11 @@ step_sec_uv(
 
   Unique step identifier.
 
+- concentration_units:
+
+  Units for the signal after extinction normalization: mg/mL (default)
+  or g/mL. This is ignored when extinction normalization is skipped.
+
 ## Value
 
 An updated recipe with the new step added.
@@ -88,14 +96,16 @@ where:
 
 - A is absorbance (AU)
 
-- epsilon is the molar extinction coefficient in mL/(mg\*cm)
+- epsilon is a mass-specific extinction coefficient in mL/(mg\*cm)
 
-- c is the concentration (mg/mL)
+- c is the concentration in mg/mL
 
 - l is the path length (cm)
 
 This step can convert UV absorbance to concentration-proportional
-signals by dividing by the extinction coefficient and path length.
+signals by dividing by the extinction coefficient and path length. With
+the documented coefficient units, the result is mg/mL; set
+concentration_units to g/mL to divide by 1000.
 
 **Common UV applications in SEC:**
 
@@ -120,15 +130,15 @@ signals by dividing by the extinction coefficient and path length.
 ## See also
 
 Other sec-detectors:
-[`step_sec_concentration()`](https://jameshwade.github.io/measure-sec/reference/step_sec_concentration.md),
-[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
-[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
-[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
-[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
-[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
-[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+[`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md),
+[`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

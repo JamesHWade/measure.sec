@@ -126,7 +126,7 @@ Gaussian, which better handles asymmetric peak shapes caused by tailing.
 
 The spreading parameter sigma should be determined from a narrow
 molecular weight standard (e.g., polystyrene with PDI \< 1.05). Use
-[`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
+[`estimate_sigma()`](https://jameshwade.github.io/measure.sec/reference/estimate_sigma.md)
 to calculate sigma from such a standard.
 
 ## Note
@@ -146,20 +146,20 @@ Science, 10(3), 375-385.
 
 ## See also
 
-[`estimate_sigma()`](https://jameshwade.github.io/measure-sec/reference/estimate_sigma.md)
+[`estimate_sigma()`](https://jameshwade.github.io/measure.sec/reference/estimate_sigma.md)
 for determining the spreading parameter
 
 Other sec-chromatography:
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
-[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md),
-[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure.sec/reference/step_sec_integration_window.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md),
+[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_refine.md)
 
 ## Examples
 

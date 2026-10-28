@@ -62,16 +62,16 @@ patterns include:
 
 **QC Metrics Available:** Use the QC functions to calculate and verify:
 
-- [`measure_sec_plate_count`](https://jameshwade.github.io/measure-sec/reference/measure_sec_plate_count.md) -
+- [`measure_sec_plate_count`](https://jameshwade.github.io/measure.sec/reference/measure_sec_plate_count.md) -
   Theoretical plates
 
-- [`measure_sec_asymmetry`](https://jameshwade.github.io/measure-sec/reference/measure_sec_asymmetry.md) -
+- [`measure_sec_asymmetry`](https://jameshwade.github.io/measure.sec/reference/measure_sec_asymmetry.md) -
   Peak asymmetry
 
-- [`measure_sec_resolution`](https://jameshwade.github.io/measure-sec/reference/measure_sec_resolution.md) -
+- [`measure_sec_resolution`](https://jameshwade.github.io/measure.sec/reference/measure_sec_resolution.md) -
   Peak resolution
 
-- [`measure_sec_suitability`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md) -
+- [`measure_sec_suitability`](https://jameshwade.github.io/measure.sec/reference/measure_sec_suitability.md) -
   Combined SST check
 
 **Typical Workflow:**
@@ -87,16 +87,16 @@ patterns include:
 ## See also
 
 Other sec-data:
-[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
+[`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_protein`](https://jameshwade.github.io/measure.sec/reference/sec_protein.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
 
 ## Examples
 

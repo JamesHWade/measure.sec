@@ -81,7 +81,7 @@ The dataset simulates a typical mAb (~150 kDa) under various conditions:
 1.  Load data and apply baseline correction
 
 2.  Use
-    [`step_sec_aggregates`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md)
+    [`step_sec_aggregates`](https://jameshwade.github.io/measure.sec/reference/step_sec_aggregates.md)
     to identify and quantify species
 
 3.  Calculate percent area for each species
@@ -91,16 +91,16 @@ The dataset simulates a typical mAb (~150 kDa) under various conditions:
 ## See also
 
 Other sec-data:
-[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
-[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
+[`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure.sec/reference/sec_system_suitability.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
 
 ## Examples
 

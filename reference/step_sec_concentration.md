@@ -66,7 +66,9 @@ step_sec_concentration(
 
 - concentration_units:
 
-  Output concentration units. Default is `"mg/mL"`.
+  Output concentration units: `"mg/mL"` (default) or `"g/mL"`. Units are
+  recorded on the output measure column when mass normalization is
+  performed.
 
 - normalize_to_mass:
 
@@ -120,18 +122,23 @@ where:
 
 4.  Result: concentration at each elution point
 
+Mass normalization excludes negative signal points from the integrated
+area and sets those output points to zero. When any points are excluded,
+the bake reports their count and percentage so the baseline correction
+can be reviewed.
+
 ## See also
 
 Other sec-detectors:
-[`step_sec_dad()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dad.md),
-[`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md),
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md),
-[`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
-[`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
-[`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md),
-[`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md),
-[`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md),
-[`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+[`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md),
+[`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md),
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md),
+[`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md),
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md),
+[`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md),
+[`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md),
+[`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md),
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
 
 ## Examples
 

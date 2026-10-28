@@ -2,6 +2,13 @@
 
 ## Overview
 
+> **Implementation status:** The theory below describes multi-angle
+> light scattering.
+> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+> currently implements only a single-angle approximation, does not fit
+> Zimm/Debye/Berry angular models, and does not calculate Rg. Its output
+> is uncalibrated unless an instrument calibration constant is supplied.
+
 Multi-Angle Light Scattering (MALS) is a powerful technique that
 provides **absolute molecular weight** without calibration standards.
 Unlike conventional calibration (which gives MW relative to polymer
@@ -17,11 +24,12 @@ based on fundamental light scattering physics. This vignette covers:
 4.  Radius of gyration (Rg) from angular dependence
 
 5.  Practical workflows with
-    [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)
+    [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
 
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -57,7 +65,9 @@ all directions. The intensity of scattered light depends on:
 
 The fundamental relationship is the **Rayleigh-Debye equation**:
 
-$$\frac{Kc}{R(\theta)} = \frac{1}{M_{w} \cdot P(\theta)} + 2A_{2}c$$
+``` math
+\frac{Kc}{R(\theta)} = \frac{1}{M_w \cdot P(\theta)} + 2A_2 c
+```
 
 Where:
 
@@ -74,7 +84,9 @@ Where:
 
 The optical constant depends on your experimental setup:
 
-$$K = \frac{4\pi^{2}n_{0}^{2}(dn/dc)^{2}}{N_{A}\lambda^{4}}$$
+``` math
+K = \frac{4\pi^2 n_0^2 (dn/dc)^2}{N_A \lambda^4}
+```
 
 Where:
 
@@ -122,7 +134,9 @@ angles. This angular dependence reveals the **radius of gyration
 
 From the Zimm equation, the slope of Kc/R(θ) vs sin²(θ/2) gives Rg:
 
-$$\frac{Kc}{R(\theta)} = \frac{1}{M_{w}}\left( 1 + \frac{16\pi^{2}n_{0}^{2}}{3\lambda^{2}}R_{g}^{2}\sin^{2}(\theta/2) \right)$$
+``` math
+\frac{Kc}{R(\theta)} = \frac{1}{M_w}\left(1 + \frac{16\pi^2 n_0^2}{3\lambda^2}R_g^2 \sin^2(\theta/2)\right)
+```
 
 The y-intercept gives 1/Mw, and the slope gives Rg².
 
@@ -151,6 +165,7 @@ Three common approaches for angular extrapolation:
 ## Example Dataset
 
 ``` r
+
 data(sec_triple_detect, package = "measure.sec")
 
 # Select samples with MALS data
@@ -178,7 +193,8 @@ glimpse(mals_samples)
 ### Basic MALS Analysis
 
 ``` r
-# Complete MALS workflow for absolute MW
+
+# Illustrative single-angle workflow; without a scattering calibration constant, output is relative
 rec_mals <- recipe(
   ri_signal + mals_signal + elution_time + dn_dc ~ sample_id,
   data = mals_samples
@@ -198,7 +214,7 @@ rec_mals <- recipe(
     injection_volume = 100,       # µL
     sample_concentration = 2.0    # mg/mL
   ) |>
-  # MALS processing for absolute MW
+  # Single-angle scattering estimate (relative without a calibration constant)
   step_sec_mals(
     mals_col = "mals",
     dn_dc_column = "dn_dc",
@@ -206,8 +222,12 @@ rec_mals <- recipe(
     solvent_ri = 1.407,           # THF
     angles = 90                   # Single angle for this example
   )
+#> Warning: No scattering calibration constant supplied; output is relative and
+#> uncalibrated.
 
 prepped_mals <- prep(rec_mals)
+#> Warning: Negative detector values were excluded during mass normalization.
+#> ℹ 2222 of 14007 signal points (15.9%) were set to zero.
 result_mals <- bake(prepped_mals, new_data = NULL)
 
 # View results
@@ -224,13 +244,13 @@ result_mals |>
 
 ### Key Parameters
 
-| Parameter    | Description                | Typical Values                                        |
-|--------------|----------------------------|-------------------------------------------------------|
-| `dn_dc`      | Refractive index increment | 0.185 (PS/THF), 0.084 (PMMA/THF)                      |
-| `wavelength` | Laser wavelength (nm)      | 658, 690, 785                                         |
-| `solvent_ri` | Solvent refractive index   | 1.333 (water), 1.407 (THF)                            |
-| `angles`     | Detection angle(s)         | 90 (single), c(35, 50, 75, 90, 105, 120, 145) (multi) |
-| `formalism`  | Extrapolation method       | “zimm”, “debye”, “berry”                              |
+| Parameter | Description | Typical Values |
+|----|----|----|
+| `dn_dc` | Refractive index increment | 0.185 (PS/THF), 0.084 (PMMA/THF) |
+| `wavelength` | Laser wavelength (nm) | 658, 690, 785 |
+| `solvent_ri` | Solvent refractive index | 1.333 (water), 1.407 (THF) |
+| `angles` | One detection angle | 90 (single) |
+| `formalism` | Reserved for future angular fits | Default only; no angular fit is performed |
 
 ## The Critical Role of dn/dc
 
@@ -239,7 +259,9 @@ result_mals |>
 The refractive index increment (dn/dc) is the change in solution
 refractive index per unit concentration:
 
-$$\frac{dn}{dc} = \frac{n_{solution} - n_{solvent}}{c}$$
+``` math
+\frac{dn}{dc} = \frac{n_{solution} - n_{solvent}}{c}
+```
 
 ### Typical dn/dc Values
 
@@ -266,9 +288,11 @@ MW.
 
 ### Setting Up Multi-Angle Analysis
 
-For Rg determination, provide multiple detection angles:
+Multi-angle fitting and Rg determination are not yet implemented. The
+following illustrates a future API and currently returns an error:
 
 ``` r
+
 # Multi-angle MALS for MW and Rg
 step_sec_mals(
   mals_col = "mals",
@@ -295,7 +319,9 @@ step_sec_mals(
 
 The relationship between Rg and MW reveals polymer conformation:
 
-$$R_{g} = K \cdot M_{w}^{\nu}$$
+``` math
+R_g = K \cdot M_w^\nu
+```
 
 Where ν (the scaling exponent) indicates conformation:
 
@@ -312,12 +338,12 @@ Where ν (the scaling exponent) indicates conformation:
 
 ### Common MALS Issues
 
-| Problem         | Possible Causes         | Solutions                               |
-|-----------------|-------------------------|-----------------------------------------|
-| Noisy MW data   | Low concentration, dust | Increase conc, filter samples           |
-| Negative MW     | Baseline issues         | Improve baseline, check alignment       |
-| MW too high     | Aggregates, dust        | Filter samples, check for aggregation   |
-| MW too low      | Wrong dn/dc             | Measure dn/dc accurately                |
+| Problem | Possible Causes | Solutions |
+|----|----|----|
+| Noisy MW data | Low concentration, dust | Increase conc, filter samples |
+| Negative MW | Baseline issues | Improve baseline, check alignment |
+| MW too high | Aggregates, dust | Filter samples, check for aggregation |
+| MW too low | Wrong dn/dc | Measure dn/dc accurately |
 | Inconsistent Rg | Poor signal, few angles | Use more angles, increase concentration |
 
 ### Signal-to-Noise Requirements
@@ -339,37 +365,38 @@ Ensure proper detector alignment:
 
 ## When to Use MALS vs Conventional Calibration
 
-| Scenario                         | Recommendation                            |
-|----------------------------------|-------------------------------------------|
-| Routine QC of known polymer      | Conventional cal is faster and sufficient |
-| Different polymer from standards | **Use MALS**                              |
-| Branched or complex architecture | **Use MALS**                              |
-| Absolute MW required             | **Use MALS**                              |
-| Characterizing new materials     | **Use MALS**                              |
-| Regulatory submissions           | **Use MALS** for accuracy                 |
+| Scenario | Recommendation |
+|----|----|
+| Routine QC of known polymer | Conventional cal is faster and sufficient |
+| Different polymer from standards | **Use MALS** |
+| Branched or complex architecture | **Use MALS** |
+| Absolute MW required | **Use MALS** |
+| Characterizing new materials | **Use MALS** |
+| Regulatory submissions | **Use MALS** for accuracy |
 
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow
 - [LALS and RALS
-  Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) -
+  Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
   Simpler light scattering alternatives
 - [Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md) -
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
   RI + Viscometer + LS workflows
 - [System
-  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md) -
+  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
   QC metrics for MALS
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -388,32 +415,32 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] nlme_3.1-168        parallelly_1.46.1   lava_1.8.2         
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.69.0      
-#> [40] purrr_1.2.1         listenv_0.10.0      labeling_0.4.3     
-#> [43] splines_4.5.2       fastmap_1.2.0       grid_4.5.2         
-#> [46] cli_3.6.5           magrittr_2.0.4      utf8_1.2.6         
-#> [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        
-#> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   
-#> [55] rmarkdown_2.30      globals_0.19.0      nnet_7.3-20        
-#> [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     
-#> [61] knitr_1.51          hardhat_1.4.2       mgcv_1.9-3         
-#> [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
-#> [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [70] systemfonts_1.3.1   fs_1.6.6
+#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
+#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        
+#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
+#> [34] nlme_3.1-169        parallelly_1.48.0   lava_1.10          
+#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.80.0      
+#> [40] purrr_1.2.2         listenv_1.1.0       labeling_0.4.3     
+#> [43] splines_4.6.1       fastmap_1.2.0       grid_4.6.1         
+#> [46] cli_3.6.6           magrittr_2.0.5      utf8_1.2.6         
+#> [49] survival_3.8-6      future.apply_1.21.0 withr_3.0.3        
+#> [52] scales_1.4.0        lubridate_1.9.5     timechange_0.4.0   
+#> [55] rmarkdown_2.32      globals_0.20.0      otel_0.2.0         
+#> [58] nnet_7.3-20         timeDate_4052.112   ragg_1.5.2         
+#> [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      
+#> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         
+#> [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
 ```

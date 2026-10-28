@@ -67,37 +67,37 @@ based on commercial kit values.
 1.  Load raw data and inspect for quality
 
 2.  Apply baseline correction with
-    [`step_sec_baseline`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md)
+    [`step_sec_baseline`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
 
 3.  Identify peak retention times
 
 4.  Build calibration curve with
-    [`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+    [`step_sec_conventional_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 
 ## See also
 
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md)
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md)
 for unknown samples to analyze
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md)
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md)
 for pre-processed calibration data
-[`step_sec_conventional_cal`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`step_sec_conventional_cal`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 for calibration step
 
 Other sec-data:
-[`sec_branched`](https://jameshwade.github.io/measure-sec/reference/sec_branched.md),
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
-[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
+[`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_protein`](https://jameshwade.github.io/measure.sec/reference/sec_protein.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure.sec/reference/sec_system_suitability.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
 
 Other sec-raw:
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md)
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md)
 
 ## Examples
 

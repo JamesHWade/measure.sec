@@ -98,9 +98,9 @@ chromatograms, making it easy to:
 ## See also
 
 Other sec-export:
-[`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md),
-[`measure_sec_report()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_report.md),
-[`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md)
+[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md),
+[`measure_sec_report()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_report.md),
+[`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
 
 ## Examples
 

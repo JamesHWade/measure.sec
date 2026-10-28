@@ -17,7 +17,10 @@ step_sec_mw_distribution(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_distribution")
+  id = recipes::rand_id("sec_mw_distribution"),
+  mw_col = NULL,
+  mw_scale = NULL,
+  integration_range = NULL
 )
 ```
 
@@ -44,7 +47,7 @@ step_sec_mw_distribution(
 - calibration:
 
   Calibration method for converting x-axis to log(MW). See
-  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
   for details.
 
 - n_points:
@@ -78,6 +81,23 @@ step_sec_mw_distribution(
 
   Unique step identifier.
 
+- mw_col:
+
+  Optional per-slice molecular-weight measure column. A matching curve
+  produced by
+  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
+  is detected automatically.
+
+- mw_scale:
+
+  Scale of `mw_col`: `"log10"` or `"absolute"`. Required for untagged
+  curves; see
+  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md).
+
+- integration_range:
+
+  Optional limits on the original elution axis.
+
 ## Value
 
 An updated recipe with the new step added.
@@ -92,25 +112,34 @@ unit log(MW). This representation is preferred because the area under
 the curve represents the weight fraction in that MW range.
 
 **Cumulative Distribution:** The cumulative weight fraction from low to
-high MW. Values range from 0 to 1.
+high MW. Values range from 0 to 1. Weight is integrated on the original
+elution axis before transforming to log(MW), so a nonlinear calibration
+is handled without treating the signal as a density on the
+molecular-weight axis. The selected MW curve must be strictly monotonic
+and valid over the integration range. When `mw_range` restricts the
+plotted range, it displays a portion of the full distribution; it does
+not renormalize that portion to 1.
 
-The output replaces the `.measures` column with the distribution data,
-where `location` contains log10(MW) values and `value` contains the
-distribution values.
+The selected measure column is replaced by the requested distribution.
+With `type = "both"`, two additional columns, `<measure>_differential`
+and `<measure>_cumulative`, are added and the selected column is
+replaced by the differential curve. Their `location` values are
+log10(MW), and their `value` entries are the corresponding distribution
+values.
 
 ## See also
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
-[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md),
-[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure.sec/reference/step_sec_integration_window.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md),
+[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_refine.md)
 
 ## Examples
 

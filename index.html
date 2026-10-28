@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="favicon.ico">
 <link rel="manifest" href="site.webmanifest">
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="deps/Montserrat-0.4.10/font.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -21,7 +21,7 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="measure.sec">
 <meta name="description" content="SEC/GPC Analysis Extensions for the Measure Package">
 <meta property="og:description" content="SEC/GPC Analysis Extensions for the Measure Package">
-<meta property="og:image" content="https://jameshwade.github.io/measure-sec/logo.svg">
+<meta property="og:image" content="https://jameshwade.github.io/measure.sec/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -68,7 +68,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure-sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure.sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -123,7 +123,7 @@ SEC Data Analysis Workflow
 <p>You can install the development version of measure.sec from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure-sec"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure.sec"</span><span class="op">)</span></span></code></pre></div>
 <p>Note: measure.sec requires the <a href="https://github.com/JamesHWade/measure" class="external-link">measure</a> package:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure"</span><span class="op">)</span></span></code></pre></div>
@@ -133,7 +133,7 @@ SEC Data Analysis Workflow
 </h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure.sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load example triple-detection SEC data</span></span>
@@ -172,48 +172,48 @@ SEC Data Analysis Workflow
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>Step</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_ri.html">step_sec_ri()</a></code></td>
 <td>RI detector with dn/dc normalization</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_uv.html">step_sec_uv()</a></code></td>
 <td>UV detector with extinction coefficient</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_dad.html">step_sec_dad()</a></code></td>
 <td>Diode array detector processing (multi-wavelength UV)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_mals.html">step_sec_mals()</a></code></td>
-<td>Multi-angle light scattering for absolute MW</td>
+<td>Single-angle light-scattering approximation; multi-angle fits and Rg are not implemented</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_lals.html">step_sec_lals()</a></code></td>
 <td>Low-angle light scattering for absolute MW</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_rals.html">step_sec_rals()</a></code></td>
 <td>Right-angle light scattering for absolute MW</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_dls.html">step_sec_dls()</a></code></td>
 <td>Dynamic light scattering for Rh and diffusion</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_viscometer.html">step_sec_viscometer()</a></code></td>
 <td>Differential viscometer processing</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_concentration.html">step_sec_concentration()</a></code></td>
 <td>Convert signal to concentration</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code></td>
 <td>Intrinsic viscosity calculation</td>
 </tr>
@@ -224,16 +224,16 @@ SEC Data Analysis Workflow
 <h3 id="preprocessing">Preprocessing<a class="anchor" aria-label="anchor" href="#preprocessing"></a>
 </h3>
 <table class="table">
-<thead><tr class="header">
+<thead><tr>
 <th>Step</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_detector_delay.html">step_sec_detector_delay()</a></code></td>
 <td>Correct inter-detector volume delays</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_baseline.html">step_sec_baseline()</a></code></td>
 <td>SEC-optimized baseline correction</td>
 </tr>
@@ -248,28 +248,28 @@ SEC Data Analysis Workflow
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>Step</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code></td>
 <td>Calculate Mn, Mw, Mz, dispersity</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code></td>
 <td>Calculate MW fractions above/below cutoffs</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code></td>
 <td>Generate differential/cumulative MWD</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code></td>
 <td>Narrow standard calibration (polynomial fits)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_universal_cal.html">step_sec_universal_cal()</a></code></td>
 <td>Universal calibration with Mark-Houwink</td>
 </tr>
@@ -280,16 +280,16 @@ SEC Data Analysis Workflow
 <h3 id="composition-analysis">Composition Analysis<a class="anchor" aria-label="anchor" href="#composition-analysis"></a>
 </h3>
 <table class="table">
-<thead><tr class="header">
+<thead><tr>
 <th>Step</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_uv_ri_ratio.html">step_sec_uv_ri_ratio()</a></code></td>
 <td>UV/RI ratio for heterogeneity detection</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_composition.html">step_sec_composition()</a></code></td>
 <td>Copolymer composition from UV/RI</td>
 </tr>
@@ -304,20 +304,20 @@ SEC Data Analysis Workflow
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>Step</th>
 <th>Description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_protein.html">step_sec_protein()</a></code></td>
 <td>Complete protein SEC workflow (baseline + aggregates + oligomers)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code><a href="reference/step_sec_aggregates.html">step_sec_aggregates()</a></code></td>
 <td>HMWS/monomer/LMWS quantitation</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code><a href="reference/step_sec_oligomer.html">step_sec_oligomer()</a></code></td>
 <td>Detailed oligomer species analysis</td>
 </tr>
@@ -404,7 +404,7 @@ SEC Data Analysis Workflow
 <p>measure.sec automatically registers with the measure package on load:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure.sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View registered SEC steps</span></span>
 <span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/measure_steps.html" class="external-link">measure_steps</a></span><span class="op">(</span>techniques <span class="op">=</span> <span class="st">"SEC/GPC"</span><span class="op">)</span></span></code></pre></div>
@@ -415,23 +415,23 @@ SEC Data Analysis Workflow
 <p>For detailed workflows and examples, see the package vignettes:</p>
 <ul>
 <li>
-<strong><a href="https://jameshwade.github.io/measure-sec/articles/getting-started.html">Getting Started</a></strong>: Basic concepts and your first SEC analysis</li>
+<strong><a href="https://jameshwade.github.io/measure.sec/articles/getting-started.html">Getting Started</a></strong>: Basic concepts and your first SEC analysis</li>
 <li>
-<strong><a href="https://jameshwade.github.io/measure-sec/articles/triple-detection.html">Multi-Detector SEC</a></strong>: Triple detection with RI, UV, and MALS</li>
+<strong><a href="https://jameshwade.github.io/measure.sec/articles/triple-detection.html">Multi-Detector SEC</a></strong>: Triple detection with RI, UV, and MALS</li>
 <li>
-<strong><a href="https://jameshwade.github.io/measure-sec/articles/protein-sec.html">Protein SEC</a></strong>: Aggregate and oligomer analysis for biopharmaceuticals</li>
+<strong><a href="https://jameshwade.github.io/measure.sec/articles/protein-sec.html">Protein SEC</a></strong>: Aggregate and oligomer analysis for biopharmaceuticals</li>
 <li>
-<strong><a href="https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.html">Copolymer Analysis</a></strong>: Composition from UV/RI ratio</li>
+<strong><a href="https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.html">Copolymer Analysis</a></strong>: Composition from UV/RI ratio</li>
 <li>
-<strong><a href="https://jameshwade.github.io/measure-sec/articles/system-suitability.html">System Suitability</a></strong>: QC functions and SST testing</li>
+<strong><a href="https://jameshwade.github.io/measure.sec/articles/system-suitability.html">System Suitability</a></strong>: QC functions and SST testing</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="getting-help">Getting Help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
 </h2>
 <ul>
-<li><a href="https://jameshwade.github.io/measure-sec/">Package documentation</a></li>
-<li><a href="https://github.com/JamesHWade/measure-sec/issues" class="external-link">GitHub Issues</a></li>
+<li><a href="https://jameshwade.github.io/measure.sec/">Package documentation</a></li>
+<li><a href="https://github.com/JamesHWade/measure.sec/issues" class="external-link">GitHub Issues</a></li>
 </ul>
 </div>
 <div class="section level2">
@@ -443,8 +443,8 @@ SEC Data Analysis Workflow
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/JamesHWade/measure-sec/" class="external-link">Browse source code</a></li>
-<li><a href="https://github.com/JamesHWade/measure-sec/issues" class="external-link">Report a bug</a></li>
+<li><a href="https://github.com/JamesHWade/measure.sec/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/JamesHWade/measure.sec/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
@@ -491,7 +491,7 @@ SEC Data Analysis Workflow
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

@@ -2,6 +2,13 @@
 
 ## Overview
 
+> **Implementation status:**
+> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+> currently uses a single-angle approximation. Its output is relative
+> without a scattering calibration constant; multi-angle extrapolation
+> and Rg are not implemented. Validate all detector workflows against
+> instrument-specific reference data.
+
 Multi-detector SEC combines concentration detectors (RI, UV) with
 molecular weight detectors (light scattering) and/or viscometers to
 provide absolute molecular weight and structural information. This
@@ -19,10 +26,10 @@ This vignette covers:
 For detailed information on specific light scattering detectors, see:
 
 - [MALS
-  Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md) -
-  Multi-angle analysis for Rg and large molecules
+  Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
+  scattering theory and current single-angle approximation
 - [LALS/RALS
-  Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) -
+  Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
   Single-angle alternatives
 
 ## Why Multi-Detector SEC?
@@ -85,6 +92,7 @@ polymers, they almost always do.
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -173,11 +181,11 @@ flowchart TB
 
 ### Molecular Weight Detectors
 
-| Detector | When to Use                    | See Also                                                                                        |
-|----------|--------------------------------|-------------------------------------------------------------------------------------------------|
-| **MALS** | Large molecules, need Rg       | [MALS Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md)           |
-| **LALS** | Medium molecules, no Rg needed | [LALS/RALS Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) |
-| **RALS** | Small molecules, QC screening  | [LALS/RALS Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) |
+| Detector | When to Use | See Also |
+|----|----|----|
+| **MALS** | Large molecules, need Rg | [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
+| **LALS** | Medium molecules, no Rg needed | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
+| **RALS** | Small molecules, QC screening | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
 
 ### Hydrodynamic Detectors
 
@@ -189,6 +197,7 @@ flowchart TB
 ## Example Dataset
 
 ``` r
+
 data(sec_triple_detect, package = "measure.sec")
 
 # Select sample data (excluding standards)
@@ -222,10 +231,11 @@ corrected, MW calculations will be wrong.
 ### Correcting Delays
 
 Use
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md)
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
 to align all detectors:
 
 ``` r
+
 rec <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
   data = samples
@@ -260,10 +270,12 @@ Delay volumes should be determined experimentally:
 A complete “triple detection” recipe with RI, UV, and light scattering:
 
 ``` r
+
 # Complete triple detection recipe
 rec_triple <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = samples
+  # UV normalization requires a positive extinction coefficient.
+  data = dplyr::filter(samples, extinction_coef > 0)
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Step 1: Convert signals to measure format
@@ -294,24 +306,26 @@ rec_triple <- recipe(
 
   # Step 6: Process MALS (requires concentration for absolute MW)
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
+#> Warning: No scattering calibration constant supplied; output is relative and
+#> uncalibrated.
 
 prepped_triple <- prep(rec_triple)
+#> Warning: Negative detector values were excluded during mass normalization.
+#> ℹ 1379 of 10005 signal points (13.8%) were set to zero.
 result_triple <- bake(prepped_triple, new_data = NULL)
 
-# View results - MALS provides absolute MW at each slice
+# View results - output is relative without a scattering calibration constant
 # For MW averages, you would integrate over the chromatogram
 result_triple |>
   select(sample_id, starts_with("mw_"))
-#> # A tibble: 7 × 2
+#> # A tibble: 5 × 2
 #>   sample_id     mw_mals
 #>   <chr>          <meas>
 #> 1 PMMA-Low  [2,001 × 2]
 #> 2 PMMA-Med  [2,001 × 2]
 #> 3 PMMA-High [2,001 × 2]
-#> 4 PEG-5K    [2,001 × 2]
-#> 5 PEG-20K   [2,001 × 2]
-#> 6 Copoly-A  [2,001 × 2]
-#> 7 Copoly-B  [2,001 × 2]
+#> 4 Copoly-A  [2,001 × 2]
+#> 5 Copoly-B  [2,001 × 2]
 ```
 
 ## Viscometer Integration
@@ -328,6 +342,7 @@ characterization.
 ### Viscometer Workflow
 
 ``` r
+
 # Viscometer integration
 # Note: Requires viscometer data (visc_signal)
 
@@ -365,7 +380,7 @@ rec_visc <- recipe(
 ### Intrinsic Viscosity Output
 
 The
-[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure-sec/reference/step_sec_intrinsic_visc.md)
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md)
 step calculates \[η\] at each elution slice:
 
 | Output           | Description                             |
@@ -383,7 +398,9 @@ is proportional to \[η\] × M.
 
 ### The Universal Calibration Principle
 
-$$\log\left( \lbrack\eta\rbrack \times M \right)_{\text{sample}} = \log\left( \lbrack\eta\rbrack \times M \right)_{\text{standard}}$$
+``` math
+\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}
+```
 
 This allows you to determine MW for any polymer type using standards of
 a different polymer (typically polystyrene).
@@ -393,6 +410,7 @@ a different polymer (typically polystyrene).
 ### Applying Universal Calibration
 
 ``` r
+
 # Universal calibration with Mark-Houwink parameters
 # Convert PS calibration to another polymer type
 
@@ -426,6 +444,7 @@ values for your specific conditions.
 Full workflow combining RI, UV, light scattering, and viscometer:
 
 ``` r
+
 # Complete quadruple detection workflow
 rec_quad <- recipe(
   ri_signal + uv_signal + mals_signal + visc_signal +
@@ -476,46 +495,47 @@ rec_quad <- recipe(
 
 ### Common Issues
 
-| Problem                  | Likely Cause           | Solution                              |
-|--------------------------|------------------------|---------------------------------------|
-| MW varies with injection | Delay values incorrect | Recalibrate with narrow standard      |
-| Noisy viscometer signal  | Air bubbles            | Degas mobile phase, check connections |
-| RI baseline drift        | Temperature variation  | Improve thermal control               |
-| LS signal too weak       | Low concentration      | Increase injection mass               |
+| Problem | Likely Cause | Solution |
+|----|----|----|
+| MW varies with injection | Delay values incorrect | Recalibrate with narrow standard |
+| Noisy viscometer signal | Air bubbles | Degas mobile phase, check connections |
+| RI baseline drift | Temperature variation | Improve thermal control |
+| LS signal too weak | Low concentration | Increase injection mass |
 
 ### Detector-Specific Troubleshooting
 
 For light scattering issues, see: - [MALS
-Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md) -
+Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
 MALS-specific troubleshooting - [LALS/RALS
-Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) -
+Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
 Single-angle troubleshooting
 
 ## See Also
 
 - [MALS
-  Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md) -
+  Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
   Multi-angle light scattering for Rg
 - [LALS/RALS
-  Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md) -
+  Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
   Single-angle alternatives
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow
 - [Calibration
-  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
   Save and reuse calibrations
 - [Copolymer
-  Composition](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md) -
+  Composition](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md) -
   Multi-detector composition analysis
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -534,31 +554,32 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] parallelly_1.46.1   lava_1.8.2          tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.69.0       purrr_1.2.1        
-#> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
-#> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      utf8_1.2.6          survival_3.8-3     
-#> [49] future.apply_1.20.1 withr_3.0.2         scales_1.4.0       
-#> [52] lubridate_1.9.4     timechange_0.4.0    rmarkdown_2.30     
-#> [55] globals_0.19.0      nnet_7.3-20         timeDate_4052.112  
-#> [58] ragg_1.5.0          evaluate_1.0.5      knitr_1.51         
-#> [61] hardhat_1.4.2       rlang_1.1.7         Rcpp_1.1.1         
-#> [64] glue_1.8.0          ipred_0.9-15        jsonlite_2.0.0     
-#> [67] R6_2.6.1            systemfonts_1.3.1   fs_1.6.6
+#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
+#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        
+#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
+#> [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      
+#> [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          
+#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-6     
+#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
+#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
+#> [55] globals_0.20.0      otel_0.2.0          nnet_7.3-20        
+#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
+#> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [70] fs_2.1.0
 ```

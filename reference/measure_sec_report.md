@@ -142,9 +142,9 @@ For the `"qc"` template, you can provide custom specifications:
 ## See also
 
 Other sec-export:
-[`measure_sec_compare()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_compare.md),
-[`measure_sec_slice_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_slice_table.md),
-[`measure_sec_summary_table()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_summary_table.md)
+[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md),
+[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md),
+[`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
 
 ## Examples
 

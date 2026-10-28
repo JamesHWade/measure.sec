@@ -86,6 +86,7 @@ accurate results.
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -116,6 +117,7 @@ from a protein SEC analysis with multiple species.
 ### Visualize the Chromatogram
 
 ``` r
+
 # Load protein SEC data
 data(sec_protein)
 
@@ -154,6 +156,7 @@ For this example, let’s define peak parameters based on the chromatogram
 above. In practice, these come from your integration software:
 
 ``` r
+
 # Peak parameters from integration (typical protein SEC)
 # These represent what your software would report
 peaks <- data.frame(
@@ -181,6 +184,7 @@ Resolution quantifies how well two adjacent peaks are separated. It uses
 **retention times** and **peak widths** from your peak table.
 
 ``` r
+
 # Extract parameters for dimer and monomer peaks
 dimer <- peaks |> filter(name == "Dimer")
 monomer <- peaks |> filter(name == "Monomer")
@@ -223,6 +227,7 @@ plates = better efficiency. It uses **retention time** and **peak
 width**.
 
 ``` r
+
 # For the monomer peak (main peak)
 cat("Monomer retention:", monomer$retention, "min\n")
 #> Monomer retention: 10.5 min
@@ -256,6 +261,7 @@ tailing/fronting. It compares the **leading half-width** to the
 **tailing half-width** at a specific height.
 
 ``` r
+
 # For asymmetry, we need leading and tailing half-widths
 # (measured at 5% height for USP, 10% height for EP)
 # Let's assume slight tailing for the monomer:
@@ -297,6 +303,7 @@ knowing the **injected mass** and comparing to **detected mass** from
 integration.
 
 ``` r
+
 # Typical protein SEC injection
 injected_mass <- 0.050   # mg (50 µg)
 detected_mass <- 0.048   # mg from integration area and response factor
@@ -326,6 +333,7 @@ complete SST evaluation.
 ### Basic System Suitability Test
 
 ``` r
+
 # Use the peak table we defined earlier
 sst <- measure_sec_suitability(
   peaks = peaks,
@@ -357,6 +365,7 @@ suitability.
 For validated biopharmaceutical methods, you may need tighter criteria:
 
 ``` r
+
 strict_criteria <- list(
   resolution_min = 2.0,       # Higher than default 1.5
   plate_count_min = 8000,     # Higher than default 5000
@@ -389,7 +398,7 @@ print(sst_strict)
 
 **Tip:** Document your acceptance criteria in your method validation
 protocol. The defaults in
-[`measure_sec_suitability()`](https://jameshwade.github.io/measure-sec/reference/measure_sec_suitability.md)
+[`measure_sec_suitability()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_suitability.md)
 are typical starting points but should be verified for your specific
 application.
 
@@ -398,6 +407,7 @@ application.
 For precision assessment, your peak table includes multiple injections:
 
 ``` r
+
 # 6 replicate injections of the same sample
 peaks_reps <- data.frame(
   name = rep(c("Dimer", "Monomer"), each = 6),
@@ -452,6 +462,7 @@ Use SST data from daily runs to monitor column aging.
 ### Column Performance Log
 
 ``` r
+
 # SST results collected over several months
 set.seed(42)
 dates <- seq(as.Date("2024-01-01"), as.Date("2024-06-01"), by = "week")
@@ -469,6 +480,7 @@ column_log <- tibble(
 ### Visualizing Trends
 
 ``` r
+
 ggplot(column_log, aes(date)) +
   geom_line(aes(y = plates / 10000), color = "#2E86AB", linewidth = 1) +
   geom_point(aes(y = plates / 10000), color = "#2E86AB", size = 2) +
@@ -501,6 +513,7 @@ ggplot(column_log, aes(date)) +
 ### Predicting Column Replacement
 
 ``` r
+
 min_plates <- 10000
 min_resolution <- 1.5
 
@@ -531,6 +544,7 @@ calibration standards. This provides baseline metrics to track over the
 column’s lifetime.
 
 ``` r
+
 # Calibration data from polymer standards
 cal_standards <- data.frame(
   retention = c(5.2, 6.1, 7.0, 8.2, 9.5, 10.8),
@@ -609,11 +623,11 @@ print(col_perf)
 
 ### Low Recovery (\< 95%)
 
-| Cause             | Check                     | Fix                               |
-|-------------------|---------------------------|-----------------------------------|
-| Adsorption        | Worse for sticky proteins | Increase ionic strength           |
-| Aggregation       | HMW increases over run    | Fresh sample, lower concentration |
-| Integration error | Baseline drift            | Reintegrate                       |
+| Cause | Check | Fix |
+|----|----|----|
+| Adsorption | Worse for sticky proteins | Increase ionic strength |
+| Aggregation | HMW increases over run | Fresh sample, lower concentration |
+| Integration error | Baseline drift | Reintegrate |
 
 ## Regulatory References
 
@@ -643,25 +657,26 @@ print(col_perf)
 ## See Also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.md) -
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
   Basic SEC workflow and concepts
 - [Protein SEC
-  Analysis](https://jameshwade.github.io/measure-sec/articles/protein-sec.md) -
+  Analysis](https://jameshwade.github.io/measure.sec/articles/protein-sec.md) -
   Biopharm aggregate analysis
 - [Calibration
-  Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) -
+  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
   Save and track calibrations
 - [Exporting
-  Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md) -
+  Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md) -
   QC reports and data export
 
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -680,31 +695,31 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] parallelly_1.46.1   lava_1.8.2          tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.69.0       purrr_1.2.1        
-#> [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      
-#> [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          
-#> [46] magrittr_2.0.4      survival_3.8-3      future.apply_1.20.1
-#> [49] withr_3.0.2         scales_1.4.0        lubridate_1.9.4    
-#> [52] timechange_0.4.0    rmarkdown_2.30      globals_0.19.0     
-#> [55] nnet_7.3-20         timeDate_4052.112   ragg_1.5.0         
-#> [58] evaluate_1.0.5      knitr_1.51          hardhat_1.4.2      
-#> [61] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
-#> [64] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [67] systemfonts_1.3.1   fs_1.6.6
+#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
+#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        
+#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
+#> [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      
+#> [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          
+#> [46] magrittr_2.0.5      survival_3.8-6      future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.2.0          nnet_7.3-20         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       rlang_1.3.0         Rcpp_1.1.2         
+#> [64] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [67] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
 ```

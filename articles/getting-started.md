@@ -84,9 +84,9 @@ flowchart TD
     C --> D[step_sec_ri / step_sec_uv<br>Detector processing with dn/dc or ε]
     D --> E{Calibration<br>method?}
     E -->|"Standards available<br>(same polymer type)"| F[step_sec_conventional_cal<br>Polynomial fit to standards]
-    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Angular extrapolation<br>Zimm/Debye/Berry]
+    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Single-angle approximation]
     F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
-    G --> I[Absolute MW & Rg<br>directly from MALS]
+    G --> I[Calibrated single-angle<br>MW estimate]
     H --> J[Results<br>MW averages, distributions, plots]
     I --> J
 
@@ -94,22 +94,25 @@ flowchart TD
     style J fill:#c8e6c9
 ```
 
-*Choose **conventional calibration** when you have narrow MW standards
-of the same polymer type. Choose **MALS** when you need absolute MW
-without polymer-specific standards or when analyzing unknown polymers.*
+*Conventional calibration uses narrow MW standards. The current
+scattering step is a single-angle approximation; it needs a calibrated
+detector and known concentration units. Multi-angle extrapolation and Rg
+are not implemented.*
 
 ## Installation
 
 ``` r
+
 # Install from GitHub
 # install.packages("pak")
 pak::pak("JamesHWade/measure")
-pak::pak("JamesHWade/measure-sec")
+pak::pak("JamesHWade/measure.sec")
 ```
 
 ## Setup
 
 ``` r
+
 library(measure)
 #> Loading required package: recipes
 #> Loading required package: dplyr
@@ -195,6 +198,7 @@ dataset in **long format** (one row per time point). This is a good
 starting point for learning the workflow before analyzing your own data.
 
 ``` r
+
 # Load the example dataset
 data(sec_triple_detect, package = "measure.sec")
 
@@ -226,6 +230,7 @@ The dataset contains:
   quantitative analysis)
 
 ``` r
+
 # View the unique samples in the dataset
 # Each sample_id represents one injection; the chromatogram spans many rows
 sec_triple_detect |>
@@ -255,6 +260,7 @@ RI detector. This demonstrates the core pattern you’ll use for all SEC
 analysis.
 
 ``` r
+
 # Select a single polystyrene standard for this example
 # In practice, you'd often process many samples at once
 ps_sample <- sec_triple_detect |>
@@ -283,6 +289,7 @@ do it yet. This separation lets you define the workflow once and apply
 it to many samples.
 
 ``` r
+
 # Start a recipe with your data
 # The formula specifies: predictor columns ~ grouping column
 # sample_id identifies which rows belong to each chromatogram
@@ -306,6 +313,7 @@ Chain additional steps using the pipe (`|>`). Each step transforms the
 data in sequence:
 
 ``` r
+
 rec <- recipe(
   ri_signal + elution_time + dn_dc ~ sample_id,
   data = ps_sample
@@ -335,6 +343,7 @@ Two functions execute your recipe:
   Applies the transformations to produce results
 
 ``` r
+
 # Prep: Learn parameters from the data
 prepped <- prep(rec)
 
@@ -372,11 +381,13 @@ averages**: - **Mn (number-average)**: Emphasizes lower MW species -
 (Mw/Mn)**: Measures breadth of the MW distribution (1.0 = monodisperse)
 
 Use
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
-to calculate these. This step requires that the x-axis (location) values
-already represent log₁₀(MW)—which is what
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
-provides. See the Calibration section below for the complete workflow.
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
+to calculate these. After
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md),
+it pairs the concentration trace with the calibrated MW curve; their
+locations remain elution time or volume. Alternatively, an input trace
+can already use log₁₀(MW) as its axis. See the Calibration section below
+for the complete workflow.
 
 ## Calibration Curves
 
@@ -385,12 +396,14 @@ molecular weight. The most common approach uses **narrow
 standards**—polymers with known molecular weights and low dispersity—to
 build a calibration curve.
 
-> **Note**: If you have a light scattering detector (MALS), you can
-> determine absolute molecular weights without calibration. See
-> [`vignette("triple-detection")`](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)
-> for details.
+> **Note**: A calibrated light-scattering detector can estimate
+> molecular weight without polymer standards.
+> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+> currently uses a single-angle approximation and does not calculate Rg
+> or perform angular extrapolation.
 
 ``` r
+
 # Load polystyrene narrow standards
 # These are well-characterized polymers used to build the calibration curve
 data(sec_ps_standards, package = "measure.sec")
@@ -436,9 +449,10 @@ ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
 ![](getting-started_files/figure-html/calibration-1.png)
 
 Apply the calibration using
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md):
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md):
 
 ``` r
+
 # Prepare standards in the format expected by the calibration step
 # Needs columns: retention (time/volume) and log_mw
 ps_cal <- sec_ps_standards |>
@@ -456,15 +470,15 @@ rec_cal <- recipe(
   ) |>
   step_sec_baseline(measures = "ri") |>
   # Apply conventional calibration using polystyrene standards
-  # This converts retention time to log10(MW) on the x-axis
+  # This creates a separate log10(MW) curve on the same elution axis
   # fit_type options: "linear", "quadratic", "cubic" (most common)
   step_sec_conventional_cal(
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
   # Calculate MW averages from the calibrated chromatogram
-  # The calibration step converted location values to log10(MW)
-  step_sec_mw_averages()
+  # The averages step pairs the original signal with the calibrated curve
+  step_sec_mw_averages(integration_range = range(ps_cal$retention))
 
 prepped_cal <- prep(rec_cal)
 #> Warning: Standard at 12.58 has 14.4% MW deviation.
@@ -478,15 +492,18 @@ result_cal <- bake(prepped_cal, new_data = NULL)
 result_cal |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 #> # A tibble: 1 × 5
-#>   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity
-#>   <chr>          <dbl>   <dbl>   <dbl>         <dbl>
-#> 1 PS-50K    419927756. 8.24e21 7.81e23       1.96e13
+#>   sample_id mw_mn   mw_mw    mw_mz mw_dispersity
+#>   <chr>     <dbl>   <dbl>    <dbl>         <dbl>
+#> 1 PS-50K    1825. 205538. 1236629.          113.
 ```
 
-> **Important**: Conventional calibration assumes your sample has
-> similar hydrodynamic behavior to your standards. Polystyrene standards
-> work well for other flexible polymers in THF, but for proteins in
-> aqueous SEC, use protein standards or light scattering.
+> **Important**: The example integrates only the portion within the
+> standards’ retention range; signal outside that range is excluded, so
+> these are not necessarily whole-sample averages. Conventional
+> calibration assumes your sample has similar hydrodynamic behavior to
+> your standards. Polystyrene standards work well for other flexible
+> polymers in THF, but for proteins in aqueous SEC, use protein
+> standards or light scattering.
 
 ------------------------------------------------------------------------
 
@@ -504,62 +521,63 @@ reference organized by function:
 
 ### Preprocessing
 
-- [`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md):
+- [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md):
   SEC-optimized baseline correction
-- [`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md):
+- [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md):
   Correct inter-detector delays
 
 ### Detector Processing
 
-- [`step_sec_ri()`](https://jameshwade.github.io/measure-sec/reference/step_sec_ri.md):
+- [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md):
   RI detector with dn/dc
-- [`step_sec_uv()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv.md):
+- [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md):
   UV detector with extinction coefficient
-- [`step_sec_mals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md),
-  [`step_sec_lals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_lals.md),
-  [`step_sec_rals()`](https://jameshwade.github.io/measure-sec/reference/step_sec_rals.md):
+- [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md),
+  [`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md),
+  [`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md):
   Light scattering
-- [`step_sec_dls()`](https://jameshwade.github.io/measure-sec/reference/step_sec_dls.md):
+- [`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md):
   Dynamic light scattering
-- [`step_sec_viscometer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md):
+- [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md):
   Differential viscometer
 
 ### Molecular Weight
 
-- [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md):
+- [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md):
   Mn, Mw, Mz, dispersity
-- [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_fractions.md):
+- [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md):
   MW fractions above/below cutoffs
-- [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md):
+- [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md):
   Differential/cumulative MWD
-- [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md):
+- [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md):
   Narrow standard calibration
-- [`step_sec_universal_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_universal_cal.md):
+- [`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md):
   Universal calibration
 
 ### Composition & Protein
 
-- [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure-sec/reference/step_sec_uv_ri_ratio.md):
+- [`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv_ri_ratio.md):
   UV/RI ratio for heterogeneity
-- [`step_sec_composition()`](https://jameshwade.github.io/measure-sec/reference/step_sec_composition.md):
+- [`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md):
   Copolymer composition
-- [`step_sec_aggregates()`](https://jameshwade.github.io/measure-sec/reference/step_sec_aggregates.md):
+- [`step_sec_aggregates()`](https://jameshwade.github.io/measure.sec/reference/step_sec_aggregates.md):
   HMWS/monomer/LMWS quantitation
-- [`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md):
+- [`step_sec_protein()`](https://jameshwade.github.io/measure.sec/reference/step_sec_protein.md):
   Complete protein SEC workflow
 
 ## Troubleshooting
 
 **Common issues and quick fixes:**
 
-| Problem                    | Solution                                                                                                                                   |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| “Column not found”         | Check column names match exactly (case-sensitive)                                                                                          |
+| Problem | Solution |
+|----|----|
+| “Column not found” | Check column names match exactly (case-sensitive) |
 | “No measure columns found” | Add [`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html) at the start of your recipe |
-| NA values in MW results    | Check calibration range covers your retention times                                                                                        |
-| Recipe won’t prep          | Try prepping with fewer steps to isolate the issue                                                                                         |
+| NA values in MW results | Check calibration range covers your retention times |
+| Recipe won’t prep | Try prepping with fewer steps to isolate the issue |
 
 ``` r
+
 # Debugging tips:
 names(your_data)                    # Check column names
 measure::find_measure_cols(result)  # Find measure columns after bake
@@ -571,20 +589,21 @@ result$ri[[1]] |> summary()         # Inspect chromatogram data
 Now that you understand the basics, explore these vignettes for
 specialized workflows:
 
-| Vignette                                                                                              | Use when you need to…                       |
-|-------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| [Multi-Detector SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.md)           | Integrate multiple detectors (RI + UV + LS) |
-| [MALS Detection](https://jameshwade.github.io/measure-sec/articles/mals-detection.md)                 | Get absolute MW and radius of gyration      |
-| [LALS/RALS Detection](https://jameshwade.github.io/measure-sec/articles/lals-rals-detection.md)       | Use single-angle light scattering           |
-| [Protein SEC](https://jameshwade.github.io/measure-sec/articles/protein-sec.md)                       | Analyze aggregates (HMWS/monomer/LMWS)      |
-| [Copolymer Composition](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.md)      | Determine composition via UV/RI ratio       |
-| [Calibration Management](https://jameshwade.github.io/measure-sec/articles/calibration-management.md) | Save, load, and reuse calibrations          |
-| [System Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.md)         | Set up QC checks and column monitoring      |
-| [Exporting Results](https://jameshwade.github.io/measure-sec/articles/exporting-results.md)           | Generate summary tables and reports         |
+| Vignette | Use when you need to… |
+|----|----|
+| [Multi-Detector SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) | Integrate multiple detectors (RI + UV + LS) |
+| [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) | Get absolute MW and radius of gyration |
+| [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) | Use single-angle light scattering |
+| [Protein SEC](https://jameshwade.github.io/measure.sec/articles/protein-sec.md) | Analyze aggregates (HMWS/monomer/LMWS) |
+| [Copolymer Composition](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md) | Determine composition via UV/RI ratio |
+| [Calibration Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) | Save, load, and reuse calibrations |
+| [System Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) | Set up QC checks and column monitoring |
+| [Exporting Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md) | Generate summary tables and reports |
 
 You can also browse all available functions with:
 
 ``` r
+
 # See all SEC/GPC steps registered with measure
 measure::measure_steps(techniques = "SEC/GPC")
 ```
@@ -592,10 +611,11 @@ measure::measure_steps(techniques = "SEC/GPC")
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.5 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -614,32 +634,32 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    
-#> [4] recipes_1.3.1          dplyr_1.1.4           
+#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       
-#>  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        
-#>  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1
-#> [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       
-#> [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    
+#>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
+#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
+#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
+#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       
-#> [34] nlme_3.1-168        parallelly_1.46.1   lava_1.8.2         
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.69.0      
-#> [40] purrr_1.2.1         listenv_0.10.0      labeling_0.4.3     
-#> [43] splines_4.5.2       fastmap_1.2.0       grid_4.5.2         
-#> [46] cli_3.6.5           magrittr_2.0.4      utf8_1.2.6         
-#> [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        
-#> [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   
-#> [55] rmarkdown_2.30      globals_0.19.0      nnet_7.3-20        
-#> [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     
-#> [61] knitr_1.51          hardhat_1.4.2       mgcv_1.9-3         
-#> [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         
-#> [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           
-#> [70] systemfonts_1.3.1   fs_1.6.6
+#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
+#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        
+#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
+#> [34] nlme_3.1-169        parallelly_1.48.0   lava_1.10          
+#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.80.0      
+#> [40] purrr_1.2.2         listenv_1.1.0       labeling_0.4.3     
+#> [43] splines_4.6.1       fastmap_1.2.0       grid_4.6.1         
+#> [46] cli_3.6.6           magrittr_2.0.5      utf8_1.2.6         
+#> [49] survival_3.8-6      future.apply_1.21.0 withr_3.0.3        
+#> [52] scales_1.4.0        lubridate_1.9.5     timechange_0.4.0   
+#> [55] rmarkdown_2.32      globals_0.20.0      otel_0.2.0         
+#> [58] nnet_7.3-20         timeDate_4052.112   ragg_1.5.2         
+#> [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      
+#> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         
+#> [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
 ```

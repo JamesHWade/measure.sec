@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Montserrat-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -65,7 +65,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure-sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure.sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -81,7 +81,7 @@
       <img src="../logo.svg" class="logo" alt=""><h1>Getting Started with measure.sec</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure-sec/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure.sec/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
       <div class="d-none name"><code>getting-started.Rmd</code></div>
     </div>
 
@@ -180,18 +180,18 @@ scattering for absolute molecular weight (MALS).</p>
     C --&gt; D[step_sec_ri / step_sec_uv&lt;br&gt;Detector processing with dn/dc or ε]
     D --&gt; E{Calibration&lt;br&gt;method?}
     E --&gt;|"Standards available&lt;br&gt;(same polymer type)"| F[step_sec_conventional_cal&lt;br&gt;Polynomial fit to standards]
-    E --&gt;|"MALS detector&lt;br&gt;(absolute MW needed)"| G[step_sec_mals&lt;br&gt;Angular extrapolation&lt;br&gt;Zimm/Debye/Berry]
+    E --&gt;|"MALS detector&lt;br&gt;(absolute MW needed)"| G[step_sec_mals&lt;br&gt;Single-angle approximation]
     F --&gt; H[step_sec_mw_averages&lt;br&gt;Calculate Mn, Mw, Mz]
-    G --&gt; I[Absolute MW &amp; Rg&lt;br&gt;directly from MALS]
+    G --&gt; I[Calibrated single-angle&lt;br&gt;MW estimate]
     H --&gt; J[Results&lt;br&gt;MW averages, distributions, plots]
     I --&gt; J
 
     style A fill:#e1f5fe
     style J fill:#c8e6c9</code></pre>
-<p><em>Choose <strong>conventional calibration</strong> when you have
-narrow MW standards of the same polymer type. Choose
-<strong>MALS</strong> when you need absolute MW without polymer-specific
-standards or when analyzing unknown polymers.</em></p>
+<p><em>Conventional calibration uses narrow MW standards. The current
+scattering step is a single-angle approximation; it needs a calibrated
+detector and known concentration units. Multi-angle extrapolation and Rg
+are not implemented.</em></p>
 </div>
 </div>
 <div class="section level2">
@@ -201,7 +201,7 @@ standards or when analyzing unknown polymers.</em></p>
 <code class="sourceCode R"><span><span class="co"># Install from GitHub</span></span>
 <span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure"</span><span class="op">)</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure-sec"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"JamesHWade/measure.sec"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
@@ -223,7 +223,7 @@ standards or when analyzing unknown polymers.</em></p>
 <span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     step</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure.sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
@@ -484,10 +484,11 @@ Emphasizes lower MW species - <strong>Mw (weight-average)</strong>:
 Emphasizes higher MW species - <strong>Mz (z-average)</strong>: Even
 more sensitive to high MW species - <strong>Dispersity (Mw/Mn)</strong>:
 Measures breadth of the MW distribution (1.0 = monodisperse)</p>
-<p>Use <code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code> to calculate these. This step
-requires that the x-axis (location) values already represent
-log₁₀(MW)—which is what <code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>
-provides. See the Calibration section below for the complete
+<p>Use <code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code> to calculate these. After
+<code><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal()</a></code>, it pairs the concentration
+trace with the calibrated MW curve; their locations remain elution time
+or volume. Alternatively, an input trace can already use log₁₀(MW) as
+its axis. See the Calibration section below for the complete
 workflow.</p>
 </div>
 <div class="section level2">
@@ -498,10 +499,10 @@ retention time to molecular weight. The most common approach uses
 <strong>narrow standards</strong>—polymers with known molecular weights
 and low dispersity—to build a calibration curve.</p>
 <blockquote>
-<p><strong>Note</strong>: If you have a light scattering detector
-(MALS), you can determine absolute molecular weights without
-calibration. See <code><a href="../articles/triple-detection.html">vignette("triple-detection")</a></code> for
-details.</p>
+<p><strong>Note</strong>: A calibrated light-scattering detector can
+estimate molecular weight without polymer standards.
+<code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code> currently uses a single-angle approximation
+and does not calculate Rg or perform angular extrapolation.</p>
 </blockquote>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load polystyrene narrow standards</span></span>
@@ -565,15 +566,15 @@ details.</p>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Apply conventional calibration using polystyrene standards</span></span>
-<span>  <span class="co"># This converts retention time to log10(MW) on the x-axis</span></span>
+<span>  <span class="co"># This creates a separate log10(MW) curve on the same elution axis</span></span>
 <span>  <span class="co"># fit_type options: "linear", "quadratic", "cubic" (most common)</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_conventional_cal.html">step_sec_conventional_cal</a></span><span class="op">(</span></span>
 <span>    standards <span class="op">=</span> <span class="va">ps_cal</span>,</span>
 <span>    fit_type <span class="op">=</span> <span class="st">"cubic"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Calculate MW averages from the calibrated chromatogram</span></span>
-<span>  <span class="co"># The calibration step converted location values to log10(MW)</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="co"># The averages step pairs the original signal with the calibrated curve</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_cal</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: Standard at 12.58 has 14.4% MW deviation.</span></span>
@@ -587,14 +588,17 @@ details.</p>
 <span><span class="va">result_cal</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
-<span><span class="co">#&gt;   sample_id      mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    419<span style="text-decoration: underline;">927</span>756. 8.24<span style="color: #949494;">e</span>21 7.81<span style="color: #949494;">e</span>23       1.96<span style="color: #949494;">e</span>13</span></span></code></pre></div>
+<span><span class="co">#&gt;   sample_id mw_mn   mw_mw    mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    <span style="text-decoration: underline;">1</span>825. <span style="text-decoration: underline;">205</span>538. 1<span style="text-decoration: underline;">236</span>629.          113.</span></span></code></pre></div>
 <blockquote>
-<p><strong>Important</strong>: Conventional calibration assumes your
-sample has similar hydrodynamic behavior to your standards. Polystyrene
-standards work well for other flexible polymers in THF, but for proteins
-in aqueous SEC, use protein standards or light scattering.</p>
+<p><strong>Important</strong>: The example integrates only the portion
+within the standards’ retention range; signal outside that range is
+excluded, so these are not necessarily whole-sample averages.
+Conventional calibration assumes your sample has similar hydrodynamic
+behavior to your standards. Polystyrene standards work well for other
+flexible polymers in THF, but for proteins in aqueous SEC, use protein
+standards or light scattering.</p>
 </blockquote>
 <hr>
 <p><strong>✓ Checkpoint</strong>: You’ve completed a full SEC analysis!
@@ -773,9 +777,9 @@ Management</a></td>
 </h2>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
+<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.3 LTS</span></span>
+<span><span class="co">#&gt; Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Matrix products: default</span></span>
 <span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -794,34 +798,34 @@ Management</a></td>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] ggplot2_4.0.1          measure.sec_0.0.0.9000 measure_0.0.1.9002    </span></span>
-<span><span class="co">#&gt; [4] recipes_1.3.1          dplyr_1.1.4           </span></span>
+<span><span class="co">#&gt; [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    </span></span>
+<span><span class="co">#&gt; [4] recipes_1.4.0          dplyr_1.2.1           </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       </span></span>
-<span><span class="co">#&gt;  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        </span></span>
-<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       </span></span>
-<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1</span></span>
-<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         </span></span>
-<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       </span></span>
-<span><span class="co">#&gt; [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    </span></span>
+<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       </span></span>
+<span><span class="co">#&gt;  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        </span></span>
+<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       </span></span>
+<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1</span></span>
+<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         </span></span>
+<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       </span></span>
+<span><span class="co">#&gt; [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    </span></span>
 <span><span class="co">#&gt; [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        </span></span>
-<span><span class="co">#&gt; [25] prodlim_2025.04.28  tidyr_1.3.2         pillar_1.11.1      </span></span>
-<span><span class="co">#&gt; [28] pkgdown_2.2.0       jquerylib_0.1.4     MASS_7.3-65        </span></span>
-<span><span class="co">#&gt; [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.24       </span></span>
-<span><span class="co">#&gt; [34] nlme_3.1-168        parallelly_1.46.1   lava_1.8.2         </span></span>
-<span><span class="co">#&gt; [37] tidyselect_1.2.1    digest_0.6.39       future_1.69.0      </span></span>
-<span><span class="co">#&gt; [40] purrr_1.2.1         listenv_0.10.0      labeling_0.4.3     </span></span>
-<span><span class="co">#&gt; [43] splines_4.5.2       fastmap_1.2.0       grid_4.5.2         </span></span>
-<span><span class="co">#&gt; [46] cli_3.6.5           magrittr_2.0.4      utf8_1.2.6         </span></span>
-<span><span class="co">#&gt; [49] survival_3.8-3      future.apply_1.20.1 withr_3.0.2        </span></span>
-<span><span class="co">#&gt; [52] scales_1.4.0        lubridate_1.9.4     timechange_0.4.0   </span></span>
-<span><span class="co">#&gt; [55] rmarkdown_2.30      globals_0.19.0      nnet_7.3-20        </span></span>
-<span><span class="co">#&gt; [58] timeDate_4052.112   ragg_1.5.0          evaluate_1.0.5     </span></span>
-<span><span class="co">#&gt; [61] knitr_1.51          hardhat_1.4.2       mgcv_1.9-3         </span></span>
-<span><span class="co">#&gt; [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         </span></span>
-<span><span class="co">#&gt; [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           </span></span>
-<span><span class="co">#&gt; [70] systemfonts_1.3.1   fs_1.6.6</span></span></code></pre></div>
+<span><span class="co">#&gt; [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      </span></span>
+<span><span class="co">#&gt; [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-65        </span></span>
+<span><span class="co">#&gt; [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       </span></span>
+<span><span class="co">#&gt; [34] nlme_3.1-169        parallelly_1.48.0   lava_1.10          </span></span>
+<span><span class="co">#&gt; [37] tidyselect_1.2.1    digest_0.6.39       future_1.80.0      </span></span>
+<span><span class="co">#&gt; [40] purrr_1.2.2         listenv_1.1.0       labeling_0.4.3     </span></span>
+<span><span class="co">#&gt; [43] splines_4.6.1       fastmap_1.2.0       grid_4.6.1         </span></span>
+<span><span class="co">#&gt; [46] cli_3.6.6           magrittr_2.0.5      utf8_1.2.6         </span></span>
+<span><span class="co">#&gt; [49] survival_3.8-6      future.apply_1.21.0 withr_3.0.3        </span></span>
+<span><span class="co">#&gt; [52] scales_1.4.0        lubridate_1.9.5     timechange_0.4.0   </span></span>
+<span><span class="co">#&gt; [55] rmarkdown_2.32      globals_0.20.0      otel_0.2.0         </span></span>
+<span><span class="co">#&gt; [58] nnet_7.3-20         timeDate_4052.112   ragg_1.5.2         </span></span>
+<span><span class="co">#&gt; [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      </span></span>
+<span><span class="co">#&gt; [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         </span></span>
+<span><span class="co">#&gt; [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     </span></span>
+<span><span class="co">#&gt; [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -834,7 +838,7 @@ Management</a></td>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

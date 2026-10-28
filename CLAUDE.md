@@ -53,6 +53,7 @@ registry system.
 ## Development Commands
 
 ``` r
+
 # Generate documentation from roxygen2 comments
 devtools::document()
 
@@ -203,6 +204,7 @@ When adding new exported functions, ensure they are included in
 The package registers with `measure` in `R/zzz.R`:
 
 ``` r
+
 .onLoad <- function(libname, pkgname) {
 
 measure::register_measure_pack(
@@ -217,6 +219,7 @@ measure::register_measure_pack(
 Users can discover available steps with:
 
 ``` r
+
 measure::measure_steps(techniques = "SEC/GPC")
 ```
 
@@ -231,7 +234,7 @@ measure::measure_steps(techniques = "SEC/GPC")
 ## Calibration Quality Metrics
 
 The
-[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure-sec/reference/step_sec_conventional_cal.md)
+[`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
 provides comprehensive diagnostics:
 
 - **Per-standard**: residuals, % deviation, prediction intervals

@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Open_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/Montserrat-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -65,7 +65,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure-sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/measure.sec/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -81,7 +81,7 @@
       <img src="../logo.svg" class="logo" alt=""><h1>Tutorial: Conventional Calibration from Raw Data</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure-sec/blob/main/vignettes/tutorial-conventional-calibration.Rmd" class="external-link"><code>vignettes/tutorial-conventional-calibration.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure.sec/blob/main/vignettes/tutorial-conventional-calibration.Rmd" class="external-link"><code>vignettes/tutorial-conventional-calibration.Rmd</code></a></small>
       <div class="d-none name"><code>tutorial-conventional-calibration.Rmd</code></div>
     </div>
 
@@ -160,7 +160,7 @@ tutorial</li>
 <span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     step</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure-sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/measure.sec" class="external-link">measure.sec</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span>
@@ -533,7 +533,10 @@ unknown samples that have known “true” MW values for validation:</p>
 <div class="section level3">
 <h3 id="analyze-unknowns-with-calibration">Analyze Unknowns with Calibration<a class="anchor" aria-label="anchor" href="#analyze-unknowns-with-calibration"></a>
 </h3>
-<p>Now we apply our calibration to calculate molecular weights:</p>
+<p>Now we apply our calibration to calculate molecular weights. Each
+example integrates only the portion within the standards’ retention
+range; signal outside that range is excluded, so the reported values may
+not represent the entire sample.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process all unknowns at once</span></span>
 <span><span class="co"># First, let's work with one sample to show the workflow</span></span>
@@ -553,7 +556,7 @@ unknown samples that have known “true” MW values for validation:</p>
 <span>    standards <span class="op">=</span> <span class="va">ps_cal</span>,</span>
 <span>    fit_type <span class="op">=</span> <span class="st">"cubic"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Process</span></span>
 <span><span class="va">result_a</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_unknown</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
@@ -568,9 +571,9 @@ unknown samples that have known “true” MW values for validation:</p>
 <span><span class="va">result_a</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">mw_mn</span>, <span class="va">mw_mw</span>, <span class="va">mw_mz</span>, <span class="va">mw_dispersity</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 5</span></span></span>
-<span><span class="co">#&gt;   sample_id    mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A 8<span style="text-decoration: underline;">901</span>726. 1.77<span style="color: #949494;">e</span>19 1.06<span style="color: #949494;">e</span>21       1.99<span style="color: #949494;">e</span>12</span></span></code></pre></div>
+<span><span class="co">#&gt;   sample_id mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A <span style="text-decoration: underline;">4</span>829. <span style="text-decoration: underline;">137</span>331. <span style="text-decoration: underline;">409</span>434.          28.4</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="process-all-unknowns">Process All Unknowns<a class="anchor" aria-label="anchor" href="#process-all-unknowns"></a>
@@ -593,7 +596,7 @@ values:</p>
 <span>      standards <span class="op">=</span> <span class="va">ps_cal</span>,</span>
 <span>      fit_type <span class="op">=</span> <span class="st">"cubic"</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
@@ -641,13 +644,13 @@ values:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">all_results</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 5</span></span></span>
-<span><span class="co">#&gt;   sample_id       mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A    8<span style="text-decoration: underline;">901</span>726. 1.77<span style="color: #949494;">e</span>19 1.06<span style="color: #949494;">e</span>21       1.99<span style="color: #949494;">e</span>12</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B   17<span style="text-decoration: underline;">884</span>676. 1.65<span style="color: #949494;">e</span>19 9.56<span style="color: #949494;">e</span>20       9.21<span style="color: #949494;">e</span>11</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C   13<span style="text-decoration: underline;">393</span>541. 1.70<span style="color: #949494;">e</span>19 9.69<span style="color: #949494;">e</span>20       1.27<span style="color: #949494;">e</span>12</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-HMW 16<span style="text-decoration: underline;">212</span>294. 1.20<span style="color: #949494;">e</span>19 9.26<span style="color: #949494;">e</span>20       7.42<span style="color: #949494;">e</span>11</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW 10<span style="text-decoration: underline;">187</span>893. 2.48<span style="color: #949494;">e</span>19 9.98<span style="color: #949494;">e</span>20       2.44<span style="color: #949494;">e</span>12</span></span></code></pre></div>
+<span><span class="co">#&gt;   sample_id   mw_mn   mw_mw   mw_mz mw_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A   <span style="text-decoration: underline;">4</span>829. <span style="text-decoration: underline;">137</span>331. <span style="text-decoration: underline;">409</span>434.          28.4</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B   <span style="text-decoration: underline;">4</span>820. <span style="text-decoration: underline;">136</span>697. <span style="text-decoration: underline;">408</span>986.          28.4</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C   <span style="text-decoration: underline;">4</span>791. <span style="text-decoration: underline;">135</span>656. <span style="text-decoration: underline;">408</span>528.          28.3</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-HMW <span style="text-decoration: underline;">4</span>941. <span style="text-decoration: underline;">140</span>724. <span style="text-decoration: underline;">410</span>757.          28.5</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW <span style="text-decoration: underline;">4</span>613. <span style="text-decoration: underline;">129</span>848. <span style="text-decoration: underline;">406</span>376.          28.1</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="validate-against-true-values">Validate Against True Values<a class="anchor" aria-label="anchor" href="#validate-against-true-values"></a>
@@ -686,19 +689,19 @@ values:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 6</span></span></span>
 <span><span class="co">#&gt;   sample_id   `Calc Mw` `True Mw` `Mw Error %` `Calc Đ` `True Đ`</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A     1.77<span style="color: #949494;">e</span>19     <span style="text-decoration: underline;">45</span>000      3.94<span style="color: #949494;">e</span>16  1.99<span style="color: #949494;">e</span>12     2.05</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B     1.65<span style="color: #949494;">e</span>19    <span style="text-decoration: underline;">125</span>000      1.32<span style="color: #949494;">e</span>16  9.21<span style="color: #949494;">e</span>11     1.32</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C     1.70<span style="color: #949494;">e</span>19     <span style="text-decoration: underline;">82</span>000      2.07<span style="color: #949494;">e</span>16  1.27<span style="color: #949494;">e</span>12     1.09</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-HMW   1.20<span style="color: #949494;">e</span>19   1<span style="text-decoration: underline;">500</span>000      8.02<span style="color: #949494;">e</span>14  7.42<span style="color: #949494;">e</span>11     1.25</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW   2.48<span style="color: #949494;">e</span>19      <span style="text-decoration: underline;">3</span>500      7.09<span style="color: #949494;">e</span>17  2.44<span style="color: #949494;">e</span>12     1.25</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A      <span style="text-decoration: underline;">137</span>331     <span style="text-decoration: underline;">45</span>000        205.      28.4     2.05</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B      <span style="text-decoration: underline;">136</span>697    <span style="text-decoration: underline;">125</span>000          9.4     28.4     1.32</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C      <span style="text-decoration: underline;">135</span>656     <span style="text-decoration: underline;">82</span>000         65.4     28.3     1.09</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-HMW    <span style="text-decoration: underline;">140</span>724   1<span style="text-decoration: underline;">500</span>000        -<span style="color: #BB0000;">90.6</span>     28.5     1.25</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW    <span style="text-decoration: underline;">129</span>848      <span style="text-decoration: underline;">3</span>500       <span style="text-decoration: underline;">3</span>610.      28.2     1.25</span></span></code></pre></div>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Parity plot: calculated vs true</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">validation</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">true_mw</span>, <span class="va">mw_mw</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_abline</a></span><span class="op">(</span>slope <span class="op">=</span> <span class="fl">1</span>, intercept <span class="op">=</span> <span class="fl">0</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"gray50"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">4</span>, color <span class="op">=</span> <span class="st">"#2E86AB"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_text.html" class="external-link">geom_text</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>label <span class="op">=</span> <span class="va">sample_id</span><span class="op">)</span>, hjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span>, vjust <span class="op">=</span> <span class="fl">0.5</span>, size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_number</a></span><span class="op">(</span>scale_cut <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/number.html" class="external-link">cut_short_scale</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_number</a></span><span class="op">(</span>scale_cut <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/number.html" class="external-link">cut_short_scale</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="st">"True Mw (Da)"</span>,</span>
 <span>    y <span class="op">=</span> <span class="st">"Calculated Mw (Da)"</span>,</span>
@@ -735,7 +738,7 @@ separately:</p>
 <span>    standards <span class="op">=</span> <span class="va">ps_cal</span>,</span>
 <span>    fit_type <span class="op">=</span> <span class="st">"cubic"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result_bimodal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_bimodal</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: Calibration fit quality is low (R\u00b2 = 0.8324).</span></span>
@@ -748,32 +751,38 @@ separately:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Bimodal Sample Results:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Bimodal Sample Results:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Mn ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">result_bimodal</span><span class="op">$</span><span class="va">mw_mn</span><span class="op">)</span>, <span class="st">"Da\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   Mn = 21531497 Da</span></span>
+<span><span class="co">#&gt;   Mn = 4802 Da</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Mw ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">result_bimodal</span><span class="op">$</span><span class="va">mw_mw</span><span class="op">)</span>, <span class="st">"Da\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   Mw = 1.652672e+19 Da</span></span>
+<span><span class="co">#&gt;   Mw = 135990 Da</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Dispersity ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">result_bimodal</span><span class="op">$</span><span class="va">mw_dispersity</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   Dispersity = 7.6756e+11</span></span>
+<span><span class="co">#&gt;   Dispersity = 28.32</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nNote: High dispersity indicates the bimodal nature!\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Note: High dispersity indicates the bimodal nature!</span></span>
 <span></span>
 <span><span class="co"># Plot the bimodal chromatogram with MW scale</span></span>
-<span><span class="va">bimodal_chrom</span> <span class="op">&lt;-</span> <span class="va">result_bimodal</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">bimodal_chrom</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="fl">10</span><span class="op">^</span><span class="va">location</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span><span class="va">bimodal_chrom</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  mw <span class="op">=</span> <span class="fl">10</span><span class="op">^</span><span class="va">result_bimodal</span><span class="op">$</span><span class="va">mw</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span>,</span>
+<span>  value <span class="op">=</span> <span class="va">result_bimodal</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">mw</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">bimodal_chrom</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">mw</span>, <span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#2E86AB"</span>, linewidth <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50000</span>, <span class="fl">200000</span><span class="op">)</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fl">50000</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">bimodal_chrom</span><span class="op">$</span><span class="va">value</span><span class="op">)</span> <span class="op">*</span> <span class="fl">0.8</span>,</span>
 <span>           label <span class="op">=</span> <span class="st">"50K"</span>, hjust <span class="op">=</span> <span class="fl">1.2</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="fl">200000</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">bimodal_chrom</span><span class="op">$</span><span class="va">value</span><span class="op">)</span> <span class="op">*</span> <span class="fl">0.8</span>,</span>
 <span>           label <span class="op">=</span> <span class="st">"200K"</span>, hjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span>, color <span class="op">=</span> <span class="st">"#A23B72"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_number</a></span><span class="op">(</span>scale_cut <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/number.html" class="external-link">cut_short_scale</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="st">"Molecular Weight (Da)"</span>,</span>
 <span>    y <span class="op">=</span> <span class="st">"RI Signal (processed)"</span>,</span>
 <span>    title <span class="op">=</span> <span class="st">"Bimodal Distribution"</span>,</span>
 <span>    subtitle <span class="op">=</span> <span class="st">"Mixture of 50K and 200K components"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in scale_x_log10(labels = scales::label_comma()): <span style="color: #00BB00;">log-10</span></span></span>
+<span><span class="co">#&gt; transformation introduced infinite values.</span></span></code></pre></div>
 <p><img src="tutorial-conventional-calibration_files/figure-html/bimodal-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
@@ -899,9 +908,9 @@ Management</a></td>
 </h3>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
+<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.3 LTS</span></span>
+<span><span class="co">#&gt; Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Matrix products: default</span></span>
 <span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -920,34 +929,34 @@ Management</a></td>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] ggplot2_4.0.1          tidyr_1.3.2            measure.sec_0.0.0.9000</span></span>
-<span><span class="co">#&gt; [4] measure_0.0.1.9002     recipes_1.3.1          dplyr_1.1.4           </span></span>
+<span><span class="co">#&gt; [1] ggplot2_4.0.3          tidyr_1.3.2            measure.sec_0.0.0.9000</span></span>
+<span><span class="co">#&gt; [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.56           bslib_0.10.0       </span></span>
-<span><span class="co">#&gt;  [4] lattice_0.22-7      vctrs_0.7.1         tools_4.5.2        </span></span>
-<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.5.2      tibble_3.3.1       </span></span>
-<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-4        data.table_1.18.2.1</span></span>
-<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.1            desc_1.4.3         </span></span>
-<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.5.2      farver_2.1.2       </span></span>
-<span><span class="co">#&gt; [19] textshaping_1.0.4   codetools_0.2-20    htmltools_0.5.9    </span></span>
+<span><span class="co">#&gt;  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       </span></span>
+<span><span class="co">#&gt;  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        </span></span>
+<span><span class="co">#&gt;  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       </span></span>
+<span><span class="co">#&gt; [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1</span></span>
+<span><span class="co">#&gt; [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         </span></span>
+<span><span class="co">#&gt; [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       </span></span>
+<span><span class="co">#&gt; [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    </span></span>
 <span><span class="co">#&gt; [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        </span></span>
-<span><span class="co">#&gt; [25] prodlim_2025.04.28  pillar_1.11.1       pkgdown_2.2.0      </span></span>
+<span><span class="co">#&gt; [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      </span></span>
 <span><span class="co">#&gt; [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       </span></span>
-<span><span class="co">#&gt; [31] gower_1.0.2         rpart_4.1.24        nlme_3.1-168       </span></span>
-<span><span class="co">#&gt; [34] parallelly_1.46.1   lava_1.8.2          tidyselect_1.2.1   </span></span>
-<span><span class="co">#&gt; [37] digest_0.6.39       future_1.69.0       purrr_1.2.1        </span></span>
-<span><span class="co">#&gt; [40] listenv_0.10.0      labeling_0.4.3      splines_4.5.2      </span></span>
-<span><span class="co">#&gt; [43] fastmap_1.2.0       grid_4.5.2          cli_3.6.5          </span></span>
-<span><span class="co">#&gt; [46] magrittr_2.0.4      utf8_1.2.6          survival_3.8-3     </span></span>
-<span><span class="co">#&gt; [49] future.apply_1.20.1 withr_3.0.2         scales_1.4.0       </span></span>
-<span><span class="co">#&gt; [52] lubridate_1.9.4     timechange_0.4.0    rmarkdown_2.30     </span></span>
-<span><span class="co">#&gt; [55] globals_0.19.0      nnet_7.3-20         timeDate_4052.112  </span></span>
-<span><span class="co">#&gt; [58] ragg_1.5.0          evaluate_1.0.5      knitr_1.51         </span></span>
-<span><span class="co">#&gt; [61] hardhat_1.4.2       viridisLite_0.4.2   mgcv_1.9-3         </span></span>
-<span><span class="co">#&gt; [64] rlang_1.1.7         Rcpp_1.1.1          glue_1.8.0         </span></span>
-<span><span class="co">#&gt; [67] ipred_0.9-15        jsonlite_2.0.0      R6_2.6.1           </span></span>
-<span><span class="co">#&gt; [70] systemfonts_1.3.1   fs_1.6.6</span></span></code></pre></div>
+<span><span class="co">#&gt; [31] gower_1.0.2         rpart_4.1.27        nlme_3.1-169       </span></span>
+<span><span class="co">#&gt; [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   </span></span>
+<span><span class="co">#&gt; [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        </span></span>
+<span><span class="co">#&gt; [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      </span></span>
+<span><span class="co">#&gt; [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          </span></span>
+<span><span class="co">#&gt; [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-6     </span></span>
+<span><span class="co">#&gt; [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       </span></span>
+<span><span class="co">#&gt; [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     </span></span>
+<span><span class="co">#&gt; [55] globals_0.20.0      otel_0.2.0          nnet_7.3-20        </span></span>
+<span><span class="co">#&gt; [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     </span></span>
+<span><span class="co">#&gt; [61] knitr_1.52          hardhat_1.4.3       viridisLite_0.4.3  </span></span>
+<span><span class="co">#&gt; [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         </span></span>
+<span><span class="co">#&gt; [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     </span></span>
+<span><span class="co">#&gt; [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -961,7 +970,7 @@ Management</a></td>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

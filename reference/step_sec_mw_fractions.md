@@ -17,7 +17,9 @@ step_sec_mw_fractions(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_fractions")
+  id = recipes::rand_id("sec_mw_fractions"),
+  mw_col = NULL,
+  mw_scale = NULL
 )
 ```
 
@@ -39,7 +41,7 @@ step_sec_mw_fractions(
 - calibration:
 
   Calibration method for converting x-axis to log(MW). See
-  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md)
+  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
   for details.
 
 - integration_range:
@@ -67,6 +69,19 @@ step_sec_mw_fractions(
 
   Unique step identifier.
 
+- mw_col:
+
+  Optional per-slice molecular-weight measure column. A matching curve
+  produced by
+  [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
+  is detected automatically.
+
+- mw_scale:
+
+  Scale of `mw_col`: `"log10"` or `"absolute"`. Required for untagged
+  curves; see
+  [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md).
+
 ## Value
 
 An updated recipe with the new step added.
@@ -79,8 +94,11 @@ For each cutoff value `C`, this step calculates:
 
 - `frac_above_C`: Weight fraction with MW \>= C
 
-These fractions sum to 1.0 and are useful for characterizing polymer
-distributions. Common cutoffs include:
+Slice weights use trapezoidal integration on the elution axis. The
+cutoff is applied to the sampled molecular-weight values, so accuracy
+near a cutoff depends on the sampling resolution. These fractions sum to
+1.0 and are useful for characterizing polymer distributions. Common
+cutoffs include:
 
 - 1000 Da for oligomer content
 
@@ -91,16 +109,16 @@ distributions. Common cutoffs include:
 ## See also
 
 Other sec-chromatography:
-[`step_sec_band_broadening()`](https://jameshwade.github.io/measure-sec/reference/step_sec_band_broadening.md),
-[`step_sec_baseline()`](https://jameshwade.github.io/measure-sec/reference/step_sec_baseline.md),
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure-sec/reference/step_sec_detector_delay.md),
-[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure-sec/reference/step_sec_exclude_regions.md),
-[`step_sec_integration_window()`](https://jameshwade.github.io/measure-sec/reference/step_sec_integration_window.md),
-[`step_sec_mw_averages()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_averages.md),
-[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure-sec/reference/step_sec_mw_distribution.md),
-[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_deconvolve.md),
-[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_detect.md),
-[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure-sec/reference/step_sec_peaks_refine.md)
+[`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md),
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md),
+[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md),
+[`step_sec_exclude_regions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_exclude_regions.md),
+[`step_sec_integration_window()`](https://jameshwade.github.io/measure.sec/reference/step_sec_integration_window.md),
+[`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md),
+[`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md),
+[`step_sec_peaks_deconvolve()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_deconvolve.md),
+[`step_sec_peaks_detect()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_detect.md),
+[`step_sec_peaks_refine()`](https://jameshwade.github.io/measure.sec/reference/step_sec_peaks_refine.md)
 
 ## Examples
 

@@ -82,15 +82,15 @@ Values less than 1.0 indicate branching. Lower values mean more compact
 **Typical Workflow:**
 
 1.  Apply
-    [`step_sec_mals`](https://jameshwade.github.io/measure-sec/reference/step_sec_mals.md)
+    [`step_sec_mals`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
     for absolute MW
 
 2.  Apply
-    [`step_sec_viscometer`](https://jameshwade.github.io/measure-sec/reference/step_sec_viscometer.md)
+    [`step_sec_viscometer`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
     for intrinsic viscosity
 
 3.  Use
-    [`measure_branching_index`](https://jameshwade.github.io/measure-sec/reference/measure_branching_index.md)
+    [`measure_branching_index`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md)
     to calculate g'
 
 4.  Plot Mark-Houwink relationship to compare topologies
@@ -98,16 +98,16 @@ Values less than 1.0 indicate branching. Lower values mean more compact
 ## See also
 
 Other sec-data:
-[`sec_calibration_standards`](https://jameshwade.github.io/measure-sec/reference/sec_calibration_standards.md),
-[`sec_copolymer`](https://jameshwade.github.io/measure-sec/reference/sec_copolymer.md),
-[`sec_pmma_standards`](https://jameshwade.github.io/measure-sec/reference/sec_pmma_standards.md),
-[`sec_protein`](https://jameshwade.github.io/measure-sec/reference/sec_protein.md),
-[`sec_ps_standards`](https://jameshwade.github.io/measure-sec/reference/sec_ps_standards.md),
-[`sec_raw_multidetector`](https://jameshwade.github.io/measure-sec/reference/sec_raw_multidetector.md),
-[`sec_raw_standards`](https://jameshwade.github.io/measure-sec/reference/sec_raw_standards.md),
-[`sec_raw_unknowns`](https://jameshwade.github.io/measure-sec/reference/sec_raw_unknowns.md),
-[`sec_system_suitability`](https://jameshwade.github.io/measure-sec/reference/sec_system_suitability.md),
-[`sec_triple_detect`](https://jameshwade.github.io/measure-sec/reference/sec_triple_detect.md)
+[`sec_calibration_standards`](https://jameshwade.github.io/measure.sec/reference/sec_calibration_standards.md),
+[`sec_copolymer`](https://jameshwade.github.io/measure.sec/reference/sec_copolymer.md),
+[`sec_pmma_standards`](https://jameshwade.github.io/measure.sec/reference/sec_pmma_standards.md),
+[`sec_protein`](https://jameshwade.github.io/measure.sec/reference/sec_protein.md),
+[`sec_ps_standards`](https://jameshwade.github.io/measure.sec/reference/sec_ps_standards.md),
+[`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md),
+[`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md),
+[`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md),
+[`sec_system_suitability`](https://jameshwade.github.io/measure.sec/reference/sec_system_suitability.md),
+[`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
 
 ## Examples
 

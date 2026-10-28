@@ -146,8 +146,8 @@ For accurate results:
 ## See also
 
 Other sec-protein:
-[`step_sec_oligomer()`](https://jameshwade.github.io/measure-sec/reference/step_sec_oligomer.md),
-[`step_sec_protein()`](https://jameshwade.github.io/measure-sec/reference/step_sec_protein.md)
+[`step_sec_oligomer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_oligomer.md),
+[`step_sec_protein()`](https://jameshwade.github.io/measure.sec/reference/step_sec_protein.md)
 
 ## Examples
 
