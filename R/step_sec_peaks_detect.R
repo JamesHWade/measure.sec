@@ -263,8 +263,8 @@ bake.step_sec_peaks_detect <- function(object, new_data, ...) {
       )
     })
 
-    # Use internal constructor from measure (should be exported in future)
-    new_data[[peaks_col_name]] <- measure:::new_peaks_list(peaks_list)
+    # Use the public measure constructor to retain the peaks_list type
+    new_data[[peaks_col_name]] <- measure::new_peaks_list(peaks_list)
   }
 
   tibble::as_tibble(new_data)
@@ -349,11 +349,11 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
 
   # Handle edge cases
   if (n < 10) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   if (all(is.na(value))) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Remove NAs for processing (filter both location and value)
@@ -363,7 +363,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   n_valid <- length(val_valid)
 
   if (n_valid < 10) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Ensure data is sorted by location first
@@ -423,7 +423,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
 
   if (abs(max_val - first_val) < .Machine$double.eps * 100) {
     # Signal is essentially flat
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   thresholds <- first_val +
@@ -479,7 +479,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   # Step 4: Extract points above threshold
   above_thresh <- val_sorted >= threshold
   if (sum(above_thresh) < 2) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Step 5: Peak boundary detection using walk algorithm
@@ -515,7 +515,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   n_above <- length(idx_above)
 
   if (n_above < 2) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Extract x and y for above-threshold points
@@ -588,7 +588,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   n_valid <- sum(valid_peaks)
 
   if (n_valid == 0) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Extract valid peaks
@@ -610,7 +610,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   # Filter by min_height
   keep <- heights > min_height
   if (!any(keep)) {
-    return(measure:::new_peaks_tbl())
+    return(measure::new_peaks_tbl())
   }
 
   # Build final peaks table
@@ -620,7 +620,7 @@ required_pkgs.step_sec_peaks_detect <- function(x, ...) {
   final_heights <- heights[keep]
   n_final <- length(final_start)
 
-  measure:::new_peaks_tbl(
+  measure::new_peaks_tbl(
     peak_id = seq_len(n_final),
     location = final_apex,
     height = final_heights,

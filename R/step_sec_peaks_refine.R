@@ -233,7 +233,7 @@ bake.step_sec_peaks_refine <- function(object, new_data, ...) {
     )
   }
 
-  new_data[[peaks_col]] <- measure:::new_peaks_list(refined_peaks)
+  new_data[[peaks_col]] <- measure::new_peaks_list(refined_peaks)
   tibble::as_tibble(new_data)
 }
 

@@ -18,7 +18,7 @@ create_test_peaks_data <- function() {
   )
 
   # Add detected peaks (simulated)
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = c(1L, 2L),
     location = c(12.0, 14.0),
     height = c(40.0, 24.0),
@@ -26,7 +26,7 @@ create_test_peaks_data <- function() {
     right_base = c(13.5, 16.0),
     area = c(100.0, 72.0)
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   test_data
 }
@@ -52,7 +52,7 @@ create_multi_sample_peaks_data <- function() {
   )
 
   # Peaks for each sample
-  peaks1 <- measure:::new_peaks_tbl(
+  peaks1 <- measure::new_peaks_tbl(
     peak_id = c(1L, 2L),
     location = c(12.0, 14.0),
     height = c(40.0, 24.0),
@@ -60,7 +60,7 @@ create_multi_sample_peaks_data <- function() {
     right_base = c(13.5, 16.0),
     area = c(100.0, 72.0)
   )
-  peaks2 <- measure:::new_peaks_tbl(
+  peaks2 <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 13.0,
     height = 32.0,
@@ -68,7 +68,7 @@ create_multi_sample_peaks_data <- function() {
     right_base = 15.5,
     area = 88.0
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks1, peaks2))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks1, peaks2))
 
   test_data
 }
@@ -230,7 +230,7 @@ test_that("step_sec_peaks_deconvolve auto-detects measure column", {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = c(1L, 2L),
     location = c(12.0, 14.0),
     height = c(40.0, 24.0),
@@ -238,7 +238,7 @@ test_that("step_sec_peaks_deconvolve auto-detects measure column", {
     right_base = c(13.5, 16.0),
     area = c(100.0, 72.0)
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   # Should auto-detect 'ri' column
   rec <- recipes::recipe(~., data = test_data) |>

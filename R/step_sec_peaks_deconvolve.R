@@ -262,7 +262,7 @@ bake.step_sec_peaks_deconvolve <- function(object, new_data, ...) {
   peaks_col <- object$peaks_col
   measures_col <- object$measures_col
 
-  # Call measure's bake directly with our parameters
+  # Dispatch to measure's registered bake method through the public generic
   # Create a temporary step object with measure's class
   temp_step <- list(
     model = model,
@@ -282,8 +282,8 @@ bake.step_sec_peaks_deconvolve <- function(object, new_data, ...) {
   )
   class(temp_step) <- c("step_measure_peaks_deconvolve", "step")
 
-  # Use measure's bake method
-  measure:::bake.step_measure_peaks_deconvolve(temp_step, new_data, ...)
+  # Use the temporary step object with measure's class
+  recipes::bake(temp_step, new_data, ...)
 }
 
 #' @export

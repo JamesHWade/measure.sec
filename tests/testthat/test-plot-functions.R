@@ -399,7 +399,7 @@ test_that("check_ggplot2_available errors when ggplot2 not installed", {
 
   # This test verifies the function exists and works when ggplot2 is available
   # We can't easily test the error case without unloading ggplot2
-  expect_silent(measure.sec:::check_ggplot2_available())
+  expect_silent(check_ggplot2_available())
 })
 
 test_that("prepare_plot_data handles slice table format", {
@@ -413,7 +413,7 @@ test_that("prepare_plot_data handles slice table format", {
     measure = rep("ri", 10)
   )
 
-  result <- measure.sec:::prepare_plot_data(slice_table)
+  result <- prepare_plot_data(slice_table)
 
   expect_equal(nrow(result), 10)
   expect_true("sample_id" %in% names(result))
@@ -424,7 +424,7 @@ test_that("detect_measure_cols finds measure columns", {
 
   test_data <- create_test_sec_data()
 
-  cols <- measure.sec:::detect_measure_cols(test_data)
+  cols <- detect_measure_cols(test_data)
 
   expect_true("ri" %in% cols)
   expect_true("uv" %in% cols)
@@ -991,26 +991,26 @@ test_that("autoplot.sec_results handles log_scale='none'", {
 # ==============================================================================
 
 test_that("detect_plot_type selects mwd for mw column", {
-  result <- measure.sec:::detect_plot_type(c("ri", "mw"))
+  result <- detect_plot_type(c("ri", "mw"))
   expect_equal(result, "mwd")
 })
 
 test_that("detect_plot_type selects conformation for rg column", {
-  result <- measure.sec:::detect_plot_type(c("ri", "rg"))
+  result <- detect_plot_type(c("ri", "rg"))
   expect_equal(result, "conformation")
 })
 
 test_that("detect_plot_type selects conformation for intrinsic_visc column", {
-  result <- measure.sec:::detect_plot_type(c("ri", "intrinsic_visc"))
+  result <- detect_plot_type(c("ri", "intrinsic_visc"))
   expect_equal(result, "conformation")
 })
 
 test_that("detect_plot_type selects composition for uv_ri_ratio column", {
-  result <- measure.sec:::detect_plot_type(c("ri", "uv_ri_ratio"))
+  result <- detect_plot_type(c("ri", "uv_ri_ratio"))
   expect_equal(result, "composition")
 })
 
 test_that("detect_plot_type defaults to chromatogram", {
-  result <- measure.sec:::detect_plot_type(c("ri", "uv"))
+  result <- detect_plot_type(c("ri", "uv"))
   expect_equal(result, "chromatogram")
 })

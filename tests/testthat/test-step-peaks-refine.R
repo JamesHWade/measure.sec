@@ -15,7 +15,7 @@ create_test_refine_data <- function() {
   )
 
   # Manually create peaks with wide boundaries (simulating baseline-return)
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 16.0,
     height = max(signal),
@@ -23,7 +23,7 @@ create_test_refine_data <- function() {
     right_base = 25.0,
     area = NA_real_
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
   test_data
 }
 
@@ -39,7 +39,7 @@ create_test_multi_peak_data <- function() {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = c(1L, 2L),
     location = c(14.0, 20.0),
     height = c(max(100 * dnorm(0, sd = 0.8)), max(150 * dnorm(0, sd = 1.2))),
@@ -47,7 +47,7 @@ create_test_multi_peak_data <- function() {
     right_base = c(16.5, 30.0),
     area = c(NA_real_, NA_real_)
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
   test_data
 }
 
@@ -61,8 +61,8 @@ create_test_no_peaks_data <- function() {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl()
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  peaks <- measure::new_peaks_tbl()
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
   test_data
 }
 
@@ -153,7 +153,7 @@ test_that("step_sec_peaks_refine errors when no measure columns exist", {
   skip_if_not_installed("measure")
 
   test_data <- tibble::tibble(sample_id = "test")
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 16.0,
     height = 100,
@@ -161,7 +161,7 @@ test_that("step_sec_peaks_refine errors when no measure columns exist", {
     right_base = 25.0,
     area = NA_real_
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   expect_error(
     recipes::recipe(~., data = test_data) |>
@@ -303,7 +303,7 @@ test_that("step_sec_peaks_refine handles non-zero baseline correctly", {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 16.0,
     height = max(peak),
@@ -311,7 +311,7 @@ test_that("step_sec_peaks_refine handles non-zero baseline correctly", {
     right_base = 25.0,
     area = NA_real_
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   rec <- recipes::recipe(~., data = test_data) |>
     step_sec_peaks_refine(measures_col = "ri", cutoff = 0.005)
@@ -345,7 +345,7 @@ test_that("step_sec_peaks_refine handles peak with negative apex", {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 16.0,
     height = 0,
@@ -353,7 +353,7 @@ test_that("step_sec_peaks_refine handles peak with negative apex", {
     right_base = 20.0,
     area = NA_real_
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   rec <- recipes::recipe(~., data = test_data) |>
     step_sec_peaks_refine(measures_col = "ri")
@@ -379,7 +379,7 @@ test_that("step_sec_peaks_refine handles peak with few data points", {
     list(measure::new_measure_tbl(location = time, value = signal))
   )
 
-  peaks <- measure:::new_peaks_tbl(
+  peaks <- measure::new_peaks_tbl(
     peak_id = 1L,
     location = 16.0,
     height = 100,
@@ -387,7 +387,7 @@ test_that("step_sec_peaks_refine handles peak with few data points", {
     right_base = 16.5,
     area = NA_real_
   )
-  test_data$.peaks <- measure:::new_peaks_list(list(peaks))
+  test_data$.peaks <- measure::new_peaks_list(list(peaks))
 
   rec <- recipes::recipe(~., data = test_data) |>
     step_sec_peaks_refine(measures_col = "ri")
