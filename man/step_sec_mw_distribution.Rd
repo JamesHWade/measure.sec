@@ -37,7 +37,9 @@ step_sec_mw_distribution(
 See \code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}} for details.}
 
 \item{n_points}{Number of points in the output distribution. Default is 100.
-If \code{NULL}, uses the original data resolution.}
+If \code{NULL}, uses the original data resolution. With
+disjoint retained support, the regular grid is augmented with support
+endpoints.}
 
 \item{mw_range}{Optional numeric vector \code{c(min, max)} specifying the MW range
 for the output distribution. If \code{NULL}, uses the range from data.}
@@ -84,7 +86,18 @@ log(MW), so a nonlinear calibration is handled without treating the signal
 as a density on the molecular-weight axis. The selected MW curve must be
 strictly monotonic and valid over the integration range. When \code{mw_range}
 restricts the plotted range, it displays a portion of the full distribution;
-it does not renormalize that portion to 1.
+it does not renormalize that portion to 1. Row-level
+\code{.integration_window} and \code{.excluded_regions} metadata are
+honored; an explicit \code{integration_range} overrides the row's
+integration window. Only regions marked for \code{integration} or
+\code{both} are applied.
+
+When exclusions leave disjoint support, cumulative curves use unique
+increasing log(MW) locations and plateau across excluded intervals.
+Differential curves include duplicated boundary locations for the
+one-sided density jumps and zero density across each excluded interval.
+Do not average values at duplicated locations when regularizing a
+differential curve.
 
 The selected measure column is replaced by the requested distribution.
 With \code{type = "both"}, two additional columns, \verb{<measure>_differential} and
