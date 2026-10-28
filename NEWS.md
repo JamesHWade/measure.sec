@@ -1,5 +1,12 @@
 # measure.sec 0.0.0.9000
 
+* `step_sec_mw_distribution()` now respects row integration windows and
+  exclusions, conserves mass within each retained interval, and keeps the CDF
+  flat across excluded support. Differential curves encode discontinuities
+  with repeated boundary locations and zero density across gaps; output grids
+  include support boundaries when needed. A new guide demonstrates the full
+  calibrated selection workflow (#57).
+
 * `step_sec_mw_averages()` and `step_sec_mw_fractions()` now use each baked
   sample's integration window and integration-purpose exclusions. An explicit
   `integration_range` overrides the stored window. Clipped boundaries are
