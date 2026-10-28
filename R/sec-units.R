@@ -50,7 +50,8 @@
 .sec_resolve_concentration_unit <- function(
   unit,
   concentration_curve,
-  argument = "concentration_unit"
+  argument = "concentration_unit",
+  require_recorded = FALSE
 ) {
   .sec_validate_concentration_unit(unit, argument)
   recorded_unit <- attr(
@@ -59,6 +60,15 @@
     exact = TRUE
   )
   .sec_validate_concentration_unit(recorded_unit, "recorded concentration unit")
+
+  if (require_recorded && is.null(recorded_unit)) {
+    cli::cli_abort(
+      c(
+        "The concentration curve no longer records its unit.",
+        "i" = "The unit for {.arg {argument}} was inferred during training, so the baked curve must retain its unit tag."
+      )
+    )
+  }
 
   if (
     !is.null(unit) && !is.null(recorded_unit) && !identical(unit, recorded_unit)

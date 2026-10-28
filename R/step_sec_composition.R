@@ -23,9 +23,12 @@
 #'   calculating composition.
 #' @param uv_concentration_unit,ri_concentration_unit Units of the respective
 #'   curves when `input_basis = "normalized_concentration"`. Each can be
-#'   omitted when that curve records `sec_concentration_unit`; an explicit
-#'   unit must agree with any recorded unit. Both are required for untagged
-#'   curves. These arguments must be `NULL` for raw detector responses.
+#'   omitted when the training curve records `sec_concentration_unit`; an
+#'   explicit unit must agree with any recorded unit. If prep infers a unit
+#'   from its training tag, the corresponding baked curve must retain that
+#'   tag. An explicit unit permits untagged baked curves, but any recorded
+#'   tag must agree. Both units are required for untagged training curves.
+#'   These arguments must be `NULL` for raw detector responses.
 #' @param output_col Name for the output composition column. Default is
 #'   `"composition_a"`. Contains weight fraction of component A (0-1).
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
@@ -253,6 +256,16 @@ step_sec_composition <- function(
       input_basis = input_basis,
       uv_concentration_unit = uv_concentration_unit,
       ri_concentration_unit = ri_concentration_unit,
+      uv_concentration_unit_source = if (is.null(uv_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
+      ri_concentration_unit_source = if (is.null(ri_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
       role = role,
       trained = trained,
       skip = skip,
@@ -277,6 +290,8 @@ step_sec_composition_new <- function(
   input_basis,
   uv_concentration_unit,
   ri_concentration_unit,
+  uv_concentration_unit_source,
+  ri_concentration_unit_source,
   role,
   trained,
   skip,
@@ -299,6 +314,8 @@ step_sec_composition_new <- function(
     input_basis = input_basis,
     uv_concentration_unit = uv_concentration_unit,
     ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     role = role,
     trained = trained,
     skip = skip,
@@ -343,6 +360,8 @@ prep.step_sec_composition <- function(x, training, info = NULL, ...) {
   input_basis <- x$input_basis
   uv_concentration_unit <- x$uv_concentration_unit
   ri_concentration_unit <- x$ri_concentration_unit
+  uv_concentration_unit_source <- NULL
+  ri_concentration_unit_source <- NULL
   if (identical(input_basis, "detector_response")) {
     if (
       !is.null(attr(
@@ -364,6 +383,16 @@ prep.step_sec_composition <- function(x, training, info = NULL, ...) {
       )
     }
   } else {
+    uv_concentration_unit_source <- if (is.null(uv_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
+    ri_concentration_unit_source <- if (is.null(ri_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
     uv_concentration_unit <- .sec_resolve_concentration_unit(
       uv_concentration_unit,
       training[[uv_col]],
@@ -392,6 +421,8 @@ prep.step_sec_composition <- function(x, training, info = NULL, ...) {
     input_basis = input_basis,
     uv_concentration_unit = uv_concentration_unit,
     ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     role = x$role,
     trained = TRUE,
     skip = x$skip,
@@ -411,6 +442,8 @@ bake.step_sec_composition <- function(object, new_data, ...) {
   input_basis <- object$input_basis
   uv_concentration_unit <- object$uv_concentration_unit
   ri_concentration_unit <- object$ri_concentration_unit
+  uv_concentration_unit_source <- object$uv_concentration_unit_source
+  ri_concentration_unit_source <- object$ri_concentration_unit_source
 
   if (identical(input_basis, "detector_response")) {
     if (
@@ -433,12 +466,20 @@ bake.step_sec_composition <- function(object, new_data, ...) {
     .sec_resolve_concentration_unit(
       uv_concentration_unit,
       new_data[[uv_col]],
-      "uv_concentration_unit"
+      "uv_concentration_unit",
+      require_recorded = identical(
+        uv_concentration_unit_source,
+        "inferred"
+      )
     )
     .sec_resolve_concentration_unit(
       ri_concentration_unit,
       new_data[[ri_col]],
-      "ri_concentration_unit"
+      "ri_concentration_unit",
+      require_recorded = identical(
+        ri_concentration_unit_source,
+        "inferred"
+      )
     )
   }
 
@@ -547,6 +588,10 @@ tidy.step_sec_composition <- function(x, ...) {
     input_basis = x$input_basis,
     uv_concentration_unit = x$uv_concentration_unit %||% NA_character_,
     ri_concentration_unit = x$ri_concentration_unit %||% NA_character_,
+    uv_concentration_unit_source = x$uv_concentration_unit_source %||%
+      NA_character_,
+    ri_concentration_unit_source = x$ri_concentration_unit_source %||%
+      NA_character_,
     min_signal = x$min_signal,
     id = x$id
   )

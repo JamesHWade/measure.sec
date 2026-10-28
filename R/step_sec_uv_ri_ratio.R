@@ -20,11 +20,13 @@
 #'   `"normalized_concentration"` select a basis explicitly. A tagged/raw mix
 #'   is rejected.
 #' @param uv_concentration_unit,ri_concentration_unit Units of the respective
-#'   curves for `"normalized_concentration"`. Each can be omitted when that
-#'   curve records `sec_concentration_unit`; an explicit unit must agree with
-#'   any recorded unit. Both are required for untagged normalized curves. These
-#'   arguments must be `NULL` for raw detector responses and with
-#'   `input_basis = "auto"`.
+#'   curves for `"normalized_concentration"`. Each can be omitted when the
+#'   training curve records `sec_concentration_unit`; an explicit unit must
+#'   agree with any recorded unit. When prep infers a unit from its training
+#'   tag, the corresponding baked curve must retain that tag. An explicit unit
+#'   permits untagged baked curves, but any recorded tag must agree. Both units
+#'   are required for untagged normalized training curves. These arguments must
+#'   be `NULL` for raw detector responses and with `input_basis = "auto"`.
 #' @param output_col Name for the output ratio column. Default is `"uv_ri_ratio"`.
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
 #'   ratio is set to `NA`. Default is 0.01 (1%). The threshold is a fraction of
@@ -162,6 +164,16 @@ step_sec_uv_ri_ratio <- function(
       input_basis = input_basis,
       uv_concentration_unit = uv_concentration_unit,
       ri_concentration_unit = ri_concentration_unit,
+      uv_concentration_unit_source = if (is.null(uv_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
+      ri_concentration_unit_source = if (is.null(ri_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
       output_col = output_col,
       min_signal = min_signal,
       smooth = smooth,
@@ -180,6 +192,8 @@ step_sec_uv_ri_ratio_new <- function(
   input_basis,
   uv_concentration_unit,
   ri_concentration_unit,
+  uv_concentration_unit_source,
+  ri_concentration_unit_source,
   output_col,
   min_signal,
   smooth,
@@ -196,6 +210,8 @@ step_sec_uv_ri_ratio_new <- function(
     input_basis = input_basis,
     uv_concentration_unit = uv_concentration_unit,
     ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     output_col = output_col,
     min_signal = min_signal,
     smooth = smooth,
@@ -244,6 +260,8 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   input_basis <- x$input_basis
   uv_concentration_unit <- x$uv_concentration_unit
   ri_concentration_unit <- x$ri_concentration_unit
+  uv_concentration_unit_source <- NULL
+  ri_concentration_unit_source <- NULL
   uv_recorded_unit <- attr(
     training[[uv_col]],
     "sec_concentration_unit",
@@ -282,6 +300,16 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
       )
     }
   } else {
+    uv_concentration_unit_source <- if (is.null(uv_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
+    ri_concentration_unit_source <- if (is.null(ri_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
     uv_concentration_unit <- .sec_resolve_concentration_unit(
       uv_concentration_unit,
       training[[uv_col]],
@@ -300,6 +328,8 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
     input_basis = input_basis,
     uv_concentration_unit = uv_concentration_unit,
     ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     output_col = x$output_col,
     min_signal = x$min_signal,
     smooth = x$smooth,
@@ -343,6 +373,8 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
   input_basis <- object$input_basis
   uv_concentration_unit <- object$uv_concentration_unit
   ri_concentration_unit <- object$ri_concentration_unit
+  uv_concentration_unit_source <- object$uv_concentration_unit_source
+  ri_concentration_unit_source <- object$ri_concentration_unit_source
   output_col <- object$output_col
   min_signal <- object$min_signal
   smooth <- object$smooth
@@ -369,12 +401,20 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
     .sec_resolve_concentration_unit(
       uv_concentration_unit,
       new_data[[uv_col]],
-      "uv_concentration_unit"
+      "uv_concentration_unit",
+      require_recorded = identical(
+        uv_concentration_unit_source,
+        "inferred"
+      )
     )
     .sec_resolve_concentration_unit(
       ri_concentration_unit,
       new_data[[ri_col]],
-      "ri_concentration_unit"
+      "ri_concentration_unit",
+      require_recorded = identical(
+        ri_concentration_unit_source,
+        "inferred"
+      )
     )
   }
 
@@ -414,6 +454,7 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
       if (smooth && sum(valid) > smooth_window) {
         ratio <- .moving_average(ratio, smooth_window)
       }
+      ratio[!valid] <- NA_real_
 
       # Return as measure object
       new_measure_tbl(location = location, value = ratio)
@@ -463,6 +504,10 @@ tidy.step_sec_uv_ri_ratio <- function(x, ...) {
     input_basis = x$input_basis,
     uv_concentration_unit = x$uv_concentration_unit %||% NA_character_,
     ri_concentration_unit = x$ri_concentration_unit %||% NA_character_,
+    uv_concentration_unit_source = x$uv_concentration_unit_source %||%
+      NA_character_,
+    ri_concentration_unit_source = x$ri_concentration_unit_source %||%
+      NA_character_,
     output_col = x$output_col,
     min_signal = x$min_signal,
     smooth = x$smooth,

@@ -27,7 +27,9 @@
 #' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
 #'   `"g/mL"`. If omitted, the curve must carry a
 #'   `sec_concentration_unit` attribute. An explicit unit must agree with any
-#'   recorded unit.
+#'   recorded unit. When prep infers the unit from the training tag, baked
+#'   curves must retain that tag. With an explicit unit, baked curves may be
+#'   untagged, but any recorded tag must agree.
 #'
 #' @return An updated recipe with the new step added, containing intrinsic
 #'   viscosity at each elution point.
@@ -122,6 +124,11 @@ step_sec_intrinsic_visc <- function(
       specific_visc_col = specific_visc_col,
       concentration_col = concentration_col,
       concentration_unit = concentration_unit,
+      concentration_unit_source = if (is.null(concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
       output_col = output_col,
       min_concentration = min_concentration,
       units = units,
@@ -137,6 +144,7 @@ step_sec_intrinsic_visc_new <- function(
   specific_visc_col,
   concentration_col,
   concentration_unit,
+  concentration_unit_source,
   output_col,
   min_concentration,
   units,
@@ -150,6 +158,7 @@ step_sec_intrinsic_visc_new <- function(
     specific_visc_col = specific_visc_col,
     concentration_col = concentration_col,
     concentration_unit = concentration_unit,
+    concentration_unit_source = concentration_unit_source,
     output_col = output_col,
     min_concentration = min_concentration,
     units = units,
@@ -218,11 +227,17 @@ prep.step_sec_intrinsic_visc <- function(x, training, info = NULL, ...) {
     x$concentration_unit,
     training[[concentration_col]]
   )
+  concentration_unit_source <- if (is.null(x$concentration_unit)) {
+    "inferred"
+  } else {
+    "explicit"
+  }
 
   step_sec_intrinsic_visc_new(
     specific_visc_col = specific_visc_col,
     concentration_col = concentration_col,
     concentration_unit = concentration_unit,
+    concentration_unit_source = concentration_unit_source,
     output_col = x$output_col,
     min_concentration = x$min_concentration,
     units = x$units,
@@ -238,12 +253,14 @@ bake.step_sec_intrinsic_visc <- function(object, new_data, ...) {
   specific_visc_col <- object$specific_visc_col
   concentration_col <- object$concentration_col
   concentration_unit <- object$concentration_unit
+  concentration_unit_source <- object$concentration_unit_source
   output_col <- object$output_col
   min_concentration <- object$min_concentration
   units <- object$units
   .sec_resolve_concentration_unit(
     concentration_unit,
-    new_data[[concentration_col]]
+    new_data[[concentration_col]],
+    require_recorded = identical(concentration_unit_source, "inferred")
   )
 
   # Calculate intrinsic viscosity for each sample
@@ -337,6 +354,7 @@ tidy.step_sec_intrinsic_visc <- function(x, ...) {
     specific_visc_col = x$specific_visc_col %||% NA_character_,
     concentration_col = x$concentration_col %||% NA_character_,
     concentration_unit = x$concentration_unit %||% NA_character_,
+    concentration_unit_source = x$concentration_unit_source %||% NA_character_,
     output_col = x$output_col,
     units = x$units,
     id = x$id

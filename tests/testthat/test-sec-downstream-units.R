@@ -72,9 +72,16 @@ test_that("intrinsic viscosity requires or records an untagged unit contract", {
       concentration_col = "conc",
       concentration_unit = "mg/mL"
     )
-  result <- recipes::bake(recipes::prep(explicit_recipe), new_data = NULL)
+  explicit_prepped <- recipes::prep(explicit_recipe)
+  result <- recipes::bake(explicit_prepped, new_data = data)
+  tagged_data <- data
+  attr(tagged_data$conc, "sec_concentration_unit") <- "g/mL"
 
   expect_equal(result$intrinsic_visc[[1]]$value, rep(0.25, 3))
+  expect_error(
+    recipes::bake(explicit_prepped, new_data = tagged_data),
+    "conflicts with the concentration curve's recorded units"
+  )
 })
 
 test_that("intrinsic viscosity rejects concentration unit drift at bake", {
@@ -101,6 +108,9 @@ test_that("intrinsic viscosity rejects concentration unit drift at bake", {
     )
 
   prepped <- recipes::prep(recipe)
+  serialized_recipe <- withr::local_tempfile()
+  saveRDS(prepped, serialized_recipe)
+  prepped <- readRDS(serialized_recipe)
 
   expect_error(
     recipes::bake(
@@ -108,6 +118,10 @@ test_that("intrinsic viscosity rejects concentration unit drift at bake", {
       new_data = make_data(0.002, "g/mL")
     ),
     "conflicts with the concentration curve's recorded units"
+  )
+  expect_error(
+    recipes::bake(prepped, new_data = make_data(2, NULL)),
+    "no longer records its unit"
   )
 })
 
@@ -219,13 +233,14 @@ test_that("composition normalizes tagged or explicitly declared channels", {
     )),
     new_data = NULL
   )
+  explicit_recipe <- recipes::prep(make_recipe(
+    make_data(rep(3.5, 3), rep(0.01, 3)),
+    uv_unit = "mg/mL",
+    ri_unit = "g/mL"
+  ))
   result_explicit_units <- recipes::bake(
-    recipes::prep(make_recipe(
-      make_data(rep(3.5, 3), rep(0.01, 3)),
-      uv_unit = "mg/mL",
-      ri_unit = "g/mL"
-    )),
-    new_data = NULL
+    explicit_recipe,
+    new_data = make_data(rep(3.5, 3), rep(0.01, 3))
   )
 
   expect_equal(result_mixed_units$composition_a[[1]]$value, rep(0.25, 3))
@@ -237,11 +252,26 @@ test_that("composition normalizes tagged or explicitly declared channels", {
     result_explicit_units$composition_a[[1]]$value,
     result_mixed_units$composition_a[[1]]$value
   )
+  expect_error(
+    recipes::bake(
+      explicit_recipe,
+      new_data = make_data(
+        rep(3.5, 3),
+        rep(0.01, 3),
+        "g/mL",
+        "g/mL"
+      )
+    ),
+    "conflicts with the concentration curve's recorded units"
+  )
 
   training_recipe <- make_recipe(
     make_data(rep(3.5, 3), rep(0.01, 3), "mg/mL", "g/mL")
   )
   prepped <- recipes::prep(training_recipe)
+  serialized_recipe <- withr::local_tempfile()
+  saveRDS(prepped, serialized_recipe)
+  prepped <- readRDS(serialized_recipe)
   changed_units <- make_data(
     rep(0.0035, 3),
     rep(0.01, 3),
@@ -251,6 +281,27 @@ test_that("composition normalizes tagged or explicitly declared channels", {
   expect_error(
     recipes::bake(prepped, new_data = changed_units),
     "conflicts with the concentration curve's recorded units"
+  )
+  expect_error(
+    recipes::bake(
+      prepped,
+      new_data = make_data(rep(3.5, 3), rep(0.01, 3), NULL, "g/mL")
+    ),
+    "no longer records its unit"
+  )
+  expect_error(
+    recipes::bake(
+      prepped,
+      new_data = make_data(rep(3.5, 3), rep(0.01, 3), "mg/mL", NULL)
+    ),
+    "no longer records its unit"
+  )
+  expect_error(
+    recipes::bake(
+      prepped,
+      new_data = make_data(rep(3.5, 3), rep(0.01, 3))
+    ),
+    "no longer records its unit"
   )
 
   untagged <- make_data(rep(3.5, 3), rep(0.01, 3))
@@ -406,11 +457,26 @@ test_that("UV/RI ratio converts concentration channels to common units", {
   result_g_per_ml <- make_result(
     make_data(rep(0.004, 3), rep(0.002, 3), "g/mL", "g/mL")
   )
-  result_explicit_units <- make_result(
-    make_data(rep(4, 3), rep(0.002, 3)),
-    input_basis = "normalized_concentration",
-    uv_unit = "mg/mL",
-    ri_unit = "g/mL"
+  explicit_data <- make_data(rep(4, 3), rep(0.002, 3))
+  explicit_recipe <- recipes::recipe(~., data = explicit_data) |>
+    step_sec_uv_ri_ratio(
+      uv_col = "uv",
+      ri_col = "ri",
+      smooth = FALSE,
+      input_basis = "normalized_concentration",
+      uv_concentration_unit = "mg/mL",
+      ri_concentration_unit = "g/mL"
+    )
+  explicit_prepped <- recipes::prep(explicit_recipe)
+  result_explicit_units <- recipes::bake(
+    explicit_prepped,
+    new_data = explicit_data
+  )
+  conflicting_data <- make_data(
+    rep(4, 3),
+    rep(0.002, 3),
+    "g/mL",
+    "g/mL"
   )
 
   expect_equal(result_mixed_units$uv_ri_ratio[[1]]$value, rep(2, 3))
@@ -425,6 +491,10 @@ test_that("UV/RI ratio converts concentration channels to common units", {
   expect_identical(
     attr(result_mixed_units$uv_ri_ratio, "sec_uv_ri_ratio_basis"),
     "normalized_concentration"
+  )
+  expect_error(
+    recipes::bake(explicit_prepped, new_data = conflicting_data),
+    "conflicts with the concentration curve's recorded units"
   )
 
   expect_error(
@@ -467,10 +537,31 @@ test_that("UV/RI ratio rejects mixed bases, drift, and misaligned curves", {
 
   training <- make_data(rep(4, 3), rep(0.002, 3), "mg/mL", "g/mL")
   prepped <- recipes::prep(make_recipe(training))
+  serialized_recipe <- withr::local_tempfile()
+  saveRDS(prepped, serialized_recipe)
+  prepped <- readRDS(serialized_recipe)
   changed_unit <- make_data(rep(0.004, 3), rep(0.002, 3), "g/mL", "g/mL")
   expect_error(
     recipes::bake(prepped, new_data = changed_unit),
     "conflicts with the concentration curve's recorded units"
+  )
+  expect_error(
+    recipes::bake(
+      prepped,
+      new_data = make_data(rep(4, 3), rep(0.002, 3), ri_unit = "g/mL")
+    ),
+    "no longer records its unit"
+  )
+  expect_error(
+    recipes::bake(prepped, new_data = make_data(rep(4, 3), rep(0.002, 3))),
+    "no longer records its unit"
+  )
+  expect_error(
+    recipes::bake(
+      prepped,
+      new_data = make_data(rep(4, 3), rep(0.002, 3), "mg/mL", NULL)
+    ),
+    "no longer records its unit"
   )
 
   misaligned <- make_data(rep(1, 3), rep(1, 3))
@@ -481,4 +572,76 @@ test_that("UV/RI ratio rejects mixed bases, drift, and misaligned curves", {
     recipes::bake(recipes::prep(make_recipe(misaligned)), new_data = NULL),
     "locations must align"
   )
+})
+
+test_that("UV/RI smoothing preserves invalid denominator points", {
+  location <- seq_len(9)
+  raw_uv <- rep(0.002, 9)
+  raw_ri <- c(0.001, 0.001, 0.000001, 0.001, 0, 0.001, Inf, 0.001, 0.001)
+  raw_data <- tibble::tibble(sample_id = "raw")
+  raw_data$uv <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location, raw_uv))
+  )
+  raw_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location, raw_ri))
+  )
+
+  normalized_data <- tibble::tibble(sample_id = "normalized")
+  normalized_data$uv <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location, raw_uv * 1000))
+  )
+  normalized_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location, raw_ri))
+  )
+  attr(normalized_data$uv, "sec_concentration_unit") <- "mg/mL"
+  attr(normalized_data$ri, "sec_concentration_unit") <- "g/mL"
+
+  make_result <- function(data, input_basis) {
+    recipe <- recipes::recipe(~., data = data) |>
+      step_sec_uv_ri_ratio(
+        uv_col = "uv",
+        ri_col = "ri",
+        min_signal = 0.01,
+        smooth = TRUE,
+        smooth_window = 3,
+        input_basis = input_basis
+      )
+    recipes::bake(recipes::prep(recipe), new_data = NULL)
+  }
+
+  raw_result <- make_result(raw_data, "detector_response")
+  normalized_result <- make_result(normalized_data, "auto")
+  expected <- rep(2, 9)
+  expected[c(3, 5, 7)] <- NA_real_
+
+  expect_equal(raw_result$uv_ri_ratio[[1]]$value, expected)
+  expect_equal(normalized_result$uv_ri_ratio[[1]]$value, expected)
+})
+
+test_that("inferred unit policy survives serialization and sample reordering", {
+  location <- c(1, 2, 3)
+  data <- tibble::tibble(sample_id = c("first", "second"))
+  data$uv <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location, rep(4, 3)),
+    measure::new_measure_tbl(location, rep(6, 3))
+  ))
+  data$ri <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location, rep(0.002, 3)),
+    measure::new_measure_tbl(location, rep(0.003, 3))
+  ))
+  attr(data$uv, "sec_concentration_unit") <- "mg/mL"
+  attr(data$ri, "sec_concentration_unit") <- "g/mL"
+
+  recipe <- recipes::recipe(~., data = data) |>
+    step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = FALSE)
+  prepped <- recipes::prep(recipe)
+  serialized_recipe <- withr::local_tempfile()
+  saveRDS(prepped, serialized_recipe)
+  prepped <- readRDS(serialized_recipe)
+
+  reordered <- recipes::bake(prepped, new_data = data[c(2, 1), ])
+
+  expect_equal(as.character(reordered$sample_id), c("second", "first"))
+  expect_equal(reordered$uv_ri_ratio[[1]]$value, rep(2, 3))
+  expect_equal(reordered$uv_ri_ratio[[2]]$value, rep(2, 3))
 })

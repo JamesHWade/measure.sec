@@ -54,11 +54,13 @@ concentrations when both curves carry units; \code{"detector_response"} and
 is rejected.}
 
 \item{uv_concentration_unit, ri_concentration_unit}{Units of the respective
-curves for \code{"normalized_concentration"}. Each can be omitted when that
-curve records \code{sec_concentration_unit}; an explicit unit must agree with
-any recorded unit. Both are required for untagged normalized curves. These
-arguments must be \code{NULL} for raw detector responses and with
-\code{input_basis = "auto"}.}
+curves for \code{"normalized_concentration"}. Each can be omitted when the
+training curve records \code{sec_concentration_unit}; an explicit unit must
+agree with any recorded unit. When prep infers a unit from its training
+tag, the corresponding baked curve must retain that tag. An explicit unit
+permits untagged baked curves, but any recorded tag must agree. Both units
+are required for untagged normalized training curves. These arguments must
+be \code{NULL} for raw detector responses and with \code{input_basis = "auto"}.}
 }
 \value{
 An updated recipe with the new step added.

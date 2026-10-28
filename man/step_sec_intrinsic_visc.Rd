@@ -46,7 +46,9 @@ Common alternatives are \code{"mL/g"} (100 mL/g equals 1 dL/g).}
 \item{concentration_unit}{Unit of the concentration curve: \code{"mg/mL"} or
 \code{"g/mL"}. If omitted, the curve must carry a
 \code{sec_concentration_unit} attribute. An explicit unit must agree with any
-recorded unit.}
+recorded unit. When prep infers the unit from the training tag, baked
+curves must retain that tag. With an explicit unit, baked curves may be
+untagged, but any recorded tag must agree.}
 }
 \value{
 An updated recipe with the new step added, containing intrinsic
