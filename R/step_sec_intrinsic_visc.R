@@ -16,14 +16,18 @@
 #' @param concentration_col Name of the concentration measure column.
 #' @param output_col Name for the intrinsic viscosity output column.
 #'   Default is `"intrinsic_visc"`.
-#' @param min_concentration Minimum concentration threshold below which
-#'   intrinsic viscosity is set to NA. Default is 1e-6 mg/mL.
+#' @param min_concentration Minimum concentration threshold in mg/mL below
+#'   which intrinsic viscosity is set to `NA`. Default is `1e-6` mg/mL.
 #' @param units Output units for intrinsic viscosity. Default is `"dL/g"`.
-#'   Common alternatives are `"mL/g"` (multiply by 100).
+#'   Common alternatives are `"mL/g"` (100 mL/g equals 1 dL/g).
 #' @param role Role for generated columns.
 #' @param trained Logical indicating if the step has been trained.
 #' @param skip Logical. Should the step be skipped when baking?
 #' @param id Unique step identifier.
+#' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
+#'   `"g/mL"`. If omitted, the curve must carry a
+#'   `sec_concentration_unit` attribute. An explicit unit must agree with any
+#'   recorded unit.
 #'
 #' @return An updated recipe with the new step added, containing intrinsic
 #'   viscosity at each elution point.
@@ -36,6 +40,10 @@
 #'
 #' In SEC, each elution slice has very low concentration, so the approximation
 #' \[eta\] = eta_sp / c is valid.
+#'
+#' The concentration curve is converted to g/mL before division, so the
+#' unscaled result is in mL/g. The requested `units` then converts that result
+#' to either mL/g or dL/g. The low-concentration cutoff is specified in mg/mL.
 #'
 #' **Applications of Intrinsic Viscosity:**
 #' \itemize{
@@ -90,12 +98,22 @@ step_sec_intrinsic_visc <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_intrinsic_visc")
+  id = recipes::rand_id("sec_intrinsic_visc"),
+  concentration_unit = NULL
 ) {
   units <- match.arg(units)
 
-  if (!is.numeric(min_concentration) || min_concentration < 0) {
-    cli::cli_abort("{.arg min_concentration} must be a non-negative number.")
+  .sec_validate_concentration_unit(concentration_unit)
+
+  if (
+    !is.numeric(min_concentration) ||
+      length(min_concentration) != 1 ||
+      !is.finite(min_concentration) ||
+      min_concentration < 0
+  ) {
+    cli::cli_abort(
+      "{.arg min_concentration} must be a non-negative finite number in mg/mL."
+    )
   }
 
   recipes::add_step(
@@ -103,6 +121,7 @@ step_sec_intrinsic_visc <- function(
     step_sec_intrinsic_visc_new(
       specific_visc_col = specific_visc_col,
       concentration_col = concentration_col,
+      concentration_unit = concentration_unit,
       output_col = output_col,
       min_concentration = min_concentration,
       units = units,
@@ -117,6 +136,7 @@ step_sec_intrinsic_visc <- function(
 step_sec_intrinsic_visc_new <- function(
   specific_visc_col,
   concentration_col,
+  concentration_unit,
   output_col,
   min_concentration,
   units,
@@ -129,6 +149,7 @@ step_sec_intrinsic_visc_new <- function(
     subclass = "sec_intrinsic_visc",
     specific_visc_col = specific_visc_col,
     concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
     output_col = output_col,
     min_concentration = min_concentration,
     units = units,
@@ -193,9 +214,15 @@ prep.step_sec_intrinsic_visc <- function(x, training, info = NULL, ...) {
     }
   }
 
+  concentration_unit <- .sec_resolve_concentration_unit(
+    x$concentration_unit,
+    training[[concentration_col]]
+  )
+
   step_sec_intrinsic_visc_new(
     specific_visc_col = specific_visc_col,
     concentration_col = concentration_col,
+    concentration_unit = concentration_unit,
     output_col = x$output_col,
     min_concentration = x$min_concentration,
     units = x$units,
@@ -210,13 +237,14 @@ prep.step_sec_intrinsic_visc <- function(x, training, info = NULL, ...) {
 bake.step_sec_intrinsic_visc <- function(object, new_data, ...) {
   specific_visc_col <- object$specific_visc_col
   concentration_col <- object$concentration_col
+  concentration_unit <- object$concentration_unit
   output_col <- object$output_col
   min_concentration <- object$min_concentration
   units <- object$units
-
-  # Unit conversion factor
-  # Default is dL/g; if mL/g requested, multiply by 100
-  unit_factor <- if (units == "mL/g") 100 else 1
+  .sec_resolve_concentration_unit(
+    concentration_unit,
+    new_data[[concentration_col]]
+  )
 
   # Calculate intrinsic viscosity for each sample
   iv_list <- purrr::map2(
@@ -227,27 +255,51 @@ bake.step_sec_intrinsic_visc <- function(object, new_data, ...) {
       conc_val <- conc_m$value
       location <- visc_m$location
 
+      .sec_assert_aligned_curves(
+        visc_m,
+        conc_m,
+        "specific viscosity and concentration"
+      )
+      concentration_g_per_ml <- .sec_concentration_g_per_ml(
+        conc_val,
+        concentration_unit
+      )
+      concentration_mg_per_ml <- if (identical(concentration_unit, "g/mL")) {
+        conc_val * 1000
+      } else {
+        conc_val
+      }
+
       # Calculate \[eta\] = eta_sp / c
       iv <- rep(NA_real_, length(visc_val))
 
-      valid <- !is.na(visc_val) &
-        !is.na(conc_val) &
-        conc_val > min_concentration &
+      valid <- is.finite(visc_val) &
+        is.finite(concentration_g_per_ml) &
+        concentration_mg_per_ml > min_concentration &
+        concentration_g_per_ml > 0 &
         visc_val > 0
 
       if (any(valid)) {
-        iv[valid] <- unit_factor * visc_val[valid] / conc_val[valid]
+        iv_ml_per_g <- visc_val[valid] / concentration_g_per_ml[valid]
+        iv_dl_per_g <- iv_ml_per_g / 100
+        iv[valid] <- if (identical(units, "dL/g")) {
+          iv_dl_per_g
+        } else {
+          iv_ml_per_g
+        }
 
         # Filter unrealistic values
-        iv[valid][iv[valid] > 100] <- NA_real_ # \[eta\] > 100 dL/g is unusual
-        iv[valid][iv[valid] < 0] <- NA_real_
+        unrealistic <- iv_dl_per_g > 100 # \[eta\] > 100 dL/g is unusual
+        iv[which(valid)[unrealistic]] <- NA_real_
       }
 
       new_measure_tbl(location = location, value = iv)
     }
   )
 
-  new_data[[output_col]] <- new_measure_list(iv_list)
+  output <- new_measure_list(iv_list)
+  attr(output, "sec_intrinsic_viscosity_unit") <- units
+  new_data[[output_col]] <- output
 
   tibble::as_tibble(new_data)
 }
@@ -284,6 +336,7 @@ tidy.step_sec_intrinsic_visc <- function(x, ...) {
   tibble::tibble(
     specific_visc_col = x$specific_visc_col %||% NA_character_,
     concentration_col = x$concentration_col %||% NA_character_,
+    concentration_unit = x$concentration_unit %||% NA_character_,
     output_col = x$output_col,
     units = x$units,
     id = x$id

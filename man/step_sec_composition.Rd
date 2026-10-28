@@ -18,7 +18,10 @@ step_sec_composition(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_composition")
+  id = recipes::rand_id("sec_composition"),
+  input_basis = c("detector_response", "normalized_concentration"),
+  uv_concentration_unit = NULL,
+  ri_concentration_unit = NULL
 )
 }
 \arguments{
@@ -28,21 +31,19 @@ step_sec_composition(
 
 \item{ri_col}{Name of the RI detector measure column.}
 
-\item{component_a_uv}{UV response factor for component A (extinction coefficient
-in mL/(mg*cm) or relative units).}
+\item{component_a_uv, component_b_uv}{UV response coefficients for components
+A and B, calibrated in the selected input-channel basis per g/mL.}
 
-\item{component_a_ri}{RI response factor for component A (dn/dc in mL/g or
-relative units).}
-
-\item{component_b_uv}{UV response factor for component B.}
-
-\item{component_b_ri}{RI response factor for component B.}
+\item{component_a_ri, component_b_ri}{RI response coefficients for components
+A and B, calibrated in the selected input-channel basis per g/mL.}
 
 \item{output_col}{Name for the output composition column. Default is
 \code{"composition_a"}. Contains weight fraction of component A (0-1).}
 
 \item{min_signal}{Minimum signal threshold (as fraction of max) below which
-composition is set to NA. Default is 0.01.}
+composition is set to \code{NA}. Default is 0.01. The threshold is a fraction of
+the maximum absolute RI value; its effective units are native RI-response
+units for raw mode and g/mL after conversion for normalized mode.}
 
 \item{clip}{Logical. Clip composition values to [0, 1] range? Default is \code{TRUE}.}
 
@@ -53,6 +54,17 @@ composition is set to NA. Default is 0.01.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{input_basis}{Input interpretation: \code{"detector_response"} (default)
+uses untagged raw UV and RI detector responses; \code{"normalized_concentration"}
+uses apparent concentration channels and converts them to g/mL before
+calculating composition.}
+
+\item{uv_concentration_unit, ri_concentration_unit}{Units of the respective
+curves when \code{input_basis = "normalized_concentration"}. Each can be
+omitted when that curve records \code{sec_concentration_unit}; an explicit
+unit must agree with any recorded unit. Both are required for untagged
+curves. These arguments must be \code{NULL} for raw detector responses.}
 }
 \value{
 An updated recipe with the new step added.
@@ -65,17 +77,30 @@ UV and RI detector signals with known response factors.
 \details{
 For a two-component system, the detector signals are:
 
-\deqn{UV = \varepsilon_A \cdot c_A + \varepsilon_B \cdot c_B}
-\deqn{RI = (dn/dc)_A \cdot c_A + (dn/dc)_B \cdot c_B}
+\deqn{UV = u_A c_A + u_B c_B, \qquad RI = r_A c_A + r_B c_B}
 
-where c_A and c_B are the concentrations of components A and B.
+where \code{c_A} and \code{c_B} are the component mass concentrations in g/mL. The
+coefficients \code{u_A}, \code{u_B}, \code{r_A}, and \code{r_B} are the response coefficients
+for the selected \code{input_basis}, measured in the same input-channel basis
+per g/mL. In raw detector-response mode these are calibrated detector
+responses per g/mL; in normalized-concentration mode they are calibrated
+apparent channel responses per g/mL. They are not inferred from physical
+extinction coefficients or \code{dn/dc} values.
 
-The weight fraction of component A is calculated by solving this system:
+Composition is calculated by solving the two-response linear system and
+converting the recovered component concentrations to a mass fraction:
 
-\deqn{w_A = \frac{R_{obs} - R_B}{R_A - R_B}}
+\deqn{c_A = \frac{UV r_B - u_B RI}{u_A r_B - u_B r_A}, \qquad
+c_B = \frac{u_A RI - UV r_A}{u_A r_B - u_B r_A}, \qquad
+w_A = \frac{c_A}{c_A + c_B}}
 
-where R_obs is the observed UV/RI ratio, and R_A, R_B are the ratios for
-pure components (e/dn/dc).
+The response matrix must be identifiable: the component response vectors
+cannot be proportional. A zero coefficient is allowed when the full matrix
+remains identifiable.
+
+\code{min_signal} is a fraction of the maximum absolute RI value. The effective
+cutoff is therefore in raw RI detector units for \code{"detector_response"}, or
+in g/mL after unit conversion for \code{"normalized_concentration"}.
 
 \strong{Common Applications:}
 \itemize{
@@ -85,24 +110,27 @@ pure components (e/dn/dc).
 \item Polymer blends with known compositions
 }
 
-\strong{Example Response Factors:}
-\itemize{
-\item Polystyrene: UV (254nm) ~ 1.0, dn/dc ~ 0.185
-\item PMMA: UV (254nm) ~ 0.01, dn/dc ~ 0.084
-\item PEG: UV (280nm) ~ 0, dn/dc ~ 0.135
-\item Proteins: UV (280nm) ~ 1.0, dn/dc ~ 0.185
-}
+Calibrate each response coefficient from the measured channel output of a
+pure-component standard at known concentrations in g/mL. A literature
+extinction coefficient or \code{dn/dc} value alone is not a substitute; account
+for path length, instrument calibration, and signal scaling when relating it
+to the actual input-channel values.
 }
 \note{
-Response factors must be in consistent units. The absolute values don't
-matter as long as the ratios are correct for pure components.
+The response coefficients must be calibrated for the selected input basis
+and the same g/mL concentration denominator. Raw detector responses and
+normalized concentration channels are separate models; switching between
+them requires recalibrating all four coefficients. If both channels have
+been normalized to the same mass concentration response for both
+components, the response matrix is singular and composition is not
+identifiable from those channels.
 }
 \examples{
 \dontrun{
 library(recipes)
 library(measure)
 
-# Styrene-MMA copolymer composition
+# Calibrate the response coefficients with pure-component standards.
 rec <- recipe(~., data = copolymer_data) |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
@@ -110,10 +138,10 @@ rec <- recipe(~., data = copolymer_data) |>
   step_sec_composition(
     uv_col = "uv",
     ri_col = "ri",
-    component_a_uv = 1.0,    # Styrene (UV-active)
-    component_a_ri = 0.185,  # Styrene dn/dc
-    component_b_uv = 0.01,   # MMA (weak UV)
-    component_b_ri = 0.084,  # MMA dn/dc
+    component_a_uv = 2.0,    # measured UV response per g/mL
+    component_a_ri = 1.0,    # measured RI response per g/mL
+    component_b_uv = 0.5,
+    component_b_ri = 3.0,
     output_col = "styrene_fraction"
   ) |>
   prep()

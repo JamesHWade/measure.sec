@@ -192,7 +192,8 @@ test_that("step_sec_intrinsic_visc calculates from viscosity and concentration",
   rec <- recipes::recipe(~., data = test_data) |>
     step_sec_intrinsic_visc(
       specific_visc_col = "visc",
-      concentration_col = "conc"
+      concentration_col = "conc",
+      concentration_unit = "mg/mL"
     )
 
   prepped <- recipes::prep(rec)
