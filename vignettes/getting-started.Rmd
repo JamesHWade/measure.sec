@@ -87,9 +87,9 @@ flowchart TD
     C --> D[step_sec_ri / step_sec_uv<br>Detector processing with dn/dc or ε]
     D --> E{Calibration<br>method?}
     E -->|"Standards available<br>(same polymer type)"| F[step_sec_conventional_cal<br>Polynomial fit to standards]
-    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Angular extrapolation<br>Zimm/Debye/Berry]
+    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Single-angle approximation]
     F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
-    G --> I[Absolute MW & Rg<br>directly from MALS]
+    G --> I[Calibrated single-angle<br>MW estimate]
     H --> J[Results<br>MW averages, distributions, plots]
     I --> J
 
@@ -97,7 +97,7 @@ flowchart TD
     style J fill:#c8e6c9
 ```
 
-*Choose **conventional calibration** when you have narrow MW standards of the same polymer type. Choose **MALS** when you need absolute MW without polymer-specific standards or when analyzing unknown polymers.*
+*Conventional calibration uses narrow MW standards. The current scattering step is a single-angle approximation; it needs a calibrated detector and known concentration units. Multi-angle extrapolation and Rg are not implemented.*
 
 ## Installation
 
@@ -289,13 +289,13 @@ The most common outputs from SEC analysis are **molecular weight averages**:
 - **Mz (z-average)**: Even more sensitive to high MW species
 - **Dispersity (Mw/Mn)**: Measures breadth of the MW distribution (1.0 = monodisperse)
 
-Use `step_sec_mw_averages()` to calculate these. This step requires that the x-axis (location) values already represent log₁₀(MW)—which is what `step_sec_conventional_cal()` provides. See the Calibration section below for the complete workflow.
+Use `step_sec_mw_averages()` to calculate these. After `step_sec_conventional_cal()`, it pairs the concentration trace with the calibrated MW curve; their locations remain elution time or volume. Alternatively, an input trace can already use log₁₀(MW) as its axis. See the Calibration section below for the complete workflow.
 
 ## Calibration Curves
 
 Most SEC analysis requires **calibration** to convert retention time to molecular weight. The most common approach uses **narrow standards**—polymers with known molecular weights and low dispersity—to build a calibration curve.
 
-> **Note**: If you have a light scattering detector (MALS), you can determine absolute molecular weights without calibration. See `vignette("triple-detection")` for details.
+> **Note**: A calibrated light-scattering detector can estimate molecular weight without polymer standards. `step_sec_mals()` currently uses a single-angle approximation and does not calculate Rg or perform angular extrapolation.
 
 ```{r calibration, fig.width=7, fig.height=5}
 # Load polystyrene narrow standards
@@ -348,15 +348,15 @@ rec_cal <- recipe(
   ) |>
   step_sec_baseline(measures = "ri") |>
   # Apply conventional calibration using polystyrene standards
-  # This converts retention time to log10(MW) on the x-axis
+  # This creates a separate log10(MW) curve on the same elution axis
   # fit_type options: "linear", "quadratic", "cubic" (most common)
   step_sec_conventional_cal(
     standards = ps_cal,
     fit_type = "cubic"
   ) |>
   # Calculate MW averages from the calibrated chromatogram
-  # The calibration step converted location values to log10(MW)
-  step_sec_mw_averages()
+  # The averages step pairs the original signal with the calibrated curve
+  step_sec_mw_averages(integration_range = range(ps_cal$retention))
 
 prepped_cal <- prep(rec_cal)
 result_cal <- bake(prepped_cal, new_data = NULL)
@@ -367,7 +367,7 @@ result_cal |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
 
-> **Important**: Conventional calibration assumes your sample has similar hydrodynamic behavior to your standards. Polystyrene standards work well for other flexible polymers in THF, but for proteins in aqueous SEC, use protein standards or light scattering.
+> **Important**: The example integrates only the portion within the standards’ retention range; signal outside that range is excluded, so these are not necessarily whole-sample averages. Conventional calibration assumes your sample has similar hydrodynamic behavior to your standards. Polystyrene standards work well for other flexible polymers in THF, but for proteins in aqueous SEC, use protein standards or light scattering.
 
 ---
 

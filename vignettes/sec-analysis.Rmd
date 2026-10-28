@@ -18,6 +18,9 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
+> **Implementation status:** `step_sec_mals()` is a single-angle approximation. It requires concentration units and an instrument calibration constant for calibrated MW; multi-angle fits and Rg are not implemented. The other detector examples are illustrative and require validation for the instrument and method.
+
+
 Size Exclusion Chromatography (SEC), also known as Gel Permeation Chromatography (GPC), is a fundamental technique for characterizing the molecular weight distribution of polymers, proteins, and other macromolecules. The **measure.sec** package extends the [measure](https://github.com/JamesHWade/measure) package with specialized preprocessing steps for SEC/GPC data analysis.
 This vignette demonstrates how to:
 
@@ -155,10 +158,10 @@ Use `step_sec_conventional_cal()` to fit the calibration and apply it to samples
 |-----------|------|---------|-------------|
 | `measures` | character | — | Column(s) containing measure data |
 | `standards` | data.frame | — | Calibration standards with `retention` and `log_mw` columns |
-| `fit_type` | character | `"cubic"` | Polynomial fit: `"linear"`, `"quadratic"`, `"cubic"`, `"quartic"` |
-| `output_col` | character | `NULL` | Name for MW output column (or `NULL` to modify in place) |
-| `extrapolation` | character | `"warn"` | Handle values outside calibration: `"none"`, `"warn"`, `"allow"` |
-| `log_transform` | logical | `TRUE` | Whether standards use log10(MW) |
+| `fit_type` | character | `"cubic"` | `"linear"`, `"quadratic"`, `"cubic"`, `"fifth"`, or `"gam"` |
+| `output_col` | character | `"mw"` | Name for the added MW curve |
+| `extrapolation` | character | `"warn"` | Handle values outside calibration: `"none"`, `"warn"`, `"linear"` |
+| `log_output` | logical | `TRUE` | Output log10(MW) rather than absolute MW |
 
 ```{r conventional-cal}
 # Prepare standards for the step (needs 'retention' and 'log_mw' columns)
@@ -191,7 +194,7 @@ rec_cal <- recipe(
     extrapolation = "none"
   ) |>
   # Calculate MW averages from RI signal weighted by MW
-  step_sec_mw_averages(measures = "ri")
+  step_sec_mw_averages(measures = "ri", integration_range = range(ps_cal$retention))
 
 # Prep and bake
 prepped <- prep(rec_cal)
@@ -373,14 +376,15 @@ rec_multi <- recipe(
   # Process detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
-  # Convert to concentration (requires injection info)
+  # Convert to concentration before single-angle scattering
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,       # µL
     sample_concentration = 2.0    # mg/mL
-  )
+  ) |>
+  # No scattering calibration supplied: output is relative and uncalibrated
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
 
 prepped_multi <- prep(rec_multi)
 result_multi <- bake(prepped_multi, new_data = NULL)
@@ -467,7 +471,7 @@ result_protein |>
 
 ## Molecular Weight Distribution
 
-Generate differential and cumulative molecular weight distributions:
+Generate differential and cumulative molecular weight distributions. The example limits integration to the standards’ retention range; signal outside that range is excluded.
 
 ```{r mwd}
 rec_mwd <- recipe(
@@ -478,19 +482,22 @@ rec_mwd <- recipe(
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_sec_baseline(measures = "ri") |>
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  # Add MW distribution curves
+  # Create a calibrated MW curve on the elution axis
+  step_sec_conventional_cal(
+    measures = "ri", standards = ps_cal, fit_type = "cubic", extrapolation = "none"
+  ) |>
   step_sec_mw_distribution(
     measures = "ri",
     type = "both",  # "differential", "cumulative", or "both"
-    calibration = NULL  # Assumes x-axis is already log10(MW)
+    integration_range = range(ps_cal$retention)
   )
 
 prepped_mwd <- prep(rec_mwd)
 result_mwd <- bake(prepped_mwd, new_data = NULL)
 
 # The result contains:
-# - mwd_differential: dw/d(logM) vs logM
-# - mwd_cumulative: cumulative weight fraction vs logM
+# - ri_differential: dW/d(logM) vs logM
+# - ri_cumulative: cumulative weight fraction vs logM
 ```
 
 ## Quality Control Functions
@@ -635,13 +642,14 @@ rec_complete <- recipe(
   # Detector processing
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
   step_sec_uv(measures = "uv", extinction_column = "extinction_coef") |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,
     sample_concentration = 2.0
   ) |>
+  # No scattering calibration supplied: output is relative and uncalibrated
+  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
   # Composition analysis
   step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri")
 
@@ -671,7 +679,7 @@ result_complete |>
 | `step_sec_ri()` | `measures`, `dn_dc_column` | Process RI signal; requires dn/dc for concentration |
 | `step_sec_uv()` | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient |
 | `step_sec_dad()` | `measures`, `wavelengths` | Multi-wavelength diode array detection |
-| `step_sec_mals()` | `mals_col`, `dn_dc_column`, `wavelength` | Multi-angle light scattering for Mw and Rg |
+| `step_sec_mals()` | `mals_col`, `dn_dc_column`, `wavelength` | Single-angle scattering approximation; no Rg or angular fit |
 | `step_sec_lals()` | `lals_col`, `dn_dc_column` | Low-angle LS for Mw without extrapolation |
 | `step_sec_rals()` | `rals_col`, `dn_dc_column` | Right-angle LS (90°) |
 | `step_sec_dls()` | `dls_col` | Dynamic LS for hydrodynamic radius |

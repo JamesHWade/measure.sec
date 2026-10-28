@@ -86,7 +86,7 @@ where f is a polynomial function and V_e is the elution volume or time.
 \strong{Calibration Curve Fitting:}
 
 The calibration is fit using orthogonal polynomials for numerical stability.
-At least 3 standards are required for cubic fits, 4 for quadratic, etc.
+At least 2 standards are required for linear fits, 3 for quadratic fits, and 4 for cubic fits. Additional standards are needed to estimate residual variation.
 
 \strong{Important Considerations:}
 \itemize{

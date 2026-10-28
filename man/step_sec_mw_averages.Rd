@@ -16,7 +16,9 @@ step_sec_mw_averages(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_averages")
+  id = recipes::rand_id("sec_mw_averages"),
+  mw_col = NULL,
+  mw_scale = NULL
 )
 }
 \arguments{
@@ -56,6 +58,16 @@ Can be obtained from \code{tidy()} output of \code{step_sec_conventional_cal()}.
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{mw_col}{Optional name of a measure column containing molecular weight
+at each concentration slice. A curve created by
+\code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}} for the selected signal is used automatically
+when it is unambiguous. Do not combine this with \code{calibration}.}
+
+\item{mw_scale}{Scale of \code{mw_col}: \code{"log10"} or \code{"absolute"} (g/mol).
+Required for a manually supplied curve; inferred for a tagged calibration
+curve. When no MW curve or calibration is supplied, the signal location is
+interpreted as log10(MW) for backwards compatibility.}
 }
 \value{
 An updated recipe with the new step added.
@@ -77,12 +89,18 @@ This step calculates standard molecular weight averages from SEC/GPC data:\tabul
 
 The detector signal is assumed to be proportional to weight concentration.
 For RI detection, this is typically valid. For UV detection, response factors
-may need to be applied first.
+may need to be applied first. Slice weights use trapezoidal integration on
+the original elution axis, including for unevenly spaced data. A positive
+signal without a valid molecular weight is an error, rather than silently
+discarded. \code{calibration = "auto"} generates an illustrative synthetic axis,
+not an experimental calibration.
 
 \strong{Uncertainty Propagation:}
 
-When \code{include_uncertainty = TRUE}, the step calculates uncertainty estimates
-based on calibration error propagation. The uncertainties account for:
+When \code{include_uncertainty = TRUE}, the step calculates an approximate
+calibration-RMSE-based estimate. It is not a complete uncertainty budget and
+does not include baseline, integration, detector, sample preparation, or
+correlated calibration uncertainty. The estimates account for:
 \itemize{
 \item Calibration curve fit error (RMSE in log10 MW units)
 \item MW distribution width effects on different averages

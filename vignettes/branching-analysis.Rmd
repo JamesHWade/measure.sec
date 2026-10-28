@@ -18,6 +18,10 @@ knitr::opts_chunk$set(
 
 ## Overview
 
+> The branching calculations in this vignette use supplied molecular-weight
+> and radius-of-gyration values. The current `step_sec_mals()` implementation
+> does not fit multi-angle data or calculate radius of gyration.
+
 This guide shows how to analyze polymer branching using multi-detector SEC data. You'll learn to:
 
 1. Calculate branching indices (g and g')
@@ -116,7 +120,7 @@ ggplot(branched_with_g, aes(x = mw, y = g)) +
 
 geom_point(alpha = 0.5, color = "#2E86AB") +
   geom_hline(yintercept = 1, linetype = "dashed", color = "gray50") +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
   labs(
     x = "Molecular Weight (Da)",
     y = "Branching Index (g)",
@@ -203,7 +207,7 @@ comparison_data <- sec_branched |>
 ggplot(comparison_data, aes(x = mw, y = intrinsic_visc, color = topology)) +
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_log10(labels = scales::label_comma()) +
   scale_y_log10() +
   scale_color_manual(values = c("linear" = "#2E86AB", "branched" = "#A23B72")) +
   labs(

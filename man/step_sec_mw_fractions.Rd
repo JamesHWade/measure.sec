@@ -14,7 +14,9 @@ step_sec_mw_fractions(
   role = "predictor",
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_mw_fractions")
+  id = recipes::rand_id("sec_mw_fractions"),
+  mw_col = NULL,
+  mw_scale = NULL
 )
 }
 \arguments{
@@ -40,6 +42,12 @@ the x-axis range for integration. If \code{NULL}, uses full range.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{mw_col}{Optional per-slice molecular-weight measure column. A matching
+curve produced by \code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}} is detected automatically.}
+
+\item{mw_scale}{Scale of \code{mw_col}: \code{"log10"} or \code{"absolute"}. Required for
+untagged curves; see \code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}}.}
 }
 \value{
 An updated recipe with the new step added.
@@ -55,7 +63,9 @@ For each cutoff value \code{C}, this step calculates:
 \item \code{frac_above_C}: Weight fraction with MW >= C
 }
 
-These fractions sum to 1.0 and are useful for characterizing polymer
+Slice weights use trapezoidal integration on the elution axis. The cutoff is
+applied to the sampled molecular-weight values, so accuracy near a cutoff
+depends on the sampling resolution. These fractions sum to 1.0 and are useful for characterizing polymer
 distributions. Common cutoffs include:
 \itemize{
 \item 1000 Da for oligomer content

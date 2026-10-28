@@ -96,7 +96,7 @@ Calibration converts elution time to molecular weight. The right approach depend
 | Conventional | `step_sec_conventional_cal()` | Narrow standards, same polymer type |
 | Broad standard | `step_sec_broad_standard()` | Single characterized reference |
 | Universal | `step_sec_universal_cal()` | Different polymer types |
-| Absolute (MALS) | `step_sec_mals()` | True MW, no standards needed |
+| Single-angle scattering approximation | `step_sec_mals()` | MW estimate with calibrated scattering and concentration; no Rg |
 
 ### Stage 4: MW Calculation
 
@@ -248,7 +248,7 @@ step_sec_universal_cal(
 
 **When to use**: You need true molecular weight independent of polymer structure, or have no appropriate standards.
 
-**How it works**: Light scattering intensity is directly proportional to molecular weight × concentration. No column calibration needed.
+**How it works**: Under the single-angle approximation, scattering intensity depends on molecular weight and concentration. A calibrated detector and known concentration units are still required.
 
 ```r
 step_sec_mals(
@@ -258,7 +258,7 @@ step_sec_mals(
 
 **Requires**: Light scattering detector (MALS, LALS, or RALS), accurate dn/dc value, good signal quality.
 
-**Advantages**: True absolute MW. Works for any polymer type. Reveals branching through Rg-MW relationships. Required for proteins and complex polymers.
+**Implementation**: The present step estimates MW at one angle, assuming a suitable form factor and calibrated scattering. It does not fit angular dependence, report Rg, or establish branching.
 
 **Limitations**: More expensive instrumentation. Sensitive to dust and bubbles. Low MW samples may have weak scattering signal.
 
