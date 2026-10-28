@@ -57,7 +57,7 @@ You can install the development version of measure.sec from
 
 ``` r
 # install.packages("pak")
-pak::pak("JamesHWade/measure-sec")
+pak::pak("JamesHWade/measure.sec")
 ```
 
 Note: measure.sec requires the
@@ -240,25 +240,25 @@ measure_steps(techniques = "SEC/GPC")
 For detailed workflows and examples, see the package vignettes:
 
 - **[Getting
-  Started](https://jameshwade.github.io/measure-sec/articles/getting-started.html)**:
+  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.html)**:
   Basic concepts and your first SEC analysis
 - **[Multi-Detector
-  SEC](https://jameshwade.github.io/measure-sec/articles/triple-detection.html)**:
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.html)**:
   Triple detection with RI, UV, and MALS
 - **[Protein
-  SEC](https://jameshwade.github.io/measure-sec/articles/protein-sec.html)**:
+  SEC](https://jameshwade.github.io/measure.sec/articles/protein-sec.html)**:
   Aggregate and oligomer analysis for biopharmaceuticals
 - **[Copolymer
-  Analysis](https://jameshwade.github.io/measure-sec/articles/copolymer-analysis.html)**:
+  Analysis](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.html)**:
   Composition from UV/RI ratio
 - **[System
-  Suitability](https://jameshwade.github.io/measure-sec/articles/system-suitability.html)**:
+  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.html)**:
   QC functions and SST testing
 
 ## Getting Help
 
-- [Package documentation](https://jameshwade.github.io/measure-sec/)
-- [GitHub Issues](https://github.com/JamesHWade/measure-sec/issues)
+- [Package documentation](https://jameshwade.github.io/measure.sec/)
+- [GitHub Issues](https://github.com/JamesHWade/measure.sec/issues)
 
 ## Code of Conduct
 

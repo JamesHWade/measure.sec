@@ -13,3 +13,4 @@
 ^CLAUDE\.md$
 ^README\.Rmd$
 ^\.beads$
+^[.]git$
