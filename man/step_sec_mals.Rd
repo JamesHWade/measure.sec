@@ -72,8 +72,9 @@ MW is set to NA. Default is 0.01.}
 \item{id}{Unique step identifier.}
 
 \item{concentration_unit}{Unit of the concentration curve: \code{"mg/mL"} or
-\code{"g/mL"}. When omitted, the unit must be recorded by a preceding
-\code{\link[=step_sec_concentration]{step_sec_concentration()}} step; an untagged curve requires an explicit unit.}
+\code{"g/mL"}. When omitted, the training curve must record its unit. If prep
+infers the unit from that tag, baked curves must retain it. An explicit
+unit permits untagged baked curves, but any recorded tag must agree.}
 }
 \value{
 An updated recipe with a single-angle MW estimate at each elution

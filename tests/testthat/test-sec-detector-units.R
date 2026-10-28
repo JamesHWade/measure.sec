@@ -510,3 +510,81 @@ test_that("scattering rejects zero and nonfinite dn/dc while RI stays positive-o
     )
   expect_error(recipes::prep(rec), "nonzero and finite")
 })
+
+test_that("scattering steps preserve inferred unit policy at bake", {
+  location <- c(1, 2, 3)
+  make_data <- function(concentration, unit = NULL) {
+    data <- tibble::tibble(sample_id = "sample")
+    data$conc <- measure::new_measure_list(list(
+      measure::new_measure_tbl(location, concentration)
+    ))
+    if (!is.null(unit)) {
+      attr(data$conc, "sec_concentration_unit") <- unit
+    }
+    for (detector in c("lals", "rals", "mals")) {
+      data[[detector]] <- measure::new_measure_list(list(
+        measure::new_measure_tbl(location, c(1, 2, 3))
+      ))
+    }
+    data
+  }
+
+  training <- make_data(c(1, 2, 3), "mg/mL")
+  untagged_bake <- make_data(c(0.001, 0.002, 0.003))
+  conflicting_bake <- make_data(c(0.001, 0.002, 0.003), "g/mL")
+  step_builders <- list(
+    lals = function(recipe, concentration_unit = NULL) {
+      step_sec_lals(
+        recipe,
+        measures = "lals",
+        concentration_col = "conc",
+        concentration_unit = concentration_unit,
+        dn_dc = 0.185,
+        calibration_constant = 1
+      )
+    },
+    rals = function(recipe, concentration_unit = NULL) {
+      step_sec_rals(
+        recipe,
+        measures = "rals",
+        concentration_col = "conc",
+        concentration_unit = concentration_unit,
+        dn_dc = 0.185,
+        calibration_constant = 1
+      )
+    },
+    mals = function(recipe, concentration_unit = NULL) {
+      step_sec_mals(
+        recipe,
+        mals_col = "mals",
+        concentration_col = "conc",
+        concentration_unit = concentration_unit,
+        dn_dc = 0.185,
+        calibration_constant = 1
+      )
+    }
+  )
+
+  for (builder in step_builders) {
+    prepped <- recipes::prep(builder(recipes::recipe(training)))
+    serialized_recipe <- withr::local_tempfile()
+    saveRDS(prepped, serialized_recipe)
+    prepped <- readRDS(serialized_recipe)
+
+    expect_error(
+      recipes::bake(prepped, new_data = untagged_bake),
+      "no longer records its unit"
+    )
+
+    explicit_prepped <- recipes::prep(
+      builder(recipes::recipe(training), concentration_unit = "mg/mL")
+    )
+    expect_no_error(
+      recipes::bake(explicit_prepped, new_data = untagged_bake)
+    )
+    expect_error(
+      recipes::bake(explicit_prepped, new_data = conflicting_bake),
+      "conflicts with the concentration curve's recorded units"
+    )
+  }
+})

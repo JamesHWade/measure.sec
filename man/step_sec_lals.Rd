@@ -63,8 +63,9 @@ MW is set to NA.}
 \item{id}{Unique step identifier.}
 
 \item{concentration_unit}{Unit of the concentration curve: "mg/mL" or
-"g/mL". When omitted, the unit must be recorded on the curve or set by
-step_sec_concentration() or step_sec_ri().}
+"g/mL". When omitted, the training curve must record its unit. If prep
+infers the unit from that tag, baked curves must retain it. An explicit
+unit permits untagged baked curves, but any recorded tag must agree.}
 }
 \value{
 An updated recipe with the new step added.
