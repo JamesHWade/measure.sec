@@ -108,166 +108,166 @@
 #'   prep()
 #' }
 step_sec_peaks_refine <- function(
-	recipe,
-	method = "height_fraction",
-	cutoff = 0.005,
-	peaks_col = ".peaks",
-	measures_col = ".measures",
-	role = NA,
-	trained = FALSE,
-	skip = FALSE,
-	id = recipes::rand_id("sec_peaks_refine")
+  recipe,
+  method = "height_fraction",
+  cutoff = 0.005,
+  peaks_col = ".peaks",
+  measures_col = ".measures",
+  role = NA,
+  trained = FALSE,
+  skip = FALSE,
+  id = recipes::rand_id("sec_peaks_refine")
 ) {
-	method <- rlang::arg_match(method, "height_fraction")
+  method <- rlang::arg_match(method, "height_fraction")
 
-	if (
-		!is.numeric(cutoff) || length(cutoff) != 1 || cutoff <= 0 || cutoff >= 1
-	) {
-		cli::cli_abort(
-			"{.arg cutoff} must be a number between 0 and 1 (exclusive)."
-		)
-	}
+  if (
+    !is.numeric(cutoff) || length(cutoff) != 1 || cutoff <= 0 || cutoff >= 1
+  ) {
+    cli::cli_abort(
+      "{.arg cutoff} must be a number between 0 and 1 (exclusive)."
+    )
+  }
 
-	recipes::add_step(
-		recipe,
-		step_sec_peaks_refine_new(
-			method = method,
-			cutoff = cutoff,
-			peaks_col = peaks_col,
-			measures_col = measures_col,
-			role = role,
-			trained = trained,
-			skip = skip,
-			id = id
-		)
-	)
+  recipes::add_step(
+    recipe,
+    step_sec_peaks_refine_new(
+      method = method,
+      cutoff = cutoff,
+      peaks_col = peaks_col,
+      measures_col = measures_col,
+      role = role,
+      trained = trained,
+      skip = skip,
+      id = id
+    )
+  )
 }
 
 step_sec_peaks_refine_new <- function(
-	method,
-	cutoff,
-	peaks_col,
-	measures_col,
-	role,
-	trained,
-	skip,
-	id
+  method,
+  cutoff,
+  peaks_col,
+  measures_col,
+  role,
+  trained,
+  skip,
+  id
 ) {
-	recipes::step(
-		subclass = "sec_peaks_refine",
-		method = method,
-		cutoff = cutoff,
-		peaks_col = peaks_col,
-		measures_col = measures_col,
-		role = role,
-		trained = trained,
-		skip = skip,
-		id = id
-	)
+  recipes::step(
+    subclass = "sec_peaks_refine",
+    method = method,
+    cutoff = cutoff,
+    peaks_col = peaks_col,
+    measures_col = measures_col,
+    role = role,
+    trained = trained,
+    skip = skip,
+    id = id
+  )
 }
 
 #' @export
 prep.step_sec_peaks_refine <- function(x, training, info = NULL, ...) {
-	# Verify peaks column exists
-	if (!x$peaks_col %in% names(training)) {
-		cli::cli_abort(
-			c(
-				"Column {.val {x$peaks_col}} not found.",
-				"i" = "Run {.fn step_sec_peaks_detect} first to detect peaks."
-			)
-		)
-	}
+  # Verify peaks column exists
+  if (!x$peaks_col %in% names(training)) {
+    cli::cli_abort(
+      c(
+        "Column {.val {x$peaks_col}} not found.",
+        "i" = "Run {.fn step_sec_peaks_detect} first to detect peaks."
+      )
+    )
+  }
 
-	# Resolve measures column
-	measures_col <- x$measures_col
-	if (!measures_col %in% names(training)) {
-		measure_cols <- find_measure_cols(training)
-		if (length(measure_cols) > 0) {
-			measures_col <- measure_cols[1]
-			cli::cli_inform(
-				c(
-					"i" = "Column {.val {x$measures_col}} not found.",
-					"i" = "Using {.val {measures_col}} instead."
-				)
-			)
-		} else {
-			cli::cli_abort("No measure columns found in data.")
-		}
-	}
+  # Resolve measures column
+  measures_col <- x$measures_col
+  if (!measures_col %in% names(training)) {
+    measure_cols <- find_measure_cols(training)
+    if (length(measure_cols) > 0) {
+      measures_col <- measure_cols[1]
+      cli::cli_inform(
+        c(
+          "i" = "Column {.val {x$measures_col}} not found.",
+          "i" = "Using {.val {measures_col}} instead."
+        )
+      )
+    } else {
+      cli::cli_abort("No measure columns found in data.")
+    }
+  }
 
-	step_sec_peaks_refine_new(
-		method = x$method,
-		cutoff = x$cutoff,
-		peaks_col = x$peaks_col,
-		measures_col = measures_col,
-		role = x$role,
-		trained = TRUE,
-		skip = x$skip,
-		id = x$id
-	)
+  step_sec_peaks_refine_new(
+    method = x$method,
+    cutoff = x$cutoff,
+    peaks_col = x$peaks_col,
+    measures_col = measures_col,
+    role = x$role,
+    trained = TRUE,
+    skip = x$skip,
+    id = x$id
+  )
 }
 
 #' @export
 bake.step_sec_peaks_refine <- function(object, new_data, ...) {
-	peaks_col <- object$peaks_col
-	measures_col <- object$measures_col
-	cutoff <- object$cutoff
-	n_rows <- nrow(new_data)
+  peaks_col <- object$peaks_col
+  measures_col <- object$measures_col
+  cutoff <- object$cutoff
+  n_rows <- nrow(new_data)
 
-	refined_peaks <- vector("list", n_rows)
+  refined_peaks <- vector("list", n_rows)
 
-	for (i in seq_len(n_rows)) {
-		peaks <- new_data[[peaks_col]][[i]]
-		signal <- new_data[[measures_col]][[i]]
+  for (i in seq_len(n_rows)) {
+    peaks <- new_data[[peaks_col]][[i]]
+    signal <- new_data[[measures_col]][[i]]
 
-		if (nrow(peaks) == 0) {
-			refined_peaks[[i]] <- peaks
-			next
-		}
+    if (nrow(peaks) == 0) {
+      refined_peaks[[i]] <- peaks
+      next
+    }
 
-		refined_peaks[[i]] <- .refine_peaks_height_fraction(
-			peaks,
-			signal$location,
-			signal$value,
-			cutoff
-		)
-	}
+    refined_peaks[[i]] <- .refine_peaks_height_fraction(
+      peaks,
+      signal$location,
+      signal$value,
+      cutoff
+    )
+  }
 
-	new_data[[peaks_col]] <- measure:::new_peaks_list(refined_peaks)
-	tibble::as_tibble(new_data)
+  new_data[[peaks_col]] <- measure:::new_peaks_list(refined_peaks)
+  tibble::as_tibble(new_data)
 }
 
 #' @export
 print.step_sec_peaks_refine <- function(
-	x,
-	width = max(20, options()$width - 30),
-	...
+  x,
+  width = max(20, options()$width - 30),
+  ...
 ) {
-	cat(
-		glue::glue("SEC peak boundary refinement ({x$method}, cutoff={x$cutoff})")
-	)
-	cat("\n")
-	invisible(x)
+  cat(
+    glue::glue("SEC peak boundary refinement ({x$method}, cutoff={x$cutoff})")
+  )
+  cat("\n")
+  invisible(x)
 }
 
 #' @rdname tidy.step_sec
 #' @export
 #' @keywords internal
 tidy.step_sec_peaks_refine <- function(x, ...) {
-	tibble::tibble(
-		method = x$method,
-		cutoff = x$cutoff,
-		peaks_col = x$peaks_col,
-		measures_col = x$measures_col %||% NA_character_,
-		id = x$id
-	)
+  tibble::tibble(
+    method = x$method,
+    cutoff = x$cutoff,
+    peaks_col = x$peaks_col,
+    measures_col = x$measures_col %||% NA_character_,
+    id = x$id
+  )
 }
 
 #' @rdname required_pkgs.step_sec
 #' @export
 #' @keywords internal
 required_pkgs.step_sec_peaks_refine <- function(x, ...) {
-	c("measure.sec", "measure")
+  c("measure.sec", "measure")
 }
 
 # ==============================================================================
@@ -292,67 +292,75 @@ required_pkgs.step_sec_peaks_refine <- function(x, ...) {
 #'   columns.
 #' @noRd
 .refine_peaks_height_fraction <- function(peaks, location, value, cutoff) {
-	n_peaks <- nrow(peaks)
+  n_peaks <- nrow(peaks)
 
-	# Store original boundaries
-	orig_left <- peaks$left_base
-	orig_right <- peaks$right_base
+  # Store original boundaries
+  orig_left <- peaks$left_base
+  orig_right <- peaks$right_base
 
-	for (j in seq_len(n_peaks)) {
-		# Find indices within the current peak boundaries
-		in_region <- which(location >= orig_left[j] & location <= orig_right[j])
+  for (j in seq_len(n_peaks)) {
+    # Find indices within the current peak boundaries
+    in_region <- which(location >= orig_left[j] & location <= orig_right[j])
 
-		# Skip if fewer than 5 data points
-		if (length(in_region) < 5) next
+    # Skip if fewer than 5 data points
+    if (length(in_region) < 5) {
+      next
+    }
 
-		region_values <- value[in_region]
-		region_locations <- location[in_region]
+    region_values <- value[in_region]
+    region_locations <- location[in_region]
 
-		# Subtract local baseline so the cutoff works on corrected signal.
-		# Without this, a non-zero baseline (e.g., -20 mV) inflates the apex
-		# height and shifts the threshold, producing boundaries that are far
-		# too tight. Linear interpolation between boundary values is a robust
-		# local estimate that works whether or not step_sec_baseline() was run.
-		# When the signal is already baseline-corrected, boundary values are
-		# near zero and this is effectively a no-op.
-		left_val <- region_values[1]
-		right_val <- region_values[length(region_values)]
-		span <- region_locations[length(region_locations)] - region_locations[1]
-		if (span > 0) {
-			local_baseline <- left_val + (right_val - left_val) *
-				(region_locations - region_locations[1]) / span
-		} else {
-			local_baseline <- rep(left_val, length(region_locations))
-		}
-		corrected <- region_values - local_baseline
+    # Subtract local baseline so the cutoff works on corrected signal.
+    # Without this, a non-zero baseline (e.g., -20 mV) inflates the apex
+    # height and shifts the threshold, producing boundaries that are far
+    # too tight. Linear interpolation between boundary values is a robust
+    # local estimate that works whether or not step_sec_baseline() was run.
+    # When the signal is already baseline-corrected, boundary values are
+    # near zero and this is effectively a no-op.
+    left_val <- region_values[1]
+    right_val <- region_values[length(region_values)]
+    span <- region_locations[length(region_locations)] - region_locations[1]
+    if (span > 0) {
+      local_baseline <- left_val +
+        (right_val - left_val) *
+          (region_locations - region_locations[1]) /
+          span
+    } else {
+      local_baseline <- rep(left_val, length(region_locations))
+    }
+    corrected <- region_values - local_baseline
 
-		# Find apex height above local baseline
-		apex_height <- max(corrected, na.rm = TRUE)
+    # Find apex height above local baseline
+    apex_height <- max(corrected, na.rm = TRUE)
 
-		# Skip if apex height is non-positive
-		if (is.na(apex_height) || apex_height <= 0) next
+    # Skip if apex height is non-positive
+    if (is.na(apex_height) || apex_height <= 0) {
+      next
+    }
 
-		threshold <- cutoff * apex_height
+    threshold <- cutoff * apex_height
 
-		# Find points above threshold (using corrected signal)
-		above <- corrected >= threshold
-		if (!any(above)) next
+    # Find points above threshold (using corrected signal)
+    above <- corrected >= threshold
+    if (!any(above)) {
+      next
+    }
 
-		# Walk inward from left: first point >= threshold
-		above_idx <- which(above)
-		new_left <- region_locations[above_idx[1]]
+    # Walk inward from left: first point >= threshold
+    above_idx <- which(above)
+    new_left <- region_locations[above_idx[1]]
 
-		# Walk inward from right: last point >= threshold
-		new_right <- region_locations[above_idx[length(above_idx)]]
+    # Walk inward from right: last point >= threshold
+    new_right <- region_locations[above_idx[length(above_idx)]]
 
-		# Enforce that refined boundaries never widen beyond originals
-		peaks$left_base[j] <- max(new_left, orig_left[j])
-		peaks$right_base[j] <- min(new_right, orig_right[j])
-	}
+    # Enforce that refined boundaries never widen beyond originals
+    peaks$left_base[j] <- max(new_left, orig_left[j])
+    peaks$right_base[j] <- min(new_right, orig_right[j])
+  }
 
-	# Add original boundary columns
-	peaks$original_left_base <- orig_left
-	peaks$original_right_base <- orig_right
+  # Add original boundary columns
+  peaks$original_left_base <- orig_left
+  peaks$original_right_base <- orig_right
 
-	peaks
+  peaks
 }
