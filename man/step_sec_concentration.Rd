@@ -88,6 +88,11 @@ where:
 \item Apply this step with known injection parameters
 \item Result: concentration at each elution point
 }
+
+Mass normalization excludes negative signal points from the integrated area
+and sets those output points to zero. When any points are excluded, the
+bake reports their count and percentage so the baseline correction can be
+reviewed.
 }
 \examples{
 \dontrun{
@@ -109,15 +114,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_mals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_mals]{step_sec_mals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

@@ -257,6 +257,7 @@ test_that("step_sec_lals computes MW and validates angle", {
       measures = "lals",
       concentration_col = "ri",
       dn_dc = 0.185,
+      concentration_unit = "mg/mL",
       calibration_constant = 1.0
     )
 
@@ -272,6 +273,7 @@ test_that("step_sec_lals computes MW and validates angle", {
         measures = "lals",
         concentration_col = "ri",
         dn_dc = 0.185,
+        concentration_unit = "mg/mL",
         angle = 25
       ),
     "angle"
@@ -298,6 +300,7 @@ test_that("step_sec_rals computes MW", {
       measures = "rals",
       concentration_col = "ri",
       dn_dc = 0.185,
+      concentration_unit = "mg/mL",
       calibration_constant = 1.0
     )
 
@@ -539,7 +542,12 @@ test_that("tidy.step_sec_lals returns expected structure", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_lals(
+      measures = "lals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      concentration_unit = "mg/mL"
+    )
 
   prepped <- suppressWarnings(recipes::prep(rec))
   tidy_result <- recipes::tidy(prepped, number = 1)
@@ -565,7 +573,12 @@ test_that("tidy.step_sec_rals returns expected structure", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_rals(
+      measures = "rals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      concentration_unit = "mg/mL"
+    )
 
   prepped <- suppressWarnings(recipes::prep(rec))
   tidy_result <- recipes::tidy(prepped, number = 1)
@@ -618,7 +631,12 @@ test_that("step_sec_lals warns when calibration_constant is NULL", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_lals(
+      measures = "lals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      concentration_unit = "mg/mL"
+    )
 
   # Warning is raised during prep (which internally bakes training data)
   expect_warning(
@@ -640,7 +658,12 @@ test_that("step_sec_rals warns when calibration_constant is NULL", {
   )
 
   rec <- recipes::recipe(~., data = test_data) |>
-    step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185)
+    step_sec_rals(
+      measures = "rals",
+      concentration_col = "ri",
+      dn_dc = 0.185,
+      concentration_unit = "mg/mL"
+    )
 
   # Warning is raised during prep (which internally bakes training data)
   expect_warning(

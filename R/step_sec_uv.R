@@ -17,8 +17,13 @@
 #'   Can be:
 #'   - A single numeric value applied to all samples
 #'   - `NULL` to skip normalization (signal remains in AU)
+#' @param concentration_units Units for the signal after extinction
+#'   normalization: mg/mL (default) or g/mL. This is ignored when extinction
+#'   normalization is skipped.
 #' @param extinction_column Character name of a column containing sample-specific
-#'   extinction coefficients. Overrides `extinction_coef` if provided.
+#'   extinction coefficients. Overrides `extinction_coef` if provided. Values
+#'   must be positive and finite because a zero coefficient cannot be inverted
+#'   to determine concentration from absorbance.
 #' @param wavelength UV detection wavelength in nm. For documentation only.
 #' @param path_length Path length of the flow cell in cm. Default is 1.0.
 #' @param output_col Name for the output column. Default is to modify in place.
@@ -36,12 +41,14 @@
 #'
 #' where:
 #' - A is absorbance (AU)
-#' - epsilon is the molar extinction coefficient in mL/(mg*cm)
-#' - c is the concentration (mg/mL)
+#' - epsilon is a mass-specific extinction coefficient in mL/(mg*cm)
+#' - c is the concentration in mg/mL
 #' - l is the path length (cm)
 #'
 #' This step can convert UV absorbance to concentration-proportional signals
-#' by dividing by the extinction coefficient and path length.
+#' by dividing by the extinction coefficient and path length. With the
+#' documented coefficient units, the result is mg/mL; set concentration_units
+#' to g/mL to divide by 1000.
 #'
 #' **Common UV applications in SEC:**
 #' - Proteins at 280 nm (aromatic amino acids)
@@ -86,8 +93,15 @@ step_sec_uv <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_uv")
+  id = recipes::rand_id("sec_uv"),
+  concentration_units = "mg/mL"
 ) {
+  .sec_validate_concentration_unit(
+    concentration_units,
+    "concentration_units",
+    allow_null = FALSE
+  )
+
   # Validate inputs
   if (!is.null(extinction_coef) && !is.null(extinction_column)) {
     cli::cli_warn(
@@ -96,18 +110,11 @@ step_sec_uv <- function(
   }
 
   if (!is.null(extinction_coef)) {
-    if (
-      !is.numeric(extinction_coef) ||
-        length(extinction_coef) != 1 ||
-        extinction_coef <= 0
-    ) {
-      cli::cli_abort("{.arg extinction_coef} must be a positive numeric value.")
-    }
+    .sec_validate_positive_scalar(extinction_coef, "extinction_coef")
   }
 
-  if (!is.numeric(path_length) || path_length <= 0) {
-    cli::cli_abort("{.arg path_length} must be a positive numeric value.")
-  }
+  .sec_validate_positive_scalar(wavelength, "wavelength")
+  .sec_validate_positive_scalar(path_length, "path_length")
 
   recipes::add_step(
     recipe,
@@ -115,6 +122,7 @@ step_sec_uv <- function(
       measures = measures,
       extinction_coef = extinction_coef,
       extinction_column = extinction_column,
+      concentration_units = concentration_units,
       wavelength = wavelength,
       path_length = path_length,
       output_col = output_col,
@@ -130,6 +138,7 @@ step_sec_uv_new <- function(
   measures,
   extinction_coef,
   extinction_column,
+  concentration_units,
   wavelength,
   path_length,
   output_col,
@@ -143,6 +152,7 @@ step_sec_uv_new <- function(
     measures = measures,
     extinction_coef = extinction_coef,
     extinction_column = extinction_column,
+    concentration_units = concentration_units,
     wavelength = wavelength,
     path_length = path_length,
     output_col = output_col,
@@ -185,6 +195,7 @@ prep.step_sec_uv <- function(x, training, info = NULL, ...) {
     measures = measures,
     extinction_coef = x$extinction_coef,
     extinction_column = x$extinction_column,
+    concentration_units = x$concentration_units,
     wavelength = x$wavelength,
     path_length = x$path_length,
     output_col = x$output_col,
@@ -200,6 +211,9 @@ bake.step_sec_uv <- function(object, new_data, ...) {
   measures <- object$measures
   extinction_coef <- object$extinction_coef
   extinction_column <- object$extinction_column
+  concentration_units <- object$concentration_units
+  normalize_to_concentration <- !is.null(extinction_coef) ||
+    !is.null(extinction_column)
   path_length <- object$path_length
 
   for (col in measures) {
@@ -209,20 +223,38 @@ bake.step_sec_uv <- function(object, new_data, ...) {
     } else if (!is.null(extinction_coef)) {
       ext_values <- rep(extinction_coef, nrow(new_data))
     } else {
-      ext_values <- rep(1.0, nrow(new_data)) # No normalization
+      ext_values <- rep(1.0, nrow(new_data))
+    }
+    if (
+      normalize_to_concentration &&
+        (!is.numeric(ext_values) ||
+          length(ext_values) != nrow(new_data) ||
+          !all(is.finite(ext_values)) ||
+          any(ext_values <= 0))
+    ) {
+      cli::cli_abort(
+        "Each extinction coefficient must be positive and finite."
+      )
     }
 
     # Process each sample
-    new_data[[col]] <- new_measure_list(
+    output <- new_measure_list(
       purrr::map2(new_data[[col]], ext_values, function(m, ext) {
         # Convert absorbance to concentration-proportional signal
         # A = epsilon * c * l, so c ~ A / (epsilon * l)
-        if (!is.na(ext) && ext > 0) {
+        if (normalize_to_concentration) {
           m$value <- m$value / (ext * path_length)
+          if (identical(concentration_units, "g/mL")) {
+            m$value <- m$value / 1000
+          }
         }
         m
       })
     )
+    if (normalize_to_concentration) {
+      attr(output, "sec_concentration_unit") <- concentration_units
+    }
+    new_data[[col]] <- output
   }
 
   tibble::as_tibble(new_data)
@@ -259,6 +291,7 @@ tidy.step_sec_uv <- function(x, ...) {
     measures = list(x$measures),
     extinction_coef = x$extinction_coef %||% NA_real_,
     extinction_column = x$extinction_column %||% NA_character_,
+    concentration_units = x$concentration_units,
     wavelength = x$wavelength,
     path_length = x$path_length,
     id = x$id

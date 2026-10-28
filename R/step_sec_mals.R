@@ -18,8 +18,11 @@
 #' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
 #'   `"g/mL"`. When omitted, the unit must be recorded by a preceding
 #'   [step_sec_concentration()] step; an untagged curve requires an explicit unit.
-#' @param dn_dc Refractive index increment (mL/g). Required for absolute MW.
-#' @param dn_dc_column Column containing sample-specific dn/dc values.
+#' @param dn_dc Refractive index increment (mL/g). May be signed but must
+#'   be finite and nonzero because the optical constant uses its square.
+#'   Required for absolute MW unless `dn_dc_column` is provided.
+#' @param dn_dc_column Column containing sample-specific finite, nonzero dn/dc
+#'   values; either sign is valid.
 #' @param wavelength Laser wavelength in nm. Default is 658 (common for MALS).
 #' @param solvent_ri Solvent refractive index. Default is 1.333 (water).
 #'   Common values: water = 1.333, THF = 1.407, toluene = 1.497.
@@ -125,6 +128,10 @@ step_sec_mals <- function(
     cli::cli_abort(
       "Either {.arg dn_dc} or {.arg dn_dc_column} must be specified for absolute MW."
     )
+  }
+
+  if (!is.null(dn_dc)) {
+    .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
   }
 
   if (
@@ -270,10 +277,14 @@ step_sec_mals_new <- function(
 #' Calculate optical constant K
 #' @noRd
 .optical_constant <- function(dn_dc, solvent_ri, wavelength_nm) {
+  .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
+  .sec_validate_positive_scalar(solvent_ri, "solvent_ri")
+  .sec_validate_positive_scalar(wavelength_nm, "wavelength")
+
   # K = 4 * pi^2 * n0^2 * (dn/dc)^2 / (NA * lambda^4)
-  # wavelength in nm -> m
+  # wavelength in nm -> cm
   # dn/dc in mL/g = cm^3/g
-  # Result in mol*cm^2/g^2
+  # K has units mol*cm^2/g^2 when lambda is in cm.
 
   lambda_cm <- wavelength_nm * 1e-7 # nm to cm
   NA_val <- 6.022e23 # Avogadro's number
@@ -337,22 +348,10 @@ prep.step_sec_mals <- function(x, training, info = NULL, ...) {
     }
   }
 
-  unit_tag <- attr(
-    training[[concentration_col]],
-    "sec_concentration_unit",
-    exact = TRUE
+  concentration_unit <- .sec_resolve_concentration_unit(
+    x$concentration_unit,
+    training[[concentration_col]]
   )
-  concentration_unit <- x$concentration_unit %||% unit_tag
-  if (is.null(concentration_unit)) {
-    cli::cli_abort(
-      "Specify {.arg concentration_unit} for an untagged concentration curve."
-    )
-  }
-  if (!is.null(unit_tag) && !identical(unit_tag, concentration_unit)) {
-    cli::cli_abort(
-      "{.arg concentration_unit} conflicts with the concentration curve's recorded units."
-    )
-  }
 
   # Validate dn_dc_column exists if specified
   if (!is.null(x$dn_dc_column)) {
@@ -389,6 +388,10 @@ bake.step_sec_mals <- function(object, new_data, ...) {
   mals_col <- object$mals_col
   concentration_col <- object$concentration_col
   concentration_unit <- object$concentration_unit
+  .sec_resolve_concentration_unit(
+    concentration_unit,
+    new_data[[concentration_col]]
+  )
   dn_dc <- object$dn_dc
   dn_dc_column <- object$dn_dc_column
   wavelength <- object$wavelength
@@ -403,6 +406,14 @@ bake.step_sec_mals <- function(object, new_data, ...) {
     dn_dc_values <- new_data[[dn_dc_column]]
   } else {
     dn_dc_values <- rep(dn_dc, nrow(new_data))
+  }
+  if (
+    !is.numeric(dn_dc_values) ||
+      length(dn_dc_values) != nrow(new_data) ||
+      !all(is.finite(dn_dc_values)) ||
+      any(dn_dc_values == 0)
+  ) {
+    cli::cli_abort("Each dn/dc value must be nonzero and finite.")
   }
 
   # Default calibration constant if not provided
@@ -420,47 +431,35 @@ bake.step_sec_mals <- function(object, new_data, ...) {
     function(mals_m, conc_m, dndc) {
       mals_val <- mals_m$value
       conc_val <- conc_m$value
+      .sec_assert_aligned_curves(mals_m, conc_m, "Scattering")
       location <- mals_m$location
-      if (
-        !isTRUE(all.equal(
-          location,
-          conc_m$location,
-          tolerance = 1e-9,
-          check.attributes = FALSE
-        ))
-      ) {
-        cli::cli_abort(
-          "Scattering and concentration curve locations must align."
-        )
-      }
-      if (length(dndc) != 1 || !is.finite(dndc) || dndc <= 0) {
-        cli::cli_abort("Each dn/dc value must be positive and finite.")
+      if (length(dndc) != 1 || !is.finite(dndc) || dndc == 0) {
+        cli::cli_abort("Each dn/dc value must be nonzero and finite.")
       }
 
       # Calculate optical constant
       K <- .optical_constant(dndc, solvent_ri, wavelength)
 
       # Determine signal threshold
-      max_conc <- max(abs(conc_val), na.rm = TRUE)
+      max_conc <- max(conc_val[is.finite(conc_val)], 0)
       threshold <- min_signal * max_conc
 
       # Calculate MW at each point
       mw <- rep(NA_real_, length(mals_val))
       valid <- conc_val > threshold &
-        mals_val > 0 &
-        !is.na(mals_val) &
-        !is.na(conc_val)
+        is.finite(mals_val) &
+        is.finite(conc_val) &
+        mals_val > 0
 
       if (any(valid)) {
         # For single angle at 90 degrees, P(theta) ~ 1 for small particles
         # Mw = R(theta) / (K * c)
         # With calibration: R = signal * calibration_constant
         R_theta <- mals_val[valid] * calibration_constant
-        conc_g_per_ml <- if (identical(concentration_unit, "mg/mL")) {
-          conc_val[valid] / 1000
-        } else {
-          conc_val[valid]
-        }
+        conc_g_per_ml <- .sec_concentration_g_per_ml(
+          conc_val[valid],
+          concentration_unit
+        )
         mw[valid] <- R_theta / (K * conc_g_per_ml)
       }
 

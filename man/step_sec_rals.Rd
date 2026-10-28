@@ -19,7 +19,8 @@ step_sec_rals(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_rals")
+  id = recipes::rand_id("sec_rals"),
+  concentration_unit = NULL
 )
 }
 \arguments{
@@ -35,15 +36,18 @@ step searches for measure columns containing "rals".}
 
 \item{laser_wavelength}{Laser wavelength in nm.}
 
-\item{dn_dc}{Refractive index increment (mL/g). Required unless
-\code{optical_constant} is provided.}
+\item{dn_dc}{Refractive index increment (mL/g). May be signed but must
+be finite and nonzero because the optical constant uses its square.
+Required unless \code{optical_constant} is provided.}
 
 \item{solvent_ri}{Solvent refractive index. Default is 1.333 (water).}
 
-\item{optical_constant}{Optional optical constant K; overrides dn/dc.}
+\item{optical_constant}{Optional optical constant K; overrides dn/dc. K
+includes (dn/dc)^2 and uses units mol*cm^2/g^2.}
 
-\item{calibration_constant}{RALS instrument calibration constant. If \code{NULL},
-results are in relative units.}
+\item{calibration_constant}{RALS instrument calibration constant. If
+\code{NULL}, results are in relative units. Otherwise it converts the detector
+signal to excess Rayleigh ratio in cm^-1.}
 
 \item{output_mw}{Name for the molecular weight output column.}
 
@@ -57,6 +61,10 @@ MW is set to NA.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{concentration_unit}{Unit of the concentration curve: "mg/mL" or
+"g/mL". When omitted, the unit must be recorded on the curve or set by
+step_sec_concentration() or step_sec_ri().}
 }
 \value{
 An updated recipe with the new step added.
@@ -66,8 +74,15 @@ An updated recipe with the new step added.
 right-angle light scattering (RALS) signals for absolute molecular weight.
 }
 \details{
-RALS provides absolute MW using a 90-degree detector. It is most accurate
-for smaller molecules where angular dependence is minimal (Rg << lambda/20).
+RALS provides an estimate from a 90-degree detector. For a calibrated
+signal, the estimate is
+\deqn{M = R(\theta)/(Kc)}
+K = 4 pi^2 n_0^2 (dn/dc)^2/(N_A lambda_0^4), c is converted to g/mL, and
+lambda_0 is in cm when calculating K. This is a single-angle estimate; it
+does not fit multiple angles, extrapolate to zero angle, or estimate Rg.
+The particle form factor is assumed to be approximately 1, so angular
+dependence must be negligible. Without a detector calibration constant,
+the result is relative and must not be interpreted as a molar mass.
 }
 \examples{
 \dontrun{
@@ -83,15 +98,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_mals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_mals]{step_sec_mals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

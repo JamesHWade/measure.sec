@@ -287,11 +287,21 @@ bake.step_sec_detector_delay <- function(object, new_data, ...) {
   for (target in targets) {
     delay <- delay_volumes[target]
 
-    new_data[[target]] <- new_measure_list(
-      purrr::map(new_data[[target]], function(m) {
+    input_curve <- new_data[[target]]
+    output_curve <- new_measure_list(
+      purrr::map(input_curve, function(m) {
         .shift_signal(m, delay, flow_rate, method)
       })
     )
+    concentration_unit <- attr(
+      input_curve,
+      "sec_concentration_unit",
+      exact = TRUE
+    )
+    if (!is.null(concentration_unit)) {
+      attr(output_curve, "sec_concentration_unit") <- concentration_unit
+    }
+    new_data[[target]] <- output_curve
   }
 
   tibble::as_tibble(new_data)

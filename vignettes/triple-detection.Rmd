@@ -248,7 +248,8 @@ A complete "triple detection" recipe with RI, UV, and light scattering:
 # Complete triple detection recipe
 rec_triple <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = samples
+  # UV normalization requires a positive extinction coefficient.
+  data = dplyr::filter(samples, extinction_coef > 0)
 ) |>
   update_role(sample_id, new_role = "id") |>
   # Step 1: Convert signals to measure format

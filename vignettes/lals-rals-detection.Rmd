@@ -153,7 +153,8 @@ rec_lals <- recipe(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,
-    sample_concentration = 2.0
+    sample_concentration = 2.0,
+    concentration_units = "mg/mL"
   ) |>
   # Process LALS for MW
   step_sec_lals(
@@ -232,7 +233,8 @@ rec_rals <- recipe(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,
-    sample_concentration = 2.0
+    sample_concentration = 2.0,
+    concentration_units = "mg/mL"
   ) |>
   # Process RALS for MW
   step_sec_rals(
@@ -369,7 +371,8 @@ rec_combined <- recipe(
     measures = "ri",
     detector = "ri",
     injection_volume = 100,
-    sample_concentration = 2.0
+    sample_concentration = 2.0,
+    concentration_units = "mg/mL"
   ) |>
   # Process each LS detector
   step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185) |>

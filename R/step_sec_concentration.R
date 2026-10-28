@@ -54,6 +54,11 @@
 #' 3. Apply this step with known injection parameters
 #' 4. Result: concentration at each elution point
 #'
+#' Mass normalization excludes negative signal points from the integrated area
+#' and sets those output points to zero. When any points are excluded, the
+#' bake reports their count and percentage so the baseline correction can be
+#' reviewed.
+#'
 #' @family sec-detectors
 #' @export
 #'
@@ -90,6 +95,13 @@ step_sec_concentration <- function(
   skip = FALSE,
   id = recipes::rand_id("sec_concentration")
 ) {
+  if (
+    !is.logical(normalize_to_mass) ||
+      length(normalize_to_mass) != 1 ||
+      is.na(normalize_to_mass)
+  ) {
+    cli::cli_abort("{.arg normalize_to_mass} must be TRUE or FALSE.")
+  }
   detector <- match.arg(detector)
   if (
     !is.character(concentration_units) ||
@@ -118,6 +130,11 @@ step_sec_concentration <- function(
 
     # Calculate injection mass if not provided
     if (is.null(injection_mass)) {
+      .sec_validate_positive_scalar(injection_volume, "injection_volume")
+      .sec_validate_positive_scalar(
+        sample_concentration,
+        "sample_concentration"
+      )
       # injection_volume is in uL, sample_concentration in mg/mL
       # injection_mass in mg = volume (uL) * conc (mg/mL) / 1000
       injection_mass <- injection_volume * sample_concentration / 1000
@@ -240,16 +257,18 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
   normalize_to_mass <- object$normalize_to_mass
   concentration_units <- object$concentration_units
 
+  if (!normalize_to_mass) {
+    return(tibble::as_tibble(new_data))
+  }
+
   for (col in measures) {
-    output <- new_measure_list(
-      purrr::map(new_data[[col]], function(m) {
+    if (normalize_to_mass) {
+      negative_count <- 0L
+      point_count <- 0L
+      for (m in new_data[[col]]) {
         location <- m$location
         value <- m$value
         n <- length(location)
-
-        if (!normalize_to_mass) {
-          return(m)
-        }
         if (
           n < 2 ||
             !all(is.finite(location)) ||
@@ -260,10 +279,29 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
             "Concentration normalization requires finite values on a strictly monotonic elution-time axis with at least two points."
           )
         }
+        negative_count <- negative_count + sum(value < 0)
+        point_count <- point_count + length(value)
+      }
+      if (negative_count > 0) {
+        cli::cli_warn(
+          c(
+            "Negative detector values were excluded during mass normalization.",
+            "i" = "{negative_count} of {point_count} signal points ({round(100 * negative_count / point_count, 1)}%) were set to zero."
+          )
+        )
+      }
+    }
 
-        if (
-          normalize_to_mass && !is.null(injection_mass) && injection_mass > 0
-        ) {
+    output <- new_measure_list(
+      purrr::map(new_data[[col]], function(m) {
+        location <- m$location
+        value <- m$value
+        n <- length(location)
+
+        if (!normalize_to_mass) {
+          return(m)
+        }
+        if (!is.null(injection_mass)) {
           # Ensure non-negative values for integration
           pos_value <- pmax(value, 0)
           total_area <- sum(
@@ -278,7 +316,7 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
             # But since total_area is in signal*min and F in mL/min,
             # we get c(t) in mg/mL if m_inj in mg
 
-            m$value <- value * injection_mass / (total_area * flow_rate)
+            m$value <- pos_value * injection_mass / (total_area * flow_rate)
             if (identical(concentration_units, "g/mL")) {
               m$value <- m$value / 1000
             }

@@ -324,10 +324,17 @@ These measure MW directly, independent of calibration.
 
 **What it measures**: Scattered light intensity at multiple angles.
 
-**Provides**: Absolute MW and radius of gyration (Rg) at each slice.
+**Provides**: A single-angle MW estimate when concentration units and detector
+calibration are known. The current step does not fit multiple angles or
+estimate radius of gyration (Rg).
 
 ```r
-step_sec_mals(dn_dc_column = "dn_dc")
+step_sec_mals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc_column = "dn_dc",
+  angles = 90
+)
 ```
 
 | Best for | Limitations |
@@ -343,7 +350,12 @@ step_sec_mals(dn_dc_column = "dn_dc")
 **What it measures**: Scattered light near 0° angle.
 
 ```r
-step_sec_lals(dn_dc_column = "dn_dc")
+step_sec_lals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc = 0.185,
+  calibration_constant = 1.0
+)
 ```
 
 | Best for | Limitations |
@@ -357,7 +369,12 @@ step_sec_lals(dn_dc_column = "dn_dc")
 **What it measures**: Scattered light at 90°.
 
 ```r
-step_sec_rals(dn_dc_column = "dn_dc")
+step_sec_rals(
+  concentration_col = "ri",
+  concentration_unit = "mg/mL",
+  dn_dc = 0.185,
+  calibration_constant = 1.0
+)
 ```
 
 | Best for | Limitations |

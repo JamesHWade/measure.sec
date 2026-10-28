@@ -34,9 +34,12 @@ detectors (RALS/LALS), this is the only signal needed.}
 \item{concentration_col}{Name of the concentration measure column (from
 \code{step_sec_concentration()} or similar).}
 
-\item{dn_dc}{Refractive index increment (mL/g). Required for absolute MW.}
+\item{dn_dc}{Refractive index increment (mL/g). May be signed but must
+be finite and nonzero because the optical constant uses its square.
+Required for absolute MW unless \code{dn_dc_column} is provided.}
 
-\item{dn_dc_column}{Column containing sample-specific dn/dc values.}
+\item{dn_dc_column}{Column containing sample-specific finite, nonzero dn/dc
+values; either sign is valid.}
 
 \item{wavelength}{Laser wavelength in nm. Default is 658 (common for MALS).}
 
@@ -136,15 +139,15 @@ rec <- recipe(~., data = sec_triple_detect) |>
 }
 }
 \seealso{
-Other sec-detectors: 
-\code{\link{step_sec_concentration}()},
-\code{\link{step_sec_dad}()},
-\code{\link{step_sec_dls}()},
-\code{\link{step_sec_intrinsic_visc}()},
-\code{\link{step_sec_lals}()},
-\code{\link{step_sec_rals}()},
-\code{\link{step_sec_ri}()},
-\code{\link{step_sec_uv}()},
-\code{\link{step_sec_viscometer}()}
+Other sec-detectors:
+\code{\link[=step_sec_concentration]{step_sec_concentration()}},
+\code{\link[=step_sec_dad]{step_sec_dad()}},
+\code{\link[=step_sec_dls]{step_sec_dls()}},
+\code{\link[=step_sec_intrinsic_visc]{step_sec_intrinsic_visc()}},
+\code{\link[=step_sec_lals]{step_sec_lals()}},
+\code{\link[=step_sec_rals]{step_sec_rals()}},
+\code{\link[=step_sec_ri]{step_sec_ri()}},
+\code{\link[=step_sec_uv]{step_sec_uv()}},
+\code{\link[=step_sec_viscometer]{step_sec_viscometer()}}
 }
 \concept{sec-detectors}

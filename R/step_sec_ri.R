@@ -14,10 +14,14 @@
 #' @param measures Character vector of RI detector column names to process.
 #'   If `NULL`, will look for columns containing "ri" in the name.
 #' @param dn_dc Refractive index increment (mL/g). Can be:
-#'   - A single numeric value applied to all samples
+#'   - A single positive finite numeric value applied to all samples
 #'   - `NULL` to skip dn/dc normalization (signal remains in detector units)
+#' @param concentration_units Units for the signal after dn/dc normalization:
+#'   g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
+#'   This is ignored when dn/dc normalization is skipped. RI processing keeps
+#'   its existing positive-only dn/dc contract.
 #' @param dn_dc_column Character name of a column containing sample-specific
-#'   dn/dc values. Overrides `dn_dc` if provided.
+#'   positive finite dn/dc values. Overrides `dn_dc` if provided.
 #' @param instrument_constant RI detector instrument constant. Default is 1.0
 #'   (no adjustment). This converts raw detector response to refractive index
 #'   units.
@@ -38,8 +42,13 @@
 #'
 #' where:
 #' - K is the instrument constant
-#' - c is the concentration (mg/mL)
+#' - c is mass concentration in g/mL when dn/dc is in mL/g
 #' - dn/dc is the refractive index increment (mL/g)
+#'
+#' Therefore dividing a calibrated refractive-index response by dn/dc gives
+#' concentration in g/mL. Set concentration_units to mg/mL to scale those
+#' values by 1000. The default preserves the current numeric behavior and can
+#' be read directly by scattering steps that use a tagged concentration curve.
 #'
 #' **Common dn/dc values (in water at 25°C, 633 nm):**
 #' - Polystyrene in THF: 0.185 mL/g
@@ -78,8 +87,15 @@ step_sec_ri <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_ri")
+  id = recipes::rand_id("sec_ri"),
+  concentration_units = "g/mL"
 ) {
+  .sec_validate_concentration_unit(
+    concentration_units,
+    "concentration_units",
+    allow_null = FALSE
+  )
+
   # Validate inputs
   if (!is.null(dn_dc) && !is.null(dn_dc_column)) {
     cli::cli_warn(
@@ -88,16 +104,10 @@ step_sec_ri <- function(
   }
 
   if (!is.null(dn_dc)) {
-    if (!is.numeric(dn_dc) || length(dn_dc) != 1 || dn_dc <= 0) {
-      cli::cli_abort("{.arg dn_dc} must be a positive numeric value.")
-    }
+    .sec_validate_positive_scalar(dn_dc, "dn_dc")
   }
 
-  if (!is.numeric(instrument_constant) || instrument_constant <= 0) {
-    cli::cli_abort(
-      "{.arg instrument_constant} must be a positive numeric value."
-    )
-  }
+  .sec_validate_positive_scalar(instrument_constant, "instrument_constant")
 
   recipes::add_step(
     recipe,
@@ -106,6 +116,7 @@ step_sec_ri <- function(
       dn_dc = dn_dc,
       dn_dc_column = dn_dc_column,
       instrument_constant = instrument_constant,
+      concentration_units = concentration_units,
       output_col = output_col,
       role = role,
       trained = trained,
@@ -120,6 +131,7 @@ step_sec_ri_new <- function(
   dn_dc,
   dn_dc_column,
   instrument_constant,
+  concentration_units,
   output_col,
   role,
   trained,
@@ -132,6 +144,7 @@ step_sec_ri_new <- function(
     dn_dc = dn_dc,
     dn_dc_column = dn_dc_column,
     instrument_constant = instrument_constant,
+    concentration_units = concentration_units,
     output_col = output_col,
     role = role,
     trained = trained,
@@ -173,6 +186,7 @@ prep.step_sec_ri <- function(x, training, info = NULL, ...) {
     dn_dc = x$dn_dc,
     dn_dc_column = x$dn_dc_column,
     instrument_constant = x$instrument_constant,
+    concentration_units = x$concentration_units,
     output_col = x$output_col,
     role = x$role,
     trained = TRUE,
@@ -187,6 +201,8 @@ bake.step_sec_ri <- function(object, new_data, ...) {
   dn_dc <- object$dn_dc
   dn_dc_column <- object$dn_dc_column
   instrument_constant <- object$instrument_constant
+  concentration_units <- object$concentration_units
+  normalize_to_concentration <- !is.null(dn_dc) || !is.null(dn_dc_column)
 
   for (col in measures) {
     # Get dn/dc values for each sample
@@ -195,22 +211,35 @@ bake.step_sec_ri <- function(object, new_data, ...) {
     } else if (!is.null(dn_dc)) {
       dn_dc_values <- rep(dn_dc, nrow(new_data))
     } else {
-      dn_dc_values <- rep(1.0, nrow(new_data)) # No normalization
+      dn_dc_values <- rep(1.0, nrow(new_data))
+    }
+    if (
+      normalize_to_concentration &&
+        (!is.numeric(dn_dc_values) ||
+          length(dn_dc_values) != nrow(new_data) ||
+          !all(is.finite(dn_dc_values)) ||
+          any(dn_dc_values <= 0))
+    ) {
+      cli::cli_abort("Each dn/dc value must be positive and finite.")
     }
 
     # Process each sample
-    new_data[[col]] <- new_measure_list(
+    output <- new_measure_list(
       purrr::map2(new_data[[col]], dn_dc_values, function(m, dndc) {
-        # Apply instrument constant and dn/dc normalization
-        # Dividing by dn/dc converts from RI signal to concentration-proportional
-        if (!is.na(dndc) && dndc > 0) {
-          m$value <- m$value * instrument_constant / dndc
-        } else {
-          m$value <- m$value * instrument_constant
+        m$value <- m$value * instrument_constant
+        if (normalize_to_concentration) {
+          m$value <- m$value / dndc
+          if (identical(concentration_units, "mg/mL")) {
+            m$value <- m$value * 1000
+          }
         }
         m
       })
     )
+    if (normalize_to_concentration) {
+      attr(output, "sec_concentration_unit") <- concentration_units
+    }
+    new_data[[col]] <- output
   }
 
   tibble::as_tibble(new_data)
@@ -248,6 +277,7 @@ tidy.step_sec_ri <- function(x, ...) {
     dn_dc = x$dn_dc %||% NA_real_,
     dn_dc_column = x$dn_dc_column %||% NA_character_,
     instrument_constant = x$instrument_constant,
+    concentration_units = x$concentration_units,
     id = x$id
   )
 }
