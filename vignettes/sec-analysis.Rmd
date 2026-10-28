@@ -217,9 +217,7 @@ locations inside the calibration domain. This example selects that finite sample
 support for this one sample. If a nominal calibration endpoint falls between
 samples, its unsampled endpoint strip is omitted; this does not establish that
 the omitted mass is negligible. Different sample grids need their own supported
-windows or a common range bracketed by finite calibration values. The
-[integration support guide](integration-support.html) shows how row metadata is
-used by all three MW calculations.
+windows or a common range bracketed by finite calibration values.
 
 ### Assessing Calibration Quality
 
@@ -489,7 +487,10 @@ result_protein |>
 
 ## Molecular Weight Distribution
 
-Generate differential and cumulative molecular weight distributions. The example limits integration to the standards’ retention range; signal outside that range is excluded.
+Generate differential and cumulative molecular weight distributions. These
+demonstration samples share the grid used above, so the same finite sampled
+calibration range applies to them. Signal outside that selected range is
+excluded; the distribution need not represent the entire sample.
 
 ```{r mwd}
 rec_mwd <- recipe(
@@ -507,7 +508,7 @@ rec_mwd <- recipe(
   step_sec_mw_distribution(
     measures = "ri",
     type = "both",  # "differential", "cumulative", or "both"
-    integration_range = range(ps_cal$retention)
+    integration_range = sampled_calibration_range
   )
 
 prepped_mwd <- prep(rec_mwd)
