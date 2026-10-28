@@ -20,7 +20,8 @@
 #' @param mw_scale Scale of `mw_col`: `"log10"` or `"absolute"`. Required for
 #'   untagged curves; see [step_sec_mw_averages()].
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
-#'   the x-axis range for integration. If `NULL`, uses full range.
+#'   the x-axis range for integration. If `NULL`, uses a row-specific
+#'   `.integration_window` when present, otherwise the full measured range.
 #' @param prefix Prefix for output column names. Default is `"frac_"`.
 #' @param role Role for generated columns. Default is `"predictor"`.
 #' @param trained Logical indicating if the step has been trained.
@@ -34,10 +35,14 @@
 #' - `frac_below_C`: Weight fraction with MW < C
 #' - `frac_above_C`: Weight fraction with MW >= C
 #'
-#' Slice weights use trapezoidal integration on the elution axis. The cutoff is
-#' applied to the sampled molecular-weight values, so accuracy near a cutoff
-#' depends on the sampling resolution. These fractions sum to 1.0 and are useful for characterizing polymer
-#' distributions. Common cutoffs include:
+#' Slice weights use trapezoidal integration on the elution axis. Regions in
+#' `.excluded_regions` marked `integration` or `both` are omitted and the
+#' retained intervals are integrated separately; baseline-only exclusions are
+#' ignored. Explicit `integration_range` values override row-specific
+#' `.integration_window` metadata. The cutoff is applied to the sampled
+#' molecular-weight values, so accuracy near a cutoff depends on the sampling
+#' resolution. These fractions sum to 1.0 and are useful for characterizing
+#' polymer distributions. Common cutoffs include:
 #' - 1000 Da for oligomer content
 #' - 10000 Da for low MW fraction
 #' - 100000 Da for high MW fraction
@@ -82,11 +87,7 @@ step_sec_mw_fractions <- function(
   }
 
   if (!is.null(integration_range)) {
-    if (!is.numeric(integration_range) || length(integration_range) != 2) {
-      cli::cli_abort(
-        "{.arg integration_range} must be a numeric vector of length 2."
-      )
-    }
+    .sec_validate_integration_range(integration_range)
   }
 
   recipes::add_step(
@@ -172,14 +173,16 @@ prep.step_sec_mw_fractions <- function(x, training, info = NULL, ...) {
   calibration,
   integration_range,
   mw_measure = NULL,
-  mw_scale = NULL
+  mw_scale = NULL,
+  excluded_regions = NULL
 ) {
   slices <- .sec_mw_slices(
-    list(location = location, value = value),
-    mw_measure,
-    mw_scale,
-    calibration,
-    integration_range
+    signal = list(location = location, value = value),
+    mw_curve = mw_measure,
+    mw_scale = mw_scale,
+    calibration = calibration,
+    integration_range = integration_range,
+    excluded_regions = excluded_regions
   )
 
   n_cutoffs <- length(cutoffs)
@@ -230,21 +233,24 @@ bake.step_sec_mw_fractions <- function(object, new_data, ...) {
   } else {
     new_data[[object$mw_col]]
   }
-  all_results <- purrr::map2(
-    new_data[[object$measures[1]]],
-    mw_curves,
-    function(m, mw_curve) {
-      .calc_mw_fractions(
-        m$location,
-        m$value,
-        cutoffs,
-        calibration,
-        integration_range,
-        mw_measure = mw_curve,
-        mw_scale = object$mw_scale
-      )
-    }
-  )
+  all_results <- purrr::map(seq_len(nrow(new_data)), function(i) {
+    m <- new_data[[object$measures[1]]][[i]]
+    metadata <- .sec_row_integration_metadata(
+      new_data,
+      i,
+      integration_range = integration_range
+    )
+    .calc_mw_fractions(
+      m$location,
+      m$value,
+      cutoffs,
+      calibration,
+      metadata$integration_range,
+      mw_measure = mw_curves[[i]],
+      mw_scale = object$mw_scale,
+      excluded_regions = metadata$excluded_regions
+    )
+  })
 
   # Convert to data frame
   result_df <- do.call(rbind, all_results)
