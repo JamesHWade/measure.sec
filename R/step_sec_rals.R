@@ -19,8 +19,9 @@
 #'   step_sec_concentration() or step_sec_ri().
 #' @param angle Detection angle in degrees. Default is 90.
 #' @param laser_wavelength Laser wavelength in nm.
-#' @param dn_dc Refractive index increment (mL/g). Required unless
-#'   `optical_constant` is provided.
+#' @param dn_dc Refractive index increment (mL/g). May be signed but must
+#'   be finite and nonzero because the optical constant uses its square.
+#'   Required unless `optical_constant` is provided.
 #' @param solvent_ri Solvent refractive index. Default is 1.333 (water).
 #' @param optical_constant Optional optical constant K; overrides dn/dc. K
 #'   includes (dn/dc)^2 and uses units mol*cm^2/g^2.
@@ -100,7 +101,7 @@ step_sec_rals <- function(
   .sec_validate_positive_scalar(solvent_ri, "solvent_ri")
   .sec_validate_concentration_unit(concentration_unit)
   if (!is.null(dn_dc)) {
-    .sec_validate_positive_scalar(dn_dc, "dn_dc")
+    .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
   }
   if (!is.null(optical_constant)) {
     .sec_validate_positive_scalar(optical_constant, "optical_constant")

@@ -18,8 +18,11 @@
 #' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
 #'   `"g/mL"`. When omitted, the unit must be recorded by a preceding
 #'   [step_sec_concentration()] step; an untagged curve requires an explicit unit.
-#' @param dn_dc Refractive index increment (mL/g). Required for absolute MW.
-#' @param dn_dc_column Column containing sample-specific dn/dc values.
+#' @param dn_dc Refractive index increment (mL/g). May be signed but must
+#'   be finite and nonzero because the optical constant uses its square.
+#'   Required for absolute MW unless `dn_dc_column` is provided.
+#' @param dn_dc_column Column containing sample-specific finite, nonzero dn/dc
+#'   values; either sign is valid.
 #' @param wavelength Laser wavelength in nm. Default is 658 (common for MALS).
 #' @param solvent_ri Solvent refractive index. Default is 1.333 (water).
 #'   Common values: water = 1.333, THF = 1.407, toluene = 1.497.
@@ -128,7 +131,7 @@ step_sec_mals <- function(
   }
 
   if (!is.null(dn_dc)) {
-    .sec_validate_positive_scalar(dn_dc, "dn_dc")
+    .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
   }
 
   if (
@@ -274,7 +277,7 @@ step_sec_mals_new <- function(
 #' Calculate optical constant K
 #' @noRd
 .optical_constant <- function(dn_dc, solvent_ri, wavelength_nm) {
-  .sec_validate_positive_scalar(dn_dc, "dn_dc")
+  .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
   .sec_validate_positive_scalar(solvent_ri, "solvent_ri")
   .sec_validate_positive_scalar(wavelength_nm, "wavelength")
 
@@ -408,9 +411,9 @@ bake.step_sec_mals <- function(object, new_data, ...) {
     !is.numeric(dn_dc_values) ||
       length(dn_dc_values) != nrow(new_data) ||
       !all(is.finite(dn_dc_values)) ||
-      any(dn_dc_values <= 0)
+      any(dn_dc_values == 0)
   ) {
-    cli::cli_abort("Each dn/dc value must be positive and finite.")
+    cli::cli_abort("Each dn/dc value must be nonzero and finite.")
   }
 
   # Default calibration constant if not provided
@@ -430,8 +433,8 @@ bake.step_sec_mals <- function(object, new_data, ...) {
       conc_val <- conc_m$value
       .sec_assert_aligned_curves(mals_m, conc_m, "Scattering")
       location <- mals_m$location
-      if (length(dndc) != 1 || !is.finite(dndc) || dndc <= 0) {
-        cli::cli_abort("Each dn/dc value must be positive and finite.")
+      if (length(dndc) != 1 || !is.finite(dndc) || dndc == 0) {
+        cli::cli_abort("Each dn/dc value must be nonzero and finite.")
       }
 
       # Calculate optical constant

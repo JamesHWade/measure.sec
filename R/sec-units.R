@@ -11,6 +11,19 @@
   invisible(value)
 }
 
+.sec_validate_nonzero_scalar <- function(value, argument) {
+  if (
+    !is.numeric(value) ||
+      length(value) != 1 ||
+      !is.finite(value) ||
+      value == 0
+  ) {
+    cli::cli_abort("{.arg {argument}} must be a nonzero finite number.")
+  }
+
+  invisible(value)
+}
+
 .sec_validate_concentration_unit <- function(
   unit,
   argument = "concentration_unit",

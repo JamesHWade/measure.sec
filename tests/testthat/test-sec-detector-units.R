@@ -387,3 +387,126 @@ test_that("RI unit metadata survives delay alignment for LALS", {
   expect_identical(attr(out$ri, "sec_concentration_unit"), "g/mL")
   expect_equal(out$mw_lals[[1]]$value, rep(expected_mw, length(location)))
 })
+
+test_that("scattering calculations accept signed nonzero dn/dc", {
+  location <- c(1, 2, 4)
+  concentration_mg_per_ml <- c(1, 2, 3)
+  concentration_g_per_ml <- concentration_mg_per_ml / 1000
+  dn_dc <- 0.185
+  solvent_ri <- 1.333
+  expected_mw <- 50
+  wavelength_by_detector <- c(lals = 670, rals = 670, mals = 658)
+  optical_constant <- function(wavelength_nm, increment) {
+    4 *
+      pi^2 *
+      solvent_ri^2 *
+      increment^2 /
+      (6.022e23 * (wavelength_nm * 1e-7)^4)
+  }
+  data <- tibble::tibble(sample_id = "sample")
+  data$conc <- measure::new_measure_list(list(
+    measure::new_measure_tbl(
+      location = location,
+      value = concentration_mg_per_ml
+    )
+  ))
+  attr(data$conc, "sec_concentration_unit") <- "mg/mL"
+  for (detector in names(wavelength_by_detector)) {
+    data[[detector]] <- measure::new_measure_list(list(
+      measure::new_measure_tbl(
+        location = location,
+        value = optical_constant(wavelength_by_detector[[detector]], dn_dc) *
+          concentration_g_per_ml *
+          expected_mw
+      )
+    ))
+  }
+
+  build_step <- function(recipe, detector, increment, use_column = FALSE) {
+    common <- list(
+      recipe = recipe,
+      concentration_col = "conc",
+      calibration_constant = 1
+    )
+    if (detector == "lals") {
+      common$measures <- "lals"
+    } else if (detector == "rals") {
+      common$measures <- "rals"
+    } else {
+      common$mals_col <- "mals"
+    }
+    if (use_column) {
+      common$dn_dc <- NULL
+      common$dn_dc_column <- "dn_dc"
+    } else {
+      common$dn_dc <- increment
+    }
+    step_fn <- switch(
+      detector,
+      lals = step_sec_lals,
+      rals = step_sec_rals,
+      mals = step_sec_mals
+    )
+    do.call(step_fn, common)
+  }
+
+  for (detector in names(wavelength_by_detector)) {
+    outputs <- lapply(c(dn_dc, -dn_dc), function(increment) {
+      prepped <- recipes::prep(build_step(
+        recipes::recipe(data),
+        detector,
+        increment
+      ))
+      recipes::bake(prepped, new_data = NULL)[[paste0("mw_", detector)]][[
+        1
+      ]]$value
+    })
+    expect_equal(
+      outputs[[1]],
+      rep(expected_mw, length(location)),
+      tolerance = 1e-8
+    )
+    expect_equal(outputs[[2]], outputs[[1]], tolerance = 1e-8)
+  }
+
+  column_data <- data
+  column_data$dn_dc <- rep(-dn_dc, nrow(column_data))
+  prepped <- recipes::prep(build_step(
+    recipes::recipe(column_data),
+    "mals",
+    increment = NULL,
+    use_column = TRUE
+  ))
+  expect_equal(
+    recipes::bake(prepped, new_data = NULL)$mw_mals[[1]]$value,
+    rep(expected_mw, length(location)),
+    tolerance = 1e-8
+  )
+})
+
+test_that("scattering rejects zero and nonfinite dn/dc while RI stays positive-only", {
+  recipe <- recipes::recipe(tibble::tibble(sample_id = "sample"))
+  for (invalid in list(0, NA_real_, Inf, -Inf)) {
+    expect_error(step_sec_lals(recipe, dn_dc = invalid), "nonzero finite")
+    expect_error(step_sec_rals(recipe, dn_dc = invalid), "nonzero finite")
+    expect_error(step_sec_mals(recipe, dn_dc = invalid), "nonzero finite")
+  }
+  expect_error(step_sec_ri(recipe, dn_dc = -0.185), "positive finite")
+
+  data <- tibble::tibble(sample_id = "sample", dn_dc = 0)
+  data$conc <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = 1:2, value = c(1, 2))
+  ))
+  attr(data$conc, "sec_concentration_unit") <- "mg/mL"
+  data$mals <- measure::new_measure_list(list(
+    measure::new_measure_tbl(location = 1:2, value = c(1, 2))
+  ))
+  rec <- recipes::recipe(data) |>
+    step_sec_mals(
+      mals_col = "mals",
+      concentration_col = "conc",
+      dn_dc_column = "dn_dc",
+      calibration_constant = 1
+    )
+  expect_error(recipes::prep(rec), "nonzero and finite")
+})

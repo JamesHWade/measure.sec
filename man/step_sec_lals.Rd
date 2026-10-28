@@ -36,8 +36,9 @@ step searches for measure columns containing "lals".}
 
 \item{laser_wavelength}{Laser wavelength in nm.}
 
-\item{dn_dc}{Refractive index increment (mL/g). Required unless
-\code{optical_constant} is provided.}
+\item{dn_dc}{Refractive index increment (mL/g). May be signed but must
+be finite and nonzero because the optical constant uses its square.
+Required unless \code{optical_constant} is provided.}
 
 \item{solvent_ri}{Solvent refractive index. Default is 1.333 (water).}
 

@@ -26,7 +26,7 @@ If \code{NULL}, will look for columns containing "ri" in the name.}
 
 \item{dn_dc}{Refractive index increment (mL/g). Can be:
 \itemize{
-\item A single numeric value applied to all samples
+\item A single positive finite numeric value applied to all samples
 \item \code{NULL} to skip dn/dc normalization (signal remains in detector units)
 }}
 
@@ -49,7 +49,8 @@ units.}
 
 \item{concentration_units}{Units for the signal after dn/dc normalization:
 g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
-This is ignored when dn/dc normalization is skipped.}
+This is ignored when dn/dc normalization is skipped. RI processing keeps
+its existing positive-only dn/dc contract.}
 }
 \value{
 An updated recipe with the new step added.

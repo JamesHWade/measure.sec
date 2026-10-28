@@ -14,11 +14,12 @@
 #' @param measures Character vector of RI detector column names to process.
 #'   If `NULL`, will look for columns containing "ri" in the name.
 #' @param dn_dc Refractive index increment (mL/g). Can be:
-#'   - A single numeric value applied to all samples
+#'   - A single positive finite numeric value applied to all samples
 #'   - `NULL` to skip dn/dc normalization (signal remains in detector units)
 #' @param concentration_units Units for the signal after dn/dc normalization:
 #'   g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
-#'   This is ignored when dn/dc normalization is skipped.
+#'   This is ignored when dn/dc normalization is skipped. RI processing keeps
+#'   its existing positive-only dn/dc contract.
 #' @param dn_dc_column Character name of a column containing sample-specific
 #'   positive finite dn/dc values. Overrides `dn_dc` if provided.
 #' @param instrument_constant RI detector instrument constant. Default is 1.0
