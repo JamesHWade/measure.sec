@@ -15,8 +15,9 @@
 #' @param concentration_col Name of the concentration measure column (from
 #'   `step_sec_concentration()` or similar).
 #' @param concentration_unit Unit of the concentration curve: "mg/mL" or
-#'   "g/mL". When omitted, the unit must be recorded on the curve or set by
-#'   step_sec_concentration() or step_sec_ri().
+#'   "g/mL". When omitted, the training curve must record its unit. If prep
+#'   infers the unit from that tag, baked curves must retain it. An explicit
+#'   unit permits untagged baked curves, but any recorded tag must agree.
 #' @param angle Detection angle in degrees. Default is 90.
 #' @param laser_wavelength Laser wavelength in nm.
 #' @param dn_dc Refractive index increment (mL/g). May be signed but must
@@ -133,6 +134,11 @@ step_sec_rals <- function(
       measures = measures,
       concentration_col = concentration_col,
       concentration_unit = concentration_unit,
+      concentration_unit_source = if (is.null(concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
       angle = angle,
       laser_wavelength = laser_wavelength,
       dn_dc = dn_dc,
@@ -153,6 +159,7 @@ step_sec_rals_new <- function(
   measures,
   concentration_col,
   concentration_unit,
+  concentration_unit_source,
   angle,
   laser_wavelength,
   dn_dc,
@@ -171,6 +178,7 @@ step_sec_rals_new <- function(
     measures = measures,
     concentration_col = concentration_col,
     concentration_unit = concentration_unit,
+    concentration_unit_source = concentration_unit_source,
     angle = angle,
     laser_wavelength = laser_wavelength,
     dn_dc = dn_dc,
@@ -241,11 +249,17 @@ prep.step_sec_rals <- function(x, training, info = NULL, ...) {
     x$concentration_unit,
     training[[concentration_col]]
   )
+  concentration_unit_source <- if (is.null(x$concentration_unit)) {
+    "inferred"
+  } else {
+    "explicit"
+  }
 
   step_sec_rals_new(
     measures = measures,
     concentration_col = concentration_col,
     concentration_unit = concentration_unit,
+    concentration_unit_source = concentration_unit_source,
     angle = x$angle,
     laser_wavelength = x$laser_wavelength,
     dn_dc = x$dn_dc,
@@ -266,9 +280,11 @@ bake.step_sec_rals <- function(object, new_data, ...) {
   rals_col <- object$measures
   concentration_col <- object$concentration_col
   concentration_unit <- object$concentration_unit
+  concentration_unit_source <- object$concentration_unit_source
   .sec_resolve_concentration_unit(
     concentration_unit,
-    new_data[[concentration_col]]
+    new_data[[concentration_col]],
+    require_recorded = identical(concentration_unit_source, "inferred")
   )
   dn_dc <- object$dn_dc
   solvent_ri <- object$solvent_ri
@@ -354,6 +370,7 @@ tidy.step_sec_rals <- function(x, ...) {
     rals_col = x$measures %||% NA_character_,
     concentration_col = x$concentration_col %||% NA_character_,
     concentration_unit = x$concentration_unit %||% NA_character_,
+    concentration_unit_source = x$concentration_unit_source %||% NA_character_,
     angle = x$angle,
     laser_wavelength = x$laser_wavelength,
     dn_dc = x$dn_dc %||% NA_real_,

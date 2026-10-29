@@ -26,7 +26,8 @@
 #'   curve. When no MW curve or calibration is supplied, the signal location is
 #'   interpreted as log10(MW) for backwards compatibility.
 #' @param integration_range Optional numeric vector `c(min, max)` specifying
-#'   the x-axis range for integration. If `NULL`, uses full range.
+#'   the x-axis range for integration. If `NULL`, uses a row-specific
+#'   `.integration_window` when present, otherwise the full measured range.
 #' @param output_cols Character vector of metrics to calculate. Default
 #'   includes all: `c("mn", "mw", "mz", "mp", "dispersity")`.
 #' @param include_uncertainty Logical. If `TRUE`, calculates and outputs
@@ -57,7 +58,11 @@
 #' The detector signal is assumed to be proportional to weight concentration.
 #' For RI detection, this is typically valid. For UV detection, response factors
 #' may need to be applied first. Slice weights use trapezoidal integration on
-#' the original elution axis, including for unevenly spaced data. A positive
+#' the original elution axis, including for unevenly spaced data. When
+#' `.excluded_regions` is present, regions marked `integration` or `both` are
+#' removed and each retained interval is integrated separately; baseline-only
+#' exclusions do not affect these calculations. Explicit `integration_range`
+#' values override row-specific `.integration_window` metadata. A positive
 #' signal without a valid molecular weight is an error, rather than silently
 #' discarded. `calibration = "auto"` generates an illustrative synthetic axis,
 #' not an experimental calibration.
@@ -132,11 +137,7 @@ step_sec_mw_averages <- function(
   }
 
   if (!is.null(integration_range)) {
-    if (!is.numeric(integration_range) || length(integration_range) != 2) {
-      cli::cli_abort(
-        "{.arg integration_range} must be a numeric vector of length 2."
-      )
-    }
+    .sec_validate_integration_range(integration_range)
   }
 
   # Validate uncertainty parameters
@@ -311,7 +312,8 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
   include_uncertainty = FALSE,
   calibration_error = NULL,
   mw_measure = NULL,
-  mw_scale = NULL
+  mw_scale = NULL,
+  excluded_regions = NULL
 ) {
   # Build full list of output column names (including uncertainties if requested)
   all_output_cols <- output_cols
@@ -326,11 +328,12 @@ prep.step_sec_mw_averages <- function(x, training, info = NULL, ...) {
   }
 
   slices <- .sec_mw_slices(
-    list(location = location, value = value),
-    mw_measure,
-    mw_scale,
-    calibration,
-    integration_range
+    signal = list(location = location, value = value),
+    mw_curve = mw_measure,
+    mw_scale = mw_scale,
+    calibration = calibration,
+    integration_range = integration_range,
+    excluded_regions = excluded_regions
   )
   if (length(slices$location) < 2) {
     result <- stats::setNames(
@@ -439,23 +442,26 @@ bake.step_sec_mw_averages <- function(object, new_data, ...) {
   } else {
     new_data[[object$mw_col]]
   }
-  all_results <- purrr::map2(
-    new_data[[object$measures[1]]],
-    mw_curves,
-    function(m, mw_curve) {
-      .calc_mw_averages(
-        m$location,
-        m$value,
-        calibration,
-        integration_range,
-        output_cols,
-        include_uncertainty = include_uncertainty,
-        calibration_error = calibration_error,
-        mw_measure = mw_curve,
-        mw_scale = object$mw_scale
-      )
-    }
-  )
+  all_results <- purrr::map(seq_len(nrow(new_data)), function(i) {
+    m <- new_data[[object$measures[1]]][[i]]
+    metadata <- .sec_row_integration_metadata(
+      new_data,
+      i,
+      integration_range = integration_range
+    )
+    .calc_mw_averages(
+      m$location,
+      m$value,
+      calibration,
+      metadata$integration_range,
+      output_cols,
+      include_uncertainty = include_uncertainty,
+      calibration_error = calibration_error,
+      mw_measure = mw_curves[[i]],
+      mw_scale = object$mw_scale,
+      excluded_regions = metadata$excluded_regions
+    )
+  })
 
   # Convert to data frame
   result_df <- do.call(rbind, all_results)

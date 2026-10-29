@@ -42,6 +42,8 @@ navbar:
         href: articles/copolymer-analysis.html
       - text: Calibration Management
         href: articles/calibration-management.html
+      - text: Integration Windows and Exclusions
+        href: articles/integration-support.html
       - text: System Suitability
         href: articles/system-suitability.html
       - text: Polymer Branching
@@ -210,6 +212,7 @@ articles:
   - protein-sec
   - copolymer-analysis
   - calibration-management
+  - integration-support
   - system-suitability
   - branching-analysis
   - exporting-results

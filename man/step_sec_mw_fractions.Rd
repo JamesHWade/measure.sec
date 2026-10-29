@@ -31,7 +31,8 @@ calculates the weight fraction below and above that value.}
 See \code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}} for details.}
 
 \item{integration_range}{Optional numeric vector \code{c(min, max)} specifying
-the x-axis range for integration. If \code{NULL}, uses full range.}
+the x-axis range for integration. If \code{NULL}, uses a row-specific
+\code{.integration_window} when present, otherwise the full measured range.}
 
 \item{prefix}{Prefix for output column names. Default is \code{"frac_"}.}
 
@@ -63,10 +64,14 @@ For each cutoff value \code{C}, this step calculates:
 \item \code{frac_above_C}: Weight fraction with MW >= C
 }
 
-Slice weights use trapezoidal integration on the elution axis. The cutoff is
-applied to the sampled molecular-weight values, so accuracy near a cutoff
-depends on the sampling resolution. These fractions sum to 1.0 and are useful for characterizing polymer
-distributions. Common cutoffs include:
+Slice weights use trapezoidal integration on the elution axis. Regions in
+\code{.excluded_regions} marked \code{integration} or \code{both} are omitted and the
+retained intervals are integrated separately; baseline-only exclusions are
+ignored. Explicit \code{integration_range} values override row-specific
+\code{.integration_window} metadata. The cutoff is applied to the sampled
+molecular-weight values, so accuracy near a cutoff depends on the sampling
+resolution. These fractions sum to 1.0 and are useful for characterizing
+polymer distributions. Common cutoffs include:
 \itemize{
 \item 1000 Da for oligomer content
 \item 10000 Da for low MW fraction

@@ -15,7 +15,10 @@ step_sec_uv_ri_ratio(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_uv_ri_ratio")
+  id = recipes::rand_id("sec_uv_ri_ratio"),
+  input_basis = c("auto", "detector_response", "normalized_concentration"),
+  uv_concentration_unit = NULL,
+  ri_concentration_unit = NULL
 )
 }
 \arguments{
@@ -28,7 +31,9 @@ step_sec_uv_ri_ratio(
 \item{output_col}{Name for the output ratio column. Default is \code{"uv_ri_ratio"}.}
 
 \item{min_signal}{Minimum signal threshold (as fraction of max) below which
-ratio is set to NA. Default is 0.01 (1\%). Prevents noisy ratios in baseline.}
+ratio is set to \code{NA}. Default is 0.01 (1\%). The threshold is a fraction of
+the maximum absolute RI value; its effective units are native RI-response
+units for raw mode and g/mL after conversion for normalized mode.}
 
 \item{smooth}{Logical. Apply smoothing to the ratio? Default is \code{TRUE}.}
 
@@ -41,6 +46,21 @@ ratio is set to NA. Default is 0.01 (1\%). Prevents noisy ratios in baseline.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{input_basis}{Input interpretation: \code{"auto"} (default) selects raw
+detector responses when both curves are untagged and normalized
+concentrations when both curves carry units; \code{"detector_response"} and
+\code{"normalized_concentration"} select a basis explicitly. A tagged/raw mix
+is rejected.}
+
+\item{uv_concentration_unit, ri_concentration_unit}{Units of the respective
+curves for \code{"normalized_concentration"}. Each can be omitted when the
+training curve records \code{sec_concentration_unit}; an explicit unit must
+agree with any recorded unit. When prep infers a unit from its training
+tag, the corresponding baked curve must retain that tag. An explicit unit
+permits untagged baked curves, but any recorded tag must agree. Both units
+are required for untagged normalized training curves. These arguments must
+be \code{NULL} for raw detector responses and with \code{input_basis = "auto"}.}
 }
 \value{
 An updated recipe with the new step added.
@@ -52,13 +72,21 @@ This ratio is useful for detecting compositional heterogeneity in copolymers
 and conjugates.
 }
 \details{
-The UV/RI ratio provides information about chemical composition across the
-molecular weight distribution:
+The UV/RI ratio provides a relative detector-response profile or an
+apparent-concentration ratio across the molecular weight distribution:
 
-\deqn{Ratio(t) = \frac{UV(t)}{RI(t)} = \frac{\varepsilon \cdot c(t)}{(dn/dc) \cdot c(t) \cdot K}}
+\deqn{Ratio(t) = \frac{UV(t)}{RI(t)}}
 
-Since concentration cancels out, the ratio reflects the relative detector
-response factors, which depend on chemical composition.
+In raw detector-response mode this is the ratio of the input detector
+responses in their native units. In normalized-concentration mode both
+curves are first converted to g/mL, so the ratio is dimensionless. In
+neither mode is this ratio by itself a mass fraction; compositional
+interpretation requires calibration of detector responses for the
+components of interest.
+
+\code{min_signal} is a fraction of the maximum absolute RI value. The effective
+cutoff is therefore in raw RI detector units in raw-response mode, or in
+g/mL after unit conversion in normalized-concentration mode.
 
 \strong{Applications:}
 \itemize{

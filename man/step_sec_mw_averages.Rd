@@ -36,7 +36,8 @@ where \code{log10(MW) = slope * x + intercept}
 }}
 
 \item{integration_range}{Optional numeric vector \code{c(min, max)} specifying
-the x-axis range for integration. If \code{NULL}, uses full range.}
+the x-axis range for integration. If \code{NULL}, uses a row-specific
+\code{.integration_window} when present, otherwise the full measured range.}
 
 \item{output_cols}{Character vector of metrics to calculate. Default
 includes all: \code{c("mn", "mw", "mz", "mp", "dispersity")}.}
@@ -90,7 +91,11 @@ This step calculates standard molecular weight averages from SEC/GPC data:\tabul
 The detector signal is assumed to be proportional to weight concentration.
 For RI detection, this is typically valid. For UV detection, response factors
 may need to be applied first. Slice weights use trapezoidal integration on
-the original elution axis, including for unevenly spaced data. A positive
+the original elution axis, including for unevenly spaced data. When
+\code{.excluded_regions} is present, regions marked \code{integration} or \code{both} are
+removed and each retained interval is integrated separately; baseline-only
+exclusions do not affect these calculations. Explicit \code{integration_range}
+values override row-specific \code{.integration_window} metadata. A positive
 signal without a valid molecular weight is an error, rather than silently
 discarded. \code{calibration = "auto"} generates an illustrative synthetic axis,
 not an experimental calibration.

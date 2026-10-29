@@ -14,9 +14,24 @@
 #' @param recipe A recipe object.
 #' @param uv_col Name of the UV detector measure column.
 #' @param ri_col Name of the RI detector measure column.
+#' @param input_basis Input interpretation: `"auto"` (default) selects raw
+#'   detector responses when both curves are untagged and normalized
+#'   concentrations when both curves carry units; `"detector_response"` and
+#'   `"normalized_concentration"` select a basis explicitly. A tagged/raw mix
+#'   is rejected.
+#' @param uv_concentration_unit,ri_concentration_unit Units of the respective
+#'   curves for `"normalized_concentration"`. Each can be omitted when the
+#'   training curve records `sec_concentration_unit`; an explicit unit must
+#'   agree with any recorded unit. When prep infers a unit from its training
+#'   tag, the corresponding baked curve must retain that tag. An explicit unit
+#'   permits untagged baked curves, but any recorded tag must agree. Both units
+#'   are required for untagged normalized training curves. These arguments must
+#'   be `NULL` for raw detector responses and with `input_basis = "auto"`.
 #' @param output_col Name for the output ratio column. Default is `"uv_ri_ratio"`.
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
-#'   ratio is set to NA. Default is 0.01 (1%). Prevents noisy ratios in baseline.
+#'   ratio is set to `NA`. Default is 0.01 (1%). The threshold is a fraction of
+#'   the maximum absolute RI value; its effective units are native RI-response
+#'   units for raw mode and g/mL after conversion for normalized mode.
 #' @param smooth Logical. Apply smoothing to the ratio? Default is `TRUE`.
 #' @param smooth_window Window size for smoothing (number of points). Default is 5.
 #' @param role Role for generated columns.
@@ -27,13 +42,21 @@
 #' @return An updated recipe with the new step added.
 #'
 #' @details
-#' The UV/RI ratio provides information about chemical composition across the
-#' molecular weight distribution:
+#' The UV/RI ratio provides a relative detector-response profile or an
+#' apparent-concentration ratio across the molecular weight distribution:
 #'
-#' \deqn{Ratio(t) = \frac{UV(t)}{RI(t)} = \frac{\varepsilon \cdot c(t)}{(dn/dc) \cdot c(t) \cdot K}}
+#' \deqn{Ratio(t) = \frac{UV(t)}{RI(t)}}
 #'
-#' Since concentration cancels out, the ratio reflects the relative detector
-#' response factors, which depend on chemical composition.
+#' In raw detector-response mode this is the ratio of the input detector
+#' responses in their native units. In normalized-concentration mode both
+#' curves are first converted to g/mL, so the ratio is dimensionless. In
+#' neither mode is this ratio by itself a mass fraction; compositional
+#' interpretation requires calibration of detector responses for the
+#' components of interest.
+#'
+#' `min_signal` is a fraction of the maximum absolute RI value. The effective
+#' cutoff is therefore in raw RI detector units in raw-response mode, or in
+#' g/mL after unit conversion in normalized-concentration mode.
 #'
 #' **Applications:**
 #' \itemize{
@@ -83,16 +106,54 @@ step_sec_uv_ri_ratio <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_uv_ri_ratio")
+  id = recipes::rand_id("sec_uv_ri_ratio"),
+  input_basis = c("auto", "detector_response", "normalized_concentration"),
+  uv_concentration_unit = NULL,
+  ri_concentration_unit = NULL
 ) {
-  # Validate inputs
+  input_basis <- match.arg(input_basis)
 
-  if (!is.numeric(min_signal) || min_signal < 0 || min_signal > 1) {
-    cli::cli_abort("{.arg min_signal} must be between 0 and 1.")
+  if (
+    !is.numeric(min_signal) ||
+      length(min_signal) != 1 ||
+      !is.finite(min_signal) ||
+      min_signal < 0 ||
+      min_signal > 1
+  ) {
+    cli::cli_abort(
+      "{.arg min_signal} must be a finite fraction between 0 and 1."
+    )
   }
 
-  if (!is.numeric(smooth_window) || smooth_window < 1) {
+  if (!is.logical(smooth) || length(smooth) != 1 || is.na(smooth)) {
+    cli::cli_abort("{.arg smooth} must be a single `TRUE` or `FALSE` value.")
+  }
+
+  if (
+    !is.numeric(smooth_window) ||
+      length(smooth_window) != 1 ||
+      !is.finite(smooth_window) ||
+      smooth_window < 1
+  ) {
     cli::cli_abort("{.arg smooth_window} must be a positive integer.")
+  }
+  .sec_validate_concentration_unit(
+    uv_concentration_unit,
+    "uv_concentration_unit"
+  )
+  .sec_validate_concentration_unit(
+    ri_concentration_unit,
+    "ri_concentration_unit"
+  )
+
+  if (
+    input_basis %in%
+      c("auto", "detector_response") &&
+      (!is.null(uv_concentration_unit) || !is.null(ri_concentration_unit))
+  ) {
+    cli::cli_abort(
+      "Concentration units require {.arg input_basis = 'normalized_concentration'}."
+    )
   }
 
   recipes::add_step(
@@ -100,6 +161,19 @@ step_sec_uv_ri_ratio <- function(
     step_sec_uv_ri_ratio_new(
       uv_col = uv_col,
       ri_col = ri_col,
+      input_basis = input_basis,
+      uv_concentration_unit = uv_concentration_unit,
+      ri_concentration_unit = ri_concentration_unit,
+      uv_concentration_unit_source = if (is.null(uv_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
+      ri_concentration_unit_source = if (is.null(ri_concentration_unit)) {
+        NULL
+      } else {
+        "explicit"
+      },
       output_col = output_col,
       min_signal = min_signal,
       smooth = smooth,
@@ -115,6 +189,11 @@ step_sec_uv_ri_ratio <- function(
 step_sec_uv_ri_ratio_new <- function(
   uv_col,
   ri_col,
+  input_basis,
+  uv_concentration_unit,
+  ri_concentration_unit,
+  uv_concentration_unit_source,
+  ri_concentration_unit_source,
   output_col,
   min_signal,
   smooth,
@@ -128,6 +207,11 @@ step_sec_uv_ri_ratio_new <- function(
     subclass = "sec_uv_ri_ratio",
     uv_col = uv_col,
     ri_col = ri_col,
+    input_basis = input_basis,
+    uv_concentration_unit = uv_concentration_unit,
+    ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     output_col = output_col,
     min_signal = min_signal,
     smooth = smooth,
@@ -173,9 +257,79 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
     }
   }
 
+  input_basis <- x$input_basis
+  uv_concentration_unit <- x$uv_concentration_unit
+  ri_concentration_unit <- x$ri_concentration_unit
+  uv_concentration_unit_source <- NULL
+  ri_concentration_unit_source <- NULL
+  uv_recorded_unit <- attr(
+    training[[uv_col]],
+    "sec_concentration_unit",
+    exact = TRUE
+  )
+  ri_recorded_unit <- attr(
+    training[[ri_col]],
+    "sec_concentration_unit",
+    exact = TRUE
+  )
+  .sec_validate_concentration_unit(
+    uv_recorded_unit,
+    "recorded UV concentration unit"
+  )
+  .sec_validate_concentration_unit(
+    ri_recorded_unit,
+    "recorded RI concentration unit"
+  )
+
+  if (identical(input_basis, "auto")) {
+    if (is.null(uv_recorded_unit) && is.null(ri_recorded_unit)) {
+      input_basis <- "detector_response"
+    } else if (!is.null(uv_recorded_unit) && !is.null(ri_recorded_unit)) {
+      input_basis <- "normalized_concentration"
+    } else {
+      cli::cli_abort(
+        "UV/RI ratio cannot mix a raw detector response with a concentration-tagged curve."
+      )
+    }
+  }
+
+  if (identical(input_basis, "detector_response")) {
+    if (!is.null(uv_recorded_unit) || !is.null(ri_recorded_unit)) {
+      cli::cli_abort(
+        "Raw detector-response mode cannot use concentration-tagged curves."
+      )
+    }
+  } else {
+    uv_concentration_unit_source <- if (is.null(uv_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
+    ri_concentration_unit_source <- if (is.null(ri_concentration_unit)) {
+      "inferred"
+    } else {
+      "explicit"
+    }
+    uv_concentration_unit <- .sec_resolve_concentration_unit(
+      uv_concentration_unit,
+      training[[uv_col]],
+      "uv_concentration_unit"
+    )
+    ri_concentration_unit <- .sec_resolve_concentration_unit(
+      ri_concentration_unit,
+      training[[ri_col]],
+      "ri_concentration_unit"
+    )
+  }
+
   step_sec_uv_ri_ratio_new(
     uv_col = uv_col,
     ri_col = ri_col,
+    input_basis = input_basis,
+    uv_concentration_unit = uv_concentration_unit,
+    ri_concentration_unit = ri_concentration_unit,
+    uv_concentration_unit_source = uv_concentration_unit_source,
+    ri_concentration_unit_source = ri_concentration_unit_source,
     output_col = x$output_col,
     min_signal = x$min_signal,
     smooth = x$smooth,
@@ -216,10 +370,53 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
 bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
   uv_col <- object$uv_col
   ri_col <- object$ri_col
+  input_basis <- object$input_basis
+  uv_concentration_unit <- object$uv_concentration_unit
+  ri_concentration_unit <- object$ri_concentration_unit
+  uv_concentration_unit_source <- object$uv_concentration_unit_source
+  ri_concentration_unit_source <- object$ri_concentration_unit_source
   output_col <- object$output_col
   min_signal <- object$min_signal
   smooth <- object$smooth
   smooth_window <- object$smooth_window
+
+  if (identical(input_basis, "detector_response")) {
+    if (
+      !is.null(attr(
+        new_data[[uv_col]],
+        "sec_concentration_unit",
+        exact = TRUE
+      )) ||
+        !is.null(attr(
+          new_data[[ri_col]],
+          "sec_concentration_unit",
+          exact = TRUE
+        ))
+    ) {
+      cli::cli_abort(
+        "Raw detector-response mode cannot bake concentration-tagged curves."
+      )
+    }
+  } else {
+    .sec_resolve_concentration_unit(
+      uv_concentration_unit,
+      new_data[[uv_col]],
+      "uv_concentration_unit",
+      require_recorded = identical(
+        uv_concentration_unit_source,
+        "inferred"
+      )
+    )
+    .sec_resolve_concentration_unit(
+      ri_concentration_unit,
+      new_data[[ri_col]],
+      "ri_concentration_unit",
+      require_recorded = identical(
+        ri_concentration_unit_source,
+        "inferred"
+      )
+    )
+  }
 
   # Calculate ratio for each sample
   ratio_list <- purrr::map2(
@@ -230,26 +427,43 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
       ri_val <- ri_m$value
       location <- uv_m$location
 
+      .sec_assert_aligned_curves(uv_m, ri_m, "UV and RI")
+      if (identical(input_basis, "normalized_concentration")) {
+        uv_val <- .sec_concentration_g_per_ml(
+          uv_val,
+          uv_concentration_unit
+        )
+        ri_val <- .sec_concentration_g_per_ml(
+          ri_val,
+          ri_concentration_unit
+        )
+      }
+
       # Determine signal threshold
-      max_ri <- max(abs(ri_val), na.rm = TRUE)
+      max_ri <- max(abs(ri_val[is.finite(ri_val)]), 0)
       threshold <- min_signal * max_ri
 
       # Calculate ratio where signal is above threshold
       ratio <- rep(NA_real_, length(uv_val))
-      valid <- abs(ri_val) > threshold & !is.na(uv_val) & !is.na(ri_val)
+      valid <- abs(ri_val) > threshold &
+        is.finite(uv_val) &
+        is.finite(ri_val)
       ratio[valid] <- uv_val[valid] / ri_val[valid]
 
       # Apply smoothing if requested
       if (smooth && sum(valid) > smooth_window) {
         ratio <- .moving_average(ratio, smooth_window)
       }
+      ratio[!valid] <- NA_real_
 
       # Return as measure object
       new_measure_tbl(location = location, value = ratio)
     }
   )
 
-  new_data[[output_col]] <- new_measure_list(ratio_list)
+  output <- new_measure_list(ratio_list)
+  attr(output, "sec_uv_ri_ratio_basis") <- input_basis
+  new_data[[output_col]] <- output
 
   tibble::as_tibble(new_data)
 }
@@ -287,6 +501,13 @@ tidy.step_sec_uv_ri_ratio <- function(x, ...) {
   tibble::tibble(
     uv_col = x$uv_col %||% NA_character_,
     ri_col = x$ri_col %||% NA_character_,
+    input_basis = x$input_basis,
+    uv_concentration_unit = x$uv_concentration_unit %||% NA_character_,
+    ri_concentration_unit = x$ri_concentration_unit %||% NA_character_,
+    uv_concentration_unit_source = x$uv_concentration_unit_source %||%
+      NA_character_,
+    ri_concentration_unit_source = x$ri_concentration_unit_source %||%
+      NA_character_,
     output_col = x$output_col,
     min_signal = x$min_signal,
     smooth = x$smooth,
