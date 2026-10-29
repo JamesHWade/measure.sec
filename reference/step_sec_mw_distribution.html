@@ -28,6 +28,7 @@ that generates molecular weight distribution curves from SEC/GPC data."><meta pr
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -104,7 +105,9 @@ See <code><a href="step_sec_mw_averages.html">step_sec_mw_averages()</a></code> 
 
 <dt id="arg-n-points">n_points<a class="anchor" aria-label="anchor" href="#arg-n-points"></a></dt>
 <dd><p>Number of points in the output distribution. Default is 100.
-If <code>NULL</code>, uses the original data resolution.</p></dd>
+If <code>NULL</code>, uses the original data resolution. With
+disjoint retained support, the regular grid is augmented with support
+endpoints.</p></dd>
 
 
 <dt id="arg-mw-range">mw_range<a class="anchor" aria-label="anchor" href="#arg-mw-range"></a></dt>
@@ -166,7 +169,17 @@ log(MW), so a nonlinear calibration is handled without treating the signal
 as a density on the molecular-weight axis. The selected MW curve must be
 strictly monotonic and valid over the integration range. When <code>mw_range</code>
 restricts the plotted range, it displays a portion of the full distribution;
-it does not renormalize that portion to 1.</p>
+it does not renormalize that portion to 1. Row-level
+<code>.integration_window</code> and <code>.excluded_regions</code> metadata are
+honored; an explicit <code>integration_range</code> overrides the row's
+integration window. Only regions marked for <code>integration</code> or
+<code>both</code> are applied.</p>
+<p>When exclusions leave disjoint support, cumulative curves use unique
+increasing log(MW) locations and plateau across excluded intervals.
+Differential curves include duplicated boundary locations for the
+one-sided density jumps and zero density across each excluded interval.
+Do not average values at duplicated locations when regularizing a
+differential curve.</p>
 <p>The selected measure column is replaced by the requested distribution.
 With <code>type = "both"</code>, two additional columns, <code>&lt;measure&gt;_differential</code> and
 <code>&lt;measure&gt;_cumulative</code>, are added and the selected column is replaced by the

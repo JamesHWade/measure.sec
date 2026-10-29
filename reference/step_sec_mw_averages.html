@@ -28,6 +28,7 @@ calculates molecular weight averages from size exclusion chromatography data."><
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -101,7 +102,8 @@ where <code>log10(MW) = slope * x + intercept</code></p></li>
 
 <dt id="arg-integration-range">integration_range<a class="anchor" aria-label="anchor" href="#arg-integration-range"></a></dt>
 <dd><p>Optional numeric vector <code>c(min, max)</code> specifying
-the x-axis range for integration. If <code>NULL</code>, uses full range.</p></dd>
+the x-axis range for integration. If <code>NULL</code>, uses a row-specific
+<code>.integration_window</code> when present, otherwise the full measured range.</p></dd>
 
 
 <dt id="arg-output-cols">output_cols<a class="anchor" aria-label="anchor" href="#arg-output-cols"></a></dt>
@@ -164,7 +166,11 @@ interpreted as log10(MW) for backwards compatibility.</p></dd>
     <p>This step calculates standard molecular weight averages from SEC/GPC data:</p><table class="table table"><tr><td>Metric</td><td>Formula</td><td>Description</td></tr><tr><td>Mn</td><td>sum(w) / sum(w/M)</td><td>Number-average molecular weight</td></tr><tr><td>Mw</td><td>sum(wM) / sum(w)</td><td>Weight-average molecular weight</td></tr><tr><td>Mz</td><td>sum(wM^2) / sum(wM)</td><td>Z-average molecular weight</td></tr><tr><td>Mp</td><td>M at peak maximum</td><td>Peak molecular weight</td></tr><tr><td>D</td><td>Mw/Mn</td><td>Dispersity (polydispersity index)</td></tr></table><p>The detector signal is assumed to be proportional to weight concentration.
 For RI detection, this is typically valid. For UV detection, response factors
 may need to be applied first. Slice weights use trapezoidal integration on
-the original elution axis, including for unevenly spaced data. A positive
+the original elution axis, including for unevenly spaced data. When
+<code>.excluded_regions</code> is present, regions marked <code>integration</code> or <code>both</code> are
+removed and each retained interval is integrated separately; baseline-only
+exclusions do not affect these calculations. Explicit <code>integration_range</code>
+values override row-specific <code>.integration_window</code> metadata. A positive
 signal without a valid molecular weight is an error, rather than silently
 discarded. <code>calibration = "auto"</code> generates an illustrative synthetic axis,
 not an experimental calibration.</p>

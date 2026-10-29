@@ -26,6 +26,7 @@
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -52,12 +53,12 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="measuresec-0009000">measure.sec 0.0.0.9000<a class="anchor" aria-label="anchor" href="#measuresec-0009000"></a></h2>
-<ul><li>
-<code><a href="../reference/step_sec_concentration.html">step_sec_concentration()</a></code> reports the count and percentage of negative detector values excluded during mass normalization, and sets those values to zero in the normalized curve (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</li>
-<li>
-<code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code>, <code><a href="../reference/step_sec_rals.html">step_sec_rals()</a></code>, and <code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code> accept finite, nonzero signed dn/dc values because the scattering optical constant squares dn/dc. LALS/RALS also require explicit or recorded concentration units, convert mg/mL to g/mL before single-angle calculations, and reject misaligned detector curves (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</li>
-<li>
-<code><a href="../reference/step_sec_ri.html">step_sec_ri()</a></code> and <code><a href="../reference/step_sec_uv.html">step_sec_uv()</a></code> record the concentration units produced by detector normalization and allow mg/mL or g/mL output (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</li>
+<ul><li><p><code><a href="../reference/step_sec_mw_distribution.html">step_sec_mw_distribution()</a></code> now respects row integration windows and exclusions, conserves mass within each retained interval, and keeps the CDF flat across excluded support. Differential curves encode discontinuities with repeated boundary locations and zero density across gaps; output grids include support boundaries when needed. A new guide demonstrates the full calibrated selection workflow (<a href="https://github.com/JamesHWade/measure.sec/issues/57" class="external-link">#57</a>).</p></li>
+<li><p><code><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages()</a></code> and <code><a href="../reference/step_sec_mw_fractions.html">step_sec_mw_fractions()</a></code> now use each baked sample’s integration window and integration-purpose exclusions. An explicit <code>integration_range</code> overrides the stored window. Clipped boundaries are interpolated in the declared MW scale, and trapezoidal weights keep disconnected support separate without extrapolating calibration (<a href="https://github.com/JamesHWade/measure.sec/issues/57" class="external-link">#57</a>).</p></li>
+<li><p><code><a href="../reference/step_sec_intrinsic_visc.html">step_sec_intrinsic_visc()</a></code> now converts recorded or explicit concentration units before calculating dL/g or mL/g. Composition uses calibrated two-channel responses to recover component mass fractions; UV/RI ratios distinguish raw detector responses from normalized concentrations. Inferred unit tags must persist when baking new data, and ratio smoothing preserves invalid points (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</p></li>
+<li><p><code><a href="../reference/step_sec_concentration.html">step_sec_concentration()</a></code> reports the count and percentage of negative detector values excluded during mass normalization, and sets those values to zero in the normalized curve (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</p></li>
+<li><p><code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code>, <code><a href="../reference/step_sec_rals.html">step_sec_rals()</a></code>, and <code><a href="../reference/step_sec_mals.html">step_sec_mals()</a></code> accept finite, nonzero signed dn/dc values because the scattering optical constant squares dn/dc. LALS/RALS also require explicit or recorded concentration units, convert mg/mL to g/mL before single-angle calculations, and reject misaligned detector curves (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</p></li>
+<li><p><code><a href="../reference/step_sec_ri.html">step_sec_ri()</a></code> and <code><a href="../reference/step_sec_uv.html">step_sec_uv()</a></code> record the concentration units produced by detector normalization and allow mg/mL or g/mL output (<a href="https://github.com/JamesHWade/measure.sec/issues/60" class="external-link">#60</a>).</p></li>
 </ul></div>
   </main></div>
 

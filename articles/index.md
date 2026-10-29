@@ -27,6 +27,8 @@ Task-oriented guides for specific applications
   Analysis](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md):
 - [Calibration
   Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md):
+- [Choose SEC integration
+  support](https://jameshwade.github.io/measure.sec/articles/integration-support.md):
 - [System Suitability and
   QC](https://jameshwade.github.io/measure.sec/articles/system-suitability.md):
 - [Polymer Branching

@@ -350,6 +350,8 @@ ggplot(all_ratios, aes(location, value, color = sample_id)) +
   scale_color_viridis_d() +
   theme_minimal() +
   theme(legend.position = "bottom")
+#> Warning: Removed 1 row containing missing values or values outside the scale range
+#> (`geom_line()`).
 ```
 
 ![](copolymer-analysis_files/figure-html/compare-copolymers-1.png)

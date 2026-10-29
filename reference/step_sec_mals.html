@@ -30,6 +30,7 @@ Multi-angle extrapolation and radius of gyration are not yet implemented."><meta
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -170,8 +171,9 @@ MW is set to NA. Default is 0.01.</p></dd>
 
 <dt id="arg-concentration-unit">concentration_unit<a class="anchor" aria-label="anchor" href="#arg-concentration-unit"></a></dt>
 <dd><p>Unit of the concentration curve: <code>"mg/mL"</code> or
-<code>"g/mL"</code>. When omitted, the unit must be recorded by a preceding
-<code><a href="step_sec_concentration.html">step_sec_concentration()</a></code> step; an untagged curve requires an explicit unit.</p></dd>
+<code>"g/mL"</code>. When omitted, the training curve must record its unit. If prep
+infers the unit from that tag, baked curves must retain it. An explicit
+unit permits untagged baked curves, but any recorded tag must agree.</p></dd>
 
 </dl></div>
     <div class="section level2">

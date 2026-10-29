@@ -49,7 +49,8 @@ step_sec_mw_averages(
 - integration_range:
 
   Optional numeric vector `c(min, max)` specifying the x-axis range for
-  integration. If `NULL`, uses full range.
+  integration. If `NULL`, uses a row-specific `.integration_window` when
+  present, otherwise the full measured range.
 
 - output_cols:
 
@@ -127,10 +128,14 @@ The detector signal is assumed to be proportional to weight
 concentration. For RI detection, this is typically valid. For UV
 detection, response factors may need to be applied first. Slice weights
 use trapezoidal integration on the original elution axis, including for
-unevenly spaced data. A positive signal without a valid molecular weight
-is an error, rather than silently discarded. `calibration = "auto"`
-generates an illustrative synthetic axis, not an experimental
-calibration.
+unevenly spaced data. When `.excluded_regions` is present, regions
+marked `integration` or `both` are removed and each retained interval is
+integrated separately; baseline-only exclusions do not affect these
+calculations. Explicit `integration_range` values override row-specific
+`.integration_window` metadata. A positive signal without a valid
+molecular weight is an error, rather than silently discarded.
+`calibration = "auto"` generates an illustrative synthetic axis, not an
+experimental calibration.
 
 **Uncertainty Propagation:**
 

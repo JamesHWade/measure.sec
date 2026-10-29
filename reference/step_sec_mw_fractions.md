@@ -47,7 +47,8 @@ step_sec_mw_fractions(
 - integration_range:
 
   Optional numeric vector `c(min, max)` specifying the x-axis range for
-  integration. If `NULL`, uses full range.
+  integration. If `NULL`, uses a row-specific `.integration_window` when
+  present, otherwise the full measured range.
 
 - prefix:
 
@@ -94,11 +95,14 @@ For each cutoff value `C`, this step calculates:
 
 - `frac_above_C`: Weight fraction with MW \>= C
 
-Slice weights use trapezoidal integration on the elution axis. The
-cutoff is applied to the sampled molecular-weight values, so accuracy
-near a cutoff depends on the sampling resolution. These fractions sum to
-1.0 and are useful for characterizing polymer distributions. Common
-cutoffs include:
+Slice weights use trapezoidal integration on the elution axis. Regions
+in `.excluded_regions` marked `integration` or `both` are omitted and
+the retained intervals are integrated separately; baseline-only
+exclusions are ignored. Explicit `integration_range` values override
+row-specific `.integration_window` metadata. The cutoff is applied to
+the sampled molecular-weight values, so accuracy near a cutoff depends
+on the sampling resolution. These fractions sum to 1.0 and are useful
+for characterizing polymer distributions. Common cutoffs include:
 
 - 1000 Da for oligomer content
 

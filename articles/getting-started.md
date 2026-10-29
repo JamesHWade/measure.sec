@@ -494,7 +494,7 @@ result_cal |>
 #> # A tibble: 1 × 5
 #>   sample_id mw_mn   mw_mw    mw_mz mw_dispersity
 #>   <chr>     <dbl>   <dbl>    <dbl>         <dbl>
-#> 1 PS-50K    1825. 205538. 1236629.          113.
+#> 1 PS-50K    1816. 205442. 1236629.          113.
 ```
 
 > **Important**: The example integrates only the portion within the

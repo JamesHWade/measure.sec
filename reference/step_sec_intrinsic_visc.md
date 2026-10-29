@@ -17,7 +17,8 @@ step_sec_intrinsic_visc(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_intrinsic_visc")
+  id = recipes::rand_id("sec_intrinsic_visc"),
+  concentration_unit = NULL
 )
 ```
 
@@ -43,13 +44,13 @@ step_sec_intrinsic_visc(
 
 - min_concentration:
 
-  Minimum concentration threshold below which intrinsic viscosity is set
-  to NA. Default is 1e-6 mg/mL.
+  Minimum concentration threshold in mg/mL below which intrinsic
+  viscosity is set to `NA`. Default is `1e-6` mg/mL.
 
 - units:
 
   Output units for intrinsic viscosity. Default is `"dL/g"`. Common
-  alternatives are `"mL/g"` (multiply by 100).
+  alternatives are `"mL/g"` (100 mL/g equals 1 dL/g).
 
 - role:
 
@@ -67,6 +68,14 @@ step_sec_intrinsic_visc(
 
   Unique step identifier.
 
+- concentration_unit:
+
+  Unit of the concentration curve: `"mg/mL"` or `"g/mL"`. If omitted,
+  the curve must carry a `sec_concentration_unit` attribute. An explicit
+  unit must agree with any recorded unit. When prep infers the unit from
+  the training tag, baked curves must retain that tag. With an explicit
+  unit, baked curves may be untagged, but any recorded tag must agree.
+
 ## Value
 
 An updated recipe with the new step added, containing intrinsic
@@ -81,6 +90,11 @@ infinite dilution:
 
 In SEC, each elution slice has very low concentration, so the
 approximation \[eta\] = eta_sp / c is valid.
+
+The concentration curve is converted to g/mL before division, so the
+unscaled result is in mL/g. The requested `units` then converts that
+result to either mL/g or dL/g. The low-concentration cutoff is specified
+in mg/mL.
 
 **Applications of Intrinsic Viscosity:**
 

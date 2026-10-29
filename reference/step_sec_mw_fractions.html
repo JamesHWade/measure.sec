@@ -28,6 +28,7 @@ calculates weight fractions above and below specified molecular weight cutoffs."
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -100,7 +101,8 @@ See <code><a href="step_sec_mw_averages.html">step_sec_mw_averages()</a></code> 
 
 <dt id="arg-integration-range">integration_range<a class="anchor" aria-label="anchor" href="#arg-integration-range"></a></dt>
 <dd><p>Optional numeric vector <code>c(min, max)</code> specifying
-the x-axis range for integration. If <code>NULL</code>, uses full range.</p></dd>
+the x-axis range for integration. If <code>NULL</code>, uses a row-specific
+<code>.integration_window</code> when present, otherwise the full measured range.</p></dd>
 
 
 <dt id="arg-prefix">prefix<a class="anchor" aria-label="anchor" href="#arg-prefix"></a></dt>
@@ -141,10 +143,14 @@ untagged curves; see <code><a href="step_sec_mw_averages.html">step_sec_mw_avera
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>For each cutoff value <code>C</code>, this step calculates:</p><ul><li><p><code>frac_below_C</code>: Weight fraction with MW &lt; C</p></li>
 <li><p><code>frac_above_C</code>: Weight fraction with MW &gt;= C</p></li>
-</ul><p>Slice weights use trapezoidal integration on the elution axis. The cutoff is
-applied to the sampled molecular-weight values, so accuracy near a cutoff
-depends on the sampling resolution. These fractions sum to 1.0 and are useful for characterizing polymer
-distributions. Common cutoffs include:</p><ul><li><p>1000 Da for oligomer content</p></li>
+</ul><p>Slice weights use trapezoidal integration on the elution axis. Regions in
+<code>.excluded_regions</code> marked <code>integration</code> or <code>both</code> are omitted and the
+retained intervals are integrated separately; baseline-only exclusions are
+ignored. Explicit <code>integration_range</code> values override row-specific
+<code>.integration_window</code> metadata. The cutoff is applied to the sampled
+molecular-weight values, so accuracy near a cutoff depends on the sampling
+resolution. These fractions sum to 1.0 and are useful for characterizing
+polymer distributions. Common cutoffs include:</p><ul><li><p>1000 Da for oligomer content</p></li>
 <li><p>10000 Da for low MW fraction</p></li>
 <li><p>100000 Da for high MW fraction</p></li>
 </ul></div>

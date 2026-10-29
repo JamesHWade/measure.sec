@@ -32,6 +32,7 @@ and conjugates."><meta property="og:image" content="https://jameshwade.github.io
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -77,7 +78,10 @@ and conjugates.</p>
 <span>  role <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  trained <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  skip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_uv_ri_ratio"</span><span class="op">)</span></span>
+<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_uv_ri_ratio"</span><span class="op">)</span>,</span>
+<span>  input_basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"detector_response"</span>, <span class="st">"normalized_concentration"</span><span class="op">)</span>,</span>
+<span>  uv_concentration_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ri_concentration_unit <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -103,7 +107,9 @@ and conjugates.</p>
 
 <dt id="arg-min-signal">min_signal<a class="anchor" aria-label="anchor" href="#arg-min-signal"></a></dt>
 <dd><p>Minimum signal threshold (as fraction of max) below which
-ratio is set to NA. Default is 0.01 (1%). Prevents noisy ratios in baseline.</p></dd>
+ratio is set to <code>NA</code>. Default is 0.01 (1%). The threshold is a fraction of
+the maximum absolute RI value; its effective units are native RI-response
+units for raw mode and g/mL after conversion for normalized mode.</p></dd>
 
 
 <dt id="arg-smooth">smooth<a class="anchor" aria-label="anchor" href="#arg-smooth"></a></dt>
@@ -129,6 +135,25 @@ ratio is set to NA. Default is 0.01 (1%). Prevents noisy ratios in baseline.</p>
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
 <dd><p>Unique step identifier.</p></dd>
 
+
+<dt id="arg-input-basis">input_basis<a class="anchor" aria-label="anchor" href="#arg-input-basis"></a></dt>
+<dd><p>Input interpretation: <code>"auto"</code> (default) selects raw
+detector responses when both curves are untagged and normalized
+concentrations when both curves carry units; <code>"detector_response"</code> and
+<code>"normalized_concentration"</code> select a basis explicitly. A tagged/raw mix
+is rejected.</p></dd>
+
+
+<dt id="arg-uv-concentration-unit-ri-concentration-unit">uv_concentration_unit, ri_concentration_unit<a class="anchor" aria-label="anchor" href="#arg-uv-concentration-unit-ri-concentration-unit"></a></dt>
+<dd><p>Units of the respective
+curves for <code>"normalized_concentration"</code>. Each can be omitted when the
+training curve records <code>sec_concentration_unit</code>; an explicit unit must
+agree with any recorded unit. When prep infers a unit from its training
+tag, the corresponding baked curve must retain that tag. An explicit unit
+permits untagged baked curves, but any recorded tag must agree. Both units
+are required for untagged normalized training curves. These arguments must
+be <code>NULL</code> for raw detector responses and with <code>input_basis = "auto"</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -136,11 +161,18 @@ ratio is set to NA. Default is 0.01 (1%). Prevents noisy ratios in baseline.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The UV/RI ratio provides information about chemical composition across the
-molecular weight distribution:</p>
-<p>$$Ratio(t) = \frac{UV(t)}{RI(t)} = \frac{\varepsilon \cdot c(t)}{(dn/dc) \cdot c(t) \cdot K}$$</p>
-<p>Since concentration cancels out, the ratio reflects the relative detector
-response factors, which depend on chemical composition.</p>
+    <p>The UV/RI ratio provides a relative detector-response profile or an
+apparent-concentration ratio across the molecular weight distribution:</p>
+<p>$$Ratio(t) = \frac{UV(t)}{RI(t)}$$</p>
+<p>In raw detector-response mode this is the ratio of the input detector
+responses in their native units. In normalized-concentration mode both
+curves are first converted to g/mL, so the ratio is dimensionless. In
+neither mode is this ratio by itself a mass fraction; compositional
+interpretation requires calibration of detector responses for the
+components of interest.</p>
+<p><code>min_signal</code> is a fraction of the maximum absolute RI value. The effective
+cutoff is therefore in raw RI detector units in raw-response mode, or in
+g/mL after unit conversion in normalized-concentration mode.</p>
 <p><strong>Applications:</strong></p><ul><li><p>Copolymer composition drift with molecular weight</p></li>
 <li><p>Block copolymer characterization</p></li>
 <li><p>PEGylation analysis (protein-PEG conjugates)</p></li>

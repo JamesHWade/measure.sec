@@ -122,7 +122,7 @@ save_sec_calibration(
     notes = "Monthly calibration - January 2024"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/Rtmp0zR9oN/file26ef17af0fb.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpFKUS8P/file27235efb4f89.rds
 ```
 
 ### Format Options
@@ -172,7 +172,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-10-28 08:19:13
+#> Created: 2026-10-29 11:09:57
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -242,7 +242,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-10-28 08:19:13
+#> Created: 2026-10-29 11:09:57
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata

@@ -28,6 +28,7 @@ right-angle light scattering (RALS) signals for absolute molecular weight."><met
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -154,8 +155,9 @@ MW is set to NA.</p></dd>
 
 <dt id="arg-concentration-unit">concentration_unit<a class="anchor" aria-label="anchor" href="#arg-concentration-unit"></a></dt>
 <dd><p>Unit of the concentration curve: "mg/mL" or
-"g/mL". When omitted, the unit must be recorded on the curve or set by
-step_sec_concentration() or step_sec_ri().</p></dd>
+"g/mL". When omitted, the training curve must record its unit. If prep
+infers the unit from that tag, baked curves must retain it. An explicit
+unit permits untagged baked curves, but any recorded tag must agree.</p></dd>
 
 </dl></div>
     <div class="section level2">

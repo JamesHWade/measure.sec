@@ -30,6 +30,7 @@ concentration at each elution point."><meta property="og:image" content="https:/
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -73,7 +74,8 @@ concentration at each elution point.</p>
 <span>  role <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  trained <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  skip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_intrinsic_visc"</span><span class="op">)</span></span>
+<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_intrinsic_visc"</span><span class="op">)</span>,</span>
+<span>  concentration_unit <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -100,13 +102,13 @@ Default is <code>"intrinsic_visc"</code>.</p></dd>
 
 
 <dt id="arg-min-concentration">min_concentration<a class="anchor" aria-label="anchor" href="#arg-min-concentration"></a></dt>
-<dd><p>Minimum concentration threshold below which
-intrinsic viscosity is set to NA. Default is 1e-6 mg/mL.</p></dd>
+<dd><p>Minimum concentration threshold in mg/mL below
+which intrinsic viscosity is set to <code>NA</code>. Default is <code>1e-6</code> mg/mL.</p></dd>
 
 
 <dt id="arg-units">units<a class="anchor" aria-label="anchor" href="#arg-units"></a></dt>
 <dd><p>Output units for intrinsic viscosity. Default is <code>"dL/g"</code>.
-Common alternatives are <code>"mL/g"</code> (multiply by 100).</p></dd>
+Common alternatives are <code>"mL/g"</code> (100 mL/g equals 1 dL/g).</p></dd>
 
 
 <dt id="arg-role">role<a class="anchor" aria-label="anchor" href="#arg-role"></a></dt>
@@ -124,6 +126,15 @@ Common alternatives are <code>"mL/g"</code> (multiply by 100).</p></dd>
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
 <dd><p>Unique step identifier.</p></dd>
 
+
+<dt id="arg-concentration-unit">concentration_unit<a class="anchor" aria-label="anchor" href="#arg-concentration-unit"></a></dt>
+<dd><p>Unit of the concentration curve: <code>"mg/mL"</code> or
+<code>"g/mL"</code>. If omitted, the curve must carry a
+<code>sec_concentration_unit</code> attribute. An explicit unit must agree with any
+recorded unit. When prep infers the unit from the training tag, baked
+curves must retain that tag. With an explicit unit, baked curves may be
+untagged, but any recorded tag must agree.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -137,6 +148,9 @@ infinite dilution:</p>
 <p>$$[\eta] = \lim_{c \to 0} \frac{\eta_{sp}}{c}$$</p>
 <p>In SEC, each elution slice has very low concentration, so the approximation
 [eta] = eta_sp / c is valid.</p>
+<p>The concentration curve is converted to g/mL before division, so the
+unscaled result is in mL/g. The requested <code>units</code> then converts that result
+to either mL/g or dL/g. The low-concentration cutoff is specified in mg/mL.</p>
 <p><strong>Applications of Intrinsic Viscosity:</strong></p><ul><li><p>Universal Calibration: log([eta] * M) is linear with retention volume,
 allowing calibration transfer between polymer types</p></li>
 <li><p>Mark-Houwink Equation: [eta] = K * M^a, where K and a are polymer-

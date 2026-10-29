@@ -49,6 +49,7 @@
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -377,6 +378,13 @@ Parameters:</strong></p>
 <span><span class="va">ps_sample</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"PS-50K"</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># Restrict this sample to measured locations inside the calibration domain.</span></span>
+<span><span class="co"># A stored MW curve cannot supply off-grid endpoints beyond its finite samples.</span></span>
+<span><span class="va">sampled_calibration_range</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_sample</span><span class="op">$</span><span class="va">elution_time</span><span class="op">[</span></span>
+<span>  <span class="va">ps_sample</span><span class="op">$</span><span class="va">elution_time</span> <span class="op">&gt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="va">ps_sample</span><span class="op">$</span><span class="va">elution_time</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span></span>
+<span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># Build the calibration recipe</span></span>
 <span><span class="co"># Note: Use explicit formula with sample_id as the grouping variable</span></span>
 <span><span class="va">rec_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
@@ -399,7 +407,7 @@ Parameters:</strong></p>
 <span>    extrapolation <span class="op">=</span> <span class="st">"none"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Calculate MW averages from RI signal weighted by MW</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_mw_averages.html">step_sec_mw_averages</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, integration_range <span class="op">=</span> <span class="va">sampled_calibration_range</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Prep and bake</span></span>
 <span><span class="va">prepped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_cal</span><span class="op">)</span></span>
@@ -414,6 +422,13 @@ Parameters:</strong></p>
 <span><span class="co">#&gt;   sample_id mw_mn   mw_mw    mw_mz mw_dispersity</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> PS-50K    <span style="text-decoration: underline;">1</span>825. <span style="text-decoration: underline;">205</span>538. 1<span style="text-decoration: underline;">236</span>629.          113.</span></span></code></pre></div>
+<p>With <code>extrapolation = "none"</code>, the stored MW curve is
+finite only at sampled locations inside the calibration domain. This
+example selects that finite sampled support for this one sample. If a
+nominal calibration endpoint falls between samples, its unsampled
+endpoint strip is omitted; this does not establish that the omitted mass
+is negligible. Different sample grids need their own supported windows
+or a common range bracketed by finite calibration values.</p>
 </div>
 <div class="section level3">
 <h3 id="assessing-calibration-quality">Assessing Calibration Quality<a class="anchor" aria-label="anchor" href="#assessing-calibration-quality"></a>
@@ -749,8 +764,10 @@ weight species (HMWS/aggregates) and low molecular weight species
 <h2 id="molecular-weight-distribution">Molecular Weight Distribution<a class="anchor" aria-label="anchor" href="#molecular-weight-distribution"></a>
 </h2>
 <p>Generate differential and cumulative molecular weight distributions.
-The example limits integration to the standards’ retention range; signal
-outside that range is excluded.</p>
+These demonstration samples share the grid used above, so the same
+finite sampled calibration range applies to them. Signal outside that
+selected range is excluded; the distribution need not represent the
+entire sample.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec_mwd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
 <span>  <span class="va">ri_signal</span> <span class="op">+</span> <span class="va">elution_time</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">+</span> <span class="va">known_mw</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
@@ -767,7 +784,7 @@ outside that range is excluded.</p>
 <span>  <span class="fu"><a href="../reference/step_sec_mw_distribution.html">step_sec_mw_distribution</a></span><span class="op">(</span></span>
 <span>    measures <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>    type <span class="op">=</span> <span class="st">"both"</span>,  <span class="co"># "differential", "cumulative", or "both"</span></span>
-<span>    integration_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span></span>
+<span>    integration_range <span class="op">=</span> <span class="va">sampled_calibration_range</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">prepped_mwd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_mwd</span><span class="op">)</span></span>

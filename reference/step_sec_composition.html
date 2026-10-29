@@ -30,6 +30,7 @@ UV and RI detector signals with known response factors."><meta property="og:imag
     <li><a class="dropdown-item" href="../articles/protein-sec.html">Protein SEC Analysis</a></li>
     <li><a class="dropdown-item" href="../articles/copolymer-analysis.html">Copolymer Composition</a></li>
     <li><a class="dropdown-item" href="../articles/calibration-management.html">Calibration Management</a></li>
+    <li><a class="dropdown-item" href="../articles/integration-support.html">Integration Windows and Exclusions</a></li>
     <li><a class="dropdown-item" href="../articles/system-suitability.html">System Suitability</a></li>
     <li><a class="dropdown-item" href="../articles/branching-analysis.html">Polymer Branching</a></li>
     <li><a class="dropdown-item" href="../articles/exporting-results.html">Exporting Results</a></li>
@@ -77,7 +78,10 @@ UV and RI detector signals with known response factors.</p>
 <span>  role <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  trained <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  skip <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_composition"</span><span class="op">)</span></span>
+<span>  id <span class="op">=</span> <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/rand_id.html" class="external-link">rand_id</a></span><span class="op">(</span><span class="st">"sec_composition"</span><span class="op">)</span>,</span>
+<span>  input_basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"detector_response"</span>, <span class="st">"normalized_concentration"</span><span class="op">)</span>,</span>
+<span>  uv_concentration_unit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ri_concentration_unit <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,22 +101,14 @@ UV and RI detector signals with known response factors.</p>
 <dd><p>Name of the RI detector measure column.</p></dd>
 
 
-<dt id="arg-component-a-uv">component_a_uv<a class="anchor" aria-label="anchor" href="#arg-component-a-uv"></a></dt>
-<dd><p>UV response factor for component A (extinction coefficient
-in mL/(mg*cm) or relative units).</p></dd>
+<dt id="arg-component-a-uv-component-b-uv">component_a_uv, component_b_uv<a class="anchor" aria-label="anchor" href="#arg-component-a-uv-component-b-uv"></a></dt>
+<dd><p>UV response coefficients for components
+A and B, calibrated in the selected input-channel basis per g/mL.</p></dd>
 
 
-<dt id="arg-component-a-ri">component_a_ri<a class="anchor" aria-label="anchor" href="#arg-component-a-ri"></a></dt>
-<dd><p>RI response factor for component A (dn/dc in mL/g or
-relative units).</p></dd>
-
-
-<dt id="arg-component-b-uv">component_b_uv<a class="anchor" aria-label="anchor" href="#arg-component-b-uv"></a></dt>
-<dd><p>UV response factor for component B.</p></dd>
-
-
-<dt id="arg-component-b-ri">component_b_ri<a class="anchor" aria-label="anchor" href="#arg-component-b-ri"></a></dt>
-<dd><p>RI response factor for component B.</p></dd>
+<dt id="arg-component-a-ri-component-b-ri">component_a_ri, component_b_ri<a class="anchor" aria-label="anchor" href="#arg-component-a-ri-component-b-ri"></a></dt>
+<dd><p>RI response coefficients for components
+A and B, calibrated in the selected input-channel basis per g/mL.</p></dd>
 
 
 <dt id="arg-output-col">output_col<a class="anchor" aria-label="anchor" href="#arg-output-col"></a></dt>
@@ -122,7 +118,9 @@ relative units).</p></dd>
 
 <dt id="arg-min-signal">min_signal<a class="anchor" aria-label="anchor" href="#arg-min-signal"></a></dt>
 <dd><p>Minimum signal threshold (as fraction of max) below which
-composition is set to NA. Default is 0.01.</p></dd>
+composition is set to <code>NA</code>. Default is 0.01. The threshold is a fraction of
+the maximum absolute RI value; its effective units are native RI-response
+units for raw mode and g/mL after conversion for normalized mode.</p></dd>
 
 
 <dt id="arg-clip">clip<a class="anchor" aria-label="anchor" href="#arg-clip"></a></dt>
@@ -144,6 +142,24 @@ composition is set to NA. Default is 0.01.</p></dd>
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
 <dd><p>Unique step identifier.</p></dd>
 
+
+<dt id="arg-input-basis">input_basis<a class="anchor" aria-label="anchor" href="#arg-input-basis"></a></dt>
+<dd><p>Input interpretation: <code>"detector_response"</code> (default)
+uses untagged raw UV and RI detector responses; <code>"normalized_concentration"</code>
+uses apparent concentration channels and converts them to g/mL before
+calculating composition.</p></dd>
+
+
+<dt id="arg-uv-concentration-unit-ri-concentration-unit">uv_concentration_unit, ri_concentration_unit<a class="anchor" aria-label="anchor" href="#arg-uv-concentration-unit-ri-concentration-unit"></a></dt>
+<dd><p>Units of the respective
+curves when <code>input_basis = "normalized_concentration"</code>. Each can be
+omitted when the training curve records <code>sec_concentration_unit</code>; an
+explicit unit must agree with any recorded unit. If prep infers a unit
+from its training tag, the corresponding baked curve must retain that
+tag. An explicit unit permits untagged baked curves, but any recorded
+tag must agree. Both units are required for untagged training curves.
+These arguments must be <code>NULL</code> for raw detector responses.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -152,26 +168,44 @@ composition is set to NA. Default is 0.01.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>For a two-component system, the detector signals are:</p>
-<p>$$UV = \varepsilon_A \cdot c_A + \varepsilon_B \cdot c_B$$
-$$RI = (dn/dc)_A \cdot c_A + (dn/dc)_B \cdot c_B$$</p>
-<p>where c_A and c_B are the concentrations of components A and B.</p>
-<p>The weight fraction of component A is calculated by solving this system:</p>
-<p>$$w_A = \frac{R_{obs} - R_B}{R_A - R_B}$$</p>
-<p>where R_obs is the observed UV/RI ratio, and R_A, R_B are the ratios for
-pure components (e/dn/dc).</p>
+<p>$$UV = u_A c_A + u_B c_B, \qquad RI = r_A c_A + r_B c_B$$</p>
+<p>where <code>c_A</code> and <code>c_B</code> are the component mass concentrations in g/mL. The
+coefficients <code>u_A</code>, <code>u_B</code>, <code>r_A</code>, and <code>r_B</code> are the response coefficients
+for the selected <code>input_basis</code>, measured in the same input-channel basis
+per g/mL. In raw detector-response mode these are calibrated detector
+responses per g/mL; in normalized-concentration mode they are calibrated
+apparent channel responses per g/mL. They are not inferred from physical
+extinction coefficients or <code>dn/dc</code> values.</p>
+<p>Composition is calculated by solving the two-response linear system and
+converting the recovered component concentrations to a mass fraction:</p>
+<p>$$c_A = \frac{UV r_B - u_B RI}{u_A r_B - u_B r_A}, \qquad
+c_B = \frac{u_A RI - UV r_A}{u_A r_B - u_B r_A}, \qquad
+w_A = \frac{c_A}{c_A + c_B}$$</p>
+<p>The response matrix must be identifiable: the component response vectors
+cannot be proportional. A zero coefficient is allowed when the full matrix
+remains identifiable.</p>
+<p><code>min_signal</code> is a fraction of the maximum absolute RI value. The effective
+cutoff is therefore in raw RI detector units for <code>"detector_response"</code>, or
+in g/mL after unit conversion for <code>"normalized_concentration"</code>.</p>
 <p><strong>Common Applications:</strong></p><ul><li><p>Styrene-acrylate copolymers (styrene is UV-active)</p></li>
 <li><p>Block copolymers with different chromophore content</p></li>
 <li><p>PEGylated proteins (protein at 280nm, PEG is UV-transparent)</p></li>
 <li><p>Polymer blends with known compositions</p></li>
-</ul><p><strong>Example Response Factors:</strong></p><ul><li><p>Polystyrene: UV (254nm) ~ 1.0, dn/dc ~ 0.185</p></li>
-<li><p>PMMA: UV (254nm) ~ 0.01, dn/dc ~ 0.084</p></li>
-<li><p>PEG: UV (280nm) ~ 0, dn/dc ~ 0.135</p></li>
-<li><p>Proteins: UV (280nm) ~ 1.0, dn/dc ~ 0.185</p></li>
-</ul></div>
+</ul><p>Calibrate each response coefficient from the measured channel output of a
+pure-component standard at known concentrations in g/mL. A literature
+extinction coefficient or <code>dn/dc</code> value alone is not a substitute; account
+for path length, instrument calibration, and signal scaling when relating it
+to the actual input-channel values.</p>
+    </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>Response factors must be in consistent units. The absolute values don't
-matter as long as the ratios are correct for pure components.</p>
+    <p>The response coefficients must be calibrated for the selected input basis
+and the same g/mL concentration denominator. Raw detector responses and
+normalized concentration channels are separate models; switching between
+them requires recalibrating all four coefficients. If both channels have
+been normalized to the same mass concentration response for both
+components, the response matrix is singular and composition is not
+identifiable from those channels.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -185,7 +219,7 @@ matter as long as the ratios are correct for pure components.</p>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/recipes" class="external-link">recipes</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/measure/" class="external-link">measure</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Styrene-MMA copolymer composition</span></span></span>
+<span class="r-in"><span><span class="co"># Calibrate the response coefficients with pure-component standards.</span></span></span>
 <span class="r-in"><span><span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">copolymer_data</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">ri_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"ri"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">step_measure_input_long</a></span><span class="op">(</span><span class="va">uv_signal</span>, location <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/vars.html" class="external-link">vars</a></span><span class="op">(</span><span class="va">elution_time</span><span class="op">)</span>, col_name <span class="op">=</span> <span class="st">"uv"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -193,10 +227,10 @@ matter as long as the ratios are correct for pure components.</p>
 <span class="r-in"><span>  <span class="fu">step_sec_composition</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    uv_col <span class="op">=</span> <span class="st">"uv"</span>,</span></span>
 <span class="r-in"><span>    ri_col <span class="op">=</span> <span class="st">"ri"</span>,</span></span>
-<span class="r-in"><span>    component_a_uv <span class="op">=</span> <span class="fl">1.0</span>,    <span class="co"># Styrene (UV-active)</span></span></span>
-<span class="r-in"><span>    component_a_ri <span class="op">=</span> <span class="fl">0.185</span>,  <span class="co"># Styrene dn/dc</span></span></span>
-<span class="r-in"><span>    component_b_uv <span class="op">=</span> <span class="fl">0.01</span>,   <span class="co"># MMA (weak UV)</span></span></span>
-<span class="r-in"><span>    component_b_ri <span class="op">=</span> <span class="fl">0.084</span>,  <span class="co"># MMA dn/dc</span></span></span>
+<span class="r-in"><span>    component_a_uv <span class="op">=</span> <span class="fl">2.0</span>,    <span class="co"># measured UV response per g/mL</span></span></span>
+<span class="r-in"><span>    component_a_ri <span class="op">=</span> <span class="fl">1.0</span>,    <span class="co"># measured RI response per g/mL</span></span></span>
+<span class="r-in"><span>    component_b_uv <span class="op">=</span> <span class="fl">0.5</span>,</span></span>
+<span class="r-in"><span>    component_b_ri <span class="op">=</span> <span class="fl">3.0</span>,</span></span>
 <span class="r-in"><span>    output_col <span class="op">=</span> <span class="st">"styrene_fraction"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="op">)</span></span></span>
