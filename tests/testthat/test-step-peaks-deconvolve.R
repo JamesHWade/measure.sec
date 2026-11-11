@@ -399,3 +399,127 @@ test_that("step_sec_peaks_deconvolve works with multiple samples", {
   prepped <- recipes::prep(rec)
   expect_s3_class(prepped, "recipe")
 })
+
+test_that("SEC refinement preserves prominence bounds through deconvolution", {
+  skip_if_not_installed("measure")
+
+  exports <- getNamespaceExports("measure")
+  if (
+    !all(
+      c(
+        "step_measure_peaks_detect",
+        "step_measure_peaks_properties",
+        "step_measure_peaks_to_table"
+      ) %in%
+        exports
+    )
+  ) {
+    skip("Installed measure does not provide the peak analysis steps.")
+  }
+
+  time <- seq(8, 20, by = 0.05)
+  signal <- 100 *
+    dnorm(time, mean = 11.5, sd = 0.8) +
+    70 * dnorm(time, mean = 14.5, sd = 1.0)
+  test_data <- tibble::tibble(sample_id = "s1")
+  test_data$ri <- measure::new_measure_list(
+    list(measure::new_measure_tbl(location = time, value = signal))
+  )
+
+  detect <- function(recipe) {
+    measure::step_measure_peaks_detect(
+      recipe,
+      algorithm = "prominence",
+      min_height = 0.2,
+      measures = "ri"
+    )
+  }
+
+  detected <- recipes::recipe(~., data = test_data) |>
+    detect() |>
+    recipes::prep() |>
+    recipes::bake(new_data = NULL)
+  detected_peaks <- detected$.peaks[[1]]
+
+  expect_equal(nrow(detected_peaks), 2L)
+  prominence_bounds <- c("prominence_left_base", "prominence_right_base")
+  if (!all(prominence_bounds %in% names(detected_peaks))) {
+    skip("Installed measure does not retain distinct prominence bounds.")
+  }
+
+  result <- recipes::recipe(~., data = test_data) |>
+    detect() |>
+    step_sec_integration_window(
+      start = 8,
+      end = 20,
+      auto_detect = FALSE
+    ) |>
+    step_sec_peaks_refine(measures_col = "ri", cutoff = 0.005) |>
+    step_sec_peaks_deconvolve(
+      model = "gaussian",
+      optimizer = "lbfgsb",
+      max_iter = 1000,
+      quality_threshold = 0,
+      measures_col = "ri"
+    ) |>
+    measure::step_measure_peaks_properties("prominence") |>
+    measure::step_measure_peaks_to_table(
+      properties = c(
+        "left_base",
+        "right_base",
+        "original_left_base",
+        "original_right_base",
+        "detected_left_base",
+        "detected_right_base",
+        prominence_bounds,
+        "prominence"
+      ),
+      max_peaks = 2
+    ) |>
+    recipes::prep() |>
+    recipes::bake(new_data = NULL)
+
+  expect_true(".integration_window" %in% names(result))
+  expect_equal(result$.integration_window[[1]]$start, 8)
+  expect_equal(result$.integration_window[[1]]$end, 20)
+
+  expected_columns <- c(
+    "peak_1_prominence_left_base",
+    "peak_1_prominence_right_base",
+    "peak_2_prominence_left_base",
+    "peak_2_prominence_right_base",
+    "peak_1_prominence",
+    "peak_2_prominence"
+  )
+  expect_true(all(expected_columns %in% names(result)))
+  expect_true(all(is.finite(unlist(result[expected_columns]))))
+  expect_gt(result$peak_1_prominence, 0)
+  expect_gt(result$peak_2_prominence, 0)
+
+  # The fitted intervals stay at the SEC-refined bounds. The detector's
+  # separate prominence contour bounds and the pre-refinement bounds survive.
+  expect_gt(
+    result$peak_1_detected_left_base,
+    result$peak_1_original_left_base
+  )
+  expect_lt(
+    result$peak_1_detected_right_base,
+    result$peak_1_original_right_base
+  )
+  expect_equal(
+    result$peak_1_left_base,
+    result$peak_1_detected_left_base
+  )
+  expect_equal(
+    result$peak_1_right_base,
+    result$peak_1_detected_right_base
+  )
+  expect_equal(
+    result$peak_1_prominence_left_base,
+    detected_peaks$prominence_left_base[1]
+  )
+  expect_equal(
+    result$peak_1_prominence_right_base,
+    detected_peaks$prominence_right_base[1]
+  )
+})
