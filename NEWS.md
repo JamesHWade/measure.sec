@@ -1,5 +1,7 @@
 # measure.sec 0.0.0.9000
 
+* `measure.sec` now requires R 4.5.0 or later (#70).
+
 * `step_sec_mw_distribution()` now respects row integration windows and
   exclusions, conserves mass within each retained interval, and keeps the CDF
   flat across excluded support. Differential curves encode discontinuities
