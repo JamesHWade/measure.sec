@@ -777,7 +777,7 @@ You’ve completed a realistic SEC analysis workflow:
 ``` r
 
 sessionInfo()
-#> R version 4.6.1 (2026-06-24)
+#> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.5 LTS
 #> 
@@ -803,24 +803,24 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
-#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
-#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#>  [4] lattice_0.23-1      vctrs_0.7.3         tools_4.6.2        
+#>  [7] generics_0.1.4      parallel_4.6.2      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-6        data.table_1.18.6.1
 #> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
-#> [16] lifecycle_1.0.5     compiler_4.6.1      farver_2.1.2       
+#> [16] lifecycle_1.0.5     compiler_4.6.2      farver_2.1.2       
 #> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
-#> [22] class_7.3-23        sass_0.4.10         yaml_2.3.12        
+#> [22] class_7.3-24        sass_0.4.10         yaml_2.3.12        
 #> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
-#> [28] jquerylib_0.1.4     MASS_7.3-65         cachem_1.1.0       
-#> [31] gower_1.0.2         rpart_4.1.27        nlme_3.1-169       
-#> [34] parallelly_1.48.0   lava_1.10           tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.80.0       purrr_1.2.2        
-#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.1      
-#> [43] fastmap_1.2.0       grid_4.6.1          cli_3.6.6          
-#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-6     
+#> [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       
+#> [31] gower_1.0.2         rpart_4.1.27        nlme_3.1-171       
+#> [34] parallelly_1.50.0   lava_1.10           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
+#> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          
+#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-12    
 #> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
 #> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
-#> [55] globals_0.20.0      otel_0.2.0          nnet_7.3-20        
+#> [55] globals_0.20.0      otel_0.3.0          nnet_7.3-21        
 #> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
 #> [61] knitr_1.52          hardhat_1.4.3       viridisLite_0.4.3  
 #> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         

@@ -396,7 +396,7 @@ ggplot(all_ratios, aes(location, value, color = sample_id)) +
 ``` r
 
 sessionInfo()
-#> R version 4.6.1 (2026-06-24)
+#> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.5 LTS
 #> 
@@ -422,25 +422,25 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
-#>  [4] lattice_0.22-9      vctrs_0.7.3         tools_4.6.1        
-#>  [7] generics_0.1.4      parallel_4.6.1      tibble_3.3.1       
-#> [10] pkgconfig_2.0.3     Matrix_1.7-5        data.table_1.18.6.1
+#>  [4] lattice_0.23-1      vctrs_0.7.3         tools_4.6.2        
+#>  [7] generics_0.1.4      parallel_4.6.2      tibble_3.3.1       
+#> [10] pkgconfig_2.0.3     Matrix_1.7-6        data.table_1.18.6.1
 #> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
-#> [16] lifecycle_1.0.5     stringr_1.6.0       compiler_4.6.1     
+#> [16] lifecycle_1.0.5     stringr_1.6.0       compiler_4.6.2     
 #> [19] farver_2.1.2        textshaping_1.0.5   codetools_0.2-20   
-#> [22] htmltools_0.5.9     class_7.3-23        sass_0.4.10        
+#> [22] htmltools_0.5.9     class_7.3-24        sass_0.4.10        
 #> [25] yaml_2.3.12         prodlim_2026.03.11  tidyr_1.3.2        
 #> [28] pillar_1.11.1       pkgdown_2.2.1       jquerylib_0.1.4    
-#> [31] MASS_7.3-65         cachem_1.1.0        gower_1.0.2        
-#> [34] rpart_4.1.27        parallelly_1.48.0   lava_1.10          
+#> [31] MASS_7.3-66         cachem_1.1.0        gower_1.0.2        
+#> [34] rpart_4.1.27        parallelly_1.50.0   lava_1.10          
 #> [37] tidyselect_1.2.1    digest_0.6.39       stringi_1.8.9      
-#> [40] future_1.80.0       purrr_1.2.2         listenv_1.1.0      
-#> [43] labeling_0.4.3      splines_4.6.1       fastmap_1.2.0      
-#> [46] grid_4.6.1          cli_3.6.6           magrittr_2.0.5     
-#> [49] utf8_1.2.6          survival_3.8-6      future.apply_1.21.0
+#> [40] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
+#> [43] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
+#> [46] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     
+#> [49] utf8_1.2.6          survival_3.8-12     future.apply_1.21.0
 #> [52] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
 #> [55] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
-#> [58] otel_0.2.0          nnet_7.3-20         timeDate_4052.112  
+#> [58] otel_0.3.0          nnet_7.3-21         timeDate_4052.112  
 #> [61] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
 #> [64] hardhat_1.4.3       viridisLite_0.4.3   rlang_1.3.0        
 #> [67] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
