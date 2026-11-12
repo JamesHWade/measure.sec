@@ -22,9 +22,12 @@
   persist when baking new data, and ratio smoothing preserves invalid points
   (#60).
 
-* `step_sec_concentration()` reports the count and percentage of negative
-  detector values excluded during mass normalization, and sets those values to
-  zero in the normalized curve (#60).
+* `step_sec_concentration()` reports clipped detector values with a structured
+  `measure_sec_negative_signal_clipped` warning. Its per-curve diagnostics
+  include positive and negative sampled areas and the negative share of
+  absolute sampled signal area, which can differ greatly from the percentage
+  of negative points. Normalization rejects nonfinite or fully underflowed
+  output and preserves ordinary numerical results (#60).
 * `step_sec_lals()`, `step_sec_rals()`, and `step_sec_mals()` accept finite,
   nonzero signed dn/dc values because the scattering optical constant squares
   dn/dc. LALS/RALS also require explicit or recorded concentration units,

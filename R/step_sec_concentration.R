@@ -59,6 +59,26 @@
 #' bake reports their count and percentage so the baseline correction can be
 #' reviewed.
 #'
+#' When a selected measure column contains negative points, baking emits one
+#' warning with class `measure_sec_negative_signal_clipped`. The warning's
+#' `column` field is the affected column name, and its `diagnostics` field is a
+#' tibble with one row for every curve in the current bake data, including
+#' curves without negative points. Its columns are `row` (the one-based row
+#' position in the current bake data), `negative_points`, `points`,
+#' `positive_area`, `negative_area`, and `excluded_fraction`. The two area
+#' columns use the curve's signal units times minutes. Positive and negative
+#' samples are clipped separately before trapezoidal integration on the
+#' sampled axis; this uses the sampled clipped ordinates rather than
+#' interpolating zero crossings. `excluded_fraction` is calculated separately
+#' for each curve as `negative_area / (positive_area + negative_area)`, using a
+#' scaled calculation to avoid overflow. It represents the negative share of
+#' absolute sampled signal area, not a recovered-mass estimate. The warning
+#' retains the total clipped-point count and adds the largest per-curve
+#' negative share with its current bake row; ties report the first row. Since
+#' recipes may bake training data during `prep()`, this warning can also occur
+#' during preparation. No clipping diagnostics are emitted when
+#' `normalize_to_mass = FALSE`.
+#'
 #' @family sec-detectors
 #' @export
 #'
@@ -210,6 +230,122 @@ step_sec_concentration_new <- function(
   )
 }
 
+.sec_normalize_concentration_measure <- function(
+  m,
+  injection_mass,
+  flow_rate,
+  concentration_units,
+  row
+) {
+  location <- m$location
+  value <- m$value
+  n <- length(location)
+
+  if (
+    n < 2 ||
+      !all(is.finite(location)) ||
+      !all(is.finite(value)) ||
+      !(all(diff(location) > 0) || all(diff(location) < 0))
+  ) {
+    cli::cli_abort(
+      "Concentration normalization requires finite values on a strictly monotonic elution-time axis with at least two points."
+    )
+  }
+
+  axis_widths <- abs(diff(location))
+  if (!all(is.finite(axis_widths)) || !all(axis_widths > 0)) {
+    cli::cli_abort(
+      "Concentration normalization requires finite, positive axis widths."
+    )
+  }
+
+  pos_value <- pmax(value, 0)
+  neg_value <- pmax(-value, 0)
+  positive_area <- sum(
+    axis_widths *
+      (utils::head(pos_value, -1) + utils::tail(pos_value, -1)) /
+      2
+  )
+  negative_area <- sum(
+    axis_widths *
+      (utils::head(neg_value, -1) + utils::tail(neg_value, -1)) /
+      2
+  )
+
+  if (!is.finite(positive_area)) {
+    cli::cli_abort(
+      "Cannot normalize a concentration signal with non-finite positive integrated area."
+    )
+  }
+  if (positive_area <= 0) {
+    cli::cli_abort(
+      "Cannot normalize a concentration signal with nonpositive integrated area."
+    )
+  }
+  if (!is.finite(negative_area) || negative_area < 0) {
+    cli::cli_abort(
+      "Concentration normalization requires a finite, nonnegative negative-signal area."
+    )
+  }
+
+  denominator <- positive_area * flow_rate
+  if (!is.finite(denominator) || denominator <= 0) {
+    cli::cli_abort(
+      "Concentration normalization requires a finite, positive integrated area-flow denominator."
+    )
+  }
+
+  normalization_factor <- injection_mass / denominator
+  if (!is.finite(normalization_factor) || normalization_factor <= 0) {
+    cli::cli_abort(
+      "Concentration normalization requires a finite, positive normalization factor."
+    )
+  }
+
+  # Keep this evaluation order stable to preserve ordinary output values.
+  m$value <- pos_value * injection_mass / denominator
+  if (identical(concentration_units, "g/mL")) {
+    m$value <- m$value / 1000
+  }
+
+  if (!all(is.finite(m$value))) {
+    cli::cli_abort(
+      "Concentration normalization produced non-finite output values."
+    )
+  }
+  if (any(pos_value > 0) && !any(m$value > 0)) {
+    cli::cli_abort(
+      "Concentration normalization underflowed all positive signal values to zero."
+    )
+  }
+
+  scale <- max(positive_area, negative_area)
+  positive_scaled <- positive_area / scale
+  negative_scaled <- negative_area / scale
+  excluded_fraction <- negative_scaled / (positive_scaled + negative_scaled)
+
+  list(
+    measure = m,
+    row = as.integer(row),
+    negative_points = as.integer(sum(value < 0)),
+    points = as.integer(n),
+    positive_area = positive_area,
+    negative_area = negative_area,
+    excluded_fraction = excluded_fraction
+  )
+}
+
+.sec_concentration_diagnostics <- function(processed) {
+  tibble::tibble(
+    row = purrr::map_int(processed, "row"),
+    negative_points = purrr::map_int(processed, "negative_points"),
+    points = purrr::map_int(processed, "points"),
+    positive_area = purrr::map_dbl(processed, "positive_area"),
+    negative_area = purrr::map_dbl(processed, "negative_area"),
+    excluded_fraction = purrr::map_dbl(processed, "excluded_fraction")
+  )
+}
+
 #' @export
 prep.step_sec_concentration <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
@@ -262,76 +398,46 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
   }
 
   for (col in measures) {
-    if (normalize_to_mass) {
-      negative_count <- 0L
-      point_count <- 0L
-      for (m in new_data[[col]]) {
-        location <- m$location
-        value <- m$value
-        n <- length(location)
-        if (
-          n < 2 ||
-            !all(is.finite(location)) ||
-            !all(is.finite(value)) ||
-            !(all(diff(location) > 0) || all(diff(location) < 0))
-        ) {
-          cli::cli_abort(
-            "Concentration normalization requires finite values on a strictly monotonic elution-time axis with at least two points."
+    processed <- purrr::map2(
+      new_data[[col]],
+      seq_along(new_data[[col]]),
+      function(m, row) {
+        if (!is.null(injection_mass)) {
+          .sec_normalize_concentration_measure(
+            m = m,
+            injection_mass = injection_mass,
+            flow_rate = flow_rate,
+            concentration_units = concentration_units,
+            row = row
           )
+        } else {
+          list(measure = m)
         }
-        negative_count <- negative_count + sum(value < 0)
-        point_count <- point_count + length(value)
       }
+    )
+
+    output <- new_measure_list(purrr::map(processed, "measure"))
+    if (!is.null(injection_mass)) {
+      attr(output, "sec_concentration_unit") <- concentration_units
+
+      diagnostics <- .sec_concentration_diagnostics(processed)
+      negative_count <- sum(diagnostics$negative_points)
+      point_count <- sum(diagnostics$points)
+
       if (negative_count > 0) {
+        max_row <- which.max(diagnostics$excluded_fraction)
+        max_fraction <- diagnostics$excluded_fraction[[max_row]]
         cli::cli_warn(
           c(
             "Negative detector values were excluded during mass normalization.",
-            "i" = "{negative_count} of {point_count} signal points ({round(100 * negative_count / point_count, 1)}%) were set to zero."
-          )
+            "i" = "{negative_count} of {point_count} signal points ({round(100 * negative_count / point_count, 1)}%) were set to zero.",
+            "i" = "Column {.val {col}}: maximum negative share of absolute sampled signal area was {round(100 * max_fraction, 1)}% in row {max_row}."
+          ),
+          class = "measure_sec_negative_signal_clipped",
+          column = col,
+          diagnostics = diagnostics
         )
       }
-    }
-
-    output <- new_measure_list(
-      purrr::map(new_data[[col]], function(m) {
-        location <- m$location
-        value <- m$value
-        n <- length(location)
-
-        if (!normalize_to_mass) {
-          return(m)
-        }
-        if (!is.null(injection_mass)) {
-          # Ensure non-negative values for integration
-          pos_value <- pmax(value, 0)
-          total_area <- sum(
-            abs(diff(location)) *
-              (utils::head(pos_value, -1) + utils::tail(pos_value, -1)) /
-              2
-          )
-
-          if (total_area > 0) {
-            # Normalize so that integral of c(t) * F * dt = m_inj
-            # c(t) = value * m_inj / (total_area * F)
-            # But since total_area is in signal*min and F in mL/min,
-            # we get c(t) in mg/mL if m_inj in mg
-
-            m$value <- pos_value * injection_mass / (total_area * flow_rate)
-            if (identical(concentration_units, "g/mL")) {
-              m$value <- m$value / 1000
-            }
-          } else {
-            cli::cli_abort(
-              "Cannot normalize a concentration signal with nonpositive integrated area."
-            )
-          }
-        }
-
-        m
-      })
-    )
-    if (normalize_to_mass) {
-      attr(output, "sec_concentration_unit") <- concentration_units
     }
     new_data[[col]] <- output
   }

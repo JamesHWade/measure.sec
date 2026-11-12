@@ -93,6 +93,26 @@ Mass normalization excludes negative signal points from the integrated area
 and sets those output points to zero. When any points are excluded, the
 bake reports their count and percentage so the baseline correction can be
 reviewed.
+
+When a selected measure column contains negative points, baking emits one
+warning with class \code{measure_sec_negative_signal_clipped}. The warning's
+\code{column} field is the affected column name, and its \code{diagnostics} field is a
+tibble with one row for every curve in the current bake data, including
+curves without negative points. Its columns are \code{row} (the one-based row
+position in the current bake data), \code{negative_points}, \code{points},
+\code{positive_area}, \code{negative_area}, and \code{excluded_fraction}. The two area
+columns use the curve's signal units times minutes. Positive and negative
+samples are clipped separately before trapezoidal integration on the
+sampled axis; this uses the sampled clipped ordinates rather than
+interpolating zero crossings. \code{excluded_fraction} is calculated separately
+for each curve as \code{negative_area / (positive_area + negative_area)}, using a
+scaled calculation to avoid overflow. It represents the negative share of
+absolute sampled signal area, not a recovered-mass estimate. The warning
+retains the total clipped-point count and adds the largest per-curve
+negative share with its current bake row; ties report the first row. Since
+recipes may bake training data during \code{prep()}, this warning can also occur
+during preparation. No clipping diagnostics are emitted when
+\code{normalize_to_mass = FALSE}.
 }
 \examples{
 \dontrun{
