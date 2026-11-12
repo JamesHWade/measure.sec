@@ -11,21 +11,24 @@
 #' application of dn/dc (refractive index increment) values.
 #'
 #' @param recipe A recipe object.
-#' @param measures Character vector of RI detector column names to process.
-#'   If `NULL`, will look for columns containing "ri" in the name.
+#' @param measures Character vector of RI detector columns to process. If
+#'   `NULL`, the step looks for columns containing "ri" in the name. Multiple
+#'   columns can be processed in place; a named output requires exactly one.
 #' @param dn_dc Refractive index increment (mL/g). Can be:
-#'   - A single positive finite numeric value applied to all samples
+#'   - A single finite, nonzero numeric value applied to all samples
 #'   - `NULL` to skip dn/dc normalization (signal remains in detector units)
 #' @param concentration_units Units for the signal after dn/dc normalization:
 #'   g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
-#'   This is ignored when dn/dc normalization is skipped. RI processing keeps
-#'   its existing positive-only dn/dc contract.
+#'   This is ignored when dn/dc normalization is skipped.
 #' @param dn_dc_column Character name of a column containing sample-specific
-#'   positive finite dn/dc values. Overrides `dn_dc` if provided.
+#'   finite, nonzero dn/dc values. Values may be positive or negative.
+#'   Overrides `dn_dc` if provided.
 #' @param instrument_constant RI detector instrument constant. Default is 1.0
-#'   (no adjustment). This converts raw detector response to refractive index
-#'   units.
-#' @param output_col Name for the output column. Default is to modify in place.
+#'   (no adjustment). This positive conversion gain multiplies raw detector
+#'   response to obtain refractive-index difference.
+#' @param output_col Name for the output column. `NULL` modifies the selected
+#'   RI measure in place. A different name creates a converted column and keeps
+#'   the source measure unchanged.
 #' @param role Role for generated columns.
 #' @param trained Logical indicating if the step has been trained.
 #' @param skip Logical. Should the step be skipped when baking?
@@ -34,28 +37,28 @@
 #' @return An updated recipe with the new step added.
 #'
 #' @details
-#' The refractive index (RI) detector is the most common concentration detector
-#' in SEC/GPC. The detector response is proportional to the product of
-#' concentration and dn/dc:
+#' The RI detector response is proportional to concentration and dn/dc. Let
+#' `S_raw` be the stored detector response and `K` be the positive conversion
+#' gain supplied as `instrument_constant`. The calibrated refractive-index
+#' difference and concentration are related by:
 #'
-#' \deqn{RI_{signal} = K \times c \times (dn/dc)}
+#' \deqn{\Delta n = K \times S_{raw} = c \times (dn/dc)}
 #'
-#' where:
-#' - K is the instrument constant
-#' - c is mass concentration in g/mL when dn/dc is in mL/g
-#' - dn/dc is the refractive index increment (mL/g)
+#' Thus the step calculates concentration in g/mL as
+#' `S_raw * instrument_constant / dn_dc`, when dn/dc is in mL/g. A negative
+#' dn/dc is physically valid for some solute/solvent combinations; the
+#' [Brookhaven BI-DNDC manual](https://www.brookhaveninstruments.com/wp-content/uploads/2023/08/BI-DNDC-Manual-Static-Mode.pdf)
+#' describes negative values. Wyatt notes that dn/dc depends on solute,
+#' solvent, wavelength, and temperature, so supply a value measured or
+#' qualified for the relevant conditions
+#' ([application note](https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html)).
 #'
-#' Therefore dividing a calibrated refractive-index response by dn/dc gives
-#' concentration in g/mL. Set concentration_units to mg/mL to scale those
-#' values by 1000. The default preserves the current numeric behavior and can
-#' be read directly by scattering steps that use a tagged concentration curve.
-#'
-#' **Common dn/dc values (in water at 25°C, 633 nm):**
-#' - Polystyrene in THF: 0.185 mL/g
-#' - PMMA in THF: 0.084 mL/g
-#' - PEG in water: 0.135 mL/g
-#' - Proteins: ~0.185 mL/g
-#' - DNA: ~0.170 mL/g
+#' Set `concentration_units` to `"mg/mL"` to scale the result by 1000. The
+#' default preserves the existing numeric behavior and can be read directly by
+#' scattering steps that use a tagged concentration curve. With `dn_dc = NULL`
+#' and no `dn_dc_column`, no concentration normalization is performed. Using
+#' the default `instrument_constant = 1.0` leaves signal values unchanged and
+#' adds no concentration-unit tag.
 #'
 #' @family sec-detectors
 #' @export
@@ -90,6 +93,8 @@ step_sec_ri <- function(
   id = recipes::rand_id("sec_ri"),
   concentration_units = "g/mL"
 ) {
+  .sec_validate_ri_output_col(output_col)
+
   .sec_validate_concentration_unit(
     concentration_units,
     "concentration_units",
@@ -104,7 +109,7 @@ step_sec_ri <- function(
   }
 
   if (!is.null(dn_dc)) {
-    .sec_validate_positive_scalar(dn_dc, "dn_dc")
+    .sec_validate_nonzero_scalar(dn_dc, "dn_dc")
   }
 
   .sec_validate_positive_scalar(instrument_constant, "instrument_constant")
@@ -124,6 +129,61 @@ step_sec_ri <- function(
       id = id
     )
   )
+}
+
+.sec_validate_ri_output_col <- function(output_col) {
+  if (is.null(output_col)) {
+    return(invisible(NULL))
+  }
+
+  if (
+    !is.character(output_col) ||
+      length(output_col) != 1L ||
+      is.na(output_col) ||
+      !nzchar(trimws(output_col))
+  ) {
+    cli::cli_abort(
+      "{.arg output_col} must be NULL or a single non-missing, non-blank character name."
+    )
+  }
+
+  invisible(output_col)
+}
+
+.sec_validate_ri_measures <- function(measures, require_single = FALSE) {
+  if (
+    !is.character(measures) ||
+      anyNA(measures) ||
+      !all(nzchar(measures))
+  ) {
+    cli::cli_abort("RI measures must be non-missing, non-blank column names.")
+  }
+
+  if (require_single && length(measures) != 1L) {
+    cli::cli_abort("Select exactly one RI measure column for a named output.")
+  }
+  if (length(measures) == 0L) {
+    cli::cli_abort("Select at least one RI measure column.")
+  }
+
+  invisible(measures)
+}
+
+.sec_check_ri_output_collision <- function(
+  output_col,
+  source_col,
+  data,
+  stage
+) {
+  if (
+    !is.null(output_col) &&
+      !identical(unname(output_col), unname(source_col)) &&
+      output_col %in% names(data)
+  ) {
+    cli::cli_abort(
+      "Output column {.val {output_col}} already exists in {stage} data."
+    )
+  }
 }
 
 step_sec_ri_new <- function(
@@ -157,9 +217,10 @@ step_sec_ri_new <- function(
 prep.step_sec_ri <- function(x, training, info = NULL, ...) {
   check_for_measure(training)
 
+  measure_cols <- find_measure_cols(training)
+
   # Find RI columns if not specified
   if (is.null(x$measures)) {
-    measure_cols <- find_measure_cols(training)
     # Look for columns containing "ri" (case insensitive)
     ri_cols <- measure_cols[grepl("ri", measure_cols, ignore.case = TRUE)]
     if (length(ri_cols) == 0) {
@@ -170,6 +231,33 @@ prep.step_sec_ri <- function(x, training, info = NULL, ...) {
     measures <- ri_cols
   } else {
     measures <- x$measures
+  }
+
+  .sec_validate_ri_measures(
+    measures,
+    require_single = !is.null(x$output_col)
+  )
+  .sec_validate_ri_output_col(x$output_col)
+
+  missing_measures <- setdiff(measures, names(training))
+  if (length(missing_measures) > 0L) {
+    cli::cli_abort(
+      "RI measure column{?s} {.and {.val {missing_measures}}} not found in training data."
+    )
+  }
+  invalid_measures <- setdiff(measures, measure_cols)
+  if (length(invalid_measures) > 0L) {
+    cli::cli_abort(
+      "Selected column{?s} {.and {.val {invalid_measures}}} {?is/are} not measure column{?s}."
+    )
+  }
+  if (!is.null(x$output_col)) {
+    .sec_check_ri_output_collision(
+      x$output_col,
+      measures[[1]],
+      training,
+      "training"
+    )
   }
 
   # Validate dn_dc_column exists if specified
@@ -198,13 +286,34 @@ prep.step_sec_ri <- function(x, training, info = NULL, ...) {
 #' @export
 bake.step_sec_ri <- function(object, new_data, ...) {
   measures <- object$measures
+  .sec_validate_ri_measures(
+    measures,
+    require_single = !is.null(object$output_col)
+  )
+  .sec_validate_ri_output_col(object$output_col)
+
+  missing_measures <- setdiff(measures, names(new_data))
+  if (length(missing_measures) > 0L) {
+    cli::cli_abort(
+      "RI measure column{?s} {.and {.val {missing_measures}}} not found in new data."
+    )
+  }
+  if (!is.null(object$output_col)) {
+    .sec_check_ri_output_collision(
+      object$output_col,
+      measures[[1]],
+      new_data,
+      "baked"
+    )
+  }
+
   dn_dc <- object$dn_dc
   dn_dc_column <- object$dn_dc_column
   instrument_constant <- object$instrument_constant
   concentration_units <- object$concentration_units
   normalize_to_concentration <- !is.null(dn_dc) || !is.null(dn_dc_column)
 
-  for (col in measures) {
+  for (source_col in measures) {
     # Get dn/dc values for each sample
     if (!is.null(dn_dc_column)) {
       dn_dc_values <- new_data[[dn_dc_column]]
@@ -218,14 +327,14 @@ bake.step_sec_ri <- function(object, new_data, ...) {
         (!is.numeric(dn_dc_values) ||
           length(dn_dc_values) != nrow(new_data) ||
           !all(is.finite(dn_dc_values)) ||
-          any(dn_dc_values <= 0))
+          any(dn_dc_values == 0))
     ) {
-      cli::cli_abort("Each dn/dc value must be positive and finite.")
+      cli::cli_abort("Each dn/dc value must be nonzero and finite.")
     }
 
     # Process each sample
     output <- new_measure_list(
-      purrr::map2(new_data[[col]], dn_dc_values, function(m, dndc) {
+      purrr::map2(new_data[[source_col]], dn_dc_values, function(m, dndc) {
         m$value <- m$value * instrument_constant
         if (normalize_to_concentration) {
           m$value <- m$value / dndc
@@ -239,7 +348,8 @@ bake.step_sec_ri <- function(object, new_data, ...) {
     if (normalize_to_concentration) {
       attr(output, "sec_concentration_unit") <- concentration_units
     }
-    new_data[[col]] <- output
+    output_col <- object$output_col %||% source_col
+    new_data[[output_col]] <- output
   }
 
   tibble::as_tibble(new_data)
@@ -278,6 +388,7 @@ tidy.step_sec_ri <- function(x, ...) {
     dn_dc_column = x$dn_dc_column %||% NA_character_,
     instrument_constant = x$instrument_constant,
     concentration_units = x$concentration_units,
+    output_col = x$output_col %||% NA_character_,
     id = x$id
   )
 }

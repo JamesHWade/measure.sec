@@ -1,5 +1,10 @@
 # measure.sec 0.0.0.9000
 
+* The new detector qualification guide uses fixed synthetic traces to check
+  signed RI conversion, retained raw outputs, mg/mL versus g/mL mass balance,
+  and the difference between negative-point counts and sampled-area shares.
+  It documents minute-axis assumptions and physical qualification limits (#60).
+
 * `measure.sec` now requires R 4.5.0 or later (#70).
 
 * `step_sec_mw_distribution()` now respects row integration windows and
@@ -22,13 +27,24 @@
   persist when baking new data, and ratio smoothing preserves invalid points
   (#60).
 
-* `step_sec_concentration()` reports the count and percentage of negative
-  detector values excluded during mass normalization, and sets those values to
-  zero in the normalized curve (#60).
+* `step_sec_concentration()` reports clipped detector values with a structured
+  `measure_sec_negative_signal_clipped` warning. Its per-curve diagnostics
+  include positive and negative sampled areas and the negative share of
+  absolute sampled signal area, which can differ greatly from the percentage
+  of negative points. Normalization rejects nonfinite or fully underflowed
+  output and preserves ordinary numerical results (#60).
 * `step_sec_lals()`, `step_sec_rals()`, and `step_sec_mals()` accept finite,
   nonzero signed dn/dc values because the scattering optical constant squares
   dn/dc. LALS/RALS also require explicit or recorded concentration units,
   convert mg/mL to g/mL before single-angle calculations, and reject
   misaligned detector curves (#60).
+* `step_sec_ri()` now respects `output_col`. A distinct output name preserves
+  the raw source curve and its role; a named output requires one selected RI
+  measure and cannot overwrite another column visible at that recipe stage.
+  `NULL` keeps existing in-place processing, including multiple measures (#75).
+* `step_sec_ri()` accepts finite, nonzero signed scalar and sample-specific
+  refractive-index increments. Its documentation now distinguishes the
+  positive raw-to-RI conversion gain from the signed increment, matching the
+  existing calibration arithmetic (#60).
 * `step_sec_ri()` and `step_sec_uv()` record the concentration units produced
   by detector normalization and allow mg/mL or g/mL output (#60).
