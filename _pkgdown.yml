@@ -30,6 +30,8 @@ navbar:
       text: Guides
       menu:
       - text: How-to Guides
+      - text: Detector Units and Clipping
+        href: articles/detector-qualification.html
       - text: Multi-Detector SEC
         href: articles/triple-detection.html
       - text: MALS Detection

@@ -16,6 +16,9 @@ knitr::opts_chunk$set(
 )
 ```
 
+For an executable check of signed RI conversion, concentration units and
+clipped-signal diagnostics, see [Detector units and clipping](detector-qualification.html).
+
 ## Overview
 
 > **Implementation status:** `step_sec_mals()` currently uses a single-angle approximation. Its output is relative without a scattering calibration constant; multi-angle extrapolation and Rg are not implemented. Validate all detector workflows against instrument-specific reference data.

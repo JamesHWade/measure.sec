@@ -1,5 +1,10 @@
 # measure.sec 0.0.0.9000
 
+* The new detector qualification guide uses fixed synthetic traces to check
+  signed RI conversion, retained raw outputs, mg/mL versus g/mL mass balance,
+  and the difference between negative-point counts and sampled-area shares.
+  It documents minute-axis assumptions and physical qualification limits (#60).
+
 * `measure.sec` now requires R 4.5.0 or later (#70).
 
 * `step_sec_mw_distribution()` now respects row integration windows and
