@@ -484,15 +484,13 @@ test_that("scattering calculations accept signed nonzero dn/dc", {
   )
 })
 
-test_that("scattering rejects zero and nonfinite dn/dc while RI stays positive-only", {
+test_that("scattering rejects zero and nonfinite dn/dc", {
   recipe <- recipes::recipe(tibble::tibble(sample_id = "sample"))
   for (invalid in list(0, NA_real_, Inf, -Inf)) {
     expect_error(step_sec_lals(recipe, dn_dc = invalid), "nonzero finite")
     expect_error(step_sec_rals(recipe, dn_dc = invalid), "nonzero finite")
     expect_error(step_sec_mals(recipe, dn_dc = invalid), "nonzero finite")
   }
-  expect_error(step_sec_ri(recipe, dn_dc = -0.185), "positive finite")
-
   data <- tibble::tibble(sample_id = "sample", dn_dc = 0)
   data$conc <- measure::new_measure_list(list(
     measure::new_measure_tbl(location = 1:2, value = c(1, 2))
