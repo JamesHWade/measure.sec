@@ -94,6 +94,11 @@ Unlike general-purpose baseline methods like ALS or polynomial fitting,
 this approach is specifically designed for the characteristic shape of
 GPC/SEC chromatograms and is computationally very fast.
 
+Baseline subtraction retains a recorded \code{g/mL} or \code{mg/mL} unit on the
+current input column. Untagged inputs remain untagged, and invalid recorded
+units are rejected. The unit tag describes the values' units; it does not
+qualify the selected baseline regions or establish recovery.
+
 \strong{No selectors should be supplied to this step function}. The data should be
 in the internal format produced by \code{\link[measure:step_measure_input_wide]{measure::step_measure_input_wide()}} or
 \code{\link[measure:step_measure_input_long]{measure::step_measure_input_long()}}.
@@ -131,16 +136,16 @@ rec <- recipe(~., data = sec_triple_detect) |>
 \code{\link[measure:step_measure_baseline_als]{measure::step_measure_baseline_als()}} for general-purpose baseline
 correction, \code{\link[measure:step_measure_detrend]{measure::step_measure_detrend()}} for simple trend removal.
 
-Other sec-chromatography: 
-\code{\link{step_sec_band_broadening}()},
-\code{\link{step_sec_detector_delay}()},
-\code{\link{step_sec_exclude_regions}()},
-\code{\link{step_sec_integration_window}()},
-\code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_peaks_deconvolve}()},
-\code{\link{step_sec_peaks_detect}()},
-\code{\link{step_sec_peaks_refine}()}
+Other sec-chromatography:
+\code{\link[=step_sec_band_broadening]{step_sec_band_broadening()}},
+\code{\link[=step_sec_detector_delay]{step_sec_detector_delay()}},
+\code{\link[=step_sec_exclude_regions]{step_sec_exclude_regions()}},
+\code{\link[=step_sec_integration_window]{step_sec_integration_window()}},
+\code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}},
+\code{\link[=step_sec_mw_distribution]{step_sec_mw_distribution()}},
+\code{\link[=step_sec_mw_fractions]{step_sec_mw_fractions()}},
+\code{\link[=step_sec_peaks_deconvolve]{step_sec_peaks_deconvolve()}},
+\code{\link[=step_sec_peaks_detect]{step_sec_peaks_detect()}},
+\code{\link[=step_sec_peaks_refine]{step_sec_peaks_refine()}}
 }
 \concept{sec-chromatography}

@@ -1,5 +1,10 @@
 # measure.sec 0.0.0.9000
 
+* `step_sec_baseline()` retains the current input column's recorded
+  concentration unit after correction, including unchanged-signal fallbacks.
+  Untagged inputs stay untagged and invalid recorded units are rejected;
+  no other cached column metadata is copied (#60).
+
 * The new detector qualification guide uses fixed synthetic traces to check
   signed RI conversion, retained raw outputs, mg/mL versus g/mL mass balance,
   and the difference between negative-point counts and sampled-area shares.

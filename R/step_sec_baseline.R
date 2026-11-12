@@ -64,6 +64,11 @@
 #' this approach is specifically designed for the characteristic shape of
 #' GPC/SEC chromatograms and is computationally very fast.
 #'
+#' Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
+#' current input column. Untagged inputs remain untagged, and invalid recorded
+#' units are rejected. The unit tag describes the values' units; it does not
+#' qualify the selected baseline regions or establish recovery.
+#'
 #' **No selectors should be supplied to this step function**. The data should be
 #' in the internal format produced by [measure::step_measure_input_wide()] or
 #' [measure::step_measure_input_long()].
@@ -248,6 +253,16 @@ prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
 #' @export
 bake.step_sec_baseline <- function(object, new_data, ...) {
   for (col in object$measures) {
+    concentration_unit <- attr(
+      new_data[[col]],
+      "sec_concentration_unit",
+      exact = TRUE
+    )
+    .sec_validate_concentration_unit(
+      concentration_unit,
+      "recorded concentration unit"
+    )
+
     result <- .compute_sec_baseline(
       new_data[[col]],
       left_frac = object$left_frac,
@@ -256,7 +271,11 @@ bake.step_sec_baseline <- function(object, new_data, ...) {
       rf_span = object$rf_span,
       rf_maxit = object$rf_maxit
     )
-    new_data[[col]] <- new_measure_list(result)
+    output <- new_measure_list(result)
+    if (!is.null(concentration_unit)) {
+      attr(output, "sec_concentration_unit") <- concentration_unit
+    }
+    new_data[[col]] <- output
   }
   tibble::as_tibble(new_data)
 }
