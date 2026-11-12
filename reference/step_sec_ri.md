@@ -30,31 +30,36 @@ step_sec_ri(
 
 - measures:
 
-  Character vector of RI detector column names to process. If `NULL`,
-  will look for columns containing "ri" in the name.
+  Character vector of RI detector columns to process. If `NULL`, the
+  step looks for columns containing "ri" in the name. Multiple columns
+  can be processed in place; a named output requires exactly one.
 
 - dn_dc:
 
   Refractive index increment (mL/g). Can be:
 
-  - A single positive finite numeric value applied to all samples
+  - A single finite, nonzero numeric value applied to all samples
 
   - `NULL` to skip dn/dc normalization (signal remains in detector
     units)
 
 - dn_dc_column:
 
-  Character name of a column containing sample-specific positive finite
-  dn/dc values. Overrides `dn_dc` if provided.
+  Character name of a column containing sample-specific finite, nonzero
+  dn/dc values. Values may be positive or negative. Overrides `dn_dc` if
+  provided.
 
 - instrument_constant:
 
   RI detector instrument constant. Default is 1.0 (no adjustment). This
-  converts raw detector response to refractive index units.
+  positive conversion gain multiplies raw detector response to obtain
+  refractive-index difference.
 
 - output_col:
 
-  Name for the output column. Default is to modify in place.
+  Name for the output column. `NULL` modifies the selected RI measure in
+  place. A different name creates a converted column and keeps the
+  source measure unchanged.
 
 - role:
 
@@ -76,8 +81,7 @@ step_sec_ri(
 
   Units for the signal after dn/dc normalization: g/mL (default, the
   natural unit from RI divided by dn/dc) or mg/mL. This is ignored when
-  dn/dc normalization is skipped. RI processing keeps its existing
-  positive-only dn/dc contract.
+  dn/dc normalization is skipped.
 
 ## Value
 
@@ -85,37 +89,29 @@ An updated recipe with the new step added.
 
 ## Details
 
-The refractive index (RI) detector is the most common concentration
-detector in SEC/GPC. The detector response is proportional to the
-product of concentration and dn/dc:
+The RI detector response is proportional to concentration and dn/dc. Let
+`S_raw` be the stored detector response and `K` be the positive
+conversion gain supplied as `instrument_constant`. The calibrated
+refractive-index difference and concentration are related by:
 
-\$\$RI\_{signal} = K \times c \times (dn/dc)\$\$
+\$\$\Delta n = K \times S\_{raw} = c \times (dn/dc)\$\$
 
-where:
+Thus the step calculates concentration in g/mL as
+`S_raw * instrument_constant / dn_dc`, when dn/dc is in mL/g. A negative
+dn/dc is physically valid for some solute/solvent combinations; the
+[Brookhaven BI-DNDC
+manual](https://www.brookhaveninstruments.com/wp-content/uploads/2023/08/BI-DNDC-Manual-Static-Mode.pdf)
+describes negative values. Wyatt notes that dn/dc depends on solute,
+solvent, wavelength, and temperature, so supply a value measured or
+qualified for the relevant conditions ([application
+note](https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html)).
 
-- K is the instrument constant
-
-- c is mass concentration in g/mL when dn/dc is in mL/g
-
-- dn/dc is the refractive index increment (mL/g)
-
-Therefore dividing a calibrated refractive-index response by dn/dc gives
-concentration in g/mL. Set concentration_units to mg/mL to scale those
-values by 1000. The default preserves the current numeric behavior and
-can be read directly by scattering steps that use a tagged concentration
-curve.
-
-**Common dn/dc values (in water at 25°C, 633 nm):**
-
-- Polystyrene in THF: 0.185 mL/g
-
-- PMMA in THF: 0.084 mL/g
-
-- PEG in water: 0.135 mL/g
-
-- Proteins: ~0.185 mL/g
-
-- DNA: ~0.170 mL/g
+Set `concentration_units` to `"mg/mL"` to scale the result by 1000. The
+default preserves the existing numeric behavior and can be read directly
+by scattering steps that use a tagged concentration curve. With
+`dn_dc = NULL` and no `dn_dc_column`, no concentration normalization is
+performed. Using the default `instrument_constant = 1.0` leaves signal
+values unchanged and adds no concentration-unit tag.
 
 ## See also
 

@@ -127,6 +127,28 @@ area and sets those output points to zero. When any points are excluded,
 the bake reports their count and percentage so the baseline correction
 can be reviewed.
 
+When a selected measure column contains negative points, baking emits
+one warning with class `measure_sec_negative_signal_clipped`. The
+warning's `column` field is the affected column name, and its
+`diagnostics` field is a tibble with one row for every curve in the
+current bake data, including curves without negative points. Its columns
+are `row` (the one-based row position in the current bake data),
+`negative_points`, `points`, `positive_area`, `negative_area`, and
+`excluded_fraction`. The two area columns use the curve's signal units
+times minutes. Positive and negative samples are clipped separately
+before trapezoidal integration on the sampled axis; this uses the
+sampled clipped ordinates rather than interpolating zero crossings.
+`excluded_fraction` is calculated separately for each curve as
+`negative_area / (positive_area + negative_area)`, using a scaled
+calculation to avoid overflow. It represents the negative share of
+absolute sampled signal area, not a recovered-mass estimate. The warning
+retains the total clipped-point count and adds the largest per-curve
+negative share with its current bake row; ties report the first row.
+Since recipes may bake training data during
+[`prep()`](https://recipes.tidymodels.org/reference/prep.html), this
+warning can also occur during preparation. No clipping diagnostics are
+emitted when `normalize_to_mass = FALSE`.
+
 ## See also
 
 Other sec-detectors:

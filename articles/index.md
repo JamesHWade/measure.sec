@@ -15,6 +15,8 @@ Learning-oriented guides to get you started
 
 Task-oriented guides for specific applications
 
+- [Check detector units, signed RI and clipped
+  signal](https://jameshwade.github.io/measure.sec/articles/detector-qualification.md):
 - [Multi-Detector SEC: Detector Integration and
   Workflows](https://jameshwade.github.io/measure.sec/articles/triple-detection.md):
 - [Multi-Angle Light Scattering (MALS) for Absolute Molecular

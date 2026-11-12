@@ -527,6 +527,8 @@ rec_multi <- recipe(
 prepped_multi <- prep(rec_multi)
 #> Warning: Negative detector values were excluded during mass normalization.
 #> ℹ 3335 of 20010 signal points (16.7%) were set to zero.
+#> ℹ Column "ri": maximum negative share of absolute sampled signal area was 3.4%
+#>   in row 1.
 result_multi <- bake(prepped_multi, new_data = NULL)
 
 # View multi-detector results
@@ -887,6 +889,8 @@ rec_complete <- recipe(
 prepped_complete <- prep(rec_complete)
 #> Warning: Negative detector values were excluded during mass normalization.
 #> ℹ 3335 of 20010 signal points (16.7%) were set to zero.
+#> ℹ Column "ri": maximum negative share of absolute sampled signal area was 3.4%
+#>   in row 1.
 result_complete <- bake(prepped_complete, new_data = NULL)
 
 # View processed results

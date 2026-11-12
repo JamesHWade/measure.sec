@@ -24,6 +24,7 @@ factors and injection parameters."><meta property="og:image" content="https://ja
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides"><li><h6 class="dropdown-header" data-toc-skip>How-to Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/detector-qualification.html">Detector Units and Clipping</a></li>
     <li><a class="dropdown-item" href="../articles/triple-detection.html">Multi-Detector SEC</a></li>
     <li><a class="dropdown-item" href="../articles/mals-detection.html">MALS Detection</a></li>
     <li><a class="dropdown-item" href="../articles/lals-rals-detection.html">LALS/RALS Detection</a></li>
@@ -168,6 +169,25 @@ injected mass to normalize the chromatogram area:</p>
 and sets those output points to zero. When any points are excluded, the
 bake reports their count and percentage so the baseline correction can be
 reviewed.</p>
+<p>When a selected measure column contains negative points, baking emits one
+warning with class <code>measure_sec_negative_signal_clipped</code>. The warning's
+<code>column</code> field is the affected column name, and its <code>diagnostics</code> field is a
+tibble with one row for every curve in the current bake data, including
+curves without negative points. Its columns are <code>row</code> (the one-based row
+position in the current bake data), <code>negative_points</code>, <code>points</code>,
+<code>positive_area</code>, <code>negative_area</code>, and <code>excluded_fraction</code>. The two area
+columns use the curve's signal units times minutes. Positive and negative
+samples are clipped separately before trapezoidal integration on the
+sampled axis; this uses the sampled clipped ordinates rather than
+interpolating zero crossings. <code>excluded_fraction</code> is calculated separately
+for each curve as <code>negative_area / (positive_area + negative_area)</code>, using a
+scaled calculation to avoid overflow. It represents the negative share of
+absolute sampled signal area, not a recovered-mass estimate. The warning
+retains the total clipped-point count and adds the largest per-curve
+negative share with its current bake row; ties report the first row. Since
+recipes may bake training data during <code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code>, this warning can also occur
+during preparation. No clipping diagnostics are emitted when
+<code>normalize_to_mass = FALSE</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

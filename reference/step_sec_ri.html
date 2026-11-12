@@ -24,6 +24,7 @@ application of dn/dc (refractive index increment) values."><meta property="og:im
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides"><li><h6 class="dropdown-header" data-toc-skip>How-to Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/detector-qualification.html">Detector Units and Clipping</a></li>
     <li><a class="dropdown-item" href="../articles/triple-detection.html">Multi-Detector SEC</a></li>
     <li><a class="dropdown-item" href="../articles/mals-detection.html">MALS Detection</a></li>
     <li><a class="dropdown-item" href="../articles/lals-rals-detection.html">LALS/RALS Detection</a></li>
@@ -88,29 +89,33 @@ application of dn/dc (refractive index increment) values.</p>
 
 
 <dt id="arg-measures">measures<a class="anchor" aria-label="anchor" href="#arg-measures"></a></dt>
-<dd><p>Character vector of RI detector column names to process.
-If <code>NULL</code>, will look for columns containing "ri" in the name.</p></dd>
+<dd><p>Character vector of RI detector columns to process. If
+<code>NULL</code>, the step looks for columns containing "ri" in the name. Multiple
+columns can be processed in place; a named output requires exactly one.</p></dd>
 
 
 <dt id="arg-dn-dc">dn_dc<a class="anchor" aria-label="anchor" href="#arg-dn-dc"></a></dt>
-<dd><p>Refractive index increment (mL/g). Can be:</p><ul><li><p>A single positive finite numeric value applied to all samples</p></li>
+<dd><p>Refractive index increment (mL/g). Can be:</p><ul><li><p>A single finite, nonzero numeric value applied to all samples</p></li>
 <li><p><code>NULL</code> to skip dn/dc normalization (signal remains in detector units)</p></li>
 </ul></dd>
 
 
 <dt id="arg-dn-dc-column">dn_dc_column<a class="anchor" aria-label="anchor" href="#arg-dn-dc-column"></a></dt>
 <dd><p>Character name of a column containing sample-specific
-positive finite dn/dc values. Overrides <code>dn_dc</code> if provided.</p></dd>
+finite, nonzero dn/dc values. Values may be positive or negative.
+Overrides <code>dn_dc</code> if provided.</p></dd>
 
 
 <dt id="arg-instrument-constant">instrument_constant<a class="anchor" aria-label="anchor" href="#arg-instrument-constant"></a></dt>
 <dd><p>RI detector instrument constant. Default is 1.0
-(no adjustment). This converts raw detector response to refractive index
-units.</p></dd>
+(no adjustment). This positive conversion gain multiplies raw detector
+response to obtain refractive-index difference.</p></dd>
 
 
 <dt id="arg-output-col">output_col<a class="anchor" aria-label="anchor" href="#arg-output-col"></a></dt>
-<dd><p>Name for the output column. Default is to modify in place.</p></dd>
+<dd><p>Name for the output column. <code>NULL</code> modifies the selected
+RI measure in place. A different name creates a converted column and keeps
+the source measure unchanged.</p></dd>
 
 
 <dt id="arg-role">role<a class="anchor" aria-label="anchor" href="#arg-role"></a></dt>
@@ -132,8 +137,7 @@ units.</p></dd>
 <dt id="arg-concentration-units">concentration_units<a class="anchor" aria-label="anchor" href="#arg-concentration-units"></a></dt>
 <dd><p>Units for the signal after dn/dc normalization:
 g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
-This is ignored when dn/dc normalization is skipped. RI processing keeps
-its existing positive-only dn/dc contract.</p></dd>
+This is ignored when dn/dc normalization is skipped.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -142,23 +146,26 @@ its existing positive-only dn/dc contract.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The refractive index (RI) detector is the most common concentration detector
-in SEC/GPC. The detector response is proportional to the product of
-concentration and dn/dc:</p>
-<p>$$RI_{signal} = K \times c \times (dn/dc)$$</p>
-<p>where:</p><ul><li><p>K is the instrument constant</p></li>
-<li><p>c is mass concentration in g/mL when dn/dc is in mL/g</p></li>
-<li><p>dn/dc is the refractive index increment (mL/g)</p></li>
-</ul><p>Therefore dividing a calibrated refractive-index response by dn/dc gives
-concentration in g/mL. Set concentration_units to mg/mL to scale those
-values by 1000. The default preserves the current numeric behavior and can
-be read directly by scattering steps that use a tagged concentration curve.</p>
-<p><strong>Common dn/dc values (in water at 25°C, 633 nm):</strong></p><ul><li><p>Polystyrene in THF: 0.185 mL/g</p></li>
-<li><p>PMMA in THF: 0.084 mL/g</p></li>
-<li><p>PEG in water: 0.135 mL/g</p></li>
-<li><p>Proteins: ~0.185 mL/g</p></li>
-<li><p>DNA: ~0.170 mL/g</p></li>
-</ul></div>
+    <p>The RI detector response is proportional to concentration and dn/dc. Let
+<code>S_raw</code> be the stored detector response and <code>K</code> be the positive conversion
+gain supplied as <code>instrument_constant</code>. The calibrated refractive-index
+difference and concentration are related by:</p>
+<p>$$\Delta n = K \times S_{raw} = c \times (dn/dc)$$</p>
+<p>Thus the step calculates concentration in g/mL as
+<code>S_raw * instrument_constant / dn_dc</code>, when dn/dc is in mL/g. A negative
+dn/dc is physically valid for some solute/solvent combinations; the
+<a href="https://www.brookhaveninstruments.com/wp-content/uploads/2023/08/BI-DNDC-Manual-Static-Mode.pdf" class="external-link">Brookhaven BI-DNDC manual</a>
+describes negative values. Wyatt notes that dn/dc depends on solute,
+solvent, wavelength, and temperature, so supply a value measured or
+qualified for the relevant conditions
+(<a href="https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html" class="external-link">application note</a>).</p>
+<p>Set <code>concentration_units</code> to <code>"mg/mL"</code> to scale the result by 1000. The
+default preserves the existing numeric behavior and can be read directly by
+scattering steps that use a tagged concentration curve. With <code>dn_dc = NULL</code>
+and no <code>dn_dc_column</code>, no concentration normalization is performed. Using
+the default <code>instrument_constant = 1.0</code> leaves signal values unchanged and
+adds no concentration-unit tag.</p>
+    </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Other sec-detectors:

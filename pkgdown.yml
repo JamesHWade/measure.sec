@@ -5,6 +5,7 @@ articles:
   branching-analysis: branching-analysis.html
   calibration-management: calibration-management.html
   copolymer-analysis: copolymer-analysis.html
+  detector-qualification: detector-qualification.html
   exporting-results: exporting-results.html
   getting-started: getting-started.html
   integration-support: integration-support.html
@@ -17,7 +18,7 @@ articles:
   triple-detection: triple-detection.html
   tutorial-conventional-calibration: tutorial-conventional-calibration.html
   tutorial-triple-detection: tutorial-triple-detection.html
-last_built: 2026-11-11T11:56Z
+last_built: 2026-11-12T01:54Z
 urls:
   reference: https://jameshwade.github.io/measure.sec/reference
   article: https://jameshwade.github.io/measure.sec/articles

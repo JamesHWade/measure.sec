@@ -1,5 +1,9 @@
 # Multi-Detector SEC: Detector Integration and Workflows
 
+For an executable check of signed RI conversion, concentration units and
+clipped-signal diagnostics, see [Detector units and
+clipping](https://jameshwade.github.io/measure.sec/articles/detector-qualification.md).
+
 ## Overview
 
 > **Implementation status:**
@@ -312,6 +316,8 @@ rec_triple <- recipe(
 prepped_triple <- prep(rec_triple)
 #> Warning: Negative detector values were excluded during mass normalization.
 #> ℹ 1379 of 10005 signal points (13.8%) were set to zero.
+#> ℹ Column "ri": maximum negative share of absolute sampled signal area was 0.8%
+#>   in row 1.
 result_triple <- bake(prepped_triple, new_data = NULL)
 
 # View results - output is relative without a scattering calibration constant

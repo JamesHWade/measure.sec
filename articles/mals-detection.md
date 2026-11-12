@@ -228,6 +228,8 @@ rec_mals <- recipe(
 prepped_mals <- prep(rec_mals)
 #> Warning: Negative detector values were excluded during mass normalization.
 #> ℹ 2222 of 14007 signal points (15.9%) were set to zero.
+#> ℹ Column "ri": maximum negative share of absolute sampled signal area was 2% in
+#>   row 4.
 result_mals <- bake(prepped_mals, new_data = NULL)
 
 # View results
