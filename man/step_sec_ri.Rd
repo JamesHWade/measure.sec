@@ -26,16 +26,17 @@ If \code{NULL}, will look for columns containing "ri" in the name.}
 
 \item{dn_dc}{Refractive index increment (mL/g). Can be:
 \itemize{
-\item A single positive finite numeric value applied to all samples
+\item A single finite, nonzero numeric value applied to all samples
 \item \code{NULL} to skip dn/dc normalization (signal remains in detector units)
 }}
 
 \item{dn_dc_column}{Character name of a column containing sample-specific
-positive finite dn/dc values. Overrides \code{dn_dc} if provided.}
+finite, nonzero dn/dc values. Values may be positive or negative.
+Overrides \code{dn_dc} if provided.}
 
 \item{instrument_constant}{RI detector instrument constant. Default is 1.0
-(no adjustment). This converts raw detector response to refractive index
-units.}
+(no adjustment). This positive conversion gain multiplies raw detector
+response to obtain refractive-index difference.}
 
 \item{output_col}{Name for the output column. Default is to modify in place.}
 
@@ -49,8 +50,7 @@ units.}
 
 \item{concentration_units}{Units for the signal after dn/dc normalization:
 g/mL (default, the natural unit from RI divided by dn/dc) or mg/mL.
-This is ignored when dn/dc normalization is skipped. RI processing keeps
-its existing positive-only dn/dc contract.}
+This is ignored when dn/dc normalization is skipped.}
 }
 \value{
 An updated recipe with the new step added.
@@ -61,32 +61,28 @@ refractive index (RI) detector signals for SEC analysis, including
 application of dn/dc (refractive index increment) values.
 }
 \details{
-The refractive index (RI) detector is the most common concentration detector
-in SEC/GPC. The detector response is proportional to the product of
-concentration and dn/dc:
+The RI detector response is proportional to concentration and dn/dc. Let
+\code{S_raw} be the stored detector response and \code{K} be the positive conversion
+gain supplied as \code{instrument_constant}. The calibrated refractive-index
+difference and concentration are related by:
 
-\deqn{RI_{signal} = K \times c \times (dn/dc)}
+\deqn{\Delta n = K \times S_{raw} = c \times (dn/dc)}
 
-where:
-\itemize{
-\item K is the instrument constant
-\item c is mass concentration in g/mL when dn/dc is in mL/g
-\item dn/dc is the refractive index increment (mL/g)
-}
+Thus the step calculates concentration in g/mL as
+\code{S_raw * instrument_constant / dn_dc}, when dn/dc is in mL/g. A negative
+dn/dc is physically valid for some solute/solvent combinations; the
+\href{https://www.brookhaveninstruments.com/wp-content/uploads/2023/08/BI-DNDC-Manual-Static-Mode.pdf}{Brookhaven BI-DNDC manual}
+describes negative values. Wyatt notes that dn/dc depends on solute,
+solvent, wavelength, and temperature, so supply a value measured or
+qualified for the relevant conditions
+(\href{https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html}{application note}).
 
-Therefore dividing a calibrated refractive-index response by dn/dc gives
-concentration in g/mL. Set concentration_units to mg/mL to scale those
-values by 1000. The default preserves the current numeric behavior and can
-be read directly by scattering steps that use a tagged concentration curve.
-
-\strong{Common dn/dc values (in water at 25°C, 633 nm):}
-\itemize{
-\item Polystyrene in THF: 0.185 mL/g
-\item PMMA in THF: 0.084 mL/g
-\item PEG in water: 0.135 mL/g
-\item Proteins: ~0.185 mL/g
-\item DNA: ~0.170 mL/g
-}
+Set \code{concentration_units} to \code{"mg/mL"} to scale the result by 1000. The
+default preserves the existing numeric behavior and can be read directly by
+scattering steps that use a tagged concentration curve. With \code{dn_dc = NULL}
+and no \code{dn_dc_column}, no concentration normalization is performed. Using
+the default \code{instrument_constant = 1.0} leaves signal values unchanged and
+adds no concentration-unit tag.
 }
 \examples{
 \dontrun{

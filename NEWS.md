@@ -33,5 +33,9 @@
   dn/dc. LALS/RALS also require explicit or recorded concentration units,
   convert mg/mL to g/mL before single-angle calculations, and reject
   misaligned detector curves (#60).
+* `step_sec_ri()` accepts finite, nonzero signed scalar and sample-specific
+  refractive-index increments. Its documentation now distinguishes the
+  positive raw-to-RI conversion gain from the signed increment, matching the
+  existing calibration arithmetic (#60).
 * `step_sec_ri()` and `step_sec_uv()` record the concentration units produced
   by detector normalization and allow mg/mL or g/mL output (#60).
