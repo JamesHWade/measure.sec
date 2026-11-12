@@ -129,6 +129,11 @@ Unlike general-purpose baseline methods like ALS or polynomial fitting,
 this approach is specifically designed for the characteristic shape of
 GPC/SEC chromatograms and is computationally very fast.
 
+Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
+current input column. Untagged inputs remain untagged, and invalid
+recorded units are rejected. The unit tag describes the values' units;
+it does not qualify the selected baseline regions or establish recovery.
+
 **No selectors should be supplied to this step function**. The data
 should be in the internal format produced by
 [`measure::step_measure_input_wide()`](https://jameshwade.github.io/measure/reference/step_measure_input_wide.html)

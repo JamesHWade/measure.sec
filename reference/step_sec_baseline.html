@@ -171,6 +171,10 @@ chromatogram is considered "baseline". Choose values that:</p><ul><li><p>Include
 </ul><p>Unlike general-purpose baseline methods like ALS or polynomial fitting,
 this approach is specifically designed for the characteristic shape of
 GPC/SEC chromatograms and is computationally very fast.</p>
+<p>Baseline subtraction retains a recorded <code>g/mL</code> or <code>mg/mL</code> unit on the
+current input column. Untagged inputs remain untagged, and invalid recorded
+units are rejected. The unit tag describes the values' units; it does not
+qualify the selected baseline regions or establish recovery.</p>
 <p><strong>No selectors should be supplied to this step function</strong>. The data should be
 in the internal format produced by <code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_wide.html" class="external-link">measure::step_measure_input_wide()</a></code> or
 <code><a href="https://jameshwade.github.io/measure/reference/step_measure_input_long.html" class="external-link">measure::step_measure_input_long()</a></code>.</p>
