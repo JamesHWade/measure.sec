@@ -21,8 +21,9 @@ step_sec_ri(
 \arguments{
 \item{recipe}{A recipe object.}
 
-\item{measures}{Character vector of RI detector column names to process.
-If \code{NULL}, will look for columns containing "ri" in the name.}
+\item{measures}{Character vector of RI detector columns to process. If
+\code{NULL}, the step looks for columns containing "ri" in the name. Multiple
+columns can be processed in place; a named output requires exactly one.}
 
 \item{dn_dc}{Refractive index increment (mL/g). Can be:
 \itemize{
@@ -38,7 +39,9 @@ Overrides \code{dn_dc} if provided.}
 (no adjustment). This positive conversion gain multiplies raw detector
 response to obtain refractive-index difference.}
 
-\item{output_col}{Name for the output column. Default is to modify in place.}
+\item{output_col}{Name for the output column. \code{NULL} modifies the selected
+RI measure in place. A different name creates a converted column and keeps
+the source measure unchanged.}
 
 \item{role}{Role for generated columns.}
 

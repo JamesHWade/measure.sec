@@ -33,6 +33,10 @@
   dn/dc. LALS/RALS also require explicit or recorded concentration units,
   convert mg/mL to g/mL before single-angle calculations, and reject
   misaligned detector curves (#60).
+* `step_sec_ri()` now respects `output_col`. A distinct output name preserves
+  the raw source curve and its role; a named output requires one selected RI
+  measure and cannot overwrite another column visible at that recipe stage.
+  `NULL` keeps existing in-place processing, including multiple measures (#75).
 * `step_sec_ri()` accepts finite, nonzero signed scalar and sample-specific
   refractive-index increments. Its documentation now distinguishes the
   positive raw-to-RI conversion gain from the signed increment, matching the
