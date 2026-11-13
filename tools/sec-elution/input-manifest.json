@@ -1,0 +1,17 @@
+{
+  "files": {
+    "fixtures.json": {
+      "sha256": "dbd3c3e15015f81264a83743b5989da1fe0e43712fda71e3a823ab46e98b6680",
+      "size_bytes": 2509
+    },
+    "declaration.json": {
+      "sha256": "26f2810af74c8a0e80eda4b0baaf29192f3d12e6c6adccf2d6eb68335a7e1316",
+      "size_bytes": 120661
+    }
+  },
+  "mass_cases": 44,
+  "delay_cases": 324,
+  "noop_cases": 4,
+  "lals_cases": 8,
+  "expected_rejections": 26
+}

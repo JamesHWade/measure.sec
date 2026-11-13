@@ -1,3 +1,6 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+tools/sec-elution/fixtures.json -text
+tools/sec-elution/declaration.json -text
+tools/sec-elution/input-manifest.json -text

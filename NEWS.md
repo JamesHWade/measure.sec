@@ -1,5 +1,11 @@
 # measure.sec 0.0.0.9000
 
+* The detector qualification guide now executes explicit time/volume-axis
+  controls, delay direction and missing-gap checks, and a synthetic LALS
+  calculation. Public installed-package qualification tools independently
+  compare fixed observations with a Python oracle in CI, including copied
+  tool and output paths containing spaces (#82).
+
 * `step_sec_detector_delay()` accepts explicit minute, second, mL, and uL
   axes. Positive delays move late target signals earlier with both correction
   methods, fixing the reversed interpolation direction. Index correction

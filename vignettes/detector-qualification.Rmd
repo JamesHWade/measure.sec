@@ -1,8 +1,8 @@
 ---
-title: "Check detector units, signed RI and clipped signal"
+title: "Qualify SEC detector units, delays and clipped signal"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Check detector units, signed RI and clipped signal}
+  %\VignetteIndexEntry{Qualify SEC detector units, delays and clipped signal}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -15,12 +15,13 @@ library(measure.sec)
 library(recipes)
 ```
 
-This guide checks numerical contracts using fixed synthetic traces: converting
-calibrated RI signals to concentration, conserving declared injected mass, and
-inspecting negative-sample clipping. It does not establish detector calibration,
-recovery, a suitable baseline, or instrument performance.
+This guide checks fixed synthetic software contracts for detector conversion,
+mass normalization, delay correction, missing samples and serialization. It
+does not establish detector calibration, actual flow accuracy, sample
+recovery, baseline suitability or instrument performance. Every declared
+value below is for software qualification, not a recommended method setting.
 
-## Convert a signed RI response
+## Check signed RI conversion before normalization
 
 `instrument_constant` is a positive conversion gain: multiplying the recorded
 signal by it gives the calibrated refractive-index difference. Dividing that
@@ -31,15 +32,12 @@ taking the absolute value of the detector trace.
 The [Brookhaven BI-DNDC manual](https://www.brookhaveninstruments.com/wp-content/uploads/2023/08/BI-DNDC-Manual-Static-Mode.pdf)
 describes negative refractive-index increments. The [Wyatt application note](https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html)
 explains why the appropriate value depends on the solute, solvent, temperature
-and wavelength. The values below are synthetic declarations, not recommended
-values for a polymer or solvent.
+and wavelength. The values below are synthetic declarations.
 
 ```{r signed-inputs}
 time_min <- c(0, 1, 2, 4)
 concentration_g_ml <- c(0, 0.001, 0.002, 0)
 gain <- 2
-flow_ml_min <- 0.5
-injected_mass_mg <- 2
 input <- tibble::tibble(
   sample_id = c("positive increment", "negative increment"),
   dn_dc = c(0.2, -0.2)
@@ -53,94 +51,324 @@ ri_recipe <- recipe(~., data = input) |>
     measures = "ri", dn_dc_column = "dn_dc",
     instrument_constant = gain, output_col = "concentration"
   )
-ri_result <- bake(prep(ri_recipe), new_data = NULL)
-stopifnot(identical(ri_result$ri, input$ri),
-          identical(attr(ri_result$concentration, "sec_concentration_unit"),
-                    "g/mL"))
+ri_result <- bake(prep(ri_recipe, training = input), new_data = NULL)
+stopifnot(
+  identical(ri_result$ri, input$ri),
+  identical(attr(ri_result$concentration, "sec_concentration_unit", exact = TRUE),
+            "g/mL")
+)
 for (row in seq_len(nrow(input))) {
   stopifnot(max(abs(ri_result$concentration[[row]]$value -
                     concentration_g_ml)) < 1e-14)
 }
-
-recipe_for <- function(unit) {
-  ri_recipe |>
-    step_sec_concentration(
-      measures = "concentration", injection_mass = injected_mass_mg,
-      flow_rate = flow_ml_min, concentration_units = unit
-    )
-}
-result_mg <- bake(prep(recipe_for("mg/mL")), new_data = NULL)
-result_g <- bake(prep(recipe_for("g/mL")), new_data = NULL)
 ```
 
-The RI-only check runs before injected-mass normalization, which would
-otherwise cancel a constant conversion error. Both rows represent the same
-concentration curve. The signed increment is
-read from each current baked row; it is not replaced by the training rows'
-values. Finite, nonzero increments are required. Without `dn_dc` or a
-`dn_dc_column`, the step applies only the declared instrument gain and does not
-create a concentration-unit tag.
+This absolute RI check runs before injected-mass normalization, which could
+otherwise cancel a constant gain error. The two rows recover the declared
+concentration with both positive and negative `dn_dc` values. No absolute value
+is applied to the recorded signal.
 
-## Check the declared mass and units
+## Declare the raw elution axis and concentration units
 
-The elution axis here is **minutes**, and flow is **mL/min**. Convert other
-axis units before using this concentration step: monotonic numeric coordinates
-do not establish their physical unit.
+`elution_units` describes the existing numeric `location` coordinates. It
+accepts exactly `"min"`, `"s"`, `"mL"` or `"uL"`; coordinates stay unchanged.
+Flow is in mL/min. The concentration step multiplies the sampled raw-axis area
+by the corresponding mL-per-axis-unit factor:
 
-For the declared curve, trapezoidal concentration area is 0.004 g min/mL.
-Multiplication by the flow gives 0.002 g, or 2 mg. The following independent
-balance checks the baked results in both requested concentration units.
+| `elution_units` | mL per raw axis unit | Example coordinate from 1 min at 0.5 mL/min |
+|:--|:--|--:|
+| `"min"` | flow rate | 1 min |
+| `"s"` | flow rate / 60 | 60 s |
+| `"mL"` | 1 | 0.5 mL |
+| `"uL"` | 0.001 | 500 uL |
 
-```{r mass-balance}
-recovered_mass_mg <- function(curve, unit) {
-  values <- curve$value
-  if (identical(unit, "g/mL")) values <- values * 1000
-  widths <- abs(diff(curve$location))
-  flow_ml_min * sum(widths *
-    (utils::head(values, -1) + utils::tail(values, -1)) / 2)
-}
-checks <- dplyr::bind_rows(lapply(
-  list(result_mg, result_g), function(result) {
-    unit <- attr(result$concentration, "sec_concentration_unit", exact = TRUE)
-    recovered <- vapply(result$concentration, recovered_mass_mg,
-                        numeric(1), unit = unit)
-    tibble::tibble(
-      sample_id = result$sample_id,
-      unit = unit,
-      recovered_mass_mg = recovered
+The table and checks below apply all four declarations to the same fixed 2 mg
+trace and request both output concentration units. The location vectors are
+constructed from the fixed minute values using the declared coordinate scale;
+the step itself does not rewrite them.
+
+```{r mass-units}
+axis_per_minute <- c(min = 1, s = 60, mL = 0.5, uL = 500)
+mL_per_axis_unit <- c(min = 0.5, s = 0.5 / 60, mL = 1, uL = 0.001)
+flow_ml_min <- 0.5
+injected_mass_mg <- 2
+output_units <- c("mg/mL", "g/mL")
+
+mass_checks <- list()
+index <- 0L
+for (axis_unit in names(axis_per_minute)) {
+  raw_location <- time_min * axis_per_minute[[axis_unit]]
+  for (concentration_unit in output_units) {
+    measure_data <- data.frame(case_id = "known-2-mg")
+    measure_data$signal <- new_measure_list(list(
+      new_measure_tbl(raw_location, concentration_g_ml)
+    ))
+    mass_recipe <- recipe(~., data = measure_data) |>
+      step_sec_concentration(
+        measures = "signal",
+        injection_mass = injected_mass_mg,
+        flow_rate = flow_ml_min,
+        concentration_units = concentration_unit,
+        elution_units = axis_unit,
+        id = paste("guide_mass", axis_unit, gsub("/", "_", concentration_unit),
+                   sep = "_")
+      )
+    mass_result <- bake(
+      prep(mass_recipe, training = measure_data),
+      new_data = measure_data
+    )
+    curve <- mass_result$signal[[1]]
+    unit_tag <- attr(mass_result$signal, "sec_concentration_unit", exact = TRUE)
+    values_mg_ml <- curve$value
+    if (identical(concentration_unit, "g/mL")) {
+      values_mg_ml <- values_mg_ml * 1000
+    }
+    trapezoid_area <- sum(abs(diff(curve$location)) *
+      (head(values_mg_ml, -1) + tail(values_mg_ml, -1)) / 2)
+    recovered_mass_mg <- trapezoid_area * mL_per_axis_unit[[axis_unit]]
+    expected_values <- if (identical(concentration_unit, "mg/mL")) {
+      concentration_g_ml * 1000
+    } else {
+      concentration_g_ml
+    }
+    stopifnot(
+      identical(as.numeric(curve$location), raw_location),
+      identical(unit_tag, concentration_unit),
+      isTRUE(all.equal(curve$value, expected_values, tolerance = 1e-12,
+                       check.attributes = FALSE)),
+      abs(recovered_mass_mg - injected_mass_mg) < 1e-12
+    )
+    index <- index + 1L
+    mass_checks[[index]] <- data.frame(
+      elution_units = axis_unit,
+      concentration_unit = concentration_unit,
+      recovered_mass_mg = recovered_mass_mg
     )
   }
-))
-stopifnot(max(abs(checks$recovered_mass_mg - injected_mass_mg)) < 1e-12)
-stopifnot(identical(result_mg$ri, input$ri),
-          identical(result_g$ri, input$ri),
-          is.null(attr(result_mg$ri, "sec_concentration_unit", exact = TRUE)))
-for (row in seq_len(nrow(input))) {
-  stopifnot(max(abs(result_g$concentration[[row]]$value - concentration_g_ml)) < 1e-14)
-  stopifnot(max(abs(result_mg$concentration[[row]]$value / 1000 -
-                    result_g$concentration[[row]]$value)) < 1e-14)
 }
-knitr::kable(checks, digits = 8)
+mass_table <- dplyr::bind_rows(mass_checks)
+knitr::kable(mass_table, digits = 8)
 ```
 
-The mass balance checks the supplied declaration, not an independently measured
-injection or column recovery. Here `output_col = "concentration"` keeps the
-raw `ri` curves unchanged and creates a separate concentration column. Its unit
-tag is checked independently of the raw signal. Omit `output_col` to retain
-the existing in-place behavior, or explicitly use the source column name. A
-new output name requires one selected RI measure and must be unused at that
-stage of the recipe.
+The recovered mass is recomputed from the baked curve in the requested units
+and the declared mL-per-axis-unit factor. The exact coordinate checks confirm
+that the processing step left each raw axis as supplied. `measure_record()`
+stores an axis declaration separately; pass that knowledge explicitly as
+`elution_units` when building this recipe.
 
-## Inspect clipping on the actual sampling grid
+## Check positive and negative delay direction
 
-Mass normalization sets negative sampled values to zero. The warning includes
-a structured `diagnostics` tibble with one row for every curve in that current
-bake. Capture this condition when you need to retain the diagnostics; the
-trained recipe does not keep a mutable record of its latest bake.
+`delay_times` is always expressed in minutes and `delay_volumes` in mL,
+independent of the raw axis. The recipe uses flow to convert between those
+declarations and the axis. The correction is `corrected(x) = target(x + delta)`
+after conversion to the raw axis. A positive delay means the target detector
+reads the signal later, so the correction samples a larger target coordinate.
+A negative delay means the target reads it earlier and samples a smaller
+coordinate. Interpolation leaves coordinates fixed and returns `NA` outside
+the target's supported range.
 
-These three curves have identical sampled values and one negative point each.
-Their first sampling interval differs, changing the quadrature weight carried
-by that point.
+```{r delay-direction}
+make_delay_input <- function(location, reference_values, target_values,
+                             tag = "mg/mL") {
+  result <- data.frame(sample_id = "synthetic-delay")
+  result$reference <- new_measure_list(list(
+    new_measure_tbl(location, reference_values)
+  ))
+  result$target <- new_measure_list(list(
+    new_measure_tbl(location, target_values)
+  ))
+  attr(result$target, "sec_concentration_unit") <- tag
+  result
+}
+
+delay_fit <- function(data, delay_value, declaration = "time",
+                      method = "interpolate") {
+  delay_recipe <- recipe(~., data = data)
+  arguments <- list(
+    recipe = delay_recipe,
+    reference = "reference",
+    targets = "target",
+    flow_rate = 0.5,
+    method = method,
+    elution_units = "min",
+    id = paste0("guide_delay_", if (delay_value < 0) "negative" else "positive")
+  )
+  if (identical(declaration, "time")) {
+    arguments$delay_times <- c(target = delay_value)
+  } else {
+    arguments$delay_volumes <- c(target = delay_value)
+  }
+  do.call(step_sec_detector_delay, arguments)
+}
+
+delay_location <- 0:5
+reference_late <- c(0, 1, 0, 0, 0, 0)
+target_late <- c(0, 0, 1, 0, 0, 0)
+positive_data <- make_delay_input(delay_location, reference_late, target_late)
+positive_recipe <- delay_fit(positive_data, delay_value = 1, declaration = "time")
+positive_prepared <- prep(positive_recipe, training = positive_data)
+serialized_prepared <- unserialize(serialize(positive_prepared, NULL))
+positive_result <- bake(serialized_prepared, new_data = positive_data)
+positive_curve <- positive_result$target[[1]]
+stopifnot(
+  identical(as.numeric(positive_curve$location), as.numeric(delay_location)),
+  identical(positive_curve$value[1:5], reference_late[1:5]),
+  is.na(positive_curve$value[6]),
+  identical(attr(positive_result$target, "sec_concentration_unit", exact = TRUE),
+            "mg/mL")
+)
+
+reference_early <- c(0, 0, 1, 0, 0, 0)
+target_early <- c(0, 1, 0, 0, 0, 0)
+negative_data <- make_delay_input(delay_location, reference_early, target_early)
+negative_result <- bake(
+  prep(
+    delay_fit(negative_data, delay_value = -0.5, declaration = "volume"),
+    training = negative_data
+  ),
+  new_data = negative_data
+)
+negative_curve <- negative_result$target[[1]]
+stopifnot(
+  is.na(negative_curve$value[1]),
+  identical(negative_curve$value[2:6], reference_early[2:6]),
+  identical(as.numeric(negative_curve$location), as.numeric(delay_location))
+)
+knitr::kable(data.frame(
+  declaration = c("delay_times = 1 min", "delay_volumes = -0.5 mL"),
+  interpretation = c("target arrives late", "target arrives early"),
+  aligned_points = c(5L, 5L)
+))
+```
+
+The positive-direction recipe was serialized after preparation, restored, then
+baked against a current dataset. Its target column retained the synthetic
+`mg/mL` tag. Each baked row is processed from its current values; the recipe
+does not cache a prior bake result.
+
+## Index shifting and interpolation
+
+`method = "shift"` uses one integer number of points, rounded to the nearest
+sample with R's ties-to-even rule. A nonzero index shift requires a uniform
+grid; a zero shift is an exact no-op on irregular coordinates. For an irregular
+grid, use `method = "interpolate"` to evaluate the target at `x + delta`.
+Internal missing samples propagate through adjacent interpolation intervals;
+they are not deleted and bridged.
+
+```{r delay-rounding}
+round_location <- 0:7
+round_values <- seq_along(round_location)
+rounding_results <- lapply(c(1.5, 2.5), function(delay_min) {
+  data <- make_delay_input(
+    round_location,
+    reference_values = rep(0, length(round_location)),
+    target_values = round_values
+  )
+  result <- bake(
+    prep(delay_fit(data, delay_value = delay_min, method = "shift"),
+         training = data),
+    new_data = data
+  )
+  curve <- result$target[[1]]
+  shift <- as.integer(round(delay_min))
+  expected <- c(round_values[(shift + 1L):length(round_values)],
+                rep(NA_real_, shift))
+  stopifnot(identical(curve$value, expected))
+  data.frame(
+    delay_points = delay_min,
+    ties_to_even_points = shift,
+    first_output_value = curve$value[[1]]
+  )
+})
+knitr::kable(dplyr::bind_rows(rounding_results))
+```
+
+```{r irregular-interpolation}
+irregular_location <- c(0, 1, 3, 6)
+irregular_values <- c(0, 1, NA_real_, 4)
+irregular_data <- make_delay_input(
+  irregular_location,
+  reference_values = c(10, 11, 13, 16),
+  target_values = irregular_values
+)
+irregular_recipe <- recipe(~., data = irregular_data) |>
+  step_sec_detector_delay(
+    reference = "reference",
+    targets = "target",
+    delay_times = c(target = 0.5),
+    flow_rate = 0.5,
+    method = "interpolate",
+    elution_units = "min",
+    id = "guide_irregular_interpolation"
+  )
+irregular_result <- bake(
+  prep(irregular_recipe, training = irregular_data),
+  new_data = irregular_data
+)
+irregular_curve <- irregular_result$target[[1]]
+stopifnot(
+  identical(as.numeric(irregular_curve$location), irregular_location),
+  isTRUE(all.equal(irregular_curve$value[[1]], 0.5, tolerance = 1e-14)),
+  all(is.na(irregular_curve$value[2:4]))
+)
+
+zero_recipe <- recipe(~., data = irregular_data) |>
+  step_sec_detector_delay(
+    reference = "reference",
+    targets = "target",
+    delay_times = c(target = 0),
+    flow_rate = 0.5,
+    method = "shift",
+    elution_units = "min",
+    id = "guide_irregular_zero_shift"
+  )
+zero_result <- bake(
+  prep(zero_recipe, training = irregular_data),
+  new_data = irregular_data
+)
+stopifnot(identical(zero_result$target[[1]]$value, irregular_values))
+
+irregular_index_error <- tryCatch(
+  bake(
+    prep(
+      delay_fit(irregular_data, delay_value = 1, method = "shift"),
+      training = irregular_data
+    ),
+    new_data = irregular_data
+  ),
+  error = identity
+)
+stopifnot(inherits(irregular_index_error, "error"))
+
+shared_grid <- make_delay_input(c(0, 1, 2), c(10, 11, 12), c(0, 1, 0))
+mismatch_grid <- make_delay_input(c(0, 1, 2), c(10, 11, 12), c(0, 1, 0))
+mismatch_grid$target[[1]]$location <- c(0, 1.01, 2)
+mismatch_error <- tryCatch(
+  bake(
+    prep(delay_fit(shared_grid, delay_value = 0.5), training = shared_grid),
+    new_data = mismatch_grid
+  ),
+  error = identity
+)
+stopifnot(inherits(mismatch_error, "error"))
+knitr::kable(data.frame(
+  location = irregular_curve$location,
+  original_target = irregular_values,
+  corrected_target = irregular_curve$value
+))
+```
+
+Reference and target must share the same exact numeric grid on every current
+bake row. This step aligns detector signals already sampled on one grid; it
+does not resample between separate reference and target grids.
+
+## Inspect clipping on the current bake rows
+
+Mass normalization sets negative sampled values to zero. Its typed warning has
+an `elution_units` field, and the diagnostic areas use the incoming signal
+units multiplied by that raw axis unit. These areas are not automatically
+signal-minutes on a seconds or volume axis. The example captures the condition
+from the current bake rather than retaining the training-time warning.
 
 ```{r clipping-inputs}
 first_interval_min <- c(0.1, 1, 9)
@@ -149,29 +377,42 @@ clipping_input$ri <- new_measure_list(lapply(first_interval_min, function(first)
   new_measure_tbl(c(0, first, 10), c(-1, 1, 1))
 }))
 clipping_recipe <- recipe(~., data = clipping_input) |>
-  step_sec_concentration(measures = "ri", injection_mass = 1, flow_rate = 1)
-
-captured <- new.env(parent = emptyenv())
-trained <- withCallingHandlers(
-  prep(clipping_recipe),
+  step_sec_concentration(
+    measures = "ri", injection_mass = 1, flow_rate = 0.5,
+    elution_units = "min", id = "guide_clipping_min"
+  )
+trained_clipping <- withCallingHandlers(
+  prep(clipping_recipe, training = clipping_input),
   measure_sec_negative_signal_clipped = function(condition) {
-    captured$diagnostics <- condition$diagnostics
     invokeRestart("muffleWarning")
   }
 )
-clipped_result <- bake(trained, new_data = NULL)
-diagnostics <- captured$diagnostics
+current_clipping <- new.env(parent = emptyenv())
+clipped_result <- withCallingHandlers(
+  bake(trained_clipping, new_data = clipping_input),
+  measure_sec_negative_signal_clipped = function(condition) {
+    current_clipping$condition <- condition
+    invokeRestart("muffleWarning")
+  }
+)
+clip_condition <- current_clipping$condition
+diagnostics <- clip_condition$diagnostics
 diagnostics$first_interval_min <- first_interval_min[diagnostics$row]
-stopifnot(max(abs(diagnostics$excluded_fraction - c(0.005, 0.05, 0.45))) < 1e-14)
+stopifnot(
+  identical(clip_condition$column, "ri"),
+  identical(clip_condition$elution_units, "min"),
+  nrow(diagnostics) == nrow(clipped_result),
+  max(abs(diagnostics$excluded_fraction - c(0.005, 0.05, 0.45))) < 1e-14
+)
 knitr::kable(diagnostics, digits = 4)
 ```
 
 `positive_area` is the trapezoidal area of the samplewise positive part, and
 `negative_area` is the same calculation on the magnitudes of negative samples.
-Their units are incoming signal units times minutes. `excluded_fraction` is
-`negative_area / (positive_area + negative_area)`: the negative share of
-**absolute sampled signal area**. It is not an estimate of lost or recovered
-mass, nor an exact integration of zero crossings between the original samples.
+`excluded_fraction` is `negative_area / (positive_area + negative_area)`: the
+negative share of **absolute sampled signal area**. It is not an estimate of
+lost or recovered mass, nor an exact integration of zero crossings between
+samples.
 
 ```{r clipping-figure, fig.alt="Three curves each have one negative point out of three. Their negative shares of absolute sampled signal area are 0.5, 5 and 45 percent as the first sampling interval grows from 0.1 to 1 to 9 minutes. The dashed line marks the common negative-point percentage of 33.3 percent."}
 ggplot2::ggplot(diagnostics, ggplot2::aes(
@@ -189,15 +430,119 @@ ggplot2::ggplot(diagnostics, ggplot2::aes(
   ggplot2::theme_minimal(base_size = 11)
 ```
 
-The warning keeps its point count and reports the largest area share with its
-current row position. Fractions are calculated per curve rather than pooling
-raw signal areas across samples. Reordering curves changes their diagnostic
-row positions; associate rows with identifiers from the same baked dataset.
-`prep()` processes training data and can emit this warning as well.
+The warning reports one diagnostic row per curve in the current bake, including
+curves without negative points. Reordering curves changes row positions;
+associate those positions with identifiers from the same baked dataset. A high
+excluded share calls for investigating the input and baseline; this guide
+defines no universal acceptance threshold.
 
-A high excluded share calls for investigation of the input and baseline; this
-guide defines no universal acceptance threshold. Choose any acceptance rule
-from appropriate blanks, controls and method requirements. The clipping share
-is not a complete uncertainty budget. The detector-unit metadata on these
-curves also does not imply that every generic preprocessing transform preserves
-it; check units before downstream detector calculations.
+The warning's axis field can be checked with the same signed trace under every
+supported declaration. Its raw areas scale with the declared numeric axis,
+while `elution_units` identifies the unit used for those areas.
+
+```{r clipping-axis-units}
+capture_axis_diagnostic <- function(axis_unit) {
+  scale <- axis_per_minute[[axis_unit]]
+  data <- data.frame(sample_id = "signed")
+  data$ri <- new_measure_list(list(
+    new_measure_tbl(c(0, 1, 2) * scale, c(-1, 1, 1))
+  ))
+  recipe_to_prep <- recipe(~., data = data) |>
+    step_sec_concentration(
+      measures = "ri", injection_mass = 1, flow_rate = flow_ml_min,
+      elution_units = axis_unit, id = paste0("guide_clip_", axis_unit)
+    )
+  prepared <- withCallingHandlers(
+    prep(recipe_to_prep, training = data),
+    measure_sec_negative_signal_clipped = function(condition) {
+      invokeRestart("muffleWarning")
+    }
+  )
+  captured <- new.env(parent = emptyenv())
+  withCallingHandlers(
+    bake(prepared, new_data = data),
+    measure_sec_negative_signal_clipped = function(condition) {
+      captured$condition <- condition
+      invokeRestart("muffleWarning")
+    }
+  )
+  condition <- captured$condition
+  diagnostic <- condition$diagnostics[1, , drop = FALSE]
+  data.frame(
+    elution_units = condition$elution_units,
+    positive_area = diagnostic$positive_area,
+    negative_area = diagnostic$negative_area,
+    excluded_fraction = diagnostic$excluded_fraction
+  )
+}
+axis_diagnostics <- dplyr::bind_rows(lapply(
+  names(axis_per_minute), capture_axis_diagnostic
+))
+stopifnot(identical(axis_diagnostics$elution_units, names(axis_per_minute)))
+knitr::kable(axis_diagnostics, digits = 6)
+```
+
+## Carry the current unit tag into downstream LALS
+
+This synthetic chain normalizes RI concentration, aligns it to an LALS reference
+with a one-minute delay, then lets `step_sec_lals()` infer the current
+concentration unit from the baked RI column. The calibration and optical
+constants are fixed software inputs. The expected output checks only this
+single-angle calculation; it is not instrument calibration or multi-angle
+analysis.
+
+```{r downstream-lals}
+lals_location <- 0:6
+lals_input <- data.frame(sample_id = "synthetic-LALS")
+lals_input$ri <- new_measure_list(list(new_measure_tbl(
+  lals_location,
+  0.0001 * (1 + lals_location)
+)))
+lals_input$lals <- new_measure_list(list(new_measure_tbl(
+  lals_location,
+  c(5e-7, 7.5e-7, 1e-6, 1.25e-6, 1.5e-6, 1.75e-6, 2e-6)
+)))
+lals_recipe <- recipe(~., data = lals_input) |>
+  step_sec_concentration(
+    measures = "ri", injection_mass = 1.2, flow_rate = 0.5,
+    concentration_units = "mg/mL", elution_units = "min",
+    id = "guide_lals_mass"
+  ) |>
+  step_sec_detector_delay(
+    reference = "lals", targets = "ri", delay_times = c(ri = 1),
+    flow_rate = 0.5, elution_units = "min", method = "interpolate",
+    id = "guide_lals_delay"
+  ) |>
+  step_sec_lals(
+    measures = "lals", concentration_col = "ri",
+    optical_constant = 1e-7, calibration_constant = 2,
+    min_signal = 0, id = "guide_lals"
+  )
+lals_result <- bake(
+  prep(lals_recipe, training = lals_input),
+  new_data = lals_input
+)
+concentration <- lals_result$ri[[1]]
+scattering <- lals_result$lals[[1]]
+mw <- lals_result$mw_lals[[1]]
+stopifnot(
+  identical(attr(lals_result$ri, "sec_concentration_unit", exact = TRUE),
+            "mg/mL"),
+  identical(as.numeric(concentration$location), as.numeric(lals_location)),
+  identical(as.numeric(scattering$location), as.numeric(lals_location)),
+  identical(scattering$value, lals_input$lals[[1]]$value),
+  max(abs(mw$value[1:6] - 50000)) < 1e-8,
+  is.na(mw$value[7])
+)
+knitr::kable(data.frame(
+  time_min = lals_location,
+  concentration_mg_ml = concentration$value,
+  scattering = scattering$value,
+  single_angle_mw = mw$value
+), digits = 8)
+```
+
+The last molecular-weight point is `NA` because the positive delay requests a
+target value beyond the supported RI range. The scattering curve and location
+vectors remain unchanged, and the unit tag survives the delay operation for
+the downstream LALS calculation.
