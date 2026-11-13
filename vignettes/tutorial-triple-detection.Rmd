@@ -135,8 +135,8 @@ cat("  UV:   ", round(uv_peak, 3), "min\n")
 cat("  MALS: ", round(mals_peak, 3), "min\n")
 
 # Calculate delays relative to RI (the reference)
-delay_uv <- ri_peak - uv_peak    # Positive = UV needs to shift later
-delay_mals <- ri_peak - mals_peak  # Negative = MALS needs to shift earlier
+delay_uv <- uv_peak - ri_peak      # Negative: UV sees the sample before RI
+delay_mals <- mals_peak - ri_peak  # Positive: MALS sees the sample after RI
 
 cat("\nDelays relative to RI:\n")
 cat("  UV delay:   ", round(delay_uv, 4), "min (shift UV signal later)\n")
@@ -151,12 +151,15 @@ cat("  MALS: ", round(delay_mals * flow_rate, 3), "mL\n")
 
 ## Step 2: Apply Delay Correction
 
-Now we align all signals to the RI reference. The `step_sec_detector_delay()` function handles this:
+Now we align all signals to the RI reference. These stored time coordinates
+are rounded: adjacent widths range from 0.0016 to 0.0017 minutes. Use
+`method = "interpolate"` for this irregular grid rather than an index shift.
+`delay_times` retains the observed target-minus-reference offset in minutes;
+a positive offset moves a late target signal earlier.
 
 ```{r apply-delays}
 # Process delay standard with correction
-# Note: delay_volumes are in mL; our delays are in minutes, so convert
-# Using flow_rate = 1.0 mL/min, time in min = volume in mL
+# Declare the measured time offset and the minute coordinate axis explicitly.
 rec_aligned <- recipe(
   ri_mv + uv_au + mals_mv + time_min + dn_dc ~ sample_id,
   data = delay_std
@@ -169,11 +172,13 @@ rec_aligned <- recipe(
   # Apply baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
   # Correct inter-detector delays
-  # delay_volumes: positive = detector sees sample AFTER reference
+  # A positive delay means the detector sees the sample after the reference.
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_volumes = c(uv = -delay_uv, mals = -delay_mals)  # Negate to get correction direction
+    delay_times = c(uv = delay_uv, mals = delay_mals),
+    elution_units = "min",
+    method = "interpolate"
   )
 
 aligned <- prep(rec_aligned) |> bake(new_data = NULL)
@@ -238,7 +243,9 @@ rec_triple <- recipe(
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_volumes = c(uv = -delay_uv, mals = -delay_mals)
+    delay_times = c(uv = delay_uv, mals = delay_mals),
+    elution_units = "min",
+    method = "interpolate"
   ) |>
   # Process RI for concentration
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
@@ -313,7 +320,9 @@ analyze_sample <- function(sample_data) {
     step_sec_detector_delay(
       reference = "ri",
       targets = "mals",
-      delay_volumes = c(mals = -delay_mals)
+      delay_times = c(mals = delay_mals),
+      elution_units = "min",
+      method = "interpolate"
     ) |>
     step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
 

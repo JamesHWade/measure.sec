@@ -1,5 +1,23 @@
 # measure.sec 0.0.0.9000
 
+* The detector qualification guide now executes explicit time/volume-axis
+  controls, delay direction and missing-gap checks, and a synthetic LALS
+  calculation. Public installed-package qualification tools independently
+  compare fixed observations with a Python oracle in CI, including copied
+  tool and output paths containing spaces (#82).
+
+* `step_sec_detector_delay()` accepts explicit minute, second, mL, and uL
+  axes. Positive delays move late target signals earlier with both correction
+  methods, fixing the reversed interpolation direction. Index correction
+  requires a uniform grid; interpolation preserves missing gaps and rejects
+  unrepresentable results. Current reference/target grids must match (#82).
+
+* `step_sec_concentration()` accepts explicit minute, second, mL, and uL
+  elution axes without changing coordinates. Mass normalization converts the
+  sampled area to mL; invalid declarations and malformed curves fail before
+  normalization. Named concentration units now convert consistently across
+  detector calculations, fixing a factor-of-1,000 error (#82).
+
 * `step_sec_baseline()` retains the current input column's recorded
   concentration unit after correction, including unchanged-signal fallbacks.
   Untagged inputs stay untagged and invalid recorded units are rejected;

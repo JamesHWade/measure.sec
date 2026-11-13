@@ -17,7 +17,8 @@ step_sec_concentration(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_concentration")
+  id = recipes::rand_id("sec_concentration"),
+  elution_units = "min"
 )
 }
 \arguments{
@@ -58,6 +59,11 @@ so that the total area equals the injected mass. Default is \code{TRUE}.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{elution_units}{Units of each curve's raw \code{location} axis: \code{"min"},
+\code{"s"}, \code{"mL"}, or \code{"uL"}. The default interprets locations as minutes.
+Axis coordinates are preserved; any axis-unit declaration from a
+measurement record must be supplied explicitly here.}
 }
 \value{
 An updated recipe with the new step added.
@@ -69,17 +75,27 @@ factors and injection parameters.
 }
 \details{
 This step converts detector response (after dn/dc or extinction coefficient
-normalization) to absolute concentration. The conversion uses the known
-injected mass to normalize the chromatogram area:
+normalization) to absolute concentration using the injected mass and the
+positive sampled area. \code{elution_units} declares the units of the existing
+location coordinates without changing them:
 
-\deqn{c(t) = \frac{S(t) \times m_{inj}}{\int S(t) \times F \times dt}}
+\deqn{c(x) = \frac{S(x) \times m_{inj}}{A \times k}}
 
-where:
-\itemize{
-\item S(t) is the normalized detector signal
-\item m_inj is the injected mass
-\item F is the flow rate
-}
+Here \code{A} is the trapezoidal positive signal area on the raw sampled axis,
+and \code{k} is millilitres per raw axis unit: \code{flow_rate} for minutes,
+\code{flow_rate / 60} for seconds, \code{1} for millilitres, and \code{0.001} for
+microlitres. \code{flow_rate} is in mL/min. A non-null flow is always validated;
+it is required only when a time-axis conversion needs it. When
+\code{normalize_to_mass = FALSE}, no axis execution or flow conversion occurs.
+
+\code{measure_record()} stores an axis declaration separately from the measure
+curves. This step does not read or reconcile that record field; translate it
+to \code{elution_units} explicitly. Binary64 spacings or widths already lost in
+the supplied coordinates cannot be recovered.
+
+Location and value columns must be plain numeric vectors of equal length,
+with at least two finite samples on a strictly monotonic axis. Increasing,
+decreasing, and irregular axes are accepted.
 
 \strong{Workflow for concentration determination:}
 \enumerate{
@@ -101,7 +117,8 @@ tibble with one row for every curve in the current bake data, including
 curves without negative points. Its columns are \code{row} (the one-based row
 position in the current bake data), \code{negative_points}, \code{points},
 \code{positive_area}, \code{negative_area}, and \code{excluded_fraction}. The two area
-columns use the curve's signal units times minutes. Positive and negative
+columns use the curve's signal units times the declared raw axis unit.
+Positive and negative
 samples are clipped separately before trapezoidal integration on the
 sampled axis; this uses the sampled clipped ordinates rather than
 interpolating zero crossings. \code{excluded_fraction} is calculated separately

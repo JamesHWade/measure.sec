@@ -4,6 +4,36 @@
 # Convert detector signal to concentration
 # ==============================================================================
 
+.sec_is_plain_numeric_scalar <- function(x) {
+  is.numeric(x) &&
+    length(x) == 1L &&
+    !is.object(x) &&
+    is.null(dim(x)) &&
+    all(names(attributes(x)) %in% "names")
+}
+
+.sec_validate_concentration_units <- function(x) {
+  .sec_validate_concentration_unit(
+    x,
+    argument = "concentration_units",
+    allow_null = FALSE
+  )
+}
+
+.sec_validate_concentration_injection_mass <- function(x) {
+  if (
+    !.sec_is_plain_numeric_scalar(x) ||
+      !is.finite(x) ||
+      x <= 0
+  ) {
+    cli::cli_abort(
+      "{.arg injection_mass} must be a positive finite mass in mg."
+    )
+  }
+
+  unname(x)
+}
+
 #' Convert Detector Signal to Concentration
 #'
 #' `step_sec_concentration()` creates a *specification* of a recipe step that
@@ -33,20 +63,36 @@
 #' @param trained Logical indicating if the step has been trained.
 #' @param skip Logical. Should the step be skipped when baking?
 #' @param id Unique step identifier.
+#' @param elution_units Units of each curve's raw `location` axis: `"min"`,
+#'   `"s"`, `"mL"`, or `"uL"`. The default interprets locations as minutes.
+#'   Axis coordinates are preserved; any axis-unit declaration from a
+#'   measurement record must be supplied explicitly here.
 #'
 #' @return An updated recipe with the new step added.
 #'
 #' @details
 #' This step converts detector response (after dn/dc or extinction coefficient
-#' normalization) to absolute concentration. The conversion uses the known
-#' injected mass to normalize the chromatogram area:
+#' normalization) to absolute concentration using the injected mass and the
+#' positive sampled area. `elution_units` declares the units of the existing
+#' location coordinates without changing them:
 #'
-#' \deqn{c(t) = \frac{S(t) \times m_{inj}}{\int S(t) \times F \times dt}}
+#' \deqn{c(x) = \frac{S(x) \times m_{inj}}{A \times k}}
 #'
-#' where:
-#' - S(t) is the normalized detector signal
-#' - m_inj is the injected mass
-#' - F is the flow rate
+#' Here `A` is the trapezoidal positive signal area on the raw sampled axis,
+#' and `k` is millilitres per raw axis unit: `flow_rate` for minutes,
+#' `flow_rate / 60` for seconds, `1` for millilitres, and `0.001` for
+#' microlitres. `flow_rate` is in mL/min. A non-null flow is always validated;
+#' it is required only when a time-axis conversion needs it. When
+#' `normalize_to_mass = FALSE`, no axis execution or flow conversion occurs.
+#'
+#' `measure_record()` stores an axis declaration separately from the measure
+#' curves. This step does not read or reconcile that record field; translate it
+#' to `elution_units` explicitly. Binary64 spacings or widths already lost in
+#' the supplied coordinates cannot be recovered.
+#'
+#' Location and value columns must be plain numeric vectors of equal length,
+#' with at least two finite samples on a strictly monotonic axis. Increasing,
+#' decreasing, and irregular axes are accepted.
 #'
 #' **Workflow for concentration determination:**
 #' 1. Baseline correct the chromatogram
@@ -66,7 +112,8 @@
 #' curves without negative points. Its columns are `row` (the one-based row
 #' position in the current bake data), `negative_points`, `points`,
 #' `positive_area`, `negative_area`, and `excluded_fraction`. The two area
-#' columns use the curve's signal units times minutes. Positive and negative
+#' columns use the curve's signal units times the declared raw axis unit.
+#' Positive and negative
 #' samples are clipped separately before trapezoidal integration on the
 #' sampled axis; this uses the sampled clipped ordinates rather than
 #' interpolating zero crossings. `excluded_fraction` is calculated separately
@@ -113,7 +160,8 @@ step_sec_concentration <- function(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_concentration")
+  id = recipes::rand_id("sec_concentration"),
+  elution_units = "min"
 ) {
   if (
     !is.logical(normalize_to_mass) ||
@@ -123,15 +171,8 @@ step_sec_concentration <- function(
     cli::cli_abort("{.arg normalize_to_mass} must be TRUE or FALSE.")
   }
   detector <- match.arg(detector)
-  if (
-    !is.character(concentration_units) ||
-      length(concentration_units) != 1 ||
-      !concentration_units %in% c("mg/mL", "g/mL")
-  ) {
-    cli::cli_abort(
-      "{.arg concentration_units} must be {.val mg/mL} or {.val g/mL}."
-    )
-  }
+  elution_units <- .sec_elution_units(elution_units)
+  concentration_units <- .sec_validate_concentration_units(concentration_units)
 
   # Validate injection parameters
   if (normalize_to_mass) {
@@ -150,6 +191,16 @@ step_sec_concentration <- function(
 
     # Calculate injection mass if not provided
     if (is.null(injection_mass)) {
+      if (!.sec_is_plain_numeric_scalar(injection_volume)) {
+        cli::cli_abort(
+          "{.arg injection_volume} must be a plain numeric scalar."
+        )
+      }
+      if (!.sec_is_plain_numeric_scalar(sample_concentration)) {
+        cli::cli_abort(
+          "{.arg sample_concentration} must be a plain numeric scalar."
+        )
+      }
       .sec_validate_positive_scalar(injection_volume, "injection_volume")
       .sec_validate_positive_scalar(
         sample_concentration,
@@ -159,25 +210,15 @@ step_sec_concentration <- function(
       # injection_mass in mg = volume (uL) * conc (mg/mL) / 1000
       injection_mass <- injection_volume * sample_concentration / 1000
     }
-    if (
-      !is.numeric(injection_mass) ||
-        length(injection_mass) != 1 ||
-        !is.finite(injection_mass) ||
-        injection_mass <= 0
-    ) {
-      cli::cli_abort(
-        "{.arg injection_mass} must be a positive finite mass in mg."
-      )
-    }
+    injection_mass <- .sec_validate_concentration_injection_mass(injection_mass)
   }
 
-  if (
-    !is.numeric(flow_rate) ||
-      length(flow_rate) != 1 ||
-      !is.finite(flow_rate) ||
-      flow_rate <= 0
-  ) {
-    cli::cli_abort("{.arg flow_rate} must be a positive number.")
+  flow_rate <- .sec_elution_flow(
+    flow_rate,
+    required = normalize_to_mass && elution_units %in% c("min", "s")
+  )
+  if (normalize_to_mass) {
+    .sec_elution_volume_factor(elution_units, flow_rate)
   }
 
   recipes::add_step(
@@ -194,7 +235,8 @@ step_sec_concentration <- function(
       role = role,
       trained = trained,
       skip = skip,
-      id = id
+      id = id,
+      elution_units = elution_units
     )
   )
 }
@@ -211,7 +253,8 @@ step_sec_concentration_new <- function(
   role,
   trained,
   skip,
-  id
+  id,
+  elution_units
 ) {
   recipes::step(
     subclass = "sec_concentration",
@@ -226,19 +269,75 @@ step_sec_concentration_new <- function(
     role = role,
     trained = trained,
     skip = skip,
-    id = id
+    id = id,
+    elution_units = elution_units
   )
+}
+
+.sec_is_plain_numeric_vector <- function(x) {
+  is.numeric(x) &&
+    !is.object(x) &&
+    is.null(dim(x)) &&
+    all(names(attributes(x)) %in% "names")
+}
+
+.sec_validate_normalize_to_mass <- function(x) {
+  if (
+    !is.logical(x) ||
+      length(x) != 1L ||
+      is.na(x) ||
+      is.object(x) ||
+      !is.null(dim(x))
+  ) {
+    cli::cli_abort("{.arg normalize_to_mass} must be TRUE or FALSE.")
+  }
+
+  x
+}
+
+.sec_validate_concentration_measures <- function(data, measures) {
+  if (!is.character(measures) || anyNA(measures)) {
+    cli::cli_abort("The trained {.arg measures} must be column names.")
+  }
+
+  measure_cols <- find_measure_cols(data)
+  missing <- setdiff(measures, measure_cols)
+  if (length(missing) > 0L) {
+    cli::cli_abort(
+      c(
+        "Selected SEC concentration columns must exist as measure columns.",
+        "x" = "Missing or non-measure columns: {.val {missing}}."
+      )
+    )
+  }
+
+  invisible(NULL)
 }
 
 .sec_normalize_concentration_measure <- function(
   m,
   injection_mass,
-  flow_rate,
+  volume_factor,
   concentration_units,
   row
 ) {
   location <- m$location
   value <- m$value
+
+  if (
+    !.sec_is_plain_numeric_vector(location) ||
+      !.sec_is_plain_numeric_vector(value)
+  ) {
+    cli::cli_abort(
+      "Concentration normalization requires plain numeric one-dimensional location and value columns."
+    )
+  }
+  if (length(location) != length(value)) {
+    cli::cli_abort(
+      "Concentration normalization requires location and value columns of equal length."
+    )
+  }
+
   n <- length(location)
 
   if (
@@ -248,7 +347,7 @@ step_sec_concentration_new <- function(
       !(all(diff(location) > 0) || all(diff(location) < 0))
   ) {
     cli::cli_abort(
-      "Concentration normalization requires finite values on a strictly monotonic elution-time axis with at least two points."
+      "Concentration normalization requires finite values on a strictly monotonic elution axis with at least two points."
     )
   }
 
@@ -288,7 +387,7 @@ step_sec_concentration_new <- function(
     )
   }
 
-  denominator <- positive_area * flow_rate
+  denominator <- positive_area * volume_factor
   if (!is.finite(denominator) || denominator <= 0) {
     cli::cli_abort(
       "Concentration normalization requires a finite, positive integrated area-flow denominator."
@@ -348,6 +447,25 @@ step_sec_concentration_new <- function(
 
 #' @export
 prep.step_sec_concentration <- function(x, training, info = NULL, ...) {
+  elution_units <- .sec_elution_units_from_step(x)
+  concentration_units <- .sec_validate_concentration_units(
+    x$concentration_units
+  )
+  normalize_to_mass <- .sec_validate_normalize_to_mass(x$normalize_to_mass)
+  injection_mass <- x$injection_mass
+  if (normalize_to_mass) {
+    injection_mass <- .sec_validate_concentration_injection_mass(injection_mass)
+  }
+  flow_rate <- .sec_elution_flow(
+    x$flow_rate,
+    required = normalize_to_mass && elution_units %in% c("min", "s")
+  )
+  if (normalize_to_mass) {
+    .sec_elution_volume_factor(elution_units, flow_rate)
+  }
+  if (normalize_to_mass && !is.null(x$measures)) {
+    .sec_validate_concentration_measures(training, x$measures)
+  }
   check_for_measure(training)
 
   # Find measure columns if not specified
@@ -369,33 +487,52 @@ prep.step_sec_concentration <- function(x, training, info = NULL, ...) {
     measures <- x$measures
   }
 
+  if (normalize_to_mass) {
+    .sec_validate_concentration_measures(training, measures)
+  }
+
   step_sec_concentration_new(
     measures = measures,
     detector = x$detector,
     injection_volume = x$injection_volume,
-    injection_mass = x$injection_mass,
+    injection_mass = injection_mass,
     sample_concentration = x$sample_concentration,
-    flow_rate = x$flow_rate,
-    concentration_units = x$concentration_units,
-    normalize_to_mass = x$normalize_to_mass,
+    flow_rate = flow_rate,
+    concentration_units = concentration_units,
+    normalize_to_mass = normalize_to_mass,
     role = x$role,
     trained = TRUE,
     skip = x$skip,
-    id = x$id
+    id = x$id,
+    elution_units = elution_units
   )
 }
 
 #' @export
 bake.step_sec_concentration <- function(object, new_data, ...) {
+  elution_units <- .sec_elution_units_from_step(object)
+  concentration_units <- .sec_validate_concentration_units(
+    object$concentration_units
+  )
+  normalize_to_mass <- .sec_validate_normalize_to_mass(
+    object$normalize_to_mass
+  )
+  flow_rate <- .sec_elution_flow(
+    object$flow_rate,
+    required = normalize_to_mass && elution_units %in% c("min", "s")
+  )
   measures <- object$measures
-  injection_mass <- object$injection_mass
-  flow_rate <- object$flow_rate
-  normalize_to_mass <- object$normalize_to_mass
-  concentration_units <- object$concentration_units
 
   if (!normalize_to_mass) {
     return(tibble::as_tibble(new_data))
   }
+
+  injection_mass <- .sec_validate_concentration_injection_mass(
+    object$injection_mass
+  )
+  .sec_validate_concentration_measures(new_data, measures)
+
+  volume_factor <- .sec_elution_volume_factor(elution_units, flow_rate)
 
   for (col in measures) {
     processed <- purrr::map2(
@@ -406,7 +543,7 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
           .sec_normalize_concentration_measure(
             m = m,
             injection_mass = injection_mass,
-            flow_rate = flow_rate,
+            volume_factor = volume_factor,
             concentration_units = concentration_units,
             row = row
           )
@@ -435,7 +572,8 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
           ),
           class = "measure_sec_negative_signal_clipped",
           column = col,
-          diagnostics = diagnostics
+          diagnostics = diagnostics,
+          elution_units = elution_units
         )
       }
     }
@@ -475,12 +613,30 @@ print.step_sec_concentration <- function(
 #' @export
 #' @keywords internal
 tidy.step_sec_concentration <- function(x, ...) {
+  elution_units <- .sec_elution_units_from_step(x)
+  concentration_units <- .sec_validate_concentration_units(
+    x$concentration_units
+  )
+  normalize_to_mass <- .sec_validate_normalize_to_mass(x$normalize_to_mass)
+  injection_mass <- x$injection_mass
+  if (normalize_to_mass) {
+    injection_mass <- .sec_validate_concentration_injection_mass(injection_mass)
+  }
+  flow_rate <- .sec_elution_flow(
+    x$flow_rate,
+    required = normalize_to_mass && elution_units %in% c("min", "s")
+  )
+  if (normalize_to_mass) {
+    .sec_elution_volume_factor(elution_units, flow_rate)
+  }
+
   tibble::tibble(
     measures = list(x$measures),
     detector = x$detector,
-    injection_mass = x$injection_mass %||% NA_real_,
-    flow_rate = x$flow_rate,
-    concentration_units = x$concentration_units,
+    injection_mass = injection_mass %||% NA_real_,
+    flow_rate = flow_rate %||% NA_real_,
+    concentration_units = concentration_units,
+    elution_units = elution_units,
     id = x$id
   )
 }
