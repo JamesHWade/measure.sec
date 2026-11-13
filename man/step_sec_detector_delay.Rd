@@ -2,7 +2,7 @@
 % Please edit documentation in R/step_sec_detector_delay.R
 \name{step_sec_detector_delay}
 \alias{step_sec_detector_delay}
-\title{Correct Inter-Detector Volume Delays}
+\title{Correct Inter-Detector Elution Delays}
 \usage{
 step_sec_detector_delay(
   recipe,
@@ -15,32 +15,34 @@ step_sec_detector_delay(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_detector_delay")
+  id = recipes::rand_id("sec_detector_delay"),
+  elution_units = "min"
 )
 }
 \arguments{
 \item{recipe}{A recipe object.}
 
-\item{reference}{Character name of the reference detector column (typically RI).
-All other detectors will be aligned to this reference.}
+\item{reference}{Character name of the reference detector column. The
+reference is unchanged and cannot also be a target.}
 
-\item{targets}{Character vector of detector column names to shift. If \code{NULL},
-all measure columns except the reference will be shifted.}
+\item{targets}{Character vector of detector columns to shift. If \code{NULL},
+all measure columns except the reference are shifted. \code{character()}
+selects no target columns.}
 
-\item{delay_volumes}{Named numeric vector of delay volumes in mL.
-Names should match the target column names. Positive values indicate the
-detector sees the sample after the reference.}
+\item{delay_volumes}{Named numeric vector of delay volumes in mL. Names must
+identify target columns. Positive values indicate that the target detector
+sees the sample after the reference.}
 
-\item{delay_times}{Named numeric vector of delay times in minutes.
-Alternative to \code{delay_volumes}. Requires \code{flow_rate} to be specified.}
+\item{delay_times}{Named numeric vector of delay times in minutes. This is
+an alternative to \code{delay_volumes}; the values remain in minutes in
+the step object.}
 
-\item{flow_rate}{Flow rate in mL/min. Required if using \code{delay_times}.}
+\item{flow_rate}{Flow rate in mL/min. Required only when converting between
+time and volume axes. Any supplied value must be positive and finite.}
 
-\item{method}{Method for shifting signals:
-\itemize{
-\item \code{"shift"} (default): Simple index shift (fastest, slight edge effects)
-\item \code{"interpolate"}: Linear interpolation (smoother, preserves signal shape)
-}}
+\item{method}{Method for shifting signals: \code{"shift"} (index shift with
+round-to-even quantization) or \code{"interpolate"} (piecewise-linear
+interpolation).}
 
 \item{role}{Not used by this step.}
 
@@ -49,63 +51,74 @@ Alternative to \code{delay_volumes}. Requires \code{flow_rate} to be specified.}
 \item{skip}{Logical. Should the step be skipped when baking?}
 
 \item{id}{Unique step identifier.}
+
+\item{elution_units}{Units of the measure \code{location} coordinates:
+\code{"min"} (minutes), \code{"s"} (seconds), \code{"mL"} (millilitres),
+or \code{"uL"} (microlitres). The default is \code{"min"}.}
 }
 \value{
 An updated recipe with the new step added.
 }
 \description{
-\code{step_sec_detector_delay()} creates a \emph{specification} of a recipe step that
-corrects for volume delays between detectors in multi-detector SEC systems.
+\code{step_sec_detector_delay()} creates a specification of a recipe step
+that aligns detector signals to a reference detector in multi-detector SEC
+systems.
 }
 \details{
-In multi-detector SEC systems, detectors are connected in series and separated
-by tubing. This causes each detector to see the same analyte at different times.
-For accurate molecular weight calculations that combine signals from multiple
-detectors (e.g., RI + MALS for absolute MW), these delays must be corrected.
+Detector delay declarations retain their own dimensions: \code{delay_times}
+are always minutes and \code{delay_volumes} are always millilitres,
+regardless of \code{elution_units}. The step converts the declared delay to
+the location axis units during baking. Time-to-time and volume-to-volume
+conversions do not need a flow rate. Converting between time and volume
+needs a positive finite \code{flow_rate} in mL/min.
 
-\strong{Typical detector order and delays:}
-\itemize{
-\item UV detector: Often first, minimal delay
-\item RI detector: Common reference detector
-\item MALS detector: Often has 0.1-0.3 mL delay from RI
-\item Viscometer: May have 0.2-0.5 mL delay
-}
+A corrected target value at location \code{x} is evaluated at
+\code{x + delay}. Thus, a positive delay moves target values toward lower
+locations. The reference and every target curve in a current bake row must
+have exactly the same numeric location grid. This step does not resample
+mismatched grids.
 
-\strong{Determining delay volumes:}
-\enumerate{
-\item Inject a narrow standard and record all detector signals
-\item Measure the time offset between peak maxima
-\item Convert to volume: delay_volume = time_offset × flow_rate
-}
+The \code{"shift"} method requires a nonzero-delay grid to be uniformly
+spaced; adjacent widths may differ by at most 1e-8 relative to the first
+width. Delays are rounded to the nearest whole index using R's round-to-even
+rule. A zero delay is an exact pass-through and does not require uniform
+spacing. The \code{"interpolate"} method accepts irregular monotonic grids,
+returns \code{NA} outside the sampled range, and propagates missing values
+without bridging an internal \code{NA} gap. Neither method changes the
+location coordinates.
+
+\code{elution_units} is a caller declaration. This step does not infer units
+from record metadata or add an axis-unit attribute to measure columns.
 }
 \examples{
 \dontrun{
 library(recipes)
 library(measure)
 
-# Correct UV and MALS signals relative to RI
+# Correct UV and MALS signals relative to RI on a minute axis
 rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(uv = -0.05, mals = 0.15)
+    delay_volumes = c(uv = -0.05, mals = 0.15),
+    elution_units = "min"
   ) |>
   prep()
 }
 }
 \seealso{
-Other sec-chromatography: 
-\code{\link{step_sec_band_broadening}()},
-\code{\link{step_sec_baseline}()},
-\code{\link{step_sec_exclude_regions}()},
-\code{\link{step_sec_integration_window}()},
-\code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_peaks_deconvolve}()},
-\code{\link{step_sec_peaks_detect}()},
-\code{\link{step_sec_peaks_refine}()}
+Other sec-chromatography:
+\code{\link[=step_sec_band_broadening]{step_sec_band_broadening()}},
+\code{\link[=step_sec_baseline]{step_sec_baseline()}},
+\code{\link[=step_sec_exclude_regions]{step_sec_exclude_regions()}},
+\code{\link[=step_sec_integration_window]{step_sec_integration_window()}},
+\code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}},
+\code{\link[=step_sec_mw_distribution]{step_sec_mw_distribution()}},
+\code{\link[=step_sec_mw_fractions]{step_sec_mw_fractions()}},
+\code{\link[=step_sec_peaks_deconvolve]{step_sec_peaks_deconvolve()}},
+\code{\link[=step_sec_peaks_detect]{step_sec_peaks_detect()}},
+\code{\link[=step_sec_peaks_refine]{step_sec_peaks_refine()}}
 }
 \concept{sec-chromatography}

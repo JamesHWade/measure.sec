@@ -1,5 +1,11 @@
 # measure.sec 0.0.0.9000
 
+* `step_sec_detector_delay()` accepts explicit minute, second, mL, and uL
+  axes. Positive delays move late target signals earlier with both correction
+  methods, fixing the reversed interpolation direction. Index correction
+  requires a uniform grid; interpolation preserves missing gaps and rejects
+  unrepresentable results. Current reference/target grids must match (#82).
+
 * `step_sec_concentration()` accepts explicit minute, second, mL, and uL
   elution axes without changing coordinates. Mass normalization converts the
   sampled area to mL; invalid declarations and malformed curves fail before
