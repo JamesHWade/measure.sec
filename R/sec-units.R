@@ -33,9 +33,14 @@
     return(invisible(NULL))
   }
 
+  valid_shape <- is.character(unit) &&
+    length(unit) == 1L &&
+    !is.object(unit) &&
+    is.null(dim(unit)) &&
+    all(names(attributes(unit)) %in% "names")
+
   if (
-    !is.character(unit) ||
-      length(unit) != 1 ||
+    !valid_shape ||
       is.na(unit) ||
       !unit %in% c("mg/mL", "g/mL")
   ) {
@@ -44,7 +49,7 @@
     )
   }
 
-  invisible(unit)
+  invisible(unname(unit))
 }
 
 .sec_resolve_concentration_unit <- function(
@@ -53,13 +58,16 @@
   argument = "concentration_unit",
   require_recorded = FALSE
 ) {
-  .sec_validate_concentration_unit(unit, argument)
+  unit <- .sec_validate_concentration_unit(unit, argument)
   recorded_unit <- attr(
     concentration_curve,
     "sec_concentration_unit",
     exact = TRUE
   )
-  .sec_validate_concentration_unit(recorded_unit, "recorded concentration unit")
+  recorded_unit <- .sec_validate_concentration_unit(
+    recorded_unit,
+    "recorded concentration unit"
+  )
 
   if (require_recorded && is.null(recorded_unit)) {
     cli::cli_abort(
@@ -89,6 +97,7 @@
 }
 
 .sec_concentration_g_per_ml <- function(value, unit) {
+  unit <- .sec_validate_concentration_unit(unit, allow_null = FALSE)
   if (identical(unit, "mg/mL")) value / 1000 else value
 }
 
