@@ -1,8 +1,8 @@
-# Correct Inter-Detector Volume Delays
+# Correct Inter-Detector Elution Delays
 
-`step_sec_detector_delay()` creates a *specification* of a recipe step
-that corrects for volume delays between detectors in multi-detector SEC
-systems.
+`step_sec_detector_delay()` creates a specification of a recipe step
+that aligns detector signals to a reference detector in multi-detector
+SEC systems.
 
 ## Usage
 
@@ -18,7 +18,8 @@ step_sec_detector_delay(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_detector_delay")
+  id = recipes::rand_id("sec_detector_delay"),
+  elution_units = "min"
 )
 ```
 
@@ -30,38 +31,36 @@ step_sec_detector_delay(
 
 - reference:
 
-  Character name of the reference detector column (typically RI). All
-  other detectors will be aligned to this reference.
+  Character name of the reference detector column. The reference is
+  unchanged and cannot also be a target.
 
 - targets:
 
-  Character vector of detector column names to shift. If `NULL`, all
-  measure columns except the reference will be shifted.
+  Character vector of detector columns to shift. If `NULL`, all measure
+  columns except the reference are shifted.
+  [`character()`](https://rdrr.io/r/base/character.html) selects no
+  target columns.
 
 - delay_volumes:
 
-  Named numeric vector of delay volumes in mL. Names should match the
-  target column names. Positive values indicate the detector sees the
-  sample after the reference.
+  Named numeric vector of delay volumes in mL. Names must identify
+  target columns. Positive values indicate that the target detector sees
+  the sample after the reference.
 
 - delay_times:
 
-  Named numeric vector of delay times in minutes. Alternative to
-  `delay_volumes`. Requires `flow_rate` to be specified.
+  Named numeric vector of delay times in minutes. This is an alternative
+  to `delay_volumes`; the values remain in minutes in the step object.
 
 - flow_rate:
 
-  Flow rate in mL/min. Required if using `delay_times`.
+  Flow rate in mL/min. Required only when converting between time and
+  volume axes. Any supplied value must be positive and finite.
 
 - method:
 
-  Method for shifting signals:
-
-  - `"shift"` (default): Simple index shift (fastest, slight edge
-    effects)
-
-  - `"interpolate"`: Linear interpolation (smoother, preserves signal
-    shape)
+  Method for shifting signals: `"shift"` (index shift with round-to-even
+  quantization) or `"interpolate"` (piecewise-linear interpolation).
 
 - role:
 
@@ -79,35 +78,42 @@ step_sec_detector_delay(
 
   Unique step identifier.
 
+- elution_units:
+
+  Units of the measure `location` coordinates: `"min"` (minutes), `"s"`
+  (seconds), `"mL"` (millilitres), or `"uL"` (microlitres). The default
+  is `"min"`.
+
 ## Value
 
 An updated recipe with the new step added.
 
 ## Details
 
-In multi-detector SEC systems, detectors are connected in series and
-separated by tubing. This causes each detector to see the same analyte
-at different times. For accurate molecular weight calculations that
-combine signals from multiple detectors (e.g., RI + MALS for absolute
-MW), these delays must be corrected.
+Detector delay declarations retain their own dimensions: `delay_times`
+are always minutes and `delay_volumes` are always millilitres,
+regardless of `elution_units`. The step converts the declared delay to
+the location axis units during baking. Time-to-time and volume-to-volume
+conversions do not need a flow rate. Converting between time and volume
+needs a positive finite `flow_rate` in mL/min.
 
-**Typical detector order and delays:**
+A corrected target value at location `x` is evaluated at `x + delay`.
+Thus, a positive delay moves target values toward lower locations. The
+reference and every target curve in a current bake row must have exactly
+the same numeric location grid. This step does not resample mismatched
+grids.
 
-- UV detector: Often first, minimal delay
+The `"shift"` method requires a nonzero-delay grid to be uniformly
+spaced; adjacent widths may differ by at most 1e-8 relative to the first
+width. Delays are rounded to the nearest whole index using R's
+round-to-even rule. A zero delay is an exact pass-through and does not
+require uniform spacing. The `"interpolate"` method accepts irregular
+monotonic grids, returns `NA` outside the sampled range, and propagates
+missing values without bridging an internal `NA` gap. Neither method
+changes the location coordinates.
 
-- RI detector: Common reference detector
-
-- MALS detector: Often has 0.1-0.3 mL delay from RI
-
-- Viscometer: May have 0.2-0.5 mL delay
-
-**Determining delay volumes:**
-
-1.  Inject a narrow standard and record all detector signals
-
-2.  Measure the time offset between peak maxima
-
-3.  Convert to volume: delay_volume = time_offset × flow_rate
+`elution_units` is a caller declaration. This step does not infer units
+from record metadata or add an axis-unit attribute to measure columns.
 
 ## See also
 
@@ -130,14 +136,15 @@ if (FALSE) { # \dontrun{
 library(recipes)
 library(measure)
 
-# Correct UV and MALS signals relative to RI
+# Correct UV and MALS signals relative to RI on a minute axis
 rec <- recipe(~., data = sec_triple_detect) |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(uv = -0.05, mals = 0.15)
+    delay_volumes = c(uv = -0.05, mals = 0.15),
+    elution_units = "min"
   ) |>
   prep()
 } # }

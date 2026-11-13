@@ -44,7 +44,7 @@ Recipe steps for SEC detector signal processing
 - [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
   : Differential Viscometer Processing for SEC
 - [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
-  : Correct Inter-Detector Volume Delays
+  : Correct Inter-Detector Elution Delays
 
 ## Signal Processing
 

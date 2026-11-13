@@ -122,7 +122,7 @@ save_sec_calibration(
     notes = "Monthly calibration - January 2024"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/Rtmpu6UFg7/file27566dbf3070.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpDZ78xS/file277ee9aedd9.rds
 ```
 
 ### Format Options
@@ -172,7 +172,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-12 02:15:56
+#> Created: 2026-11-13 12:39:59
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -242,7 +242,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-12 02:15:56
+#> Created: 2026-11-13 12:39:59
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -462,7 +462,7 @@ sessionInfo()
 #> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
 #> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-66        
 #> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
-#> [34] parallelly_1.50.0   lava_1.10           tidyselect_1.2.1   
+#> [34] parallelly_1.50.0   lava_1.11           tidyselect_1.2.1   
 #> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
 #> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
 #> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          

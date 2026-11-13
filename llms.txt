@@ -306,7 +306,7 @@ Recipe steps for SEC detector signal processing
 - [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
   : Differential Viscometer Processing for SEC
 - [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
-  : Correct Inter-Detector Volume Delays
+  : Correct Inter-Detector Elution Delays
 
 ## Signal Processing
 
@@ -505,7 +505,7 @@ Learning-oriented guides to get you started
 
 Task-oriented guides for specific applications
 
-- [Check detector units, signed RI and clipped
+- [Qualify SEC detector units, delays and clipped
   signal](https://jameshwade.github.io/measure.sec/articles/detector-qualification.md):
 - [Multi-Detector SEC: Detector Integration and
   Workflows](https://jameshwade.github.io/measure.sec/articles/triple-detection.md):

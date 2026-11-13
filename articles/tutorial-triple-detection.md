@@ -160,16 +160,16 @@ cat("  MALS: ", round(mals_peak, 3), "min\n")
 #>   MALS:  14.757 min
 
 # Calculate delays relative to RI (the reference)
-delay_uv <- ri_peak - uv_peak    # Positive = UV needs to shift later
-delay_mals <- ri_peak - mals_peak  # Negative = MALS needs to shift earlier
+delay_uv <- uv_peak - ri_peak      # Negative: UV sees the sample before RI
+delay_mals <- mals_peak - ri_peak  # Positive: MALS sees the sample after RI
 
 cat("\nDelays relative to RI:\n")
 #> 
 #> Delays relative to RI:
 cat("  UV delay:   ", round(delay_uv, 4), "min (shift UV signal later)\n")
-#>   UV delay:    0.42 min (shift UV signal later)
+#>   UV delay:    -0.42 min (shift UV signal later)
 cat("  MALS delay: ", round(delay_mals, 4), "min (shift MALS signal earlier)\n")
-#>   MALS delay:  0.795 min (shift MALS signal earlier)
+#>   MALS delay:  -0.795 min (shift MALS signal earlier)
 
 # Convert to volume (using flow rate of 1.0 mL/min)
 flow_rate <- 1.0
@@ -177,22 +177,24 @@ cat("\nDelay volumes:\n")
 #> 
 #> Delay volumes:
 cat("  UV:   ", round(delay_uv * flow_rate, 3), "mL\n")
-#>   UV:    0.42 mL
+#>   UV:    -0.42 mL
 cat("  MALS: ", round(delay_mals * flow_rate, 3), "mL\n")
-#>   MALS:  0.795 mL
+#>   MALS:  -0.795 mL
 ```
 
 ## Step 2: Apply Delay Correction
 
-Now we align all signals to the RI reference. The
-[`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
-function handles this:
+Now we align all signals to the RI reference. These stored time
+coordinates are rounded: adjacent widths range from 0.0016 to 0.0017
+minutes. Use `method = "interpolate"` for this irregular grid rather
+than an index shift. `delay_times` retains the observed
+target-minus-reference offset in minutes; a positive offset moves a late
+target signal earlier.
 
 ``` r
 
 # Process delay standard with correction
-# Note: delay_volumes are in mL; our delays are in minutes, so convert
-# Using flow_rate = 1.0 mL/min, time in min = volume in mL
+# Declare the measured time offset and the minute coordinate axis explicitly.
 rec_aligned <- recipe(
   ri_mv + uv_au + mals_mv + time_min + dn_dc ~ sample_id,
   data = delay_std
@@ -205,11 +207,13 @@ rec_aligned <- recipe(
   # Apply baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
   # Correct inter-detector delays
-  # delay_volumes: positive = detector sees sample AFTER reference
+  # A positive delay means the detector sees the sample after the reference.
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_volumes = c(uv = -delay_uv, mals = -delay_mals)  # Negate to get correction direction
+    delay_times = c(uv = delay_uv, mals = delay_mals),
+    elution_units = "min",
+    method = "interpolate"
   )
 
 aligned <- prep(rec_aligned) |> bake(new_data = NULL)
@@ -280,7 +284,9 @@ rec_triple <- recipe(
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_volumes = c(uv = -delay_uv, mals = -delay_mals)
+    delay_times = c(uv = delay_uv, mals = delay_mals),
+    elution_units = "min",
+    method = "interpolate"
   ) |>
   # Process RI for concentration
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
@@ -335,7 +341,9 @@ analyze_sample <- function(sample_data) {
     step_sec_detector_delay(
       reference = "ri",
       targets = "mals",
-      delay_volumes = c(mals = -delay_mals)
+      delay_times = c(mals = delay_mals),
+      elution_units = "min",
+      method = "interpolate"
     ) |>
     step_sec_ri(measures = "ri", dn_dc_column = "dn_dc")
 
@@ -514,7 +522,7 @@ sessionInfo()
 #> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
 #> [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       
 #> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.50.0  
-#> [34] lava_1.10           tidyselect_1.2.1    digest_0.6.39      
+#> [34] lava_1.11           tidyselect_1.2.1    digest_0.6.39      
 #> [37] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
 #> [40] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
 #> [43] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     

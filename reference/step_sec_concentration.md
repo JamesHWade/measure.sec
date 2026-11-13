@@ -20,7 +20,8 @@ step_sec_concentration(
   role = NA,
   trained = FALSE,
   skip = FALSE,
-  id = recipes::rand_id("sec_concentration")
+  id = recipes::rand_id("sec_concentration"),
+  elution_units = "min"
 )
 ```
 
@@ -91,6 +92,13 @@ step_sec_concentration(
 
   Unique step identifier.
 
+- elution_units:
+
+  Units of each curve's raw `location` axis: `"min"`, `"s"`, `"mL"`, or
+  `"uL"`. The default interprets locations as minutes. Axis coordinates
+  are preserved; any axis-unit declaration from a measurement record
+  must be supplied explicitly here.
+
 ## Value
 
 An updated recipe with the new step added.
@@ -98,18 +106,29 @@ An updated recipe with the new step added.
 ## Details
 
 This step converts detector response (after dn/dc or extinction
-coefficient normalization) to absolute concentration. The conversion
-uses the known injected mass to normalize the chromatogram area:
+coefficient normalization) to absolute concentration using the injected
+mass and the positive sampled area. `elution_units` declares the units
+of the existing location coordinates without changing them:
 
-\$\$c(t) = \frac{S(t) \times m\_{inj}}{\int S(t) \times F \times dt}\$\$
+\$\$c(x) = \frac{S(x) \times m\_{inj}}{A \times k}\$\$
 
-where:
+Here `A` is the trapezoidal positive signal area on the raw sampled
+axis, and `k` is millilitres per raw axis unit: `flow_rate` for minutes,
+`flow_rate / 60` for seconds, `1` for millilitres, and `0.001` for
+microlitres. `flow_rate` is in mL/min. A non-null flow is always
+validated; it is required only when a time-axis conversion needs it.
+When `normalize_to_mass = FALSE`, no axis execution or flow conversion
+occurs.
 
-- S(t) is the normalized detector signal
+[`measure_record()`](https://jameshwade.github.io/measure/reference/measure_record.html)
+stores an axis declaration separately from the measure curves. This step
+does not read or reconcile that record field; translate it to
+`elution_units` explicitly. Binary64 spacings or widths already lost in
+the supplied coordinates cannot be recovered.
 
-- m_inj is the injected mass
-
-- F is the flow rate
+Location and value columns must be plain numeric vectors of equal
+length, with at least two finite samples on a strictly monotonic axis.
+Increasing, decreasing, and irregular axes are accepted.
 
 **Workflow for concentration determination:**
 
@@ -135,11 +154,11 @@ current bake data, including curves without negative points. Its columns
 are `row` (the one-based row position in the current bake data),
 `negative_points`, `points`, `positive_area`, `negative_area`, and
 `excluded_fraction`. The two area columns use the curve's signal units
-times minutes. Positive and negative samples are clipped separately
-before trapezoidal integration on the sampled axis; this uses the
-sampled clipped ordinates rather than interpolating zero crossings.
-`excluded_fraction` is calculated separately for each curve as
-`negative_area / (positive_area + negative_area)`, using a scaled
+times the declared raw axis unit. Positive and negative samples are
+clipped separately before trapezoidal integration on the sampled axis;
+this uses the sampled clipped ordinates rather than interpolating zero
+crossings. `excluded_fraction` is calculated separately for each curve
+as `negative_area / (positive_area + negative_area)`, using a scaled
 calculation to avoid overflow. It represents the negative share of
 absolute sampled signal area, not a recovered-mass estimate. The warning
 retains the total clipped-point count and adds the largest per-curve

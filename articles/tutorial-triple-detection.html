@@ -253,16 +253,16 @@ calculate the difference.</p>
 <span><span class="co">#&gt;   MALS:  14.757 min</span></span>
 <span></span>
 <span><span class="co"># Calculate delays relative to RI (the reference)</span></span>
-<span><span class="va">delay_uv</span> <span class="op">&lt;-</span> <span class="va">ri_peak</span> <span class="op">-</span> <span class="va">uv_peak</span>    <span class="co"># Positive = UV needs to shift later</span></span>
-<span><span class="va">delay_mals</span> <span class="op">&lt;-</span> <span class="va">ri_peak</span> <span class="op">-</span> <span class="va">mals_peak</span>  <span class="co"># Negative = MALS needs to shift earlier</span></span>
+<span><span class="va">delay_uv</span> <span class="op">&lt;-</span> <span class="va">uv_peak</span> <span class="op">-</span> <span class="va">ri_peak</span>      <span class="co"># Negative: UV sees the sample before RI</span></span>
+<span><span class="va">delay_mals</span> <span class="op">&lt;-</span> <span class="va">mals_peak</span> <span class="op">-</span> <span class="va">ri_peak</span>  <span class="co"># Positive: MALS sees the sample after RI</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nDelays relative to RI:\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Delays relative to RI:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  UV delay:   "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">delay_uv</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"min (shift UV signal later)\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   UV delay:    0.42 min (shift UV signal later)</span></span>
+<span><span class="co">#&gt;   UV delay:    -0.42 min (shift UV signal later)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  MALS delay: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">delay_mals</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"min (shift MALS signal earlier)\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   MALS delay:  0.795 min (shift MALS signal earlier)</span></span>
+<span><span class="co">#&gt;   MALS delay:  -0.795 min (shift MALS signal earlier)</span></span>
 <span></span>
 <span><span class="co"># Convert to volume (using flow rate of 1.0 mL/min)</span></span>
 <span><span class="va">flow_rate</span> <span class="op">&lt;-</span> <span class="fl">1.0</span></span>
@@ -270,19 +270,22 @@ calculate the difference.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Delay volumes:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  UV:   "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">delay_uv</span> <span class="op">*</span> <span class="va">flow_rate</span>, <span class="fl">3</span><span class="op">)</span>, <span class="st">"mL\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   UV:    0.42 mL</span></span>
+<span><span class="co">#&gt;   UV:    -0.42 mL</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  MALS: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">delay_mals</span> <span class="op">*</span> <span class="va">flow_rate</span>, <span class="fl">3</span><span class="op">)</span>, <span class="st">"mL\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   MALS:  0.795 mL</span></span></code></pre></div>
+<span><span class="co">#&gt;   MALS:  -0.795 mL</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-2-apply-delay-correction">Step 2: Apply Delay Correction<a class="anchor" aria-label="anchor" href="#step-2-apply-delay-correction"></a>
 </h2>
-<p>Now we align all signals to the RI reference. The
-<code><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay()</a></code> function handles this:</p>
+<p>Now we align all signals to the RI reference. These stored time
+coordinates are rounded: adjacent widths range from 0.0016 to 0.0017
+minutes. Use <code>method = "interpolate"</code> for this irregular grid
+rather than an index shift. <code>delay_times</code> retains the
+observed target-minus-reference offset in minutes; a positive offset
+moves a late target signal earlier.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process delay standard with correction</span></span>
-<span><span class="co"># Note: delay_volumes are in mL; our delays are in minutes, so convert</span></span>
-<span><span class="co"># Using flow_rate = 1.0 mL/min, time in min = volume in mL</span></span>
+<span><span class="co"># Declare the measured time offset and the minute coordinate axis explicitly.</span></span>
 <span><span class="va">rec_aligned</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span></span>
 <span>  <span class="va">ri_mv</span> <span class="op">+</span> <span class="va">uv_au</span> <span class="op">+</span> <span class="va">mals_mv</span> <span class="op">+</span> <span class="va">time_min</span> <span class="op">+</span> <span class="va">dn_dc</span> <span class="op">~</span> <span class="va">sample_id</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">delay_std</span></span>
@@ -295,11 +298,13 @@ calculate the difference.</p>
 <span>  <span class="co"># Apply baseline correction</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ri"</span>, <span class="st">"uv"</span>, <span class="st">"mals"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Correct inter-detector delays</span></span>
-<span>  <span class="co"># delay_volumes: positive = detector sees sample AFTER reference</span></span>
+<span>  <span class="co"># A positive delay means the detector sees the sample after the reference.</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
 <span>    reference <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>    targets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"uv"</span>, <span class="st">"mals"</span><span class="op">)</span>,</span>
-<span>    delay_volumes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>uv <span class="op">=</span> <span class="op">-</span><span class="va">delay_uv</span>, mals <span class="op">=</span> <span class="op">-</span><span class="va">delay_mals</span><span class="op">)</span>  <span class="co"># Negate to get correction direction</span></span>
+<span>    delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>uv <span class="op">=</span> <span class="va">delay_uv</span>, mals <span class="op">=</span> <span class="va">delay_mals</span><span class="op">)</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    method <span class="op">=</span> <span class="st">"interpolate"</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">aligned</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">rec_aligned</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span>new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
@@ -363,7 +368,9 @@ calculate the difference.</p>
 <span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
 <span>    reference <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>    targets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"uv"</span>, <span class="st">"mals"</span><span class="op">)</span>,</span>
-<span>    delay_volumes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>uv <span class="op">=</span> <span class="op">-</span><span class="va">delay_uv</span>, mals <span class="op">=</span> <span class="op">-</span><span class="va">delay_mals</span><span class="op">)</span></span>
+<span>    delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>uv <span class="op">=</span> <span class="va">delay_uv</span>, mals <span class="op">=</span> <span class="va">delay_mals</span><span class="op">)</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    method <span class="op">=</span> <span class="st">"interpolate"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># Process RI for concentration</span></span>
 <span>  <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span></span>
@@ -416,7 +423,9 @@ with concentration. The basic relationship is:</p>
 <span>    <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
 <span>      reference <span class="op">=</span> <span class="st">"ri"</span>,</span>
 <span>      targets <span class="op">=</span> <span class="st">"mals"</span>,</span>
-<span>      delay_volumes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mals <span class="op">=</span> <span class="op">-</span><span class="va">delay_mals</span><span class="op">)</span></span>
+<span>      delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mals <span class="op">=</span> <span class="va">delay_mals</span><span class="op">)</span>,</span>
+<span>      elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>      method <span class="op">=</span> <span class="st">"interpolate"</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/step_sec_ri.html">step_sec_ri</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span><span class="op">)</span></span>
 <span></span>
@@ -693,7 +702,7 @@ Calibration Tutorial</a></td>
 <span><span class="co">#&gt; [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      </span></span>
 <span><span class="co">#&gt; [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       </span></span>
 <span><span class="co">#&gt; [31] gower_1.0.2         rpart_4.1.27        parallelly_1.50.0  </span></span>
-<span><span class="co">#&gt; [34] lava_1.10           tidyselect_1.2.1    digest_0.6.39      </span></span>
+<span><span class="co">#&gt; [34] lava_1.11           tidyselect_1.2.1    digest_0.6.39      </span></span>
 <span><span class="co">#&gt; [37] future_1.82.0       purrr_1.2.2         listenv_1.1.0      </span></span>
 <span><span class="co">#&gt; [40] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      </span></span>
 <span><span class="co">#&gt; [43] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     </span></span>

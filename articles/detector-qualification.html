@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Check detector units, signed RI and clipped signal • measure.sec</title>
+<title>Qualify SEC detector units, delays and clipped signal • measure.sec</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -18,7 +18,7 @@
 <link href="../deps/Montserrat-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Check detector units, signed RI and clipped signal">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Qualify SEC detector units, delays and clipped signal">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -80,7 +80,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Check detector units, signed RI and clipped signal</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Qualify SEC detector units, delays and clipped signal</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/measure.sec/blob/main/vignettes/detector-qualification.Rmd" class="external-link"><code>vignettes/detector-qualification.Rmd</code></a></small>
@@ -89,13 +89,14 @@
 
     
     
-<p>This guide checks numerical contracts using fixed synthetic traces:
-converting calibrated RI signals to concentration, conserving declared
-injected mass, and inspecting negative-sample clipping. It does not
-establish detector calibration, recovery, a suitable baseline, or
-instrument performance.</p>
+<p>This guide checks fixed synthetic software contracts for detector
+conversion, mass normalization, delay correction, missing samples and
+serialization. It does not establish detector calibration, actual flow
+accuracy, sample recovery, baseline suitability or instrument
+performance. Every declared value below is for software qualification,
+not a recommended method setting.</p>
 <div class="section level2">
-<h2 id="convert-a-signed-ri-response">Convert a signed RI response<a class="anchor" aria-label="anchor" href="#convert-a-signed-ri-response"></a>
+<h2 id="check-signed-ri-conversion-before-normalization">Check signed RI conversion before normalization<a class="anchor" aria-label="anchor" href="#check-signed-ri-conversion-before-normalization"></a>
 </h2>
 <p><code>instrument_constant</code> is a positive conversion gain:
 multiplying the recorded signal by it gives the calibrated
@@ -109,14 +110,11 @@ BI-DNDC manual</a> describes negative refractive-index increments. The
 <a href="https://www.wyatt.com/library/application-notes/determination-of-dn-dc.html" class="external-link">Wyatt
 application note</a> explains why the appropriate value depends on the
 solute, solvent, temperature and wavelength. The values below are
-synthetic declarations, not recommended values for a polymer or
-solvent.</p>
+synthetic declarations.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">time_min</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="va">concentration_g_ml</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.001</span>, <span class="fl">0.002</span>, <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">gain</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
-<span><span class="va">flow_ml_min</span> <span class="op">&lt;-</span> <span class="fl">0.5</span></span>
-<span><span class="va">injected_mass_mg</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">input</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  sample_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive increment"</span>, <span class="st">"negative increment"</span><span class="op">)</span>,</span>
 <span>  dn_dc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span></span>
@@ -130,143 +128,500 @@ solvent.</p>
 <span>    measures <span class="op">=</span> <span class="st">"ri"</span>, dn_dc_column <span class="op">=</span> <span class="st">"dn_dc"</span>,</span>
 <span>    instrument_constant <span class="op">=</span> <span class="va">gain</span>, output_col <span class="op">=</span> <span class="st">"concentration"</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="va">ri_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">ri_recipe</span><span class="op">)</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">ri_result</span><span class="op">$</span><span class="va">ri</span>, <span class="va">input</span><span class="op">$</span><span class="va">ri</span><span class="op">)</span>,</span>
-<span>          <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">ri_result</span><span class="op">$</span><span class="va">concentration</span>, <span class="st">"sec_concentration_unit"</span><span class="op">)</span>,</span>
-<span>                    <span class="st">"g/mL"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">ri_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">ri_recipe</span>, training <span class="op">=</span> <span class="va">input</span><span class="op">)</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">ri_result</span><span class="op">$</span><span class="va">ri</span>, <span class="va">input</span><span class="op">$</span><span class="va">ri</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">ri_result</span><span class="op">$</span><span class="va">concentration</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>            <span class="st">"g/mL"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">row</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">input</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">ri_result</span><span class="op">$</span><span class="va">concentration</span><span class="op">[[</span><span class="va">row</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span> <span class="op">-</span></span>
 <span>                    <span class="va">concentration_g_ml</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-14</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">recipe_for</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">unit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">ri_recipe</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
-<span>      measures <span class="op">=</span> <span class="st">"concentration"</span>, injection_mass <span class="op">=</span> <span class="va">injected_mass_mg</span>,</span>
-<span>      flow_rate <span class="op">=</span> <span class="va">flow_ml_min</span>, concentration_units <span class="op">=</span> <span class="va">unit</span></span>
-<span>    <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="va">result_mg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="fu">recipe_for</span><span class="op">(</span><span class="st">"mg/mL"</span><span class="op">)</span><span class="op">)</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span><span class="va">result_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="fu">recipe_for</span><span class="op">(</span><span class="st">"g/mL"</span><span class="op">)</span><span class="op">)</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
-<p>The RI-only check runs before injected-mass normalization, which
-would otherwise cancel a constant conversion error. Both rows represent
-the same concentration curve. The signed increment is read from each
-current baked row; it is not replaced by the training rows’ values.
-Finite, nonzero increments are required. Without <code>dn_dc</code> or a
-<code>dn_dc_column</code>, the step applies only the declared instrument
-gain and does not create a concentration-unit tag.</p>
+<span><span class="op">}</span></span></code></pre></div>
+<p>This absolute RI check runs before injected-mass normalization, which
+could otherwise cancel a constant gain error. The two rows recover the
+declared concentration with both positive and negative
+<code>dn_dc</code> values. No absolute value is applied to the recorded
+signal.</p>
 </div>
 <div class="section level2">
-<h2 id="check-the-declared-mass-and-units">Check the declared mass and units<a class="anchor" aria-label="anchor" href="#check-the-declared-mass-and-units"></a>
+<h2 id="declare-the-raw-elution-axis-and-concentration-units">Declare the raw elution axis and concentration units<a class="anchor" aria-label="anchor" href="#declare-the-raw-elution-axis-and-concentration-units"></a>
 </h2>
-<p>The elution axis here is <strong>minutes</strong>, and flow is
-<strong>mL/min</strong>. Convert other axis units before using this
-concentration step: monotonic numeric coordinates do not establish their
-physical unit.</p>
-<p>For the declared curve, trapezoidal concentration area is 0.004 g
-min/mL. Multiplication by the flow gives 0.002 g, or 2 mg. The following
-independent balance checks the baked results in both requested
-concentration units.</p>
+<p><code>elution_units</code> describes the existing numeric
+<code>location</code> coordinates. It accepts exactly
+<code>"min"</code>, <code>"s"</code>, <code>"mL"</code> or
+<code>"uL"</code>; coordinates stay unchanged. Flow is in mL/min. The
+concentration step multiplies the sampled raw-axis area by the
+corresponding mL-per-axis-unit factor:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th align="left"><code>elution_units</code></th>
+<th align="left">mL per raw axis unit</th>
+<th align="right">Example coordinate from 1 min at 0.5 mL/min</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>"min"</code></td>
+<td align="left">flow rate</td>
+<td align="right">1 min</td>
+</tr>
+<tr class="even">
+<td align="left"><code>"s"</code></td>
+<td align="left">flow rate / 60</td>
+<td align="right">60 s</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>"mL"</code></td>
+<td align="left">1</td>
+<td align="right">0.5 mL</td>
+</tr>
+<tr class="even">
+<td align="left"><code>"uL"</code></td>
+<td align="left">0.001</td>
+<td align="right">500 uL</td>
+</tr>
+</tbody>
+</table>
+<p>The table and checks below apply all four declarations to the same
+fixed 2 mg trace and request both output concentration units. The
+location vectors are constructed from the fixed minute values using the
+declared coordinate scale; the step itself does not rewrite them.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">recovered_mass_mg</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">curve</span>, <span class="va">unit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">values</span> <span class="op">&lt;-</span> <span class="va">curve</span><span class="op">$</span><span class="va">value</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">unit</span>, <span class="st">"g/mL"</span><span class="op">)</span><span class="op">)</span> <span class="va">values</span> <span class="op">&lt;-</span> <span class="va">values</span> <span class="op">*</span> <span class="fl">1000</span></span>
-<span>  <span class="va">widths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="va">curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">flow_ml_min</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">widths</span> <span class="op">*</span></span>
-<span>    <span class="op">(</span><span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">values</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">values</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="va">checks</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">result_mg</span>, <span class="va">result_g</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">unit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">concentration</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>    <span class="va">recovered</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">concentration</span>, <span class="va">recovered_mass_mg</span>,</span>
-<span>                        <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, unit <span class="op">=</span> <span class="va">unit</span><span class="op">)</span></span>
-<span>    <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>      sample_id <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">sample_id</span>,</span>
-<span>      unit <span class="op">=</span> <span class="va">unit</span>,</span>
-<span>      recovered_mass_mg <span class="op">=</span> <span class="va">recovered</span></span>
+<code class="sourceCode R"><span><span class="va">axis_per_minute</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>min <span class="op">=</span> <span class="fl">1</span>, s <span class="op">=</span> <span class="fl">60</span>, mL <span class="op">=</span> <span class="fl">0.5</span>, uL <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span>
+<span><span class="va">mL_per_axis_unit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>min <span class="op">=</span> <span class="fl">0.5</span>, s <span class="op">=</span> <span class="fl">0.5</span> <span class="op">/</span> <span class="fl">60</span>, mL <span class="op">=</span> <span class="fl">1</span>, uL <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span></span>
+<span><span class="va">flow_ml_min</span> <span class="op">&lt;-</span> <span class="fl">0.5</span></span>
+<span><span class="va">injected_mass_mg</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
+<span><span class="va">output_units</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mg/mL"</span>, <span class="st">"g/mL"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mass_checks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">index</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">axis_unit</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">axis_per_minute</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">raw_location</span> <span class="op">&lt;-</span> <span class="va">time_min</span> <span class="op">*</span> <span class="va">axis_per_minute</span><span class="op">[[</span><span class="va">axis_unit</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">concentration_unit</span> <span class="kw">in</span> <span class="va">output_units</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">measure_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>case_id <span class="op">=</span> <span class="st">"known-2-mg"</span><span class="op">)</span></span>
+<span>    <span class="va">measure_data</span><span class="op">$</span><span class="va">signal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span><span class="va">raw_location</span>, <span class="va">concentration_g_ml</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">mass_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">measure_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>      <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>        measures <span class="op">=</span> <span class="st">"signal"</span>,</span>
+<span>        injection_mass <span class="op">=</span> <span class="va">injected_mass_mg</span>,</span>
+<span>        flow_rate <span class="op">=</span> <span class="va">flow_ml_min</span>,</span>
+<span>        concentration_units <span class="op">=</span> <span class="va">concentration_unit</span>,</span>
+<span>        elution_units <span class="op">=</span> <span class="va">axis_unit</span>,</span>
+<span>        id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"guide_mass"</span>, <span class="va">axis_unit</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"/"</span>, <span class="st">"_"</span>, <span class="va">concentration_unit</span><span class="op">)</span>,</span>
+<span>                   sep <span class="op">=</span> <span class="st">"_"</span><span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="va">mass_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">mass_recipe</span>, training <span class="op">=</span> <span class="va">measure_data</span><span class="op">)</span>,</span>
+<span>      new_data <span class="op">=</span> <span class="va">measure_data</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="va">curve</span> <span class="op">&lt;-</span> <span class="va">mass_result</span><span class="op">$</span><span class="va">signal</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="va">unit_tag</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">mass_result</span><span class="op">$</span><span class="va">signal</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>    <span class="va">values_mg_ml</span> <span class="op">&lt;-</span> <span class="va">curve</span><span class="op">$</span><span class="va">value</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">concentration_unit</span>, <span class="st">"g/mL"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">values_mg_ml</span> <span class="op">&lt;-</span> <span class="va">values_mg_ml</span> <span class="op">*</span> <span class="fl">1000</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="va">trapezoid_area</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="va">curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span><span class="op">)</span> <span class="op">*</span></span>
+<span>      <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">values_mg_ml</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">values_mg_ml</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span></span>
+<span>    <span class="va">recovered_mass_mg</span> <span class="op">&lt;-</span> <span class="va">trapezoid_area</span> <span class="op">*</span> <span class="va">mL_per_axis_unit</span><span class="op">[[</span><span class="va">axis_unit</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="va">expected_values</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">concentration_unit</span>, <span class="st">"mg/mL"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">concentration_g_ml</span> <span class="op">*</span> <span class="fl">1000</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="va">concentration_g_ml</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="va">raw_location</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">unit_tag</span>, <span class="va">concentration_unit</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">curve</span><span class="op">$</span><span class="va">value</span>, <span class="va">expected_values</span>, tolerance <span class="op">=</span> <span class="fl">1e-12</span>,</span>
+<span>                       check.attributes <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">recovered_mass_mg</span> <span class="op">-</span> <span class="va">injected_mass_mg</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-12</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="va">index</span> <span class="op">&lt;-</span> <span class="va">index</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>    <span class="va">mass_checks</span><span class="op">[[</span><span class="va">index</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>      elution_units <span class="op">=</span> <span class="va">axis_unit</span>,</span>
+<span>      concentration_unit <span class="op">=</span> <span class="va">concentration_unit</span>,</span>
+<span>      recovered_mass_mg <span class="op">=</span> <span class="va">recovered_mass_mg</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">checks</span><span class="op">$</span><span class="va">recovered_mass_mg</span> <span class="op">-</span> <span class="va">injected_mass_mg</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-12</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result_mg</span><span class="op">$</span><span class="va">ri</span>, <span class="va">input</span><span class="op">$</span><span class="va">ri</span><span class="op">)</span>,</span>
-<span>          <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result_g</span><span class="op">$</span><span class="va">ri</span>, <span class="va">input</span><span class="op">$</span><span class="va">ri</span><span class="op">)</span>,</span>
-<span>          <span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result_mg</span><span class="op">$</span><span class="va">ri</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">row</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">input</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">result_g</span><span class="op">$</span><span class="va">concentration</span><span class="op">[[</span><span class="va">row</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span> <span class="op">-</span> <span class="va">concentration_g_ml</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-14</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">result_mg</span><span class="op">$</span><span class="va">concentration</span><span class="op">[[</span><span class="va">row</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span> <span class="op">/</span> <span class="fl">1000</span> <span class="op">-</span></span>
-<span>                    <span class="va">result_g</span><span class="op">$</span><span class="va">concentration</span><span class="op">[[</span><span class="va">row</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-14</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">checks</span>, digits <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mass_table</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">mass_checks</span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">mass_table</span>, digits <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
-<th align="left">sample_id</th>
-<th align="left">unit</th>
+<th align="left">elution_units</th>
+<th align="left">concentration_unit</th>
 <th align="right">recovered_mass_mg</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left">positive increment</td>
+<td align="left">min</td>
 <td align="left">mg/mL</td>
 <td align="right">2</td>
 </tr>
 <tr class="even">
-<td align="left">negative increment</td>
-<td align="left">mg/mL</td>
-<td align="right">2</td>
-</tr>
-<tr class="odd">
-<td align="left">positive increment</td>
+<td align="left">min</td>
 <td align="left">g/mL</td>
 <td align="right">2</td>
 </tr>
+<tr class="odd">
+<td align="left">s</td>
+<td align="left">mg/mL</td>
+<td align="right">2</td>
+</tr>
 <tr class="even">
-<td align="left">negative increment</td>
+<td align="left">s</td>
+<td align="left">g/mL</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="left">mL</td>
+<td align="left">mg/mL</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="left">mL</td>
+<td align="left">g/mL</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="left">uL</td>
+<td align="left">mg/mL</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="left">uL</td>
 <td align="left">g/mL</td>
 <td align="right">2</td>
 </tr>
 </tbody>
 </table>
-<p>The mass balance checks the supplied declaration, not an
-independently measured injection or column recovery. Here
-<code>output_col = "concentration"</code> keeps the raw <code>ri</code>
-curves unchanged and creates a separate concentration column. Its unit
-tag is checked independently of the raw signal. Omit
-<code>output_col</code> to retain the existing in-place behavior, or
-explicitly use the source column name. A new output name requires one
-selected RI measure and must be unused at that stage of the recipe.</p>
+<p>The recovered mass is recomputed from the baked curve in the
+requested units and the declared mL-per-axis-unit factor. The exact
+coordinate checks confirm that the processing step left each raw axis as
+supplied. <code><a href="https://jameshwade.github.io/measure/reference/measure_record.html" class="external-link">measure_record()</a></code> stores an axis declaration
+separately; pass that knowledge explicitly as <code>elution_units</code>
+when building this recipe.</p>
 </div>
 <div class="section level2">
-<h2 id="inspect-clipping-on-the-actual-sampling-grid">Inspect clipping on the actual sampling grid<a class="anchor" aria-label="anchor" href="#inspect-clipping-on-the-actual-sampling-grid"></a>
+<h2 id="check-positive-and-negative-delay-direction">Check positive and negative delay direction<a class="anchor" aria-label="anchor" href="#check-positive-and-negative-delay-direction"></a>
 </h2>
-<p>Mass normalization sets negative sampled values to zero. The warning
-includes a structured <code>diagnostics</code> tibble with one row for
-every curve in that current bake. Capture this condition when you need
-to retain the diagnostics; the trained recipe does not keep a mutable
-record of its latest bake.</p>
-<p>These three curves have identical sampled values and one negative
-point each. Their first sampling interval differs, changing the
-quadrature weight carried by that point.</p>
+<p><code>delay_times</code> is always expressed in minutes and
+<code>delay_volumes</code> in mL, independent of the raw axis. The
+recipe uses flow to convert between those declarations and the axis. The
+correction is <code>corrected(x) = target(x + delta)</code> after
+conversion to the raw axis. A positive delay means the target detector
+reads the signal later, so the correction samples a larger target
+coordinate. A negative delay means the target reads it earlier and
+samples a smaller coordinate. Interpolation leaves coordinates fixed and
+returns <code>NA</code> outside the target’s supported range.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">make_delay_input</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">location</span>, <span class="va">reference_values</span>, <span class="va">target_values</span>,</span>
+<span>                             <span class="va">tag</span> <span class="op">=</span> <span class="st">"mg/mL"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"synthetic-delay"</span><span class="op">)</span></span>
+<span>  <span class="va">result</span><span class="op">$</span><span class="va">reference</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span><span class="va">location</span>, <span class="va">reference_values</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">result</span><span class="op">$</span><span class="va">target</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span><span class="va">location</span>, <span class="va">target_values</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">target</span>, <span class="st">"sec_concentration_unit"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">tag</span></span>
+<span>  <span class="va">result</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">delay_fit</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span>, <span class="va">delay_value</span>, <span class="va">declaration</span> <span class="op">=</span> <span class="st">"time"</span>,</span>
+<span>                      <span class="va">method</span> <span class="op">=</span> <span class="st">"interpolate"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">delay_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span>  <span class="va">arguments</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    recipe <span class="op">=</span> <span class="va">delay_recipe</span>,</span>
+<span>    reference <span class="op">=</span> <span class="st">"reference"</span>,</span>
+<span>    targets <span class="op">=</span> <span class="st">"target"</span>,</span>
+<span>    flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    method <span class="op">=</span> <span class="va">method</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"guide_delay_"</span>, <span class="kw">if</span> <span class="op">(</span><span class="va">delay_value</span> <span class="op">&lt;</span> <span class="fl">0</span><span class="op">)</span> <span class="st">"negative"</span> <span class="kw">else</span> <span class="st">"positive"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">declaration</span>, <span class="st">"time"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">arguments</span><span class="op">$</span><span class="va">delay_times</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>target <span class="op">=</span> <span class="va">delay_value</span><span class="op">)</span></span>
+<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>    <span class="va">arguments</span><span class="op">$</span><span class="va">delay_volumes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>target <span class="op">=</span> <span class="va">delay_value</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">step_sec_detector_delay</span>, <span class="va">arguments</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">delay_location</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">5</span></span>
+<span><span class="va">reference_late</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">target_late</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">positive_data</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span><span class="va">delay_location</span>, <span class="va">reference_late</span>, <span class="va">target_late</span><span class="op">)</span></span>
+<span><span class="va">positive_recipe</span> <span class="op">&lt;-</span> <span class="fu">delay_fit</span><span class="op">(</span><span class="va">positive_data</span>, delay_value <span class="op">=</span> <span class="fl">1</span>, declaration <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span>
+<span><span class="va">positive_prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">positive_recipe</span>, training <span class="op">=</span> <span class="va">positive_data</span><span class="op">)</span></span>
+<span><span class="va">serialized_prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/serialize.html" class="external-link">unserialize</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/serialize.html" class="external-link">serialize</a></span><span class="op">(</span><span class="va">positive_prepared</span>, <span class="cn">NULL</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">positive_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">serialized_prepared</span>, new_data <span class="op">=</span> <span class="va">positive_data</span><span class="op">)</span></span>
+<span><span class="va">positive_curve</span> <span class="op">&lt;-</span> <span class="va">positive_result</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">positive_curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">delay_location</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">positive_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, <span class="va">reference_late</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">positive_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">6</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">positive_result</span><span class="op">$</span><span class="va">target</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>            <span class="st">"mg/mL"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">reference_early</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">target_early</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">negative_data</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span><span class="va">delay_location</span>, <span class="va">reference_early</span>, <span class="va">target_early</span><span class="op">)</span></span>
+<span><span class="va">negative_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span></span>
+<span>    <span class="fu">delay_fit</span><span class="op">(</span><span class="va">negative_data</span>, delay_value <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span>, declaration <span class="op">=</span> <span class="st">"volume"</span><span class="op">)</span>,</span>
+<span>    training <span class="op">=</span> <span class="va">negative_data</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  new_data <span class="op">=</span> <span class="va">negative_data</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">negative_curve</span> <span class="op">&lt;-</span> <span class="va">negative_result</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">negative_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">negative_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span>, <span class="va">reference_early</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">negative_curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">delay_location</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  declaration <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"delay_times = 1 min"</span>, <span class="st">"delay_volumes = -0.5 mL"</span><span class="op">)</span>,</span>
+<span>  interpretation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target arrives late"</span>, <span class="st">"target arrives early"</span><span class="op">)</span>,</span>
+<span>  aligned_points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">5L</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">declaration</th>
+<th align="left">interpretation</th>
+<th align="right">aligned_points</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">delay_times = 1 min</td>
+<td align="left">target arrives late</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">delay_volumes = -0.5 mL</td>
+<td align="left">target arrives early</td>
+<td align="right">5</td>
+</tr>
+</tbody>
+</table>
+<p>The positive-direction recipe was serialized after preparation,
+restored, then baked against a current dataset. Its target column
+retained the synthetic <code>mg/mL</code> tag. Each baked row is
+processed from its current values; the recipe does not cache a prior
+bake result.</p>
+</div>
+<div class="section level2">
+<h2 id="index-shifting-and-interpolation">Index shifting and interpolation<a class="anchor" aria-label="anchor" href="#index-shifting-and-interpolation"></a>
+</h2>
+<p><code>method = "shift"</code> uses one integer number of points,
+rounded to the nearest sample with R’s ties-to-even rule. A nonzero
+index shift requires a uniform grid; a zero shift is an exact no-op on
+irregular coordinates. For an irregular grid, use
+<code>method = "interpolate"</code> to evaluate the target at
+<code>x + delta</code>. Internal missing samples propagate through
+adjacent interpolation intervals; they are not deleted and bridged.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">round_location</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">7</span></span>
+<span><span class="va">round_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">round_location</span><span class="op">)</span></span>
+<span><span class="va">rounding_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">2.5</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">delay_min</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span></span>
+<span>    <span class="va">round_location</span>,</span>
+<span>    reference_values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">round_location</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    target_values <span class="op">=</span> <span class="va">round_values</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="fu">delay_fit</span><span class="op">(</span><span class="va">data</span>, delay_value <span class="op">=</span> <span class="va">delay_min</span>, method <span class="op">=</span> <span class="st">"shift"</span><span class="op">)</span>,</span>
+<span>         training <span class="op">=</span> <span class="va">data</span><span class="op">)</span>,</span>
+<span>    new_data <span class="op">=</span> <span class="va">data</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">curve</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="va">shift</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">delay_min</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">expected</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">round_values</span><span class="op">[</span><span class="op">(</span><span class="va">shift</span> <span class="op">+</span> <span class="fl">1L</span><span class="op">)</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">round_values</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>                <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="cn">NA_real_</span>, <span class="va">shift</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">curve</span><span class="op">$</span><span class="va">value</span>, <span class="va">expected</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    delay_points <span class="op">=</span> <span class="va">delay_min</span>,</span>
+<span>    ties_to_even_points <span class="op">=</span> <span class="va">shift</span>,</span>
+<span>    first_output_value <span class="op">=</span> <span class="va">curve</span><span class="op">$</span><span class="va">value</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">rounding_results</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">delay_points</th>
+<th align="right">ties_to_even_points</th>
+<th align="right">first_output_value</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1.5</td>
+<td align="right">2</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="right">2.5</td>
+<td align="right">2</td>
+<td align="right">3</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">irregular_location</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">6</span><span class="op">)</span></span>
+<span><span class="va">irregular_values</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="cn">NA_real_</span>, <span class="fl">4</span><span class="op">)</span></span>
+<span><span class="va">irregular_data</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span></span>
+<span>  <span class="va">irregular_location</span>,</span>
+<span>  reference_values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">11</span>, <span class="fl">13</span>, <span class="fl">16</span><span class="op">)</span>,</span>
+<span>  target_values <span class="op">=</span> <span class="va">irregular_values</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">irregular_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">irregular_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
+<span>    reference <span class="op">=</span> <span class="st">"reference"</span>,</span>
+<span>    targets <span class="op">=</span> <span class="st">"target"</span>,</span>
+<span>    delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>target <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>    flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    method <span class="op">=</span> <span class="st">"interpolate"</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    id <span class="op">=</span> <span class="st">"guide_irregular_interpolation"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="va">irregular_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">irregular_recipe</span>, training <span class="op">=</span> <span class="va">irregular_data</span><span class="op">)</span>,</span>
+<span>  new_data <span class="op">=</span> <span class="va">irregular_data</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">irregular_curve</span> <span class="op">&lt;-</span> <span class="va">irregular_result</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">irregular_curve</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="va">irregular_location</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">irregular_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0.5</span>, tolerance <span class="op">=</span> <span class="fl">1e-14</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">irregular_curve</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">zero_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">irregular_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
+<span>    reference <span class="op">=</span> <span class="st">"reference"</span>,</span>
+<span>    targets <span class="op">=</span> <span class="st">"target"</span>,</span>
+<span>    delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>target <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>    flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    method <span class="op">=</span> <span class="st">"shift"</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    id <span class="op">=</span> <span class="st">"guide_irregular_zero_shift"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="va">zero_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">zero_recipe</span>, training <span class="op">=</span> <span class="va">irregular_data</span><span class="op">)</span>,</span>
+<span>  new_data <span class="op">=</span> <span class="va">irregular_data</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">zero_result</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span>, <span class="va">irregular_values</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">irregular_index_error</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span></span>
+<span>      <span class="fu">delay_fit</span><span class="op">(</span><span class="va">irregular_data</span>, delay_value <span class="op">=</span> <span class="fl">1</span>, method <span class="op">=</span> <span class="st">"shift"</span><span class="op">)</span>,</span>
+<span>      training <span class="op">=</span> <span class="va">irregular_data</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    new_data <span class="op">=</span> <span class="va">irregular_data</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  error <span class="op">=</span> <span class="va">identity</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">irregular_index_error</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">shared_grid</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">11</span>, <span class="fl">12</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mismatch_grid</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">11</span>, <span class="fl">12</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mismatch_grid</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">location</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1.01</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">mismatch_error</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="fu">delay_fit</span><span class="op">(</span><span class="va">shared_grid</span>, delay_value <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, training <span class="op">=</span> <span class="va">shared_grid</span><span class="op">)</span>,</span>
+<span>    new_data <span class="op">=</span> <span class="va">mismatch_grid</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  error <span class="op">=</span> <span class="va">identity</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">mismatch_error</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  location <span class="op">=</span> <span class="va">irregular_curve</span><span class="op">$</span><span class="va">location</span>,</span>
+<span>  original_target <span class="op">=</span> <span class="va">irregular_values</span>,</span>
+<span>  corrected_target <span class="op">=</span> <span class="va">irregular_curve</span><span class="op">$</span><span class="va">value</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">location</th>
+<th align="right">original_target</th>
+<th align="right">corrected_target</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0.5</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">NA</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">4</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+<p>Reference and target must share the same exact numeric grid on every
+current bake row. This step aligns detector signals already sampled on
+one grid; it does not resample between separate reference and target
+grids.</p>
+</div>
+<div class="section level2">
+<h2 id="inspect-clipping-on-the-current-bake-rows">Inspect clipping on the current bake rows<a class="anchor" aria-label="anchor" href="#inspect-clipping-on-the-current-bake-rows"></a>
+</h2>
+<p>Mass normalization sets negative sampled values to zero. Its typed
+warning has an <code>elution_units</code> field, and the diagnostic
+areas use the incoming signal units multiplied by that raw axis unit.
+These areas are not automatically signal-minutes on a seconds or volume
+axis. The example captures the condition from the current bake rather
+than retaining the training-time warning.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">first_interval_min</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">1</span>, <span class="fl">9</span><span class="op">)</span></span>
 <span><span class="va">clipping_input</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>first_interval_min <span class="op">=</span> <span class="va">first_interval_min</span><span class="op">)</span></span>
 <span><span class="va">clipping_input</span><span class="op">$</span><span class="va">ri</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">first_interval_min</span>, <span class="kw">function</span><span class="op">(</span><span class="va">first</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">first</span>, <span class="fl">10</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">clipping_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">clipping_input</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"ri"</span>, injection_mass <span class="op">=</span> <span class="fl">1</span>, flow_rate <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">captured</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">trained</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">clipping_recipe</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"ri"</span>, injection_mass <span class="op">=</span> <span class="fl">1</span>, flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    elution_units <span class="op">=</span> <span class="st">"min"</span>, id <span class="op">=</span> <span class="st">"guide_clipping_min"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="va">trained_clipping</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">clipping_recipe</span>, training <span class="op">=</span> <span class="va">clipping_input</span><span class="op">)</span>,</span>
 <span>  measure_sec_negative_signal_clipped <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">captured</span><span class="op">$</span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="va">condition</span><span class="op">$</span><span class="va">diagnostics</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">clipped_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">trained</span>, new_data <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
-<span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="va">captured</span><span class="op">$</span><span class="va">diagnostics</span></span>
+<span><span class="va">current_clipping</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">clipped_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">trained_clipping</span>, new_data <span class="op">=</span> <span class="va">clipping_input</span><span class="op">)</span>,</span>
+<span>  measure_sec_negative_signal_clipped <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">current_clipping</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="va">condition</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">clip_condition</span> <span class="op">&lt;-</span> <span class="va">current_clipping</span><span class="op">$</span><span class="va">condition</span></span>
+<span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="va">clip_condition</span><span class="op">$</span><span class="va">diagnostics</span></span>
 <span><span class="va">diagnostics</span><span class="op">$</span><span class="va">first_interval_min</span> <span class="op">&lt;-</span> <span class="va">first_interval_min</span><span class="op">[</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">row</span><span class="op">]</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">excluded_fraction</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.005</span>, <span class="fl">0.05</span>, <span class="fl">0.45</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-14</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">clip_condition</span><span class="op">$</span><span class="va">column</span>, <span class="st">"ri"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">clip_condition</span><span class="op">$</span><span class="va">elution_units</span>, <span class="st">"min"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">diagnostics</span><span class="op">)</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">clipped_result</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">excluded_fraction</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.005</span>, <span class="fl">0.05</span>, <span class="fl">0.45</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-14</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">diagnostics</span>, digits <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <colgroup>
@@ -319,13 +674,12 @@ quadrature weight carried by that point.</p>
 </table>
 <p><code>positive_area</code> is the trapezoidal area of the samplewise
 positive part, and <code>negative_area</code> is the same calculation on
-the magnitudes of negative samples. Their units are incoming signal
-units times minutes. <code>excluded_fraction</code> is
+the magnitudes of negative samples. <code>excluded_fraction</code> is
 <code>negative_area / (positive_area + negative_area)</code>: the
 negative share of <strong>absolute sampled signal area</strong>. It is
 not an estimate of lost or recovered mass, nor an exact integration of
-zero crossings between the original samples.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+zero crossings between samples.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">diagnostics</span>, <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span></span>
 <span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">first_interval_min</span>, levels <span class="op">=</span> <span class="va">first_interval_min</span><span class="op">)</span>,</span>
 <span>  y <span class="op">=</span> <span class="fl">100</span> <span class="op">*</span> <span class="va">excluded_fraction</span></span>
@@ -340,19 +694,206 @@ zero crossings between the original samples.</p>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span></code></pre></div>
 <p><img src="detector-qualification_files/figure-html/clipping-figure-1.png" class="r-plt" alt="Three curves each have one negative point out of three. Their negative shares of absolute sampled signal area are 0.5, 5 and 45 percent as the first sampling interval grows from 0.1 to 1 to 9 minutes. The dashed line marks the common negative-point percentage of 33.3 percent." width="672"></p>
-<p>The warning keeps its point count and reports the largest area share
-with its current row position. Fractions are calculated per curve rather
-than pooling raw signal areas across samples. Reordering curves changes
-their diagnostic row positions; associate rows with identifiers from the
-same baked dataset. <code><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep()</a></code> processes training data and can
-emit this warning as well.</p>
-<p>A high excluded share calls for investigation of the input and
-baseline; this guide defines no universal acceptance threshold. Choose
-any acceptance rule from appropriate blanks, controls and method
-requirements. The clipping share is not a complete uncertainty budget.
-The detector-unit metadata on these curves also does not imply that
-every generic preprocessing transform preserves it; check units before
-downstream detector calculations.</p>
+<p>The warning reports one diagnostic row per curve in the current bake,
+including curves without negative points. Reordering curves changes row
+positions; associate those positions with identifiers from the same
+baked dataset. A high excluded share calls for investigating the input
+and baseline; this guide defines no universal acceptance threshold.</p>
+<p>The warning’s axis field can be checked with the same signed trace
+under every supported declaration. Its raw areas scale with the declared
+numeric axis, while <code>elution_units</code> identifies the unit used
+for those areas.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">capture_axis_diagnostic</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">axis_unit</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">scale</span> <span class="op">&lt;-</span> <span class="va">axis_per_minute</span><span class="op">[[</span><span class="va">axis_unit</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"signed"</span><span class="op">)</span></span>
+<span>  <span class="va">data</span><span class="op">$</span><span class="va">ri</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span> <span class="op">*</span> <span class="va">scale</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">recipe_to_prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>      measures <span class="op">=</span> <span class="st">"ri"</span>, injection_mass <span class="op">=</span> <span class="fl">1</span>, flow_rate <span class="op">=</span> <span class="va">flow_ml_min</span>,</span>
+<span>      elution_units <span class="op">=</span> <span class="va">axis_unit</span>, id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"guide_clip_"</span>, <span class="va">axis_unit</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">recipe_to_prep</span>, training <span class="op">=</span> <span class="va">data</span><span class="op">)</span>,</span>
+<span>    measure_sec_negative_signal_clipped <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">captured</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="va">prepared</span>, new_data <span class="op">=</span> <span class="va">data</span><span class="op">)</span>,</span>
+<span>    measure_sec_negative_signal_clipped <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">condition</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">captured</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="va">condition</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">condition</span> <span class="op">&lt;-</span> <span class="va">captured</span><span class="op">$</span><span class="va">condition</span></span>
+<span>  <span class="va">diagnostic</span> <span class="op">&lt;-</span> <span class="va">condition</span><span class="op">$</span><span class="va">diagnostics</span><span class="op">[</span><span class="fl">1</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    elution_units <span class="op">=</span> <span class="va">condition</span><span class="op">$</span><span class="va">elution_units</span>,</span>
+<span>    positive_area <span class="op">=</span> <span class="va">diagnostic</span><span class="op">$</span><span class="va">positive_area</span>,</span>
+<span>    negative_area <span class="op">=</span> <span class="va">diagnostic</span><span class="op">$</span><span class="va">negative_area</span>,</span>
+<span>    excluded_fraction <span class="op">=</span> <span class="va">diagnostic</span><span class="op">$</span><span class="va">excluded_fraction</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">axis_diagnostics</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">axis_per_minute</span><span class="op">)</span>, <span class="va">capture_axis_diagnostic</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">axis_diagnostics</span><span class="op">$</span><span class="va">elution_units</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">axis_per_minute</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">axis_diagnostics</span>, digits <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left">elution_units</th>
+<th align="right">positive_area</th>
+<th align="right">negative_area</th>
+<th align="right">excluded_fraction</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">min</td>
+<td align="right">1.50</td>
+<td align="right">0.50</td>
+<td align="right">0.25</td>
+</tr>
+<tr class="even">
+<td align="left">s</td>
+<td align="right">90.00</td>
+<td align="right">30.00</td>
+<td align="right">0.25</td>
+</tr>
+<tr class="odd">
+<td align="left">mL</td>
+<td align="right">0.75</td>
+<td align="right">0.25</td>
+<td align="right">0.25</td>
+</tr>
+<tr class="even">
+<td align="left">uL</td>
+<td align="right">750.00</td>
+<td align="right">250.00</td>
+<td align="right">0.25</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level2">
+<h2 id="carry-the-current-unit-tag-into-downstream-lals">Carry the current unit tag into downstream LALS<a class="anchor" aria-label="anchor" href="#carry-the-current-unit-tag-into-downstream-lals"></a>
+</h2>
+<p>This synthetic chain normalizes RI concentration, aligns it to an
+LALS reference with a one-minute delay, then lets
+<code><a href="../reference/step_sec_lals.html">step_sec_lals()</a></code> infer the current concentration unit from
+the baked RI column. The calibration and optical constants are fixed
+software inputs. The expected output checks only this single-angle
+calculation; it is not instrument calibration or multi-angle
+analysis.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">lals_location</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">6</span></span>
+<span><span class="va">lals_input</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"synthetic-LALS"</span><span class="op">)</span></span>
+<span><span class="va">lals_input</span><span class="op">$</span><span class="va">ri</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span></span>
+<span>  <span class="va">lals_location</span>,</span>
+<span>  <span class="fl">0.0001</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="va">lals_location</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">lals_input</span><span class="op">$</span><span class="va">lals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span></span>
+<span>  <span class="va">lals_location</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5e-7</span>, <span class="fl">7.5e-7</span>, <span class="fl">1e-6</span>, <span class="fl">1.25e-6</span>, <span class="fl">1.5e-6</span>, <span class="fl">1.75e-6</span>, <span class="fl">2e-6</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">lals_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">lals_input</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_concentration.html">step_sec_concentration</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"ri"</span>, injection_mass <span class="op">=</span> <span class="fl">1.2</span>, flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    concentration_units <span class="op">=</span> <span class="st">"mg/mL"</span>, elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
+<span>    id <span class="op">=</span> <span class="st">"guide_lals_mass"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
+<span>    reference <span class="op">=</span> <span class="st">"lals"</span>, targets <span class="op">=</span> <span class="st">"ri"</span>, delay_times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ri <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>    flow_rate <span class="op">=</span> <span class="fl">0.5</span>, elution_units <span class="op">=</span> <span class="st">"min"</span>, method <span class="op">=</span> <span class="st">"interpolate"</span>,</span>
+<span>    id <span class="op">=</span> <span class="st">"guide_lals_delay"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_lals.html">step_sec_lals</a></span><span class="op">(</span></span>
+<span>    measures <span class="op">=</span> <span class="st">"lals"</span>, concentration_col <span class="op">=</span> <span class="st">"ri"</span>,</span>
+<span>    optical_constant <span class="op">=</span> <span class="fl">1e-7</span>, calibration_constant <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>    min_signal <span class="op">=</span> <span class="fl">0</span>, id <span class="op">=</span> <span class="st">"guide_lals"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="va">lals_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">lals_recipe</span>, training <span class="op">=</span> <span class="va">lals_input</span><span class="op">)</span>,</span>
+<span>  new_data <span class="op">=</span> <span class="va">lals_input</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">concentration</span> <span class="op">&lt;-</span> <span class="va">lals_result</span><span class="op">$</span><span class="va">ri</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">scattering</span> <span class="op">&lt;-</span> <span class="va">lals_result</span><span class="op">$</span><span class="va">lals</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">mw</span> <span class="op">&lt;-</span> <span class="va">lals_result</span><span class="op">$</span><span class="va">mw_lals</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">lals_result</span><span class="op">$</span><span class="va">ri</span>, <span class="st">"sec_concentration_unit"</span>, exact <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>            <span class="st">"mg/mL"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">concentration</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">lals_location</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">scattering</span><span class="op">$</span><span class="va">location</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">lals_location</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">scattering</span><span class="op">$</span><span class="va">value</span>, <span class="va">lals_input</span><span class="op">$</span><span class="va">lals</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">value</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">mw</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span> <span class="op">-</span> <span class="fl">50000</span><span class="op">)</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">1e-8</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">mw</span><span class="op">$</span><span class="va">value</span><span class="op">[</span><span class="fl">7</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  time_min <span class="op">=</span> <span class="va">lals_location</span>,</span>
+<span>  concentration_mg_ml <span class="op">=</span> <span class="va">concentration</span><span class="op">$</span><span class="va">value</span>,</span>
+<span>  scattering <span class="op">=</span> <span class="va">scattering</span><span class="op">$</span><span class="va">value</span>,</span>
+<span>  single_angle_mw <span class="op">=</span> <span class="va">mw</span><span class="op">$</span><span class="va">value</span></span>
+<span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">time_min</th>
+<th align="right">concentration_mg_ml</th>
+<th align="right">scattering</th>
+<th align="right">single_angle_mw</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">0</td>
+<td align="right">0.2</td>
+<td align="right">5.00e-07</td>
+<td align="right">50000</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">0.3</td>
+<td align="right">7.50e-07</td>
+<td align="right">50000</td>
+</tr>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">0.4</td>
+<td align="right">1.00e-06</td>
+<td align="right">50000</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">0.5</td>
+<td align="right">1.25e-06</td>
+<td align="right">50000</td>
+</tr>
+<tr class="odd">
+<td align="right">4</td>
+<td align="right">0.6</td>
+<td align="right">1.50e-06</td>
+<td align="right">50000</td>
+</tr>
+<tr class="even">
+<td align="right">5</td>
+<td align="right">0.7</td>
+<td align="right">1.75e-06</td>
+<td align="right">50000</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">NA</td>
+<td align="right">2.00e-06</td>
+<td align="right">NA</td>
+</tr>
+</tbody>
+</table>
+<p>The last molecular-weight point is <code>NA</code> because the
+positive delay requests a target value beyond the supported RI range.
+The scattering curve and location vectors remain unchanged, and the unit
+tag survives the delay operation for the downstream LALS
+calculation.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
