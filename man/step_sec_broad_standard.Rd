@@ -120,16 +120,16 @@ scattering/viscometry. The algorithm optimizes calibration coefficients to
 minimize the sum of squared differences between the calculated and reference
 cumulative distributions.
 
-This method is more robust than Hamielec because it uses the full distribution
-shape, not just two moments. It's particularly useful when the standard's
-MWD shape is well-characterized.
+The integral method uses the supplied cumulative distribution, while the
+Hamielec method matches Mn and Mw. Choose integral matching when a reference
+distribution is available and appropriate for the standard.
 
 \strong{When to Use Broad Standard Calibration:}
 \itemize{
 \item QC labs running the same polymer type repeatedly
 \item When narrow standards aren't available for your polymer
 \item When you have a well-characterized in-house reference material
-\item Provides "absolute" molecular weights for the same polymer type
+\item Produces molecular weights relative to the supplied reference standard
 }
 
 \strong{Limitations:}
@@ -179,13 +179,13 @@ Gel permeation chromatography.
 8(1), 54-57.
 }
 \seealso{
-Other sec-calibration: 
-\code{\link{load_sec_calibration}()},
-\code{\link{save_sec_calibration}()},
+Other sec-calibration:
+\code{\link[=load_sec_calibration]{load_sec_calibration()}},
+\code{\link[=save_sec_calibration]{save_sec_calibration()}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_ps_standards}},
-\code{\link{step_sec_conventional_cal}()},
-\code{\link{step_sec_universal_cal}()}
+\code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}},
+\code{\link[=step_sec_universal_cal]{step_sec_universal_cal()}}
 }
 \concept{sec-calibration}

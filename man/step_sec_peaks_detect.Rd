@@ -86,8 +86,8 @@ nonlinear spacing to detect changes in peak structure
 determine the optimal threshold for peak/baseline separation
 4. \strong{Peak boundary detection}: Identifies peak start, apex, and end points
 
-This approach is robust to baseline drift and varying peak heights, making it
-well-suited for polymer SEC chromatograms.
+Check the detected boundaries against the chromatogram, especially when
+baseline drift or small neighbouring peaks affect the separation.
 
 \strong{Peak properties stored:}
 \itemize{
@@ -131,16 +131,16 @@ rec <- recipe(~., data = sec_triple_detect) |>
 \code{\link[measure:step_measure_peaks_detect]{measure::step_measure_peaks_detect()}} for general peak detection,
 \code{\link[measure:step_measure_peaks_integrate]{measure::step_measure_peaks_integrate()}} to calculate peak areas.
 
-Other sec-chromatography: 
-\code{\link{step_sec_band_broadening}()},
-\code{\link{step_sec_baseline}()},
-\code{\link{step_sec_detector_delay}()},
-\code{\link{step_sec_exclude_regions}()},
-\code{\link{step_sec_integration_window}()},
-\code{\link{step_sec_mw_averages}()},
-\code{\link{step_sec_mw_distribution}()},
-\code{\link{step_sec_mw_fractions}()},
-\code{\link{step_sec_peaks_deconvolve}()},
-\code{\link{step_sec_peaks_refine}()}
+Other sec-chromatography:
+\code{\link[=step_sec_band_broadening]{step_sec_band_broadening()}},
+\code{\link[=step_sec_baseline]{step_sec_baseline()}},
+\code{\link[=step_sec_detector_delay]{step_sec_detector_delay()}},
+\code{\link[=step_sec_exclude_regions]{step_sec_exclude_regions()}},
+\code{\link[=step_sec_integration_window]{step_sec_integration_window()}},
+\code{\link[=step_sec_mw_averages]{step_sec_mw_averages()}},
+\code{\link[=step_sec_mw_distribution]{step_sec_mw_distribution()}},
+\code{\link[=step_sec_mw_fractions]{step_sec_mw_fractions()}},
+\code{\link[=step_sec_peaks_deconvolve]{step_sec_peaks_deconvolve()}},
+\code{\link[=step_sec_peaks_refine]{step_sec_peaks_refine()}}
 }
 \concept{sec-chromatography}

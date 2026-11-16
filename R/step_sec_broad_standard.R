@@ -75,16 +75,16 @@
 #' minimize the sum of squared differences between the calculated and reference
 #' cumulative distributions.
 #'
-#' This method is more robust than Hamielec because it uses the full distribution
-#' shape, not just two moments. It's particularly useful when the standard's
-#' MWD shape is well-characterized.
+#' The integral method uses the supplied cumulative distribution, while the
+#' Hamielec method matches Mn and Mw. Choose integral matching when a reference
+#' distribution is available and appropriate for the standard.
 #'
 #' **When to Use Broad Standard Calibration:**
 #'
 #' - QC labs running the same polymer type repeatedly
 #' - When narrow standards aren't available for your polymer
 #' - When you have a well-characterized in-house reference material
-#' - Provides "absolute" molecular weights for the same polymer type
+#' - Produces molecular weights relative to the supplied reference standard
 #'
 #' **Limitations:**
 #'

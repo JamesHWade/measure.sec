@@ -8,9 +8,9 @@
 A tibble with approximately 130,000 rows and 6 columns:
 \describe{
 \item{standard_name}{Character. Standard identifier (e.g., "PS-67500")}
-\item{mp}{Numeric. Peak molecular weight in Da from certificate}
+\item{mp}{Numeric. Assigned peak molecular weight in Da}
 \item{log_mp}{Numeric. log10(Mp) for calibration curve fitting}
-\item{dispersity}{Numeric. Polydispersity index from certificate}
+\item{dispersity}{Numeric. Assigned dispersity for the simulation}
 \item{time_min}{Numeric. Elution time in minutes}
 \item{ri_mv}{Numeric. RI detector signal in millivolts (raw, unprocessed)}
 }
@@ -22,15 +22,13 @@ Synthetic data generated for package tutorials.
 sec_raw_standards
 }
 \description{
-A dataset containing raw SEC chromatograms of polystyrene narrow standards
-with realistic noise, baseline drift, and injection artifacts. Designed to
-mimic data exported directly from SEC instruments for tutorial purposes.
+Synthetic SEC chromatograms of polystyrene narrow standards with noise,
+baseline drift and injection artifacts for tutorial examples.
 }
 \details{
-This dataset represents "raw" data as it would come from an SEC instrument,
-before any processing. Key characteristics include:
+The simulated signals have not been processed. They include:
 
-\strong{Realistic Signal Features:}
+\strong{Simulated Signal Features:}
 \itemize{
 \item Gaussian noise on detector signal
 \item Slow baseline drift from temperature fluctuations
@@ -81,7 +79,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 \code{\link{sec_ps_standards}} for pre-processed calibration data
 \code{\link{step_sec_conventional_cal}} for calibration step
 
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},
@@ -93,7 +91,7 @@ Other sec-data:
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
-Other sec-raw: 
+Other sec-raw:
 \code{\link{sec_raw_multidetector}},
 \code{\link{sec_raw_unknowns}}
 }

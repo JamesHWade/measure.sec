@@ -12,53 +12,34 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 4.5
 )
+
+theme_measure_sec <- function() {
+  ggplot2::theme_bw(base_size = 10, base_family = "sans") +
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      plot.background = ggplot2::element_rect(fill = "white", colour = NA),
+      panel.background = ggplot2::element_rect(fill = "white")
+    )
+}
 ```
 
-## Overview
-Size Exclusion Chromatography (SEC) is a critical analytical technique for biopharmaceutical characterization. It separates proteins based on hydrodynamic size, enabling quantification of:
+## Scope
 
-- **High Molecular Weight Species (HMWS)**: Aggregates, dimers, oligomers
-- **Monomer**: The intended product
-- **Low Molecular Weight Species (LMWS)**: Fragments, degradation products
+This vignette demonstrates area-based protein SEC summaries with
+`sec_protein`, a synthetic dataset of monoclonal-antibody-like chromatograms.
+The embedded component percentages and nominal species sizes describe the
+dataset's simulation. They are not experimental measurements or acceptance
+criteria.
 
-This vignette covers:
+The dataset does not include protein calibration standards. Its nominal masses
+are approximately 600 kDa for HMW aggregates, 300 kDa for dimers, 150 kDa for
+monomer, and 50 kDa for fragments. These values are generation assumptions,
+not MW estimates recovered from the plotted signal. A polystyrene calibration
+curve should not be used to assign protein MW.
 
-1. Protein SEC basics
-2. Aggregate quantitation workflows
-3. Detailed oligomer analysis
-4. Regulatory considerations
-
-## Why SEC for Biopharmaceutical Analysis?
-
-### The Unique Demands of Protein Characterization
-
-Proteins are inherently more complex than small molecules or synthetic polymers. They fold into precise three-dimensional structures, associate into quaternary complexes, and can aggregate through multiple pathways. For biopharmaceutical products---monoclonal antibodies, enzymes, vaccines---understanding the **size distribution** of species in solution is critical to both efficacy and safety.
-
-SEC has become the primary analytical technique for protein aggregation analysis because it separates species non-destructively under native conditions. Unlike SDS-PAGE (which denatures proteins) or analytical ultracentrifugation (which requires specialized equipment and long run times), SEC provides quantitative, reproducible data in under 30 minutes per sample with standard HPLC instrumentation. The technique preserves non-covalent interactions, enabling detection of both reversible and irreversible aggregates.
-
-### How Protein Aggregates Form
-
-**Aggregation** refers to the association of protein molecules into higher-order species beyond the intended quaternary structure. Aggregates can form through several mechanisms:
-
-- **Native aggregation**: Properly folded monomers associate through surface interactions. These aggregates often form at high concentrations, interfaces (air-water, container surfaces), or under mechanical stress.
-
-- **Non-native aggregation**: Partially unfolded proteins expose hydrophobic regions that drive irreversible association. Heat stress, freeze-thaw cycles, and oxidation promote unfolding.
-
-- **Covalent aggregation**: Disulfide scrambling or other chemical crosslinks create species that persist even under denaturing conditions.
-
-The size of aggregates matters: small oligomers (dimers, trimers) may have reduced activity, while large aggregates (visible or subvisible particles) are the primary concern for immunogenicity.
-
-### Why Aggregate Monitoring Matters
-
-Regulatory agencies (FDA, EMA, WHO) require comprehensive aggregate characterization for biopharmaceutical approval and lot release. This focus stems from immunogenicity concerns: aggregated proteins can activate the immune system, potentially leading to anti-drug antibodies that reduce efficacy or cause adverse reactions.
-
-The connection between aggregation and immunogenicity is well-established through clinical experience: early insulin and growth hormone products had immunogenicity problems traced to aggregation, and modern monoclonal antibody products face similar scrutiny. ICH Q6B specifically identifies aggregate content as a critical quality attribute (CQA), and product specifications typically limit high molecular weight species (HMWS) to less than 5%---with tighter limits for high-dose or frequently administered products.
-
-SEC aggregate quantitation is the most common release test for biopharmaceuticals precisely because it is fast, robust, and directly measures what regulators care about: the distribution of species by size.
-
-## Setup
+## View the synthetic chromatograms
 
 ```{r setup}
 library(measure)
@@ -66,125 +47,82 @@ library(measure.sec)
 library(recipes)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 ```
 
-## Protein SEC Principles
-
-### Elution Order
-
-In SEC, proteins elute in order of decreasing size:
-
-```{r elution-concept, echo = FALSE, fig.width=7, fig.height=4}
-# Simulate protein SEC chromatogram
-time <- seq(5, 18, by = 0.05)
-
-# HMW aggregate
-hmw <- 0.03 * dnorm(time, mean = 7, sd = 0.3)
-# Dimer
-dimer <- 0.08 * dnorm(time, mean = 8.5, sd = 0.35)
-# Monomer (main peak)
-monomer <- 0.85 * dnorm(time, mean = 10, sd = 0.4)
-# Fragment
-fragment <- 0.04 * dnorm(time, mean = 13, sd = 0.5)
-
-chrom_data <- tibble(
-  time = time,
-  signal = hmw + dimer + monomer + fragment
-)
-
-peak_labels <- tibble(
-  time = c(7, 8.5, 10, 13),
-  signal = c(0.035, 0.09, 0.9, 0.05),
-  label = c("HMW\nAggregate", "Dimer", "Monomer", "Fragment")
-)
-
-ggplot(chrom_data, aes(time, signal)) +
-  geom_line(linewidth = 1, color = "#2E86AB") +
-  geom_area(alpha = 0.2, fill = "#2E86AB") +
-  geom_text(data = peak_labels, aes(label = label), vjust = -0.5, size = 3.5) +
-  annotate(
-    "segment",
-    x = 9, xend = 11, y = 0.88, yend = 0.88,
-    arrow = arrow(ends = "both", length = unit(0.1, "inches"))
-  ) +
-  annotate("text", x = 10, y = 0.92, label = "Monomer region") +
-  labs(
-    x = "Retention Time (min)",
-    y = "UV Absorbance (280 nm)",
-    title = "Typical Protein SEC Chromatogram",
-    subtitle = "mAb with aggregates and fragments"
-  ) +
-  theme_minimal()
-```
-
-### Detection
-
-Protein SEC typically uses UV detection at 280 nm (tryptophan/tyrosine absorbance).
-
-## Basic Aggregate Quantitation
-
-### Using step_sec_aggregates()
-
-For simple HMWS/monomer/LMWS quantitation:
-
-```{r aggregates-basic}
-# Load protein SEC data - mAb samples with reference and stressed conditions
+```{r protein-data}
 data(sec_protein, package = "measure.sec")
 
-# Start with the reference sample
-protein_ref <- sec_protein |>
-  filter(sample_id == "mAb-Reference")
+chromatograms <- sec_protein |>
+  filter(sample_id %in% c("mAb-Reference", "mAb-Stressed-2")) |>
+  group_by(sample_id) |>
+  mutate(relative_uv = uv_280_signal / max(uv_280_signal, na.rm = TRUE)) |>
+  ungroup()
 
-# Aggregate quantitation using tallest peak detection
-rec_agg <- recipe(
+sample_metadata <- sec_protein |>
+  distinct(sample_id, description, monomer_pct, dimer_pct, hmw_pct, fragment_pct)
+
+sample_metadata
+```
+
+The chart scales each trace to its own maximum to compare peak positions and
+shapes. The normalized signal is not an estimate of species percentage.
+
+```{r chromatogram-comparison, fig.width = 7, fig.height = 4.5, fig.cap = "Full-range synthetic UV 280 nm traces for the reference and heat-stressed samples, each divided by its own maximum signal. Both show one dominant broad peak near 16 minutes and low signal elsewhere; area-based percentages are calculated separately below.", fig.alt = "Line chart from about 5 to 30 minutes of UV 280 nm signal normalized to each synthetic sample's own maximum. The mAb-Reference and mAb-Stressed-2 traces almost overlap, with one dominant broad peak near 16 minutes and signal near baseline on either side. Each trace is normalized separately, so the y values do not compare sample concentration or area-based component percentages."}
+ggplot(
+  chromatograms,
+  aes(x = elution_time, y = relative_uv, colour = sample_id)
+) +
+  geom_line(linewidth = 0.65) +
+  scale_colour_manual(
+    values = c("mAb-Reference" = "#2E86AB", "mAb-Stressed-2" = "#A23B72")
+  ) +
+  labs(
+    x = "Elution time (min)",
+    y = "Relative UV 280 nm signal (maximum = 1)",
+    colour = "Synthetic sample"
+  ) +
+  theme_measure_sec()
+```
+
+## Area-based aggregate summary
+
+`step_sec_aggregates()` divides the baseline-corrected signal into HMW,
+main-peak, and LMW regions. The boundaries are inferred from the chromatogram
+unless explicit limits are supplied. This example reports the step's
+calculated area percentages for all five synthetic samples.
+
+```{r aggregates-workflow}
+rec_aggregates <- recipe(
   uv_280_signal + elution_time ~ sample_id,
-  data = protein_ref
+  data = sec_protein
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Convert UV 280 nm signal to measure format
   step_measure_input_long(
     uv_280_signal,
     location = vars(elution_time),
     col_name = "uv"
   ) |>
-  # Baseline correction
   step_sec_baseline(measures = "uv") |>
-  # Aggregate quantitation - auto-detect monomer peak
   step_sec_aggregates(
     measures = "uv",
     method = "tallest"
   )
 
-prepped_agg <- prep(rec_agg)
-result_agg <- bake(prepped_agg, new_data = NULL)
+result_aggregates <- prep(rec_aggregates) |>
+  bake(new_data = NULL)
 
-# View aggregate results
-result_agg |>
+result_aggregates |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
 ```
 
-### Manual Peak Boundaries
+## Protein summary with `step_sec_protein()`
 
-For precise control over integration limits:
-
-```{r aggregates-manual, eval = FALSE}
-# When you know the exact monomer elution window
-step_sec_aggregates(
-  measures = "uv",
-  monomer_start = 14.5,  # Monomer peak start (min)
-  monomer_end = 17.5,    # Monomer peak end (min)
-  method = "manual"
-)
-```
-
-## Complete Protein Workflow
-
-### Using step_sec_protein()
-
-The `step_sec_protein()` function provides a streamlined workflow combining baseline correction, aggregate analysis, and optional oligomer detection:
+With `include_oligomer = FALSE`, the step returns three area partitions. The
+output is useful for reviewing the main-peak and surrounding signal areas; it
+does not produce a calibrated molecular-weight distribution.
 
 ```{r protein-workflow}
-# Analyze all mAb samples with the protein step
 rec_protein <- recipe(
   uv_280_signal + elution_time ~ sample_id,
   data = sec_protein
@@ -198,220 +136,83 @@ rec_protein <- recipe(
   step_sec_protein(
     measures = "uv",
     type = "native",
-    monomer_mw = 150000,        # mAb ~150 kDa
-    baseline_method = "linear"
+    baseline_method = "linear",
+    include_oligomer = FALSE
   )
 
-prepped_protein <- prep(rec_protein)
-result_protein <- bake(prepped_protein, new_data = NULL)
+result_protein <- prep(rec_protein) |>
+  bake(new_data = NULL)
 
-# View results for all samples
 result_protein |>
-  select(sample_id, starts_with("protein_"))
+  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct)
 ```
 
-### Output Columns
-
-The `step_sec_protein()` step creates:
-
-| Column | Description |
-|--------|-------------|
-| `protein_hmws_pct` | % high molecular weight species |
-| `protein_monomer_pct` | % main peak (monomer) |
-| `protein_lmws_pct` | % low molecular weight species |
-| `protein_main_start` | Start of monomer region |
-| `protein_main_end` | End of monomer region |
-
-With `include_oligomer = TRUE`:
-
-| Column | Description |
-|--------|-------------|
-| `protein_monomer_oligo_pct` | % monomer from oligomer analysis |
-| `protein_dimer_pct` | % dimer |
-| `protein_trimer_pct` | % trimer |
-| `protein_hmw_oligo_pct` | % higher oligomers |
-| `protein_lmw_oligo_pct` | % fragments |
-| `protein_species_count` | Number of detected species |
-
-## Native vs Denaturing SEC
-
-### Native SEC
-
-Preserves non-covalent interactions:
-
-```{r native, eval = FALSE}
-step_sec_protein(
-  type = "native",
-  monomer_mw = 150000
-)
-```
-
-Use for:
-- Detecting reversible aggregates
-- Oligomer state assessment
-- Native quaternary structure
-
-### Denaturing SEC (SDS-SEC)
-
-Disrupts non-covalent interactions:
-
-```{r denaturing, eval = FALSE}
-step_sec_protein(
-  type = "denaturing",
-  monomer_mw = 150000
-)
-```
-
-Use for:
-- Covalent aggregate detection
-- Clipped/truncated species
-- Heavy/light chain analysis
-
-## Detailed Oligomer Analysis
-
-### Using step_sec_oligomer()
-
-For more control over oligomer detection:
-
-```{r oligomer, eval = FALSE}
-# Detailed oligomer analysis with explicit control
-rec_oligo <- recipe(
-  uv_280_signal + elution_time ~ sample_id,
-  data = sec_protein
-) |>
-  update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(
-    uv_280_signal,
-    location = vars(elution_time),
-    col_name = "uv"
-  ) |>
-  step_sec_baseline(measures = "uv") |>
-  step_sec_oligomer(
-    measures = "uv",
-    monomer_mw = 150000,
-    mw_tolerance = 0.15,     # 15% MW tolerance for species assignment
-    min_area_pct = 0.1       # Minimum 0.1% to report
-  )
-```
-
-### Species Assignment
-
-The oligomer step identifies species based on expected MW:
-
-| Species | Expected MW | Example (mAb) |
-|---------|-------------|---------------|
-| Fragment | < 0.7 × monomer | < 105 kDa |
-| Monomer | 1.0 × monomer | 150 kDa |
-| Dimer | 2.0 × monomer | 300 kDa |
-| Trimer | 3.0 × monomer | 450 kDa |
-| Higher oligomer | > 3 × monomer | > 450 kDa |
-
-## Regulatory Considerations
-
-### ICH Guidelines
-
-- **ICH Q6B**: Specifications for biotechnology products
-  - Aggregate content is a critical quality attribute
-  - Typical specification: HMWS < 5%
-
-- **ICH Q5E**: Comparability of biotechnology products
-  - Aggregate profiles should be comparable
-
-### USP Guidelines
-
-- **USP <129>**: Analytical procedures for proteins
-- **USP <1032>**: Design and development of biological assays
-
-### Typical Specifications
-
-| Parameter | Typical Limit | Notes |
-|-----------|--------------|-------|
-| HMWS | < 5% | May be tighter for high-dose products |
-| Monomer | > 95% | Primary quality indicator |
-| LMWS | < 2% | Product-specific |
-| Dimer | Report | Not always specified separately |
-
-## Best Practices
-
-### Sample Preparation
-
-1. **Filter samples** through 0.22 μm before injection
-2. **Minimize time** between prep and analysis
-3. **Use appropriate buffer** (match formulation buffer)
-4. **Control temperature** during autosampler storage
-
-### Method Parameters
-
-1. **Column selection**: Appropriate exclusion limit for aggregates
-2. **Mobile phase**: Typically PBS or phosphate buffer
-3. **Flow rate**: 0.5-1.0 mL/min
-4. **Injection volume**: 10-100 μL (depending on concentration)
-5. **Detection**: 280 nm (standard) or 214 nm (higher sensitivity)
-
-### Integration
-
-1. **Consistent baseline** selection across samples
-2. **Same integration limits** for all samples in a study
-3. **Report detection limit** for minor species
-
-## Example: Comparing Stressed Samples
-
-The `sec_protein` dataset includes samples under various stress conditions, simulating a stability study:
-
-```{r stability-comparison}
-# Analyze all samples including stressed conditions
-result_protein |>
-  select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
-  arrange(desc(protein_hmws_pct))
-```
-
-```{r stability-plot, fig.width=7, fig.height=4}
-# Compare aggregate content across conditions
-library(tidyr)
-
-plot_data <- result_protein |>
+```{r protein-fractions, fig.width = 7, fig.height = 4.5, fig.cap = "HMW, main-peak, and LMW area percentages returned by `step_sec_protein()` for each synthetic sample. Each panel uses its own vertical scale to keep the smaller fractions legible.", fig.alt = "Faceted dot chart of sample ID versus area percentage, with separate panels for HMW, main peak, and LMW signal. Each point is the value returned by `step_sec_protein()` for one of the five synthetic samples. The panels use separate vertical scales; missing values, if present, are left unplotted rather than treated as zero."}
+protein_fraction_data <- result_protein |>
   select(sample_id, protein_hmws_pct, protein_monomer_pct, protein_lmws_pct) |>
   pivot_longer(
     cols = starts_with("protein_"),
-    names_to = "species",
+    names_to = "region",
     values_to = "percent"
   ) |>
   mutate(
-    species = case_when(
-      species == "protein_hmws_pct" ~ "HMWS",
-      species == "protein_monomer_pct" ~ "Monomer",
-      species == "protein_lmws_pct" ~ "LMWS"
+    region = recode(
+      region,
+      protein_hmws_pct = "HMW area",
+      protein_monomer_pct = "Main-peak area",
+      protein_lmws_pct = "LMW area"
     ),
-    species = factor(species, levels = c("HMWS", "Monomer", "LMWS"))
+    sample_id = factor(sample_id, levels = unique(sec_protein$sample_id))
   )
 
-# Focus on non-monomer species for clarity
-plot_data |>
-  filter(species != "Monomer") |>
-  ggplot(aes(x = sample_id, y = percent, fill = species)) +
-  geom_col(position = "dodge") +
-  geom_hline(yintercept = 5, linetype = "dashed", color = "red") +
-  annotate("text", x = 1, y = 5.5, label = "Typical spec: < 5%", color = "red", hjust = 0) +
-  scale_fill_manual(values = c("HMWS" = "#E8751A", "LMWS" = "#2E86AB")) +
-  labs(
-    x = NULL,
-    y = "% of Total",
-    fill = "Species",
-    title = "Aggregate and Fragment Content by Sample",
-    subtitle = "Comparing reference vs stressed mAb samples"
+ggplot(protein_fraction_data, aes(x = sample_id, y = percent)) +
+  geom_point(
+    aes(colour = region),
+    size = 2.2,
+    na.rm = TRUE
   ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  facet_wrap(~region, ncol = 1, scales = "free_y") +
+  scale_colour_manual(
+    values = c(
+      "HMW area" = "#A23B72",
+      "Main-peak area" = "#2E86AB",
+      "LMW area" = "#3B7A57"
+    ),
+    guide = "none"
+  ) +
+  labs(
+    x = "Synthetic sample",
+    y = "Area percentage (%)"
+  ) +
+  theme_measure_sec() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
 ```
 
-## See Also
+The provided `monomer_pct`, `dimer_pct`, `hmw_pct`, and `fragment_pct` columns
+are simulation metadata. They are not outputs from the recipe above. Compare
+them only when evaluating the synthetic example; keep the calculated step
+results and the dataset's supplied fields distinct.
 
-- [Getting Started](getting-started.html) - Basic SEC workflow and concepts
-- [System Suitability](system-suitability.html) - QC metrics for biopharm compliance
-- [Multi-Detector SEC](triple-detection.html) - MALS for absolute MW determination
-- [Exporting Results](exporting-results.html) - Summary tables and report generation
+## Standards and mass assignment
 
-## Session Info
+The package's `sec_triple_detect` example includes polystyrene standards, not
+protein standards. `step_sec_conventional_cal()` fits a polymer-specific curve;
+its output should not be transferred to these protein traces. The
+`step_sec_protein()` workflow above reports area regions and does not supply a
+protein-standard MW calibration.
+
+For a protein-specific MW estimate, use appropriate protein standards or a
+validated method with the calibration information required for that method.
+The examples here do not establish suitability or product specifications.
+
+## See also
+
+- [Getting started](getting-started.html) — basic SEC workflow
+- [System suitability](system-suitability.html) — QC calculations and limits
+- [Multi-detector SEC](triple-detection.html) — detector processing and limits
+- [Exporting results](exporting-results.html) — tables and files
+
+## Session info
 
 ```{r session-info}
 sessionInfo()

@@ -28,19 +28,19 @@ Synthetic data generated for package tutorials.
 sec_raw_multidetector
 }
 \description{
-A dataset containing raw SEC chromatograms with RI, UV, and MALS detector
-signals that have NOT been corrected for inter-detector delay. Designed
-for teaching triple detection workflows from raw data.
+Synthetic RI, UV and scattering signals before detector-delay correction,
+for teaching multi-detector processing.
 }
 \details{
 This dataset simulates raw multi-detector SEC data before inter-detector
 delay correction. The detectors are physically separated in the flow path,
-so peaks appear at different times in each detector.
+so the simulated profiles are shifted. Detector-specific noise and drift
+mean the observed peak maxima need not recover the declared delays.
 
 \strong{Detector Configuration:}
 \itemize{
-\item UV detector is 0.08 mL BEFORE RI (peaks appear earlier)
-\item MALS detector is 0.18 mL AFTER RI (peaks appear later)
+\item Declared UV delay: -0.08 mL relative to RI
+\item Declared MALS delay: +0.18 mL relative to RI
 \item RI is the reference detector (delay = 0)
 }
 
@@ -55,9 +55,10 @@ so peaks appear at different times in each detector.
 \strong{Tutorial Workflow:}
 \enumerate{
 \item Load raw multi-detector data
-\item Use delay standard to determine inter-detector offsets
+\item Compare response diagnostics with the declared detector offsets
 \item Apply \code{\link{step_sec_detector_delay}} to align signals
-\item Process with \code{\link{step_sec_mals}} for absolute MW
+\item Supply response calibration and concentration for the single-angle
+approximation in \code{\link{step_sec_mals}}
 }
 }
 \examples{
@@ -89,7 +90,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
       x = "Time (min)",
       y = "Normalized Signal",
       title = "Raw Multi-Detector Data (Before Delay Correction)",
-      subtitle = "Note: Peaks are NOT aligned - UV leads, MALS lags"
+      subtitle = "Noise and drift affect the observed peak maxima"
     ) +
     theme_minimal()
 }
@@ -98,9 +99,9 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 \seealso{
 \code{\link{step_sec_detector_delay}} for delay correction
 \code{\link{step_sec_mals}} for MALS processing
-\code{\link{sec_triple_detect}} for pre-processed multi-detector data
+\code{\link{sec_triple_detect}} for another synthetic detector dataset
 
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},
@@ -112,7 +113,7 @@ Other sec-data:
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
-Other sec-raw: 
+Other sec-raw:
 \code{\link{sec_raw_standards}},
 \code{\link{sec_raw_unknowns}}
 }

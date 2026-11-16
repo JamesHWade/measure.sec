@@ -41,7 +41,9 @@ The dataset includes polyethylene-like samples with three topologies:
 \strong{Key Observation:}
 At the same molecular weight, branched polymers have smaller hydrodynamic
 volume and elute LATER than their linear counterparts. This is the basis
-for branching analysis by comparing SEC retention to absolute MW from MALS.
+for comparing retention with independently determined molecular weight.
+The stored MW, radius and viscosity values are simulation inputs, repeated
+along each chromatogram; they are not independently measured slices.
 
 \strong{Branching Index (g'):}
 g' = \eqn{[\eta]_{branched}} / \eqn{[\eta]_{linear}} at same MW
@@ -51,7 +53,7 @@ Values less than 1.0 indicate branching. Lower values mean more compact
 
 \strong{Typical Workflow:}
 \enumerate{
-\item Apply \code{\link{step_sec_mals}} for absolute MW
+\item Obtain calibrated molecular-weight estimates and inspect their assumptions
 \item Apply \code{\link{step_sec_viscometer}} for intrinsic viscosity
 \item Use \code{\link{measure_branching_index}} to calculate g'
 \item Plot Mark-Houwink relationship to compare topologies
@@ -83,7 +85,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 
 }
 \seealso{
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},
 \code{\link{sec_pmma_standards}},

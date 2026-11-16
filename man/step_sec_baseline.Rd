@@ -39,8 +39,8 @@ baseline region. Default is \code{0.05} (last 5\% of data points). Not used for
 \item \code{"linear"} (default): Linear interpolation between left and right means
 \item \code{"median"}: Uses median of baseline regions (more robust to outliers)
 \item \code{"spline"}: Smooth spline through baseline regions
-\item \code{"rf"}: Robust local regression (IDPmisc::rfbaseline). Best for complex
-baselines with curvature or drift. Does not use left_frac/right_frac.
+\item \code{"rf"}: Robust local regression (IDPmisc::rfbaseline) for curved or
+drifting baselines. Does not use left_frac/right_frac.
 }}
 
 \item{rf_span}{Span parameter for RF baseline (only used when \code{method = "rf"}).
@@ -72,9 +72,8 @@ baseline by interpolating between baseline regions at the start and end of
 the chromatogram.
 }
 \details{
-GPC/SEC chromatograms typically have distinct baseline regions at the
-beginning and end where no polymer elutes. This step leverages this
-characteristic by:
+When the beginning and end of a chromatogram contain baseline-only
+observations, this step estimates a baseline by:
 \enumerate{
 \item Identifying baseline regions at the start and end of the chromatogram
 \item Computing a representative baseline value for each region (mean or median)
@@ -90,9 +89,9 @@ chromatogram is considered "baseline". Choose values that:
 \item Are large enough to average out noise
 }
 
-Unlike general-purpose baseline methods like ALS or polynomial fitting,
-this approach is specifically designed for the characteristic shape of
-GPC/SEC chromatograms and is computationally very fast.
+Inspect the selected edge regions before subtraction. A peak that extends
+into either region can contribute to the estimated baseline and lose part
+of its response during subtraction.
 
 Baseline subtraction retains a recorded \code{g/mL} or \code{mg/mL} unit on the
 current input column. Untagged inputs remain untagged, and invalid recorded

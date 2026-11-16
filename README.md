@@ -7,102 +7,137 @@
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/measure.sec)](https://CRAN.R-project.org/package=measure.sec)
 [![R-CMD-check](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/measure.sec/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/JamesHWade/measure.sec/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/measure.sec)
 <!-- badges: end -->
 
-## Overview
-
-**measure.sec** is an R package that extends the
-[measure](https://github.com/JamesHWade/measure) package with
-preprocessing and analysis steps for Size Exclusion Chromatography (SEC)
-and Gel Permeation Chromatography (GPC) data.
-
-### Features
-
-- **Multi-detector support**: RI, UV/DAD, MALS, LALS, RALS, DLS, and
-  viscometer processing
-- **Inter-detector delay correction**: Align signals from detectors in
-  series
-- **Molecular weight calculations**: Mn, Mw, Mz, dispersity (PDI)
-- **Copolymer composition**: UV/RI ratio and composition analysis
-- **Protein SEC**: Aggregate and fragment quantitation (HMWS/LMWS)
-- **Universal calibration**: Mark-Houwink parameter-based MW conversion
-- **Quality control**: System suitability testing (resolution, plate
-  count, asymmetry)
-- **Polymer analysis**: Branching indices and Mark-Houwink parameter
-  estimation
-
-### Package Workflow
-
-<figure>
-<img src="man/figures/measure.sec_overview.png"
-alt="SEC Data Analysis Workflow" />
-<figcaption aria-hidden="true">SEC Data Analysis Workflow</figcaption>
-</figure>
-
-*The typical SEC analysis workflow processes raw chromatogram data
-through preprocessing, detector-specific signal processing, calibration,
-and molecular weight calculations. Concentration detectors (RI, UV)
-require calibration curves from standards, while light scattering
-detectors (MALS) provide absolute molecular weight directly.*
+measure.sec adds SEC/GPC detector processing, calibration and
+molecular-weight calculations to
+[measure](https://jameshwade.github.io/measure/dev/) recipes. It also
+provides copolymer composition, protein aggregation, branching and
+system-suitability calculations.
 
 ## Installation
 
-You can install the development version of measure.sec from
-[GitHub](https://github.com/) with:
+Install both development packages from GitHub:
 
 ``` r
 # install.packages("pak")
-pak::pak("JamesHWade/measure.sec")
+pak::pak(c("JamesHWade/measure", "JamesHWade/measure.sec"))
 ```
 
-Note: measure.sec requires the
-[measure](https://github.com/JamesHWade/measure) package:
+## Align and baseline-correct detector signals
 
-``` r
-pak::pak("JamesHWade/measure")
-```
-
-## Quick Start
+This example creates three Gaussian signals with known offsets and
+linear baselines. UV is 0.05 minutes earlier than RI; scattering is 0.15
+minutes later. At 1 mL/min, those offsets are also the delay volumes in
+mL. The responses are arbitrary simulated values. Give `sample_id` an ID
+role to keep one curve per sample and detector.
 
 ``` r
 library(measure)
 library(measure.sec)
 library(recipes)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
-# Load example triple-detection SEC data
-data(sec_triple_detect, package = "measure.sec")
+elution_time <- seq(9, 11, by = 0.01)
+gaussian <- function(centre) exp(-0.5 * ((elution_time - centre) / 0.12)^2)
+detector_data <- tibble(
+  sample_id = "illustrative-polymer",
+  elution_time,
+  ri_signal = 0.02 + 0.004 * (elution_time - 9) + gaussian(10),
+  uv_signal = 0.03 + 0.003 * (elution_time - 9) + 0.75 * gaussian(9.95),
+  mals_signal = 0.01 + 0.002 * (elution_time - 9) + 0.5 * gaussian(10.15)
+)
 
-# Create a processing recipe
-rec <- recipe(~ ., data = sec_triple_detect) |>
-  # Convert to measure format
+rec <- recipe(~ ., data = detector_data) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
-
-  # Correct inter-detector delays
+  step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
+  step_sec_baseline(measures = c("ri", "uv", "mals")) |>
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(uv = -0.05)
-  ) |>
+    delay_volumes = c(uv = -0.05, mals = 0.15),
+    flow_rate = 1,
+    elution_units = "min",
+    method = "interpolate"
+  )
 
-  # Apply baseline correction
-  step_sec_baseline() |>
-
-  # Process RI detector with dn/dc
-  step_sec_ri(dn_dc_column = "dn_dc")
-
-# Prep and bake
 prepped <- prep(rec)
 result <- bake(prepped, new_data = NULL)
+result |> select(sample_id, ri, uv, mals)
+#> # A tibble: 1 × 4
+#>   sample_id                   ri        uv      mals
+#>   <chr>                   <meas>    <meas>    <meas>
+#> 1 illustrative-polymer [201 × 2] [201 × 2] [201 × 2]
 ```
 
-## Available Steps
+A positive target delay moves its signal earlier; a negative delay moves
+it later. Use measured delays and flow rate for your own acquisition.
+The example shows the correction convention; it does not estimate an
+instrument delay. Baseline subtraction uses the recorded edge regions
+before alignment. The interpolated shift leaves `NA` where the target
+was not sampled.
 
-### Detector Processing
+``` r
+example_id <- "illustrative-polymer"
+raw_sample <- detector_data |> filter(sample_id == example_id)
+baked_sample <- result |> filter(sample_id == example_id)
+
+raw_plot <- raw_sample |>
+  pivot_longer(ends_with("_signal"), names_to = "detector", values_to = "value") |>
+  transmute(
+    detector = sub("_signal$", "", detector),
+    location = elution_time, value, stage = "Recorded signals"
+  )
+processed_plot <- bind_rows(lapply(c("ri", "uv", "mals"), function(detector) {
+  curve <- baked_sample[[detector]][[1]]
+  tibble(detector, location = curve$location, value = curve$value,
+         stage = "Aligned + baseline-corrected")
+}))
+plot_data <- bind_rows(raw_plot, processed_plot) |>
+  mutate(
+    detector = factor(detector, levels = c("ri", "uv", "mals"),
+                      labels = c("RI", "UV", "Scattering")),
+    stage = factor(stage, levels = c("Recorded signals", "Aligned + baseline-corrected"))
+  )
+peak_time <- raw_sample$elution_time[which.max(raw_sample$ri_signal)]
+
+ggplot(plot_data, aes(location, value, colour = stage)) +
+  geom_line(linewidth = 0.45, na.rm = TRUE) +
+  facet_grid(detector ~ stage, scales = "free_y") +
+  coord_cartesian(xlim = peak_time + c(-0.7, 0.7)) +
+  scale_colour_manual(values = c("#0072B2", "#D55E00"), guide = "none") +
+  labs(x = "Elution time (min)", y = "Simulated detector response") +
+  theme_minimal(base_size = 12) +
+  theme(plot.background = element_rect(fill = "white", colour = NA))
+```
+
+<div class="figure">
+
+<img src="man/figures/README-detector-comparison-1.png" alt="Six line-chart panels plot elution time in minutes against simulated detector response. Rows are RI, UV and scattering; columns are the recorded and processed signals. The recorded UV peak is earlier and the scattering peak later than the RI reference. After processing, all three peaks are at 10 minutes and their baselines are near zero. Each detector row uses its own vertical scale." width="100%" />
+<p class="caption">
+
+Known-offset simulated signals before and after linear baseline
+subtraction and detector-delay correction. After correction, all three
+peak maxima occur at 10 minutes. Left and right panels share a response
+scale within each detector; scales differ between detectors.
+</p>
+
+</div>
+
+Concentration and molecular-weight calculations need their own response
+calibration and unit declarations. The current `step_sec_mals()` is a
+calibrated single-angle approximation; multi-angle extrapolation and
+radius of gyration are outside that step’s implementation.
+
+## Available steps
+
+### Detector processing
 
 | Step | Description |
 |----|----|
@@ -110,8 +145,8 @@ result <- bake(prepped, new_data = NULL)
 | `step_sec_uv()` | UV detector with extinction coefficient |
 | `step_sec_dad()` | Diode array detector processing (multi-wavelength UV) |
 | `step_sec_mals()` | Single-angle light-scattering approximation; multi-angle fits and Rg are not implemented |
-| `step_sec_lals()` | Low-angle light scattering for absolute MW |
-| `step_sec_rals()` | Right-angle light scattering for absolute MW |
+| `step_sec_lals()` | MW estimate from calibrated low-angle scattering and concentration |
+| `step_sec_rals()` | MW estimate from calibrated right-angle scattering and concentration |
 | `step_sec_dls()` | Dynamic light scattering for Rh and diffusion |
 | `step_sec_viscometer()` | Differential viscometer processing |
 | `step_sec_concentration()` | Convert signal to concentration |
@@ -119,12 +154,12 @@ result <- bake(prepped, new_data = NULL)
 
 ### Preprocessing
 
-| Step                        | Description                          |
-|-----------------------------|--------------------------------------|
-| `step_sec_detector_delay()` | Correct inter-detector volume delays |
-| `step_sec_baseline()`       | SEC-optimized baseline correction    |
+| Step                        | Description                             |
+|-----------------------------|-----------------------------------------|
+| `step_sec_detector_delay()` | Correct inter-detector volume delays    |
+| `step_sec_baseline()`       | Subtract an estimated detector baseline |
 
-### Molecular Weight
+### Molecular weight
 
 | Step | Description |
 |----|----|
@@ -134,7 +169,7 @@ result <- bake(prepped, new_data = NULL)
 | `step_sec_conventional_cal()` | Narrow standard calibration (polynomial fits) |
 | `step_sec_universal_cal()` | Universal calibration with Mark-Houwink |
 
-### Composition Analysis
+### Composition analysis
 
 | Step                     | Description                             |
 |--------------------------|-----------------------------------------|
@@ -145,124 +180,39 @@ result <- bake(prepped, new_data = NULL)
 
 | Step | Description |
 |----|----|
-| `step_sec_protein()` | Complete protein SEC workflow (baseline + aggregates + oligomers) |
+| `step_sec_protein()` | Protein workflow: baseline, aggregate and oligomer calculations |
 | `step_sec_aggregates()` | HMWS/monomer/LMWS quantitation |
 | `step_sec_oligomer()` | Detailed oligomer species analysis |
 
-## Quality Control Functions
+## Choose a workflow
 
-``` r
-# Peak resolution
-Rs <- measure_sec_resolution(
-  retention_1 = 8.5,
-  retention_2 = 10.0,
-  width_1 = 0.3,
-  width_2 = 0.35
-)
+- [Start an SEC
+  analysis](https://jameshwade.github.io/measure.sec/articles/getting-started.html)
+- [Check detector units and
+  clipping](https://jameshwade.github.io/measure.sec/articles/detector-qualification.html)
+- [Fit and inspect conventional
+  calibration](https://jameshwade.github.io/measure.sec/articles/tutorial-conventional-calibration.html)
+- [Process multiple
+  detectors](https://jameshwade.github.io/measure.sec/articles/triple-detection.html)
+- [Choose integration windows and
+  exclusions](https://jameshwade.github.io/measure.sec/articles/integration-support.html)
+- [Assess system
+  suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.html)
+- [Inspect protein
+  aggregates](https://jameshwade.github.io/measure.sec/articles/protein-sec.html)
+- [Estimate copolymer
+  composition](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.html)
+- [Export
+  results](https://jameshwade.github.io/measure.sec/articles/exporting-results.html)
 
-# Plate count
-N <- measure_sec_plate_count(retention = 10.0, width = 0.25)
+## Getting help
 
-# System suitability testing
-peaks <- data.frame(
-  name = c("dimer", "monomer"),
-  retention = c(8.5, 10.0),
-  width = c(0.3, 0.35),
-  area = c(5, 95)
-)
+- [Function
+  reference](https://jameshwade.github.io/measure.sec/reference/index.html)
+- [GitHub issues](https://github.com/JamesHWade/measure.sec/issues)
 
-sst <- measure_sec_suitability(
-  peaks = peaks,
-  reference_peaks = c("dimer", "monomer")
-)
-print(sst)
-```
+## Code of conduct
 
-## Polymer Analysis Functions
-
-``` r
-# Estimate Mark-Houwink parameters
-mw <- c(10000, 25000, 50000, 100000, 250000)
-iv <- c(0.15, 0.28, 0.45, 0.72, 1.2)
-
-mh <- measure_mh_parameters(mw, iv)
-print(mh)
-# K = 1.14e-04, a = 0.716
-
-# Calculate branching index
-g <- measure_branching_index(
-  mw = mw,
-  rg = c(8, 12, 18, 28, 45),
-  reference = data.frame(mw = mw, rg = c(10, 15, 22, 35, 55)),
-  method = "g"
-)
-```
-
-## Data Export
-
-``` r
-# Extract slice-by-slice data
-slices <- measure_sec_slice_table(result, measures = c("ri", "mw"))
-
-# Generate summary table
-summary <- measure_sec_summary_table(result, sample_id = "sample_id")
-```
-
-## Example Dataset
-
-The package includes `sec_triple_detect`, a synthetic multi-detector SEC
-dataset with:
-
-- 12 polymer samples (PS standards, PMMA, PEG, copolymers)
-- RI, UV, and MALS detector signals
-- Known molecular weights and dispersities
-- Sample-specific dn/dc and extinction coefficients
-
-``` r
-data(sec_triple_detect)
-head(sec_triple_detect)
-```
-
-## Integration with measure
-
-measure.sec automatically registers with the measure package on load:
-
-``` r
-library(measure)
-library(measure.sec)
-
-# View registered SEC steps
-measure_steps(techniques = "SEC/GPC")
-```
-
-## Learn More
-
-For detailed workflows and examples, see the package vignettes:
-
-- **[Getting
-  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.html)**:
-  Basic concepts and your first SEC analysis
-- **[Multi-Detector
-  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.html)**:
-  Triple detection with RI, UV, and MALS
-- **[Protein
-  SEC](https://jameshwade.github.io/measure.sec/articles/protein-sec.html)**:
-  Aggregate and oligomer analysis for biopharmaceuticals
-- **[Copolymer
-  Analysis](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.html)**:
-  Composition from UV/RI ratio
-- **[System
-  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.html)**:
-  QC functions and SST testing
-
-## Getting Help
-
-- [Package documentation](https://jameshwade.github.io/measure.sec/)
-- [GitHub Issues](https://github.com/JamesHWade/measure.sec/issues)
-
-## Code of Conduct
-
-Please note that the measure.sec project is released with a [Contributor
-Code of
-Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
-By contributing to this project, you agree to abide by its terms.
+The [Contributor Code of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html)
+applies to contributions to this project.
