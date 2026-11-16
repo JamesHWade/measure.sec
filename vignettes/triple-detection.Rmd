@@ -12,7 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 4.5
 )
 ```
 
@@ -21,56 +21,16 @@ clipped-signal diagnostics, see [Detector units and clipping](detector-qualifica
 
 ## Overview
 
-> **Implementation status:** `step_sec_mals()` currently uses a single-angle approximation. Its output is relative without a scattering calibration constant; multi-angle extrapolation and Rg are not implemented. Validate all detector workflows against instrument-specific reference data.
+Multi-detector SEC combines concentration measurements with scattering or
+viscometer signals. Detector delays and signal processing affect slice-level
+calculations, so the channels need to be aligned on a shared elution axis.
 
+This guide shows the recipe structure and the roles of common SEC detectors.
+The current `step_sec_mals()` step returns a single-angle estimate; absolute
+values require a calibrated detector and concentration with declared units.
 
-Multi-detector SEC combines concentration detectors (RI, UV) with molecular weight detectors (light scattering) and/or viscometers to provide absolute molecular weight and structural information. This vignette focuses on **integrating multiple detectors** into a unified workflow.
-
-This vignette covers:
-
-1. Detector types and their roles
-2. Inter-detector delay correction (critical!)
-3. Building multi-detector recipes
-4. Viscometer integration and intrinsic viscosity
-5. Universal calibration
-
-For detailed information on specific light scattering detectors, see:
-
-- [MALS Detection](mals-detection.html) - scattering theory and current single-angle approximation
-- [LALS/RALS Detection](lals-rals-detection.html) - Single-angle alternatives
-
-## Why Multi-Detector SEC?
-
-### The Limitation of Conventional SEC
-
-Conventional SEC with a single concentration detector (RI or UV) relies on **column calibration** with narrow standards of known molecular weight. This approach has a fundamental limitation: it assumes your sample has the same relationship between hydrodynamic size and molecular weight as the calibration standards. For a polystyrene sample measured with polystyrene standards, this works well. But what about other polymers, proteins, or branched structures?
-
-The problem is that SEC separates by **hydrodynamic volume**---how much space a molecule occupies in solution---not by molecular weight directly. A compact, branched polymer with MW = 100,000 Da might elute at the same time as a linear polymer with MW = 50,000 Da simply because they occupy similar volumes. Conventional calibration cannot distinguish between them.
-
-### What Each Detector Adds
-
-Multi-detector SEC overcomes this limitation by measuring molecular properties directly:
-
-- **Concentration detectors (RI, UV)** tell you *how much* material is present at each elution slice. RI responds to refractive index changes (nearly universal), while UV detects chromophores (selective but sensitive).
-
-- **Light scattering detectors (MALS, LALS, RALS)** measure molecular weight *directly* from the intensity of scattered light, independent of calibration standards. They also provide radius of gyration (Rg) for larger molecules, revealing information about molecular shape and structure.
-
-- **Viscometers** measure intrinsic viscosity [η], which reflects molecular size and shape in solution. Combined with MW from light scattering, viscometry reveals branching and conformation through the Mark-Houwink relationship.
-
-### When to Use Absolute vs Relative MW
-
-**Use conventional calibration** (relative MW) when:
-- Your sample is the same polymer type as your standards (e.g., PS sample with PS standards)
-- You need fast screening and don't require absolute values
-- Relative comparison between samples is sufficient
-
-**Use multi-detector SEC** (absolute MW) when:
-- Your sample differs structurally from available standards
-- You're analyzing proteins, copolymers, or branched polymers
-- Regulatory requirements demand absolute MW values
-- You need structural information beyond molecular weight (Rg, branching, conformation)
-
-The additional complexity of multi-detector systems is justified when accurate absolute measurements matter---and for proteins and complex polymers, they almost always do.
+For a runnable delay correction using the package's raw example data, see the
+[Tutorial: triple detection from raw data](tutorial-triple-detection.html).
 
 ## Setup
 
@@ -82,9 +42,10 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## Multi-Detector Workflow
+## Multi-detector workflow
 
-The key to multi-detector SEC is proper orchestration of signals. Each detector provides different information, and they must be aligned before calculations.
+Align detector channels to shared elution coordinates before matching values
+at each slice.
 
 ```mermaid
 flowchart TB
@@ -111,7 +72,7 @@ flowchart TB
     end
 
     subgraph Calculate["🔬 Calculations"]
-        D2[Absolute MW<br>from LS + concentration]
+        D2[Single-angle MW estimate<br>absolute only with calibration]
         D4[step_sec_intrinsic_visc<br>η from viscometer + concentration]
     end
 
@@ -134,9 +95,9 @@ flowchart TB
     style Results fill:#e8f5e9
 ```
 
-## Detector Types
+## Detector types
 
-### Concentration Detectors
+### Concentration detectors
 
 | Detector | Signal | Best For |
 |----------|--------|----------|
@@ -144,22 +105,22 @@ flowchart TB
 | **UV** | Absorbance | Chromophore-containing samples |
 | **DAD** | Multi-wavelength UV | Complex samples, composition |
 
-### Molecular Weight Detectors
+### Molecular-weight detectors
 
 | Detector | When to Use | See Also |
 |----------|-------------|----------|
-| **MALS** | Large molecules, need Rg | [MALS Detection](mals-detection.html) |
-| **LALS** | Medium molecules, no Rg needed | [LALS/RALS Detection](lals-rals-detection.html) |
-| **RALS** | Small molecules, QC screening | [LALS/RALS Detection](lals-rals-detection.html) |
+| **MALS** | One-angle estimate; current step does not calculate Rg | [MALS Detection](mals-detection.html) |
+| **LALS** | Low-angle single-angle estimate | [LALS/RALS Detection](lals-rals-detection.html) |
+| **RALS** | Right-angle single-angle estimate | [LALS/RALS Detection](lals-rals-detection.html) |
 
-### Hydrodynamic Detectors
+### Hydrodynamic detectors
 
 | Detector | Signal | Output |
 |----------|--------|--------|
 | **Viscometer** | Differential pressure | Intrinsic viscosity [η] |
 | **DLS** | Dynamic scattering | Hydrodynamic radius Rh |
 
-## Example Dataset
+## Example dataset
 
 ```{r data}
 data(sec_triple_detect, package = "measure.sec")
@@ -171,45 +132,49 @@ samples <- sec_triple_detect |>
 glimpse(samples)
 ```
 
-## Inter-Detector Delay Correction
+The dataset stores RI, UV, and MALS responses on separate numeric scales. This
+plot shows one synthetic sample without rescaling the channels; the y-axis
+units are not specified by the dataset.
 
-**This is the most critical step in multi-detector SEC.** When detectors are connected in series, each experiences a different delay. If not corrected, MW calculations will be wrong.
+```{r detector-responses, fig.cap = "Raw RI, UV, and MALS signals for PMMA-Med from the synthetic `sec_triple_detect` dataset. Each detector has its own vertical scale, so the panel heights do not compare response magnitude across detectors; the dataset does not declare response units.", fig.alt = "Faceted line chart of the synthetic `sec_triple_detect` PMMA-Med data with three panels in order: RI, UV, and MALS signal versus elution time from 5 to 25 minutes. Each panel has a separate vertical scale. The traces show detector-specific response profiles on a shared time axis; their heights are not directly comparable."}
+response_plot <- samples |>
+  filter(sample_id == "PMMA-Med") |>
+  tidyr::pivot_longer(
+    cols = c(ri_signal, uv_signal, mals_signal),
+    names_to = "detector",
+    names_pattern = "(.*)_signal",
+    values_to = "signal"
+  ) |>
+  mutate(detector = factor(detector, levels = c("ri", "uv", "mals"),
+                           labels = c("RI", "UV", "MALS")))
 
-```{r detector-delay-concept, echo = FALSE, fig.width=7, fig.height=4}
-# Simulate detector delay visualization
-time <- seq(5, 15, by = 0.1)
-n_points <- length(time)
-
-# Create signals for each detector with different delays
-ri_signal <- dnorm(time, mean = 10, sd = 0.5)
-uv_signal <- dnorm(time, mean = 9.9, sd = 0.5)   # UV before RI
-ls_signal <- dnorm(time, mean = 10.2, sd = 0.5)  # LS after RI
-visc_signal <- dnorm(time, mean = 10.4, sd = 0.5) # Visc last
-
-delay_data <- tibble(
-  time = rep(time, 4),
-  signal = c(ri_signal, uv_signal, ls_signal, visc_signal),
-  detector = factor(
-    rep(c("RI (reference)", "UV (before)", "LS (after)", "Viscometer (last)"),
-    each = n_points),
-    levels = c("UV (before)", "RI (reference)", "LS (after)", "Viscometer (last)")
-  )
-)
-
-ggplot(delay_data, aes(time, signal, color = detector)) +
-  geom_line(linewidth = 1) +
+ggplot(response_plot, aes(elution_time, signal, color = detector)) +
+  geom_line(linewidth = 0.6) +
+  facet_wrap(~detector, nrow = 1, scales = "free_y") +
+  scale_color_manual(values = c(RI = "#2E86AB", UV = "#A23B72",
+                                MALS = "#F18F01")) +
   labs(
-    x = "Elution Time (min)",
-    y = "Signal (normalized)",
-    title = "Inter-Detector Delay",
-    subtitle = "All signals must be aligned to the same elution time before calculations"
+    x = "Elution time (min)",
+    y = "Recorded signal (unit not declared)"
   ) +
-  scale_color_manual(values = c("#E8751A", "#2E86AB", "#A23B72", "#1A936F")) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none")
 ```
 
-### Correcting Delays
+## Inter-detector delay correction
+
+Detectors connected in series can observe the same sample at different
+elution coordinates. Correct measured delays before matching detector values
+at each slice.
+
+The package's [raw-data tutorial](tutorial-triple-detection.html) plots a delay
+standard before and after interpolation-based alignment. The correction
+samples each target at the reference coordinate plus its declared
+target-minus-reference delay; positive and negative delays therefore move in
+opposite directions.
+
+
+### Correcting delays
 
 Use `step_sec_detector_delay()` to align all detectors:
 
@@ -232,7 +197,7 @@ rec <- recipe(
   )
 ```
 
-### Determining Delay Values
+### Determining delay values
 
 Delay volumes should be determined experimentally:
 
@@ -243,7 +208,7 @@ Delay volumes should be determined experimentally:
 
 **Tip**: Re-calibrate delays after column changes or major maintenance.
 
-## Triple Detection Workflow
+## Triple-detection workflow
 
 A complete "triple detection" recipe with RI, UV, and light scattering:
 
@@ -281,7 +246,7 @@ rec_triple <- recipe(
     sample_concentration = 2.0    # mg/mL
   ) |>
 
-  # Step 6: Process MALS (requires concentration for absolute MW)
+  # Step 6: Process MALS (absolute values also require detector calibration)
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
 
 prepped_triple <- prep(rec_triple)
@@ -293,44 +258,17 @@ result_triple |>
   select(sample_id, starts_with("mw_"))
 ```
 
-## Viscometer Integration
+## Viscometer integration
 
 The viscometer measures differential pressure across a capillary, which relates to solution viscosity. Combined with concentration, this gives **intrinsic viscosity [η]**—a key parameter for polymer characterization.
 
-### Why Intrinsic Viscosity Matters
+### Why intrinsic viscosity matters
 
-```{r viscosity-concept, echo = FALSE, fig.width=7, fig.height=4}
-# Show relationship between [η], MW, and structure
-mw_range <- seq(1000, 1000000, length.out = 100)
+Intrinsic viscosity relates polymer size in solution to concentration. The
+Mark-Houwink relationship is `[η] = K × M^a`; its parameters depend on the
+polymer and solution conditions.
 
-# Mark-Houwink equation: [η] = K × M^a
-# Different K and a values for different polymers
-eta_linear <- 1.14e-4 * mw_range^0.716  # Linear PS
-eta_branched <- 0.8e-4 * mw_range^0.5   # Branched polymer
-
-viscosity_data <- tibble(
-  mw = rep(mw_range, 2),
-  eta = c(eta_linear, eta_branched),
-  structure = rep(c("Linear polymer", "Branched polymer"), each = length(mw_range))
-)
-
-ggplot(viscosity_data, aes(mw / 1000, eta, color = structure)) +
-  geom_line(linewidth = 1.2) +
-  scale_x_log10() +
-  scale_y_log10() +
-  labs(
-    x = "Molecular Weight (kDa)",
-    y = "Intrinsic Viscosity [η] (dL/g)",
-    title = "Mark-Houwink Relationship",
-    subtitle = "[η] = K × M^a — structure affects the relationship",
-    color = NULL
-  ) +
-  scale_color_manual(values = c("#2E86AB", "#A23B72")) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-```
-
-### Viscometer Workflow
+### Viscometer workflow
 
 ```{r viscometer, eval = FALSE}
 # Viscometer integration
@@ -367,7 +305,7 @@ rec_visc <- recipe(
   )
 ```
 
-### Intrinsic Viscosity Output
+### Intrinsic-viscosity output
 
 The `step_sec_intrinsic_visc()` step calculates [η] at each elution slice:
 
@@ -377,40 +315,19 @@ The `step_sec_intrinsic_visc()` step calculates [η] at each elution slice:
 
 This can be combined with MW data for Mark-Houwink analysis or branching calculations.
 
-## Universal Calibration
+## Universal calibration
 
-Universal calibration uses the principle that **hydrodynamic volume** (not molecular weight) determines elution time. The hydrodynamic volume is proportional to [η] × M.
+Universal calibration relates elution to hydrodynamic volume, commonly
+expressed using `[η] × M`.
 
-### The Universal Calibration Principle
+### The universal-calibration principle
 
 $$\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}$$
 
-This allows you to determine MW for any polymer type using standards of a different polymer (typically polystyrene).
+The recipe below shows the available interface. Its parameters must come
+from a calibration for the polymer and solution conditions.
 
-```{r universal-cal-concept, echo = FALSE, fig.width=7, fig.height=4}
-# Universal calibration curve
-elution_vol <- seq(12, 22, by = 0.5)
-
-# Simulated log(η*M) vs elution volume (same for all polymers)
-log_eta_m <- 7 - 0.3 * elution_vol
-
-universal_data <- tibble(
-  elution_vol = elution_vol,
-  log_eta_m = log_eta_m
-)
-
-ggplot(universal_data, aes(elution_vol, log_eta_m)) +
-  geom_line(linewidth = 1.2, color = "#2E86AB") +
-  labs(
-    x = "Elution Volume (mL)",
-    y = "log([η] × M)",
-    title = "Universal Calibration Curve",
-    subtitle = "Same curve applies to all polymers regardless of structure"
-  ) +
-  theme_minimal()
-```
-
-### Applying Universal Calibration
+### Applying universal calibration
 
 ```{r universal-cal, eval = FALSE}
 # Universal calibration with Mark-Houwink parameters
@@ -427,20 +344,12 @@ step_sec_universal_cal(
 )
 ```
 
-### Mark-Houwink Parameters
+### Mark-Houwink parameters
 
-Common Mark-Houwink parameters ([η] = K × M^a):
+Use Mark-Houwink parameters measured or reported for the polymer, solvent,
+and temperature in the method. Values from other conditions may not apply.
 
-| Polymer | Solvent | K (dL/g) | a |
-|---------|---------|----------|---|
-| PS | THF | 1.14 × 10⁻⁴ | 0.716 |
-| PMMA | THF | 6.0 × 10⁻⁵ | 0.73 |
-| PEG | Water | 1.25 × 10⁻⁴ | 0.78 |
-| PVP | Water | 2.8 × 10⁻⁵ | 0.64 |
-
-**Note**: Values are temperature and solvent dependent. Use literature values for your specific conditions.
-
-## Complete Quadruple Detection
+## Quadruple-detection workflow
 
 Full workflow combining RI, UV, light scattering, and viscometer:
 
@@ -487,38 +396,16 @@ rec_quad <- recipe(
   step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
 ```
 
-## Comparing Conventional vs Absolute MW
+## Comparing molecular-weight results
 
-```{r comparison, echo = FALSE, fig.width=7, fig.height=5}
-# Simulated comparison showing bias from conventional calibration
-comparison <- tibble(
-  method = rep(c("Conventional (PS standards)", "Absolute (Light Scattering)"), each = 4),
-  polymer = rep(c("PS", "PMMA", "PEG", "Branched PE"), 2),
-  mw = c(
-    # Conventional (relative to PS - biased for non-PS)
-    50000, 65000, 42000, 55000,
-    # Absolute (true values)
-    50000, 50000, 50000, 50000
-  )
-)
-
-ggplot(comparison, aes(polymer, mw / 1000, fill = method)) +
-  geom_col(position = "dodge") +
-  labs(
-    x = "Polymer",
-    y = "Molecular Weight (kDa)",
-    title = "Conventional vs Absolute MW Determination",
-    subtitle = "Samples have identical true MW; conventional calibration introduces polymer-specific bias",
-    fill = NULL
-  ) +
-  scale_fill_manual(values = c("Conventional (PS standards)" = "#A23B72", "Absolute (Light Scattering)" = "#2E86AB")) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-```
+A conventional calibration reports values on the scale of its standards.
+Light-scattering estimates use detector response and concentration; absolute
+values require a suitable instrument calibration constant. Compare results
+only when the calibration basis and units are recorded.
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 | Problem | Likely Cause | Solution |
 |---------|--------------|----------|
@@ -527,21 +414,21 @@ ggplot(comparison, aes(polymer, mw / 1000, fill = method)) +
 | RI baseline drift | Temperature variation | Improve thermal control |
 | LS signal too weak | Low concentration | Increase injection mass |
 
-### Detector-Specific Troubleshooting
+### Detector-specific troubleshooting
 
 For light scattering issues, see:
 - [MALS Detection](mals-detection.html) - MALS-specific troubleshooting
 - [LALS/RALS Detection](lals-rals-detection.html) - Single-angle troubleshooting
 
-## See Also
+## See also
 
-- [MALS Detection](mals-detection.html) - Multi-angle light scattering for Rg
+- [MALS Detection](mals-detection.html) - Single-angle implementation and multi-angle limits
 - [LALS/RALS Detection](lals-rals-detection.html) - Single-angle alternatives
 - [Getting Started](getting-started.html) - Basic SEC workflow
 - [Calibration Management](calibration-management.html) - Save and reuse calibrations
 - [Copolymer Composition](copolymer-analysis.html) - Multi-detector composition analysis
 
-## Session Info
+## Session info
 
 ```{r session-info}
 sessionInfo()
