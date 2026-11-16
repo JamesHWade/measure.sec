@@ -324,31 +324,41 @@ Supply detector and concentration fields from the method. This step does not cal
 
 **What it measures**: Scattered light near 0° angle.
 
+Add this step to a recipe with aligned detector and concentration columns.
+`dn_dc` is one numeric value in mL/g for the recipe; 0.185 below is an
+illustrative setting. Choose it for the sample, solvent and method.
+
 ```r
 step_sec_lals(
+  measures = "lals",
   concentration_col = "concentration",
   concentration_unit = "mg/mL",
-  dn_dc_column = "dn_dc",
+  dn_dc = 0.185,
   calibration_constant = lals_calibration_constant
 )
 ```
 
-Use the detector's calibrated response and the correct concentration units.
+Supply the detector's calibration constant for a calibrated mass estimate.
+Without it, the step returns a relative estimate.
 
 #### Right-Angle Light Scattering (RALS)
 
 **What it measures**: Scattered light at 90°.
 
+Use the same concentration and dn/dc declarations, with the calibration
+constant for the right-angle detector:
+
 ```r
 step_sec_rals(
+  measures = "rals",
   concentration_col = "concentration",
   concentration_unit = "mg/mL",
-  dn_dc_column = "dn_dc",
+  dn_dc = 0.185,
   calibration_constant = rals_calibration_constant
 )
 ```
 
-Use the detector's calibrated response and the correct concentration units.
+The single-angle interpretation still needs to suit the sample and method.
 
 **See also**: [LALS/RALS Detection vignette](lals-rals-detection.html)
 
@@ -363,8 +373,13 @@ Viscosity and diffusion measurements provide information about molecular behavio
 **Provides**: Intrinsic viscosity [η] when combined with concentration.
 
 ```r
-step_sec_viscometer()
-step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
+recipe(...) |>
+  step_sec_viscometer(dp_col = "dp", ip_col = "ip") |>
+  step_sec_intrinsic_visc(
+    specific_visc_col = "specific_visc",
+    concentration_col = "concentration",
+    concentration_unit = "mg/mL"
+  )
 ```
 
 | Best for | Limitations |
