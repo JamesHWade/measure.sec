@@ -662,10 +662,10 @@ result_complete |>
 | `step_sec_uv()` | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient |
 | `step_sec_dad()` | `measures`, `wavelengths` | Multi-wavelength diode array detection |
 | `step_sec_mals()` | `mals_col`, `concentration_col`, `concentration_unit`, `dn_dc_column`, `calibration_constant` | Single-angle estimate; no Rg or angular fit |
-| `step_sec_lals()` | `concentration_col`, `concentration_unit`, `dn_dc_column`, `calibration_constant` | Low-angle estimate; use a calibrated detector response for calibrated MW |
-| `step_sec_rals()` | `concentration_col`, `concentration_unit`, `dn_dc_column`, `calibration_constant` | Right-angle estimate; use a calibrated detector response for calibrated MW |
-| `step_sec_dls()` | `dls_col` | Dynamic LS for hydrodynamic radius |
-| `step_sec_viscometer()` | `visc_col`, `dp_column` | Differential viscometer for intrinsic viscosity |
+| `step_sec_lals()` | `measures`, `concentration_col`, `concentration_unit`, `dn_dc`, `calibration_constant` | Low-angle single-angle estimate; without a calibration constant, output is relative |
+| `step_sec_rals()` | `measures`, `concentration_col`, `concentration_unit`, `dn_dc`, `calibration_constant` | Right-angle single-angle estimate; without a calibration constant, output is relative |
+| `step_sec_dls()` | `measures`, `temperature`, `viscosity`, `angle`, `output_cols` | Dynamic light scattering; estimates hydrodynamic radius and diffusion coefficient |
+| `step_sec_viscometer()` | `dp_col`, `ip_col`, `viscometer_constant` | Processes viscometer signals to specific viscosity |
 
 ### Calibration Steps
 
@@ -679,7 +679,7 @@ result_complete |>
 | Step | Key Parameters | Outputs |
 |------|----------------|---------|
 | `step_sec_concentration()` | `injection_volume`, `sample_concentration`, `concentration_units` | Concentration in the requested units when inputs are appropriate |
-| `step_sec_intrinsic_visc()` | `visc_col`, `conc_col` | Intrinsic viscosity at each slice |
+| `step_sec_intrinsic_visc()` | `specific_visc_col`, `concentration_col`, `concentration_unit`, `units` | Intrinsic viscosity at each slice |
 | `step_sec_mw_averages()` | `measures` | `mw_mn`, `mw_mw`, `mw_mz`, `mw_dispersity` |
 | `step_sec_mw_fractions()` | `cutoffs` | Weight fractions above/below MW cutoffs |
 | `step_sec_mw_distribution()` | `type` | Differential and/or cumulative MWD curves |

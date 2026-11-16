@@ -260,7 +260,9 @@ result_triple |>
 
 ## Viscometer integration
 
-The viscometer measures differential pressure across a capillary, which relates to solution viscosity. Combined with concentration, this gives **intrinsic viscosity [η]**—a key parameter for polymer characterization.
+`step_sec_viscometer()` converts calibrated pressure signals to specific
+viscosity. `step_sec_intrinsic_visc()` combines it with concentration to
+estimate intrinsic viscosity [η].
 
 ### Why intrinsic viscosity matters
 
@@ -272,46 +274,89 @@ polymer and solution conditions.
 
 ```{r viscometer, eval = FALSE}
 # Viscometer integration
-# Note: Requires viscometer data (visc_signal)
+# This external input must include RI, differential-pressure (DP), and
+# inlet-pressure (IP) curves on a shared elution axis. Supply the settings
+# below from the method, sample record, and viscometer standard calibration.
+# dp_delay_ml, ip_delay_ml, flow_rate_ml_min, injection_volume_ul,
+# sample_concentration_mg_ml, viscometer_constant, left_baseline_fraction,
+# and right_baseline_fraction are method-specific. The baseline fractions must
+# cover peak-free regions for both RI and DP.
 
-rec_visc <- recipe(
-  ri_signal + visc_signal + elution_time + dn_dc ~ sample_id,
-  data = visc_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  # Input signals
+rec_visc <- recipe(~ ., data = visc_samples) |>
+  update_role(sample_id, dn_dc, new_role = "id") |>
+  # Convert the measured pressure and RI curves to measure columns
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
-  # Delay correction (viscometer typically last in line)
+  step_measure_input_long(dp_signal, location = vars(elution_time), col_name = "dp") |>
+  step_measure_input_long(ip_signal, location = vars(elution_time), col_name = "ip") |>
+  # Baseline-correct RI and DP in their recorded peak-free regions; retain IP
+  step_sec_baseline(
+    measures = c("ri", "dp"),
+    left_frac = left_baseline_fraction,
+    right_frac = right_baseline_fraction
+  ) |>
+  # Use target-minus-reference delays measured for these channels
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(visc = 0.25)
+    targets = c("dp", "ip"),
+    delay_volumes = c(dp = dp_delay_ml, ip = ip_delay_ml),
+    flow_rate = flow_rate_ml_min,
+    elution_units = "min",
+    method = "interpolate"
   ) |>
-  # Process detectors
-  step_sec_baseline(measures = c("ri", "visc")) |>
+  # Process the baseline-corrected RI response; IP keeps its positive reference
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_viscometer(measures = "visc") |>
-  # Get concentration
+  # Use the calibrated viscometer constant and both pressure channels
+  step_sec_viscometer(
+    dp_col = "dp",
+    ip_col = "ip",
+    output_col = "specific_visc",
+    viscometer_constant = viscometer_constant
+  ) |>
+  # Concentration normalization updates the selected RI measure in place
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0
+    injection_volume = injection_volume_ul,
+    sample_concentration = sample_concentration_mg_ml,
+    flow_rate = flow_rate_ml_min,
+    concentration_units = "mg/mL",
+    elution_units = "min"
   ) |>
-  # Calculate intrinsic viscosity
+  # The concentration column is still named ri after normalization
   step_sec_intrinsic_visc(
-    visc_col = "visc",
-    conc_col = "concentration"
+    specific_visc_col = "specific_visc",
+    concentration_col = "ri",
+    concentration_unit = "mg/mL",
+    units = "dL/g"
   )
+
+# After substituting method-specific inputs and standards:
+prepped_visc <- prep(rec_visc)
+result_visc <- bake(prepped_visc, new_data = NULL)
 ```
+
+This template expects a `visc_samples` object containing measured `dp_signal`
+and `ip_signal` curves, plus RI, `elution_time`, and `dn_dc`. The recipe keeps
+signals as predictors and preserves sample metadata with an ID role, so an
+exactly constant IP channel remains a curve during input conversion. Select left and
+right baseline fractions from recorded peak-free regions for RI and DP, and
+apply them before delay interpolation. Do not baseline-subtract
+IP: the differential calculation uses the measured positive IP reference in
+`IP - 2 * DP`. Interpolation leaves unsupported target edges missing. The
+template is not run here because the instrument data, delays, baseline regions,
+concentration inputs, and calibration constant are not bundled.
 
 ### Intrinsic-viscosity output
 
-The `step_sec_intrinsic_visc()` step calculates [η] at each elution slice:
+The viscometer step adds `specific_visc`. Concentration normalization writes
+the mass-concentration curve into the selected measure (`ri` in the template),
+and `step_sec_intrinsic_visc()` adds `[η]` at each elution slice:
 
-| Output | Description |
-|--------|-------------|
-| `intrinsic_visc` | Intrinsic viscosity [η] at each slice |
+| Step | Output column | Description |
+|------|--------------|-------------|
+| `step_sec_viscometer()` | `specific_visc` | Specific viscosity from DP and IP |
+| `step_sec_concentration(measures = "ri")` | `ri` | Concentration in mg/mL; the measure is updated in place |
+| `step_sec_intrinsic_visc()` | `intrinsic_visc` | Intrinsic viscosity [η], in dL/g by default |
 
 This can be combined with MW data for Mark-Houwink analysis or branching calculations.
 
@@ -324,24 +369,36 @@ expressed using `[η] × M`.
 
 $$\log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}$$
 
-The recipe below shows the available interface. Its parameters must come
-from a calibration for the polymer and solution conditions.
+The recipe below extends `rec_visc` from the previous section. It expects a
+calibration object built from measured standard retention and molecular-weight
+values, plus Mark-Houwink parameters for the standard and sample polymers in
+the same solvent and temperature conditions. Retention values must use the
+same elution coordinate as the sample measure. The current data-frame path fits
+a cubic curve, so provide enough distinct standard retention values. The
+template uses `mw_universal` as the default output column; it does not supply
+or imply a measured calibration.
 
 ### Applying universal calibration
 
 ```{r universal-cal, eval = FALSE}
-# Universal calibration with Mark-Houwink parameters
-# Convert PS calibration to another polymer type
+# `ps_calibration` must come from measured standards: a data frame with
+# `retention` and either `mw` or `log_mw` columns, or an `lm` model.
+# Define these four values from the standard/sample polymer method conditions.
+rec_universal <- rec_visc |>
+  step_sec_universal_cal(
+    measures = "intrinsic_visc",
+    calibration = ps_calibration,
+    intrinsic_visc_col = "intrinsic_visc",
+    K_sample = K_sample,
+    a_sample = a_sample,
+    K_standard = K_standard,
+    a_standard = a_standard
+  )
 
-step_sec_universal_cal(
-  visc_col = "intrinsic_visc",
-  # PS reference parameters (from calibration standards)
-  reference_k = 1.14e-4,
-  reference_a = 0.716,
-  # Sample parameters (from literature or measurement)
-  sample_k = 6.0e-5,      # e.g., PMMA in THF
-  sample_a = 0.73
-)
+prepped_universal <- prep(rec_universal)
+result_universal <- bake(prepped_universal, new_data = NULL)
+result_universal |>
+  select(sample_id, mw_universal)
 ```
 
 ### Mark-Houwink parameters
@@ -355,26 +412,39 @@ Full workflow combining RI, UV, light scattering, and viscometer:
 
 ```{r quad-detection, eval = FALSE}
 # Complete quadruple detection workflow
-rec_quad <- recipe(
-  ri_signal + uv_signal + mals_signal + visc_signal +
-    elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = quad_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
+# This external dataset needs DP and IP pressure curves as separate channels.
+# Replace each delay, flow, injection, concentration, baseline, and calibration
+# symbol below with values from the method, sample record, or standards.
+rec_quad <- recipe(~ ., data = quad_samples) |>
+  update_role(sample_id, dn_dc, extinction_coef, new_role = "id") |>
   # Input all detectors
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
-  step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
+  step_measure_input_long(dp_signal, location = vars(elution_time), col_name = "dp") |>
+  step_measure_input_long(ip_signal, location = vars(elution_time), col_name = "ip") |>
+
+  # Use peak-free regions for RI, UV, MALS, and DP; preserve the IP reference
+  step_sec_baseline(
+    measures = c("ri", "uv", "mals", "dp"),
+    left_frac = left_baseline_fraction,
+    right_frac = right_baseline_fraction
+  ) |>
 
   # Delay correction (all relative to RI)
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(uv = -0.05, mals = 0.15, visc = 0.25)
+    targets = c("uv", "mals", "dp", "ip"),
+    delay_volumes = c(
+      uv = uv_delay_ml,
+      mals = mals_delay_ml,
+      dp = dp_delay_ml,
+      ip = ip_delay_ml
+    ),
+    flow_rate = flow_rate_ml_min,
+    elution_units = "min",
+    method = "interpolate"
   ) |>
-
-  # Baseline correction
-  step_sec_baseline(measures = c("ri", "uv", "mals", "visc")) |>
 
   # Process concentration detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
@@ -384,17 +454,37 @@ rec_quad <- recipe(
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0
+    injection_volume = injection_volume_ul,
+    sample_concentration = sample_concentration_mg_ml,
+    flow_rate = flow_rate_ml_min,
+    concentration_units = "mg/mL",
+    elution_units = "min"
   ) |>
 
   # Process MW detector (choose appropriate step)
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
-  # Process viscometer
-  step_sec_viscometer(measures = "visc") |>
-  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
+  # Process measured DP/IP and use calibrated viscometer output fields
+  step_sec_viscometer(
+    dp_col = "dp",
+    ip_col = "ip",
+    output_col = "specific_visc",
+    viscometer_constant = viscometer_constant
+  ) |>
+  step_sec_intrinsic_visc(
+    specific_visc_col = "specific_visc",
+    concentration_col = "ri",
+    concentration_unit = "mg/mL",
+    units = "dL/g"
+  )
 ```
+
+This external template keeps `ip` out of baseline subtraction because its
+positive pressure reference is required in the `IP - 2 * DP` denominator.
+Choose the common baseline fractions from peak-free regions of RI, UV, MALS,
+and DP, then interpolate using method-measured delays and flow. Unsupported
+target edges remain missing; the instrument data and method settings are not
+included here.
 
 ## Comparing molecular-weight results
 
