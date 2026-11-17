@@ -37,12 +37,11 @@ for PLgel Mixed-C columns in THF at 1.0 mL/min.
 sec_calibration_standards
 }
 \description{
-Comprehensive calibration standard data for SEC/GPC analysis, containing
-polystyrene and PMMA narrow standards with certificate values, retention
-data, and Mark-Houwink parameters. Based on commercial standard kits.
+Synthetic polystyrene and PMMA narrow standards with assigned molecular
+weights, retention data and Mark-Houwink parameters for calibration examples.
 }
 \details{
-This dataset enables several key calibration workflows:
+Use the assigned values to exercise the following calibration workflows:
 
 \strong{Conventional Calibration:}
 Use \code{retention_time} (or \code{retention_volume}) and \code{log_mp} with
@@ -54,9 +53,9 @@ The Mark-Houwink parameters (\code{k_value}, \code{a_value}) enable conversion b
 polymers.
 
 \strong{Quality Assessment:}
-The \code{mp_uncertainty} values (from typical certificates) enable uncertainty
-propagation through the calibration. Dispersity values confirm standards
-are suitably narrow.
+The illustrative \code{mp_uncertainty} values can be propagated through a
+calibration. Use certificate values for a real standard; these synthetic
+values do not qualify a calibration or instrument.
 
 \strong{Polymer Types:}
 \itemize{
@@ -96,7 +95,7 @@ ps_cal <- sec_calibration_standards |>
 \code{\link{step_sec_conventional_cal}} for conventional calibration
 \code{\link{step_sec_universal_cal}} for universal calibration
 
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_copolymer}},
 \code{\link{sec_pmma_standards}},
@@ -108,14 +107,14 @@ Other sec-data:
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
-Other sec-calibration: 
-\code{\link{load_sec_calibration}()},
-\code{\link{save_sec_calibration}()},
+Other sec-calibration:
+\code{\link[=load_sec_calibration]{load_sec_calibration()}},
+\code{\link[=save_sec_calibration]{save_sec_calibration()}},
 \code{\link{sec_pmma_standards}},
 \code{\link{sec_ps_standards}},
-\code{\link{step_sec_broad_standard}()},
-\code{\link{step_sec_conventional_cal}()},
-\code{\link{step_sec_universal_cal}()}
+\code{\link[=step_sec_broad_standard]{step_sec_broad_standard()}},
+\code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}},
+\code{\link[=step_sec_universal_cal]{step_sec_universal_cal()}}
 }
 \concept{sec-calibration}
 \concept{sec-data}

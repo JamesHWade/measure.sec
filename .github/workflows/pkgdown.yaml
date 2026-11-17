@@ -31,11 +31,20 @@ jobs:
         with:
           use-public-rspm: true
 
+      - name: Install graphics system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libfreetype-dev
+
       - name: Install dependencies (workaround for pak issue)
         run: |
           install.packages("remotes")
           remotes::install_deps(dependencies = TRUE)
           install.packages("pkgdown")
+          stopifnot(
+            requireNamespace("pkgdown", quietly = TRUE),
+            requireNamespace("ragg", quietly = TRUE)
+          )
         shell: Rscript {0}
 
       - name: Build site

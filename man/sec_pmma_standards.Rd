@@ -44,9 +44,9 @@ At equivalent molecular weight, PMMA has a smaller hydrodynamic volume than
 PS in THF, so PMMA standards elute later than PS of the same MW. This
 demonstrates why conventional calibration is polymer-specific.
 
-\strong{Universal Calibration Validation:}
-When plotted as log(M * [eta]) vs retention time, PS and PMMA should fall
-on the same curve, confirming universal calibration is valid for the column.
+\strong{Universal Calibration Comparison:}
+Compare log(M * [eta]) against retention time for PS and PMMA. Agreement
+is one diagnostic; these synthetic values do not validate a real column.
 }
 \examples{
 data(sec_pmma_standards)
@@ -79,7 +79,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 \code{\link{sec_ps_standards}} for polystyrene standards
 \code{\link{step_sec_universal_cal}} for universal calibration
 
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},
@@ -91,14 +91,14 @@ Other sec-data:
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
-Other sec-calibration: 
-\code{\link{load_sec_calibration}()},
-\code{\link{save_sec_calibration}()},
+Other sec-calibration:
+\code{\link[=load_sec_calibration]{load_sec_calibration()}},
+\code{\link[=save_sec_calibration]{save_sec_calibration()}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_ps_standards}},
-\code{\link{step_sec_broad_standard}()},
-\code{\link{step_sec_conventional_cal}()},
-\code{\link{step_sec_universal_cal}()}
+\code{\link[=step_sec_broad_standard]{step_sec_broad_standard()}},
+\code{\link[=step_sec_conventional_cal]{step_sec_conventional_cal()}},
+\code{\link[=step_sec_universal_cal]{step_sec_universal_cal()}}
 }
 \concept{sec-calibration}
 \concept{sec-data}

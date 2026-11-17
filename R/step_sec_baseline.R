@@ -27,8 +27,8 @@
 #'   - `"linear"` (default): Linear interpolation between left and right means
 #'   - `"median"`: Uses median of baseline regions (more robust to outliers)
 #'   - `"spline"`: Smooth spline through baseline regions
-#'   - `"rf"`: Robust local regression (IDPmisc::rfbaseline). Best for complex
-#'     baselines with curvature or drift. Does not use left_frac/right_frac.
+#'   - `"rf"`: Robust local regression (IDPmisc::rfbaseline) for curved or
+#'     drifting baselines. Does not use left_frac/right_frac.
 #' @param rf_span Span parameter for RF baseline (only used when `method = "rf"`).
 #'   A numeric value between 0 and 1 specifying the fraction of points used for
 #'   local regression. Default is `2/3`. Higher values produce smoother baselines.
@@ -45,9 +45,8 @@
 #'   sequence of any existing operations.
 #'
 #' @details
-#' GPC/SEC chromatograms typically have distinct baseline regions at the
-#' beginning and end where no polymer elutes. This step leverages this
-#' characteristic by:
+#' When the beginning and end of a chromatogram contain baseline-only
+#' observations, this step estimates a baseline by:
 #'
 #' 1. Identifying baseline regions at the start and end of the chromatogram
 #' 2. Computing a representative baseline value for each region (mean or median)
@@ -60,9 +59,9 @@
 #' - Exclude any polymer peaks or system peaks
 #' - Are large enough to average out noise
 #'
-#' Unlike general-purpose baseline methods like ALS or polynomial fitting,
-#' this approach is specifically designed for the characteristic shape of
-#' GPC/SEC chromatograms and is computationally very fast.
+#' Inspect the selected edge regions before subtraction. A peak that extends
+#' into either region can contribute to the estimated baseline and lose part
+#' of its response during subtraction.
 #'
 #' Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
 #' current input column. Untagged inputs remain untagged, and invalid recorded

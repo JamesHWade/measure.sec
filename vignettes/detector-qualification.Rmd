@@ -241,6 +241,68 @@ knitr::kable(data.frame(
 ))
 ```
 
+```{r delay-direction-plot, fig.cap = "Synthetic reference and target signals before and after applying positive and negative detector delays. The early target has a declared delay of -0.5 mL at 0.5 mL/min, equivalent to -1 minute. The corrected target is sampled at the output coordinate plus the delay; unsupported edges remain missing.", fig.alt = "Faceted line chart of synthetic signal value versus elution time in minutes for a target detector that is 1 minute late and one declared 0.5 mL early at a flow rate of 0.5 mL/min, equivalent to 1 minute early. Each panel shows the reference, target before correction, and target after correction. The corrected traces move in opposite directions to align with the reference; missing edge values are left unconnected."}
+delay_plot <- dplyr::bind_rows(
+  tibble::tibble(
+    case = "Target is 1 min late",
+    trace = "Reference",
+    location = delay_location,
+    value = reference_late
+  ),
+  tibble::tibble(
+    case = "Target is 1 min late",
+    trace = "Target before correction",
+    location = delay_location,
+    value = target_late
+  ),
+  tibble::tibble(
+    case = "Target is 1 min late",
+    trace = "Target after correction",
+    location = positive_curve$location,
+    value = positive_curve$value
+  ),
+  tibble::tibble(
+    case = "Target is 1 min early",
+    trace = "Reference",
+    location = delay_location,
+    value = reference_early
+  ),
+  tibble::tibble(
+    case = "Target is 1 min early",
+    trace = "Target before correction",
+    location = delay_location,
+    value = target_early
+  ),
+  tibble::tibble(
+    case = "Target is 1 min early",
+    trace = "Target after correction",
+    location = negative_curve$location,
+    value = negative_curve$value
+  )
+)
+
+ggplot2::ggplot(
+  delay_plot,
+  ggplot2::aes(location, value, colour = trace, linetype = trace)
+) +
+  ggplot2::geom_line(linewidth = 0.7, na.rm = TRUE) +
+  ggplot2::geom_point(size = 1.5, na.rm = TRUE) +
+  ggplot2::facet_wrap(~case, nrow = 1) +
+  ggplot2::scale_colour_manual(values = c(
+    "Reference" = "#4A90A4",
+    "Target before correction" = "#E8751A",
+    "Target after correction" = "#A23B72"
+  )) +
+  ggplot2::labs(
+    x = "Elution time (min)",
+    y = "Synthetic signal value",
+    colour = NULL,
+    linetype = NULL
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(legend.position = "bottom")
+```
+
 The positive-direction recipe was serialized after preparation, restored, then
 baked against a current dataset. Its target column retained the synthetic
 `mg/mL` tag. Each baked row is processed from its current values; the recipe
@@ -414,7 +476,7 @@ negative share of **absolute sampled signal area**. It is not an estimate of
 lost or recovered mass, nor an exact integration of zero crossings between
 samples.
 
-```{r clipping-figure, fig.alt="Three curves each have one negative point out of three. Their negative shares of absolute sampled signal area are 0.5, 5 and 45 percent as the first sampling interval grows from 0.1 to 1 to 9 minutes. The dashed line marks the common negative-point percentage of 33.3 percent."}
+```{r clipping-figure, fig.cap = "Negative share of absolute sampled signal area for three curves with one negative point each. Wider first intervals give the negative point more trapezoidal area weight; the dashed line marks the constant negative-point share.", fig.alt = "Bar chart of negative share of absolute sampled signal area versus first sampling interval in minutes. The shares are 0.5%, 5%, and 45% at intervals of 0.1, 1, and 9 minutes, although each curve has one negative point out of three. A dashed horizontal line marks the common negative-point share of 33.3%."}
 ggplot2::ggplot(diagnostics, ggplot2::aes(
   x = factor(first_interval_min, levels = first_interval_min),
   y = 100 * excluded_fraction

@@ -8,7 +8,9 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5
+)
 library(measure)
 library(recipes)
 library(measure.sec)
@@ -113,16 +115,16 @@ stopifnot(
 cdf[gap, ]
 ```
 
-```{r selected-density, fig.alt = "A normalized molecular-weight density with two retained intervals and zero density across the shaded excluded interval."}
+```{r selected-density, fig.cap = "Normalized differential molecular-weight distribution after applying the stored window and integration exclusion. The shaded log10(MW) interval was excluded and has zero density; the plotted path follows the zero baseline across that band.", fig.alt = "Line chart of mass fraction per unit log10(MW) against log10 molecular weight in g/mol. Density is positive in two retained regions outside the shaded log10(MW) band from 5.4 to 5.6. The excluded band is shown at zero density, with a horizontal line along the zero baseline."}
 ggplot2::ggplot(density, ggplot2::aes(location, value)) +
   ggplot2::annotate("rect", xmin = 5.4, xmax = 5.6,
     ymin = -Inf, ymax = Inf, fill = "#FF9933", alpha = 0.15) +
   ggplot2::geom_path(linewidth = 0.7, colour = "#4A90A4") +
   ggplot2::labs(
-    x = "log10 molecular weight (g/mol)",
-    y = "Mass fraction per log10(MW)"
+    x = "log10(MW [g/mol])",
+    y = "Mass fraction per unit log10(MW)"
   ) +
-  ggplot2::theme_minimal()
+  ggplot2::theme_minimal(base_size = 11)
 ```
 
 At a discontinuity, the differential curve repeats a location to store its

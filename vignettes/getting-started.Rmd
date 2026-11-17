@@ -12,27 +12,22 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 4.5
 )
 ```
 
-## What You'll Learn
+## What you'll learn
 
-By the end of this tutorial, you will be able to:
+This tutorial shows how to:
 
-1. **Load and convert** SEC chromatogram data into the measure format
-2. **Build a recipe** that processes your detector signals
-3. **Apply calibration** to convert retention time to molecular weight
-4. **Calculate MW averages** (Mn, Mw, Mz, dispersity)
-
-**Time to complete**: ~15 minutes
+1. Convert detector data to the `measure` format
+2. Build and apply an SEC preprocessing recipe
+3. Add a conventional calibration from standards
+4. Calculate molecular weight averages and dispersity
 
 ## Prerequisites
 
-Before starting, you should have:
-- Basic R knowledge (data frames, pipes, functions)
-- R and RStudio installed
-- No prior SEC/GPC knowledge required (we'll cover the basics)
+You need basic familiarity with R, data frames, and pipes. The guide introduces the SEC terms used in its examples.
 
 ## Overview
 
@@ -40,45 +35,13 @@ Before starting, you should have:
 
 ## What is SEC/GPC?
 
-**Size Exclusion Chromatography (SEC)**, also known as **Gel Permeation Chromatography (GPC)**, separates molecules by size. Larger molecules elute faster (excluded from pores), smaller molecules elute slower (enter pores). This lets you determine **molecular weight averages** (Mn, Mw, Mz) and **dispersity** (distribution breadth).
+**Size Exclusion Chromatography (SEC)**, also called **Gel Permeation Chromatography (GPC)**, separates molecules by hydrodynamic size. Larger molecules generally elute earlier than smaller molecules. A conventional calibration relates elution time or volume to molecular weight for the standards used.
 
-SEC data consists of **chromatograms** (detector response vs. elution time). Common detectors include **RI** (concentration), **UV** (chromophores), and **light scattering** (absolute MW). This package processes these signals to extract molecular weight information.
+SEC chromatograms record detector response over an elution coordinate. `measure.sec` provides recipe steps for processing RI, UV, and light-scattering signals. Its scattering calculation is single-angle; a molecular weight estimate requires suitable concentration units and a detector calibration constant.
 
-## Workflow Overview
+## Workflow overview
 
-The typical SEC analysis workflow follows these steps:
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        SEC Analysis Workflow                            │
-└─────────────────────────────────────────────────────────────────────────┘
-
-  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-  │   Raw Data   │────▶│ Preprocess   │────▶│  Calibrate   │
-  │ (CSV/Export) │     │  Signals     │     │   MW Scale   │
-  └──────────────┘     └──────────────┘     └──────────────┘
-         │                    │                    │
-         │                    │                    │
-         ▼                    ▼                    ▼
-   • Detector signals   • Baseline correct  • Apply standards
-   • Elution times      • Align detectors   • Or use MALS for
-   • Sample metadata    • Convert units       absolute MW
-                                                   │
-                                                   ▼
-                        ┌──────────────────────────────────────┐
-                        │          Calculate Results           │
-                        │  • MW averages (Mn, Mw, Mz)         │
-                        │  • Dispersity                        │
-                        │  • MW distribution                   │
-                        │  • Aggregate/fragment %              │
-                        └──────────────────────────────────────┘
-```
-
-In measure.sec, each box becomes one or more **recipe steps**. You chain these steps together into a reproducible analysis pipeline.
-
-### Basic Workflow Overview
-
-A typical SEC analysis starts with raw detector signals, converts them to the measure format, applies baseline correction, processes detector signals with appropriate normalization factors, then either applies calibration from standards (conventional) or uses light scattering for absolute molecular weight (MALS).
+The diagram summarizes the conventional recipe; the separate scattering branch uses the calibrated single-angle inputs described above.
 
 ```mermaid
 flowchart TD
@@ -87,7 +50,7 @@ flowchart TD
     C --> D[step_sec_ri / step_sec_uv<br>Detector processing with dn/dc or ε]
     D --> E{Calibration<br>method?}
     E -->|"Standards available<br>(same polymer type)"| F[step_sec_conventional_cal<br>Polynomial fit to standards]
-    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Single-angle approximation]
+    E -->|"Calibrated scattering signal available"| G[step_sec_mals<br>Single-angle calculation]
     F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
     G --> I[Calibrated single-angle<br>MW estimate]
     H --> J[Results<br>MW averages, distributions, plots]
@@ -96,8 +59,6 @@ flowchart TD
     style A fill:#e1f5fe
     style J fill:#c8e6c9
 ```
-
-*Conventional calibration uses narrow MW standards. The current scattering step is a single-angle approximation; it needs a calibrated detector and known concentration units. Multi-angle extrapolation and Rg are not implemented.*
 
 ## Installation
 
@@ -118,42 +79,31 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## The Data Model
+## The data model
 
 SEC data in measure.sec uses the **measure** package's nested tibble structure. Understanding this structure is key to working effectively with the package.
 
-### measure_tbl: A Single Chromatogram
+### `measure_tbl`: one chromatogram
 
 A **`measure_tbl`** is a tibble (data frame) representing a single chromatogram with two required columns:
 
 - **`location`**: The x-axis values—typically elution time (minutes) or elution volume (mL)
-- **`value`**: The y-axis values—detector response (mV, AU, or processed units)
+- **`value`**: The detector response, in the source or processed units supplied by the workflow
 
 Think of it as one line on a chromatogram plot. For example, an RI detector signal from one injection is stored as a `measure_tbl`.
 
-### measure_list: Multiple Chromatograms (Internal Format)
+### `measure_list`: multiple chromatograms
 
 A **`measure_list`** is a list column containing multiple `measure_tbl` objects. This is the **internal format** used by measure.sec recipe steps—you typically won't create this yourself. Instead, `step_measure_input_long()` converts your raw data into this format automatically.
 
-**After conversion**, your data will look like this:
+After conversion, each sample row contains a list-column entry with one `measure_tbl`. This schematic shows the structure; its placeholders are not example measurements:
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  sample_id   known_mw   dn_dc       ri                      │
-├──────────────────────────────────────────────────────────────┤
-│  "PS-50K"    50000      0.185       <measure_list[1]>       │
-│  "PS-100K"   100000     0.185       <measure_list[1]>       │
-│  "PMMA-75K"  75000      0.084       <measure_list[1]>       │
-└──────────────────────────────────────────────────────────────┘
-                                           │
-                                           ▼
-                            Each entry contains a measure_tbl:
-                              location │ value
-                              ─────────┼────────
-                              5.0      │ 0.002
-                              5.1      │ 0.015
-                              5.2      │ 0.089
-                              ...      │ ...
+sample_id     dn_dc       ri
+<sample_id>   <metadata>  <measure_list[1]>
+                            └─ location | value
+                               <x value> | <response>
+                               <x value> | <response>
 ```
 
 This nested structure has several advantages:
@@ -163,9 +113,9 @@ This nested structure has several advantages:
 3. **Multiple detectors**: Store RI, UV, and MALS signals as separate nested columns
 4. **Metadata preservation**: Sample properties like `dn_dc` or `known_mw` travel with the chromatogram
 
-## Example Dataset
+## Example dataset
 
-The package includes `sec_triple_detect`, a synthetic multi-detector SEC dataset in **long format** (one row per time point). This is a good starting point for learning the workflow before analyzing your own data.
+The package includes `sec_triple_detect`, a synthetic multi-detector SEC dataset in **long format** (one row per time point). Its `elution_time` field is in minutes. Use it to follow the workflow; it is not instrument data.
 
 ```{r data}
 # Load the example dataset
@@ -181,8 +131,8 @@ The dataset contains:
 - **12 polymer samples**: polystyrene (PS), PMMA, PEG, and copolymers
 - **~2,000 time points per sample**: giving 24,012 total rows
 - **Three detector signals**: RI, UV, and MALS (as numeric columns)
-- **Known molecular weights**: For validating your analysis
-- **Optical constants**: dn/dc and extinction coefficients (needed for quantitative analysis)
+- **Supplied molecular weights** for these synthetic examples
+- **Example optical constants** such as dn/dc and extinction coefficients; use values appropriate to your sample and method
 
 ```{r samples}
 # View the unique samples in the dataset
@@ -192,9 +142,9 @@ sec_triple_detect |>
   print(n = 12)
 ```
 
-## Basic Workflow: RI Detector Analysis
+## Basic workflow: RI detector analysis
 
-Let's walk through a complete analysis of a polystyrene sample using the RI detector. This demonstrates the core pattern you'll use for all SEC analysis.
+The next example processes the synthetic `PS-50K` trace with the RI detector.
 
 ```{r basic-workflow}
 # Select a single polystyrene standard for this example
@@ -267,21 +217,39 @@ prepped <- prep(rec)
 # Bake: Apply transformations (new_data = NULL means use the training data)
 result <- bake(prepped, new_data = NULL)
 
-# View the processed data - ri now contains the baseline-corrected,
-# concentration-converted chromatogram
+# View the processed data - ri contains the baseline-corrected,
+# dn/dc-scaled RI response
 result |>
   select(sample_id, ri)
 ```
 
-> **Why two steps?** This design lets you prep once on training data (like calibration standards), then bake on new samples without re-learning parameters. It also makes your analysis reproducible.
+The source data are synthetic and do not assign units to the detector signal. The plot uses the same elution-time support before and after processing; its panels have separate vertical scales because `step_sec_ri()` also scales the response by `dn_dc`.
 
----
+```{r signal-before-after, fig.cap="Synthetic PS-50K RI trace before and after baseline correction and dn/dc scaling. Both panels use the same measured elution-time locations; their vertical scales are independent, and the dataset does not specify signal units.", fig.alt="Two-panel faceted line chart of synthetic PS-50K RI response. Elution time in minutes is on the horizontal axis and signal value on the vertical axis. The first panel shows the input RI signal; the second shows the response after baseline correction and dn/dc scaling. Both panels use the same measured locations and separate vertical ranges."}
+raw_signal <- ps_sample |>
+  transmute(location = elution_time, value = ri_signal, stage = "Raw RI signal")
 
-**✓ Checkpoint**: You've successfully converted raw detector data into the measure format and applied baseline correction. Your `result` tibble now contains a processed `ri` column ready for calibration.
+processed_signal <- result$ri[[1]] |>
+  transmute(location, value, stage = "Processed RI response")
 
----
+stopifnot(identical(raw_signal$location, processed_signal$location))
 
-## Molecular Weight Averages
+bind_rows(raw_signal, processed_signal) |>
+  mutate(stage = factor(stage, levels = c("Raw RI signal", "Processed RI response"))) |>
+  ggplot(aes(location, value)) +
+  geom_line(color = "#2E86AB", linewidth = 0.45) +
+  facet_wrap(vars(stage), ncol = 1, scales = "free_y") +
+  labs(
+    x = "Elution time (min)",
+    y = "Signal value (dataset scale)"
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+> `prep()` learns step parameters from its training data. `bake()` applies the prepared recipe to new data.
+
+
+## Molecular weight averages
 
 The most common outputs from SEC analysis are **molecular weight averages**:
 - **Mn (number-average)**: Emphasizes lower MW species
@@ -291,13 +259,13 @@ The most common outputs from SEC analysis are **molecular weight averages**:
 
 Use `step_sec_mw_averages()` to calculate these. After `step_sec_conventional_cal()`, it pairs the concentration trace with the calibrated MW curve; their locations remain elution time or volume. Alternatively, an input trace can already use log₁₀(MW) as its axis. See the Calibration section below for the complete workflow.
 
-## Calibration Curves
+## Calibration curves
 
 Most SEC analysis requires **calibration** to convert retention time to molecular weight. The most common approach uses **narrow standards**—polymers with known molecular weights and low dispersity—to build a calibration curve.
 
-> **Note**: A calibrated light-scattering detector can estimate molecular weight without polymer standards. `step_sec_mals()` currently uses a single-angle approximation and does not calculate Rg or perform angular extrapolation.
+A light-scattering workflow can estimate molecular weight without polymer standards when it has suitable concentration units and a detector calibration constant. `step_sec_mals()` currently uses one angle; it does not calculate Rg or perform angular extrapolation.
 
-```{r calibration, fig.width=7, fig.height=5}
+```{r calibration, fig.width=7, fig.height=4.5, fig.cap="Calibration plot returned by `plot_sec_calibration()` for the supplied synthetic polystyrene standards. The cubic fit and R-squared annotation summarize this example standard set; retention is shown only across the supplied range.", fig.alt="Calibration chart for the synthetic polystyrene standards, produced by `plot_sec_calibration()`. Retention time in minutes is on the horizontal axis and log10 peak molecular weight in daltons is on the vertical axis. Points mark the supplied standards; a fitted cubic curve decreases across their observed retention range, with the plotted R-squared annotation describing this synthetic fit."}
 # Load polystyrene narrow standards
 # These are well-characterized polymers used to build the calibration curve
 data(sec_ps_standards, package = "measure.sec")
@@ -307,25 +275,14 @@ sec_ps_standards |>
   select(standard_name, mp, log_mp, retention_time) |>
   print(n = 8)
 
-# Visualize the calibration curve
-# The relationship between log(MW) and retention time is typically linear
-# or slightly curved, so we fit a polynomial
-ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
-  geom_point(size = 3, color = "#2E86AB") +
-  geom_smooth(
-    method = "lm",
-    formula = y ~ poly(x, 3),
-    se = TRUE,
-    color = "#A23B72",
-    fill = "#A23B72",
-    alpha = 0.2
-  ) +
+# Visualize the cubic calibration with the package plotting helper
+plot_sec_calibration(sec_ps_standards) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
-    title = "Polystyrene Calibration Curve"
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Synthetic polystyrene standards"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 11)
 ```
 
 Apply the calibration using `step_sec_conventional_cal()`:
@@ -367,15 +324,10 @@ result_cal |>
   select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 ```
 
-> **Important**: The example integrates only the portion within the standards’ retention range; signal outside that range is excluded, so these are not necessarily whole-sample averages. Conventional calibration assumes your sample has similar hydrodynamic behavior to your standards. Polystyrene standards work well for other flexible polymers in THF, but for proteins in aqueous SEC, use protein standards or light scattering.
+> The example integrates only the portion within the standards’ retention range. Signal outside that range is excluded, so the results may not represent whole-sample averages. Conventional calibration assumes sample and standard hydrodynamic behavior are comparable; choose standards or another calibration approach appropriate to the sample and method.
 
----
 
-**✓ Checkpoint**: You've completed a full SEC analysis! Your `result_cal` tibble contains molecular weight averages (Mn, Mw, Mz) and dispersity calculated from your chromatogram using conventional calibration.
-
----
-
-## Available Steps
+## Available steps
 
 The package provides a comprehensive set of recipe steps. Here's a quick reference organized by function:
 
@@ -421,14 +373,14 @@ measure::find_measure_cols(result)  # Find measure columns after bake
 result$ri[[1]] |> summary()         # Inspect chromatogram data
 ```
 
-## Next Steps
+## Next steps
 
 Now that you understand the basics, explore these vignettes for specialized workflows:
 
 | Vignette | Use when you need to... |
 |----------|------------------------|
 | [Multi-Detector SEC](triple-detection.html) | Integrate multiple detectors (RI + UV + LS) |
-| [MALS Detection](mals-detection.html) | Get absolute MW and radius of gyration |
+| [MALS Detection](mals-detection.html) | Configure and interpret the single-angle scattering step |
 | [LALS/RALS Detection](lals-rals-detection.html) | Use single-angle light scattering |
 | [Protein SEC](protein-sec.html) | Analyze aggregates (HMWS/monomer/LMWS) |
 | [Copolymer Composition](copolymer-analysis.html) | Determine composition via UV/RI ratio |
@@ -443,7 +395,7 @@ You can also browse all available functions with:
 measure::measure_steps(techniques = "SEC/GPC")
 ```
 
-## Session Info
+## Session information
 
 ```{r session-info}
 sessionInfo()

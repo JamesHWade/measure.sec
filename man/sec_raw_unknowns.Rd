@@ -24,13 +24,13 @@ Synthetic data generated for package tutorials.
 sec_raw_unknowns
 }
 \description{
-A dataset containing raw SEC chromatograms of polymer samples with known
-true molecular weight values for validation. Includes challenging cases
-like bimodal distributions and high molecular weight aggregates.
+Synthetic SEC chromatograms with assigned molecular weights, including
+bimodal distributions and high molecular weight shoulders.
 }
 \details{
-This dataset provides unknown samples with known "true" MW values, enabling
-validation of the complete SEC workflow from raw data to final results.
+The \verb{true_*} fields are simulation inputs. Compare calculated results with
+those values to investigate the workflow; agreement does not validate an
+instrument or a physical sample.
 
 \strong{Sample Types:}
 \itemize{
@@ -43,8 +43,8 @@ validation of the complete SEC workflow from raw data to final results.
 }
 
 \strong{Educational Value:}
-Students can compare their calculated MW values against the true values
-to validate their analysis workflow and understand sources of error.
+Compare calculated MW values with the simulation inputs and investigate
+differences from calibration, integration and signal processing.
 }
 \examples{
 data(sec_raw_unknowns)
@@ -76,7 +76,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 \code{\link{sec_raw_standards}} for calibration standards
 \code{\link{step_sec_mw_averages}} for MW calculation
 
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},
@@ -88,7 +88,7 @@ Other sec-data:
 \code{\link{sec_system_suitability}},
 \code{\link{sec_triple_detect}}
 
-Other sec-raw: 
+Other sec-raw:
 \code{\link{sec_raw_multidetector}},
 \code{\link{sec_raw_standards}}
 }

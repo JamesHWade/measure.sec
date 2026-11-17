@@ -28,10 +28,11 @@ sec_triple_detect
 }
 \description{
 A synthetic dataset containing multi-detector Size Exclusion Chromatography
-(SEC) data for 12 polymer samples with realistic signal characteristics.
+(SEC) responses for 12 example polymer samples.
 }
 \details{
-The dataset includes realistic features commonly encountered in SEC analysis:
+The simulated curves include detector delays, response factors and baseline
+drift:
 
 \strong{Sample Composition:}
 \itemize{
@@ -43,10 +44,12 @@ The dataset includes realistic features commonly encountered in SEC analysis:
 
 \strong{Multi-Detector Features:}
 \itemize{
-\item Inter-detector volume delays: UV is 0.05 mL before RI, MALS is 0.15 mL after RI
+\item Detector offsets are present, but the legacy generator's delay sign
+differs from the physical convention in \code{\link{step_sec_detector_delay}}.
+Do not use this dataset as a known-delay reference.
 \item Different detector responses based on polymer chemistry
 \item PEG has no UV response (extinction_coef = 0)
-\item MALS signal scales with MW for absolute MW determination
+\item Scattering signal depends on the molecular weight used in the simulation
 }
 
 \strong{Signal Characteristics:}
@@ -57,13 +60,14 @@ The dataset includes realistic features commonly encountered in SEC analysis:
 }
 
 \strong{Typical SEC Workflow:}
-1
-. Convert to measure format with \code{\link[measure]{step_measure_input_long}}
-2. Correct inter-detector delays with \code{\link{step_sec_detector_delay}}
-3. Apply baseline correction with \code{\link{step_sec_baseline}}
-4. Process detectors with \code{\link{step_sec_ri}} or \code{\link{step_sec_uv}}
-5. Convert to concentration with \code{\link{step_sec_concentration}}
-6. Calculate MW averages with \code{\link{step_sec_mw_averages}}
+\enumerate{
+\item Convert to measure format with \code{\link[measure]{step_measure_input_long}}
+\item Correct inter-detector delays with \code{\link{step_sec_detector_delay}}
+\item Apply baseline correction with \code{\link{step_sec_baseline}}
+\item Process detectors with \code{\link{step_sec_ri}} or \code{\link{step_sec_uv}}
+\item Convert to concentration with \code{\link{step_sec_concentration}}
+\item Calculate MW averages with \code{\link{step_sec_mw_averages}}
+}
 }
 \examples{
 \dontrun{
@@ -95,7 +99,7 @@ rec <- recipe(~ ., data = sec_triple_detect) |>
 
 }
 \seealso{
-Other sec-data: 
+Other sec-data:
 \code{\link{sec_branched}},
 \code{\link{sec_calibration_standards}},
 \code{\link{sec_copolymer}},

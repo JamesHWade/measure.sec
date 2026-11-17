@@ -5,7 +5,7 @@
 #' Multi-Detector SEC Data
 #'
 #' A synthetic dataset containing multi-detector Size Exclusion Chromatography
-#' (SEC) data for 12 polymer samples with realistic signal characteristics.
+#' (SEC) responses for 12 example polymer samples.
 #'
 #' @format A tibble with 24,012 rows and 11 columns:
 #' \describe{
@@ -23,7 +23,8 @@
 #' }
 #'
 #' @details
-#' The dataset includes realistic features commonly encountered in SEC analysis:
+#' The simulated curves include detector delays, response factors and baseline
+#' drift:
 #'
 #' **Sample Composition:**
 #' \itemize{
@@ -35,10 +36,12 @@
 #'
 #' **Multi-Detector Features:**
 #' \itemize{
-#'   \item Inter-detector volume delays: UV is 0.05 mL before RI, MALS is 0.15 mL after RI
+#'   \item Detector offsets are present, but the legacy generator's delay sign
+#'     differs from the physical convention in \code{\link{step_sec_detector_delay}}.
+#'     Do not use this dataset as a known-delay reference.
 #'   \item Different detector responses based on polymer chemistry
 #'   \item PEG has no UV response (extinction_coef = 0)
-#'   \item MALS signal scales with MW for absolute MW determination
+#'   \item Scattering signal depends on the molecular weight used in the simulation
 #' }
 #'
 #' **Signal Characteristics:**
@@ -49,8 +52,7 @@
 #' }
 #'
 #' **Typical SEC Workflow:**
-#' 1
-#' . Convert to measure format with \code{\link[measure]{step_measure_input_long}}
+#' 1. Convert to measure format with \code{\link[measure]{step_measure_input_long}}
 #' 2. Correct inter-detector delays with \code{\link{step_sec_detector_delay}}
 #' 3. Apply baseline correction with \code{\link{step_sec_baseline}}
 #' 4. Process detectors with \code{\link{step_sec_ri}} or \code{\link{step_sec_uv}}
@@ -96,9 +98,8 @@
 
 #' SEC Calibration Standards - Complete Dataset
 #'
-#' Comprehensive calibration standard data for SEC/GPC analysis, containing
-#' polystyrene and PMMA narrow standards with certificate values, retention
-#' data, and Mark-Houwink parameters. Based on commercial standard kits.
+#' Synthetic polystyrene and PMMA narrow standards with assigned molecular
+#' weights, retention data and Mark-Houwink parameters for calibration examples.
 #'
 #' @format A tibble with 26 rows and 19 columns:
 #' \describe{
@@ -124,7 +125,7 @@
 #' }
 #'
 #' @details
-#' This dataset enables several key calibration workflows:
+#' Use the assigned values to exercise the following calibration workflows:
 #'
 #' **Conventional Calibration:**
 #' Use `retention_time` (or `retention_volume`) and `log_mp` with
@@ -136,9 +137,9 @@
 #' polymers.
 #'
 #' **Quality Assessment:**
-#' The `mp_uncertainty` values (from typical certificates) enable uncertainty
-#' propagation through the calibration. Dispersity values confirm standards
-#' are suitably narrow.
+#' The illustrative `mp_uncertainty` values can be propagated through a
+#' calibration. Use certificate values for a real standard; these synthetic
+#' values do not qualify a calibration or instrument.
 #'
 #' **Polymer Types:**
 #' \itemize{
@@ -296,9 +297,9 @@
 #' PS in THF, so PMMA standards elute later than PS of the same MW. This
 #' demonstrates why conventional calibration is polymer-specific.
 #'
-#' **Universal Calibration Validation:**
-#' When plotted as log(M * \[eta\]) vs retention time, PS and PMMA should fall
-#' on the same curve, confirming universal calibration is valid for the column.
+#' **Universal Calibration Comparison:**
+#' Compare log(M * \[eta\]) against retention time for PS and PMMA. Agreement
+#' is one diagnostic; these synthetic values do not validate a real column.
 #'
 #' @seealso
 #' \code{\link{sec_calibration_standards}} for full dataset with PS
@@ -501,7 +502,9 @@
 #' **Key Observation:**
 #' At the same molecular weight, branched polymers have smaller hydrodynamic
 #' volume and elute LATER than their linear counterparts. This is the basis
-#' for branching analysis by comparing SEC retention to absolute MW from MALS.
+#' for comparing retention with independently determined molecular weight.
+#' The stored MW, radius and viscosity values are simulation inputs, repeated
+#' along each chromatogram; they are not independently measured slices.
 #'
 #' **Branching Index (g'):**
 #' g' = \eqn{[\eta]_{branched}} / \eqn{[\eta]_{linear}} at same MW
@@ -510,7 +513,7 @@
 #' (more branched) structures.
 #'
 #' **Typical Workflow:**
-#' 1. Apply \code{\link{step_sec_mals}} for absolute MW
+#' 1. Obtain calibrated molecular-weight estimates and inspect their assumptions
 #' 2. Apply \code{\link{step_sec_viscometer}} for intrinsic viscosity
 #' 3. Use \code{\link{measure_branching_index}} to calculate g'
 #' 4. Plot Mark-Houwink relationship to compare topologies
@@ -620,25 +623,23 @@
 
 #' Raw SEC Calibration Standards
 #'
-#' A dataset containing raw SEC chromatograms of polystyrene narrow standards
-#' with realistic noise, baseline drift, and injection artifacts. Designed to
-#' mimic data exported directly from SEC instruments for tutorial purposes.
+#' Synthetic SEC chromatograms of polystyrene narrow standards with noise,
+#' baseline drift and injection artifacts for tutorial examples.
 #'
 #' @format A tibble with approximately 130,000 rows and 6 columns:
 #' \describe{
 #'   \item{standard_name}{Character. Standard identifier (e.g., "PS-67500")}
-#'   \item{mp}{Numeric. Peak molecular weight in Da from certificate}
+#'   \item{mp}{Numeric. Assigned peak molecular weight in Da}
 #'   \item{log_mp}{Numeric. log10(Mp) for calibration curve fitting}
-#'   \item{dispersity}{Numeric. Polydispersity index from certificate}
+#'   \item{dispersity}{Numeric. Assigned dispersity for the simulation}
 #'   \item{time_min}{Numeric. Elution time in minutes}
 #'   \item{ri_mv}{Numeric. RI detector signal in millivolts (raw, unprocessed)}
 #' }
 #'
 #' @details
-#' This dataset represents "raw" data as it would come from an SEC instrument,
-#' before any processing. Key characteristics include:
+#' The simulated signals have not been processed. They include:
 #'
-#' **Realistic Signal Features:**
+#' **Simulated Signal Features:**
 #' \itemize{
 #'   \item Gaussian noise on detector signal
 #'   \item Slow baseline drift from temperature fluctuations
@@ -694,9 +695,8 @@
 
 #' Raw SEC Unknown Samples with Known Molecular Weights
 #'
-#' A dataset containing raw SEC chromatograms of polymer samples with known
-#' true molecular weight values for validation. Includes challenging cases
-#' like bimodal distributions and high molecular weight aggregates.
+#' Synthetic SEC chromatograms with assigned molecular weights, including
+#' bimodal distributions and high molecular weight shoulders.
 #'
 #' @format A tibble with approximately 65,000 rows and 8 columns:
 #' \describe{
@@ -711,8 +711,9 @@
 #' }
 #'
 #' @details
-#' This dataset provides unknown samples with known "true" MW values, enabling
-#' validation of the complete SEC workflow from raw data to final results.
+#' The `true_*` fields are simulation inputs. Compare calculated results with
+#' those values to investigate the workflow; agreement does not validate an
+#' instrument or a physical sample.
 #'
 #' **Sample Types:**
 #' \itemize{
@@ -725,8 +726,8 @@
 #' }
 #'
 #' **Educational Value:**
-#' Students can compare their calculated MW values against the true values
-#' to validate their analysis workflow and understand sources of error.
+#' Compare calculated MW values with the simulation inputs and investigate
+#' differences from calibration, integration and signal processing.
 #'
 #' @seealso
 #' \code{\link{sec_raw_standards}} for calibration standards
@@ -765,9 +766,8 @@
 
 #' Raw Multi-Detector SEC Data
 #'
-#' A dataset containing raw SEC chromatograms with RI, UV, and MALS detector
-#' signals that have NOT been corrected for inter-detector delay. Designed
-#' for teaching triple detection workflows from raw data.
+#' Synthetic RI, UV and scattering signals before detector-delay correction,
+#' for teaching multi-detector processing.
 #'
 #' @format A tibble with approximately 48,000 rows and 12 columns:
 #' \describe{
@@ -788,12 +788,13 @@
 #' @details
 #' This dataset simulates raw multi-detector SEC data before inter-detector
 #' delay correction. The detectors are physically separated in the flow path,
-#' so peaks appear at different times in each detector.
+#' so the simulated profiles are shifted. Detector-specific noise and drift
+#' mean the observed peak maxima need not recover the declared delays.
 #'
 #' **Detector Configuration:**
 #' \itemize{
-#'   \item UV detector is 0.08 mL BEFORE RI (peaks appear earlier)
-#'   \item MALS detector is 0.18 mL AFTER RI (peaks appear later)
+#'   \item Declared UV delay: -0.08 mL relative to RI
+#'   \item Declared MALS delay: +0.18 mL relative to RI
 #'   \item RI is the reference detector (delay = 0)
 #' }
 #'
@@ -807,14 +808,15 @@
 #'
 #' **Tutorial Workflow:**
 #' 1. Load raw multi-detector data
-#' 2. Use delay standard to determine inter-detector offsets
+#' 2. Compare response diagnostics with the declared detector offsets
 #' 3. Apply \code{\link{step_sec_detector_delay}} to align signals
-#' 4. Process with \code{\link{step_sec_mals}} for absolute MW
+#' 4. Supply response calibration and concentration for the single-angle
+#'    approximation in \code{\link{step_sec_mals}}
 #'
 #' @seealso
 #' \code{\link{step_sec_detector_delay}} for delay correction
 #' \code{\link{step_sec_mals}} for MALS processing
-#' \code{\link{sec_triple_detect}} for pre-processed multi-detector data
+#' \code{\link{sec_triple_detect}} for another synthetic detector dataset
 #'
 #' @family sec-data
 #' @family sec-raw
@@ -848,7 +850,7 @@
 #'       x = "Time (min)",
 #'       y = "Normalized Signal",
 #'       title = "Raw Multi-Detector Data (Before Delay Correction)",
-#'       subtitle = "Note: Peaks are NOT aligned - UV leads, MALS lags"
+#'       subtitle = "Noise and drift affect the observed peak maxima"
 #'     ) +
 #'     theme_minimal()
 #' }

@@ -12,28 +12,30 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 4.5
 )
+
+theme_measure_sec <- function() {
+  ggplot2::theme_bw(base_size = 10, base_family = "sans") +
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      plot.background = ggplot2::element_rect(fill = "white", colour = NA),
+      panel.background = ggplot2::element_rect(fill = "white")
+    )
+}
 ```
 
-## Overview
+## Scope
 
-After processing SEC data with measure.sec, you'll need to export results for reports, further analysis, or regulatory submissions. This guide covers:
+This vignette shows summary and slice tables, a comparison result, and a local
+CSV export. The summary examples use the package's supplied polystyrene
+standard table. The chromatogram example uses a synthetic `sec_triple_detect`
+trace. These examples demonstrate the export functions; they do not validate a
+calibration or a method.
 
-1. Creating summary tables with MW averages
-2. Extracting slice-by-slice data for detailed analysis
-3. Comparing multiple samples side-by-side
-4. Generating automated reports
-5. Exporting to Excel, CSV, and other formats
-
-## Quick Reference: Export Functions
-
-| Function | Purpose | Output |
-|----------|---------|--------|
-| `measure_sec_summary_table()` | Per-sample MW averages | Tibble with Mn, Mw, Mz, dispersity |
-| `measure_sec_slice_table()` | Point-by-point data | Long or wide format tibble |
-| `measure_sec_compare()` | Multi-sample comparison | Summary, differences, optional plot |
-| `measure_sec_report()` | Automated reports | HTML, PDF, or Word document |
+The CSV files created during rendering are written to `tempdir()`. Report,
+Excel, database, and Arrow examples later in the vignette remain unevaluated;
+they are templates that require local paths or optional software.
 
 ## Setup
 
@@ -43,113 +45,129 @@ library(measure.sec)
 library(recipes)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 ```
 
-## Creating Processed Data for Export
+## Summary table
 
-In a real workflow, you'd process SEC data through calibration and MW averaging steps (see the [Getting Started](getting-started.html) vignette). Here, we'll create representative processed data to demonstrate the export functions.
-
-```{r create-mock-data}
-# Simulate processed SEC results with realistic MW values
-# In practice, these columns come from step_sec_mw_averages()
-
-processed <- tibble::tibble(
-  sample_id = c("PS-50K", "PS-100K", "PS-200K"),
-  polymer_type = "polystyrene",
-  # MW averages (typical for narrow PS standards)
-  mw_mn = c(48500, 97200, 195000),
-  mw_mw = c(50200, 101000, 203000),
-  mw_mz = c(52100, 105000, 211000),
-  mw_dispersity = c(1.035, 1.039, 1.041),
-  # Additional metadata
-  injection_volume = 100,  # µL
-  concentration = 2.0      # mg/mL
-)
-
-processed
-```
-
-For multi-sample comparisons, let's create data for different polymer types:
-
-```{r create-comparison-data}
-# Three batches with slight variations (typical QC scenario)
-batch1 <- tibble::tibble(
-  sample_id = "Batch-001",
-  mw_mn = 48200, mw_mw = 50100, mw_mz = 52000, mw_dispersity = 1.039
-)
-
-batch2 <- tibble::tibble(
-  sample_id = "Batch-002",
-  mw_mn = 49100, mw_mw = 51200, mw_mz = 53100, mw_dispersity = 1.043
-)
-
-batch3 <- tibble::tibble(
-  sample_id = "Batch-003",
-  mw_mn = 47800, mw_mw = 49800, mw_mz = 51900, mw_dispersity = 1.042
-)
-```
-
-## Summary Tables
-
-### Basic Summary Table
-
-`measure_sec_summary_table()` creates a one-row-per-sample table with key metrics:
+`measure_sec_summary_table()` collects molecular-weight averages and any
+additional columns requested. Here it formats the values supplied with
+`sec_ps_standards` and carries the modal mass (`mp`) as an additional column.
 
 ```{r summary-table}
-# Create summary table - automatically finds MW columns
+data(sec_ps_standards, package = "measure.sec")
+
+summary_input <- sec_ps_standards |>
+  transmute(
+    sample_id = standard_name,
+    mp_da = mp,
+    mw_mn = mn,
+    mw_mw = mw,
+    mw_dispersity = dispersity
+  )
+
 summary_tbl <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id"
+  summary_input,
+  sample_id = "sample_id",
+  additional_cols = "mp_da",
+  digits = 2
 )
 
 print(summary_tbl)
 ```
 
-### Including Additional Columns
+The figure uses the averages in the supplied standard table. It is a view of
+the package data, not an analysis of a newly measured chromatogram.
 
-You can include any numeric column from your data:
+```{r summary-view, fig.width = 7, fig.height = 4.5, fig.cap = "Molecular-weight averages from the supplied standard table, returned by `measure_sec_summary_table()` and plotted against each standard's supplied modal mass.", fig.alt = "Log-log scatter chart of supplied modal mass in Da versus number-average and weight-average molecular weight in Da for 16 polystyrene standards. Two colored point series rise with modal mass; number-average values are below weight-average values."}
+summary_plot_data <- summary_tbl |>
+  as_tibble() |>
+  pivot_longer(
+    cols = c(mw_mn, mw_mw),
+    names_to = "average",
+    values_to = "molecular_weight"
+  ) |>
+  mutate(
+    average = recode(
+      average,
+      mw_mn = "Number average (Mn)",
+      mw_mw = "Weight average (Mw)"
+    )
+  )
 
-```{r summary-with-extra}
-# Include method metadata alongside MW results
-summary_with_meta <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id",
-  additional_cols = c("injection_volume", "concentration")
-)
-
-print(summary_with_meta)
+ggplot(
+  summary_plot_data,
+  aes(x = mp_da, y = molecular_weight, colour = average, group = average)
+) +
+  geom_line(linewidth = 0.6) +
+  geom_point(size = 1.8) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_colour_manual(
+    values = c(
+      "Number average (Mn)" = "#2E86AB",
+      "Weight average (Mw)" = "#A23B72"
+    )
+  ) +
+  labs(
+    x = "Supplied modal mass (Da)",
+    y = "Supplied molecular-weight average (Da)",
+    colour = "Average"
+  ) +
+  theme_measure_sec()
 ```
 
-### Controlling Decimal Places
+## Comparing standards
 
-For regulatory submissions that require specific precision:
+`measure_sec_compare()` returns a summary and differences from a selected
+reference. This example compares three rows from the same supplied standard
+table; it does not represent batch release results.
 
-```{r summary-digits}
-# Higher precision for documentation
-summary_precise <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id",
-  digits = 0  # Whole numbers for MW
+```{r compare-standards}
+comparison_rows <- summary_tbl |>
+  as_tibble() |>
+  filter(sample_id %in% c("PS-430000", "PS-216000", "PS-120000"))
+
+comparison <- measure_sec_compare(
+  comparison_rows |> filter(sample_id == "PS-430000"),
+  comparison_rows |> filter(sample_id == "PS-216000"),
+  comparison_rows |> filter(sample_id == "PS-120000"),
+  samples = c("PS-430000", "PS-216000", "PS-120000"),
+  metrics = "mw_averages",
+  plot = FALSE,
+  reference = "PS-430000"
 )
 
-print(summary_precise)
+comparison$summary
+comparison$differences
 ```
 
-## Slice Tables: Point-by-Point Data
+```{r comparison-view, fig.width = 7, fig.height = 4.5, fig.cap = "Percent differences in supplied weight-average molecular weight from the PS-430000 reference, using the `differences` table returned by `measure_sec_compare()`.", fig.alt = "Horizontal dot chart of percent difference in weight-average molecular weight relative to PS-430000. The PS-216000 and PS-120000 reference rows fall below zero because their supplied weight-average values are lower than the selected reference."}
+comparison_plot_data <- comparison$differences |>
+  filter(sample != "PS-430000")
 
-### Understanding Slice Data
+ggplot(
+  comparison_plot_data,
+  aes(x = mw_mw_pct, y = sample)
+) +
+  geom_vline(xintercept = 0, colour = "grey45", linetype = "dashed") +
+  geom_point(colour = "#A23B72", size = 2.4) +
+  labs(
+    x = "Difference in Mw from PS-430000 (%)",
+    y = NULL
+  ) +
+  theme_measure_sec()
+```
 
-SEC analysis works on a point-by-point basis across the chromatogram. Each "slice" represents one data point with its elution time and corresponding signal values. Use `measure_sec_slice_table()` to extract this detailed data from recipes that produce `measure_list` columns.
+## Slice table from a chromatogram
 
-### Creating Slice Data
-
-First, let's process actual chromatogram data to demonstrate slice extraction:
+Long format is convenient for plotting and interchange. This example converts
+a single synthetic PS-100K chromatogram to the measure format, corrects its RI
+baseline, and extracts slice values.
 
 ```{r process-for-slices}
-# Load and process actual chromatogram data
-data(sec_triple_detect)
+data(sec_triple_detect, package = "measure.sec")
 
-# Process a single sample
 ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-100K")
 
@@ -165,43 +183,34 @@ rec <- recipe(
   ) |>
   step_sec_baseline(measures = "ri")
 
-chromatogram_data <- prep(rec) |> bake(new_data = NULL)
-```
+chromatogram_data <- prep(rec) |>
+  bake(new_data = NULL)
 
-### Long Format (Default)
-
-Long format is best for plotting with ggplot2:
-
-```{r slice-long}
-# Extract slice data in long format
 slices_long <- measure_sec_slice_table(
   chromatogram_data,
   measures = "ri",
   sample_id = "sample_id"
 )
 
-# View structure - one row per data point
 head(slices_long, 10)
 ```
 
-```{r plot-slices, fig.height=4}
-# Plot using the slice table
+```{r slice-view, fig.width = 7, fig.height = 4.5, fig.cap = "The baseline-corrected RI slice table for the synthetic PS-100K example, plotted against its stored elution-time locations.", fig.alt = "Line chart of elution time in minutes versus baseline-corrected RI detector response in its native units for the synthetic PS-100K trace. The signal forms one broad peak in the middle of the displayed elution range and approaches baseline on either side."}
 ggplot(slices_long, aes(x = location, y = value)) +
-  geom_line(color = "#2E86AB") +
+  geom_line(colour = "#2E86AB", linewidth = 0.7) +
   labs(
-    x = "Elution Time (min)",
-    y = "RI Signal (baseline corrected)",
-    title = "Chromatogram from Slice Data"
+    x = "Elution time (min)",
+    y = "Baseline-corrected RI signal (native units)"
   ) +
-  theme_minimal()
+  theme_measure_sec()
 ```
 
-### Wide Format
+## Wide slice tables
 
-Wide format is better for spreadsheet export or correlating multiple measures:
+Wide format gives each measure its own column. It can be useful when exporting
+several aligned measures from the same baked recipe.
 
 ```{r slice-wide}
-# Wide format puts each measure in its own column
 slices_wide <- measure_sec_slice_table(
   chromatogram_data,
   measures = "ri",
@@ -212,303 +221,180 @@ slices_wide <- measure_sec_slice_table(
 head(slices_wide)
 ```
 
-### Exporting Slice Data to CSV
+## Write CSV files to a temporary directory
 
-```{r export-csv, eval=FALSE}
-# Export for external analysis
-write.csv(slices_long, "sec_slice_data.csv", row.names = FALSE)
+These two files are written to the current R session's temporary directory.
+They are not saved in the package or vignette source tree.
 
-# Or use readr for consistent formatting
-readr::write_csv(slices_long, "sec_slice_data.csv")
-```
+```{r csv-export}
+export_dir <- tempdir()
+summary_csv <- file.path(export_dir, "sec_summary_table.csv")
+slices_csv <- file.path(export_dir, "sec_slice_data.csv")
 
-## Comparing Multiple Samples
+utils::write.csv(as.data.frame(summary_tbl), summary_csv, row.names = FALSE)
+utils::write.csv(slices_long, slices_csv, row.names = FALSE)
 
-### Basic Comparison
-
-`measure_sec_compare()` provides side-by-side comparison with differences from a reference:
-
-```{r compare-basic}
-# Compare the three batches we created earlier
-comparison <- measure_sec_compare(
-  batch1, batch2, batch3,
-  samples = c("Batch 001", "Batch 002", "Batch 003"),
-  metrics = "mw_averages",
-  plot = FALSE
-)
-
-print(comparison)
-```
-
-### Understanding the Comparison Output
-
-The comparison object contains:
-
-- **`$summary`**: All samples with their metrics
-- **`$differences`**: Absolute and percent differences from reference
-- **`$plot`**: MWD overlay (if requested and available)
-- **`$reference`**: Which sample is the reference
-
-```{r compare-details, eval=FALSE}
-# Access individual components
-comparison$summary      # Metrics for all samples
-comparison$differences  # Differences from reference
-comparison$reference    # Reference sample name
-```
-
-### Setting a Different Reference
-
-By default, the first sample is the reference. You can change this:
-
-```{r compare-reference, eval=FALSE}
-# Use PS 500K as reference
-comparison_ref <- measure_sec_compare(
-  ps100k, ps500k, pmma,
-  samples = c("PS 100K", "PS 500K", "PMMA High"),
-  reference = "PS 500K"
+tibble::tibble(
+  file = basename(c(summary_csv, slices_csv)),
+  bytes = file.info(c(summary_csv, slices_csv))$size
 )
 ```
 
-### Batch-to-Batch Comparison
+## Other export targets
 
-A common use case is comparing production batches to a reference lot:
+The following chunks are not run when this vignette is rendered. They show
+optional local integrations; set paths and connection details for your own
+environment before running them.
 
-```{r batch-comparison, eval=FALSE}
-# Compare production batches
-batch_comparison <- measure_sec_compare(
-  reference_lot,
-  batch_001,
-  batch_002,
-  batch_003,
-  samples = c("Reference", "Batch 001", "Batch 002", "Batch 003"),
-  reference = "Reference"
+### Excel workbook
+
+```{r excel-export, eval=FALSE}
+# Requires the optional writexl package.
+excel_file <- file.path(tempdir(), "sec_results.xlsx")
+
+writexl::write_xlsx(
+  list(
+    Summary = as.data.frame(summary_tbl),
+    `Slice Data` = slices_long
+  ),
+  excel_file
 )
-
-# Check for significant deviations
-batch_comparison$differences |>
-  filter(abs(mw_mw_pct) > 5)  # Flag batches > 5% different
 ```
 
-## Automated Reports
+### Database
 
-### Available Templates
-
-```{r list-templates}
-# See available report templates
-list_sec_templates()
+```{r db-export, eval=FALSE}
+# Requires DBI and RSQLite. The example database path is temporary.
+db_file <- file.path(tempdir(), "sec_results.sqlite")
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = db_file)
+DBI::dbWriteTable(con, "sec_results", as.data.frame(summary_tbl), append = TRUE)
+DBI::dbDisconnect(con)
 ```
 
-### Standard Report
+### GraphPad Prism
 
-The standard template includes:
-- Summary table with MW averages
-- Chromatogram overlay
-- Molecular weight distribution plot
+```{r prism-export, eval=FALSE}
+prism_data <- slices_long |>
+  select(location, sample_id, value) |>
+  pivot_wider(names_from = sample_id, values_from = value)
 
-```{r generate-report, eval=FALSE}
-# Generate HTML report
+prism_file <- file.path(tempdir(), "sec_for_prism.csv")
+utils::write.csv(prism_data, prism_file, row.names = FALSE)
+```
+
+### Python-readable files
+
+```{r python-export, eval=FALSE}
+# Requires the optional arrow package.
+feather_file <- file.path(tempdir(), "sec_data.feather")
+parquet_file <- file.path(tempdir(), "sec_data.parquet")
+
+arrow::write_feather(slices_long, feather_file)
+arrow::write_parquet(slices_long, parquet_file)
+```
+
+## Reports
+
+Report generation can write files and may require Quarto or other local
+software. These examples remain unevaluated during rendering; each output path
+points to `tempdir()`.
+
+```{r standard-report, eval=FALSE}
 measure_sec_report(
-  processed,
+  as.data.frame(summary_tbl),
   template = "standard",
   output_format = "html",
-  title = "Polymer SEC Analysis",
-  author = "Lab Analyst"
+  output_file = file.path(tempdir(), "sec_standard_report.html"),
+  title = "SEC analysis summary",
+  open = FALSE
 )
 ```
-
-### Detailed Report
-
-For more comprehensive documentation:
 
 ```{r detailed-report, eval=FALSE}
 measure_sec_report(
-  processed,
+  as.data.frame(summary_tbl),
   template = "detailed",
   output_format = "pdf",
-  title = "Comprehensive SEC Report",
+  output_file = file.path(tempdir(), "sec_detailed_report.pdf"),
   sample_id = "sample_id",
-  include_slice_table = TRUE  # Append raw data
+  include_slice_table = TRUE
 )
 ```
 
-### QC Report
-
-For system suitability testing:
+A QC report needs peak-level input and criteria from the method. Those objects
+are not part of the standard-table example.
 
 ```{r qc-report, eval=FALSE}
 measure_sec_report(
-  sst_data,
+  integration_peak_table,
   template = "qc",
   output_format = "html",
-  specs = list(
-    plate_count_min = 10000,
-    asymmetry_min = 0.8,
-    asymmetry_max = 1.5,
-    resolution_min = 1.5
-  )
+  output_file = file.path(tempdir(), "sec_qc_report.html"),
+  specs = method_criteria
 )
 ```
 
-### Saving Reports to Specific Locations
+## Traceability fields
 
-```{r report-location, eval=FALSE}
-# Save to a specific path
-measure_sec_report(
-  processed,
-  template = "standard",
-  output_file = "reports/polymer_analysis_2024-01-15.html",
-  open = FALSE  # Don't open automatically
-)
-```
-
-## Integration with Other Tools
-
-### Export to Excel
-
-For spreadsheet-based workflows:
-
-```{r excel-export, eval=FALSE}
-# Requires writexl package
-library(writexl)
-
-# Create a workbook with multiple sheets
-write_xlsx(
-  list(
-    "Summary" = summary_tbl,
-    "Slice Data" = slices_long
-  ),
-  "sec_results.xlsx"
-)
-```
-
-### Export to Database
-
-For LIMS integration:
-
-```{r db-export, eval=FALSE}
-# Using DBI for database connection
-library(DBI)
-
-con <- dbConnect(RSQLite::SQLite(), "lims.db")
-
-# Write summary to database
-dbWriteTable(con, "sec_results", summary_tbl, append = TRUE)
-
-dbDisconnect(con)
-```
-
-### Export for GraphPad Prism
-
-Prism prefers wide format with specific column arrangements:
-
-```{r prism-export, eval=FALSE}
-# Create Prism-friendly format
-prism_data <- slices_long |>
-  select(location, sample_id, value) |>
-  tidyr::pivot_wider(names_from = sample_id, values_from = value)
-
-write.csv(prism_data, "sec_for_prism.csv", row.names = FALSE)
-```
-
-### Export for Python Analysis
-
-For interoperability with Python workflows:
-
-```{r python-export, eval=FALSE}
-# Save as feather for fast Python loading
-arrow::write_feather(slices_long, "sec_data.feather")
-
-# Or as parquet for columnar storage
-arrow::write_parquet(slices_long, "sec_data.parquet")
-```
-
-## Best Practices
-
-### Traceability
-
-Always include metadata for regulatory compliance:
+Attach provenance fields from the actual run record. The placeholders below
+are intentionally empty because no analyst or instrument record is included
+with the supplied standard table.
 
 ```{r traceability, eval=FALSE}
-# Add audit trail information
-summary_with_audit <- summary_tbl |>
+summary_with_audit <- as.data.frame(summary_tbl) |>
   mutate(
-    analysis_date = Sys.Date(),
-    analyst = "JW",
-    instrument = "Agilent 1260",
-    column = "PLgel Mixed-C",
-    software_version = packageVersion("measure.sec")
+    analysis_date = as.Date(NA),
+    analyst = NA_character_,
+    instrument = NA_character_,
+    column = NA_character_,
+    measure_sec_version = as.character(packageVersion("measure.sec"))
   )
 ```
 
-### File Naming Conventions
+For reproducibility, store the calibration object and analysis settings used
+for the actual sample. The path below is temporary; replace the placeholder
+calibration name with the object or identifier from your run.
 
-Use descriptive, consistent file names:
-
-```r
-# Good: includes key information
-"sec_summary_batch123_2024-01-15.xlsx"
-"mwd_comparison_stability_t12m.pdf"
-
-# Avoid: ambiguous names
-"results.xlsx"
-"output.csv"
-```
-
-### Version Control for Reports
-
-Save report parameters for reproducibility:
-
-```{r version-control, eval=FALSE}
-# Save analysis parameters alongside results
+```{r save-parameters, eval=FALSE}
 analysis_params <- list(
   date = Sys.time(),
-  calibration = "ps_2024-01.rds",
+  calibration = calibration_object,
   baseline_method = "linear",
-  integration_limits = c(8, 18),
   package_version = packageVersion("measure.sec")
 )
 
-saveRDS(analysis_params, "sec_analysis_params.rds")
+parameter_file <- file.path(tempdir(), "sec_analysis_parameters.rds")
+saveRDS(analysis_params, parameter_file)
 ```
 
 ## Troubleshooting
 
-### Missing Columns in Summary
+### Missing molecular-weight columns
 
-If MW columns are missing from your summary table, check that you've run the calibration and MW averaging steps:
+Check that the input to `measure_sec_summary_table()` contains `Mn`, `Mw`,
+`Mz`, or their `mw_`-prefixed names.
+
 ```{r troubleshoot-missing, eval=FALSE}
-# Ensure you have MW data
-names(processed)  # Should include Mn, Mw, Mz, or mw_mn, mw_mw, mw_mz
+names(processed_results)
 ```
 
-### Empty Slice Tables
+### Empty slice table
 
-If `measure_sec_slice_table()` returns no data:
+Confirm that the baked recipe contains measure columns before calling
+`measure_sec_slice_table()`.
 
 ```{r troubleshoot-empty, eval=FALSE}
-# Check that measure columns exist
-find_measure_cols <- function(data) {
-  names(data)[vapply(data, inherits, logical(1), "measure_list")]
-}
-find_measure_cols(processed)
+measure::find_measure_cols(processed_results)
 ```
 
-### Report Generation Fails
+## See also
 
-If `measure_sec_report()` fails:
+- [Getting started](getting-started.html) — basic SEC workflow
+- [Calibration management](calibration-management.html) — save and reuse calibrations
+- [System suitability](system-suitability.html) — QC calculations and limits
+- [SEC analysis reference](sec-analysis.html) — function reference
 
-1. Verify Quarto is installed: `quarto::quarto_version()`
-2. For PDF output, ensure LaTeX is installed
-3. Check data has required columns
-
-## See Also
-
-- [Getting Started](getting-started.html) - Basic SEC workflow and concepts
-- [Calibration Management](calibration-management.html) - Save and reuse calibrations
-- [System Suitability](system-suitability.html) - QC metrics and column performance
-- [Comprehensive SEC Analysis](sec-analysis.html) - Complete reference with all functions
-
-## Session Info
+## Session info
 
 ```{r session-info}
 sessionInfo()
