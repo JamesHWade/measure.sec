@@ -1,25 +1,17 @@
 # Exporting Results
 
-## Overview
+## Scope
 
-After processing SEC data with measure.sec, you’ll need to export
-results for reports, further analysis, or regulatory submissions. This
-guide covers:
+This vignette shows summary and slice tables, a comparison result, and a
+local CSV export. The summary examples use the package’s supplied
+polystyrene standard table. The chromatogram example uses a synthetic
+`sec_triple_detect` trace. These examples demonstrate the export
+functions; they do not validate a calibration or a method.
 
-1.  Creating summary tables with MW averages
-2.  Extracting slice-by-slice data for detailed analysis
-3.  Comparing multiple samples side-by-side
-4.  Generating automated reports
-5.  Exporting to Excel, CSV, and other formats
-
-## Quick Reference: Export Functions
-
-| Function | Purpose | Output |
-|----|----|----|
-| [`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md) | Per-sample MW averages | Tibble with Mn, Mw, Mz, dispersity |
-| [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md) | Point-by-point data | Long or wide format tibble |
-| [`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md) | Multi-sample comparison | Summary, differences, optional plot |
-| [`measure_sec_report()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_report.md) | Automated reports | HTML, PDF, or Word document |
+The CSV files created during rendering are written to
+[`tempdir()`](https://rdrr.io/r/base/tempfile.html). Report, Excel,
+database, and Arrow examples later in the vignette remain unevaluated;
+they are templates that require local paths or optional software.
 
 ## Setup
 
@@ -45,168 +37,193 @@ library(measure.sec)
 library(recipes)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 ```
 
-## Creating Processed Data for Export
-
-In a real workflow, you’d process SEC data through calibration and MW
-averaging steps (see the [Getting
-Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md)
-vignette). Here, we’ll create representative processed data to
-demonstrate the export functions.
-
-``` r
-
-# Simulate processed SEC results with realistic MW values
-# In practice, these columns come from step_sec_mw_averages()
-
-processed <- tibble::tibble(
-  sample_id = c("PS-50K", "PS-100K", "PS-200K"),
-  polymer_type = "polystyrene",
-  # MW averages (typical for narrow PS standards)
-  mw_mn = c(48500, 97200, 195000),
-  mw_mw = c(50200, 101000, 203000),
-  mw_mz = c(52100, 105000, 211000),
-  mw_dispersity = c(1.035, 1.039, 1.041),
-  # Additional metadata
-  injection_volume = 100,  # µL
-  concentration = 2.0      # mg/mL
-)
-
-processed
-#> # A tibble: 3 × 8
-#>   sample_id polymer_type  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume
-#>   <chr>     <chr>         <dbl>  <dbl>  <dbl>         <dbl>            <dbl>
-#> 1 PS-50K    polystyrene   48500  50200  52100          1.03              100
-#> 2 PS-100K   polystyrene   97200 101000 105000          1.04              100
-#> 3 PS-200K   polystyrene  195000 203000 211000          1.04              100
-#> # ℹ 1 more variable: concentration <dbl>
-```
-
-For multi-sample comparisons, let’s create data for different polymer
-types:
-
-``` r
-
-# Three batches with slight variations (typical QC scenario)
-batch1 <- tibble::tibble(
-  sample_id = "Batch-001",
-  mw_mn = 48200, mw_mw = 50100, mw_mz = 52000, mw_dispersity = 1.039
-)
-
-batch2 <- tibble::tibble(
-  sample_id = "Batch-002",
-  mw_mn = 49100, mw_mw = 51200, mw_mz = 53100, mw_dispersity = 1.043
-)
-
-batch3 <- tibble::tibble(
-  sample_id = "Batch-003",
-  mw_mn = 47800, mw_mw = 49800, mw_mz = 51900, mw_dispersity = 1.042
-)
-```
-
-## Summary Tables
-
-### Basic Summary Table
+## Summary table
 
 [`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
-creates a one-row-per-sample table with key metrics:
+collects molecular-weight averages and any additional columns requested.
+Here it formats the values supplied with `sec_ps_standards` and carries
+the modal mass (`mp`) as an additional column.
 
 ``` r
 
-# Create summary table - automatically finds MW columns
+data(sec_ps_standards, package = "measure.sec")
+
+summary_input <- sec_ps_standards |>
+  transmute(
+    sample_id = standard_name,
+    mp_da = mp,
+    mw_mn = mn,
+    mw_mw = mw,
+    mw_dispersity = dispersity
+  )
+
 summary_tbl <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id"
+  summary_input,
+  sample_id = "sample_id",
+  additional_cols = "mp_da",
+  digits = 2
 )
 
 print(summary_tbl)
 #> SEC Analysis Summary
 #> ============================================================ 
-#> Samples: 3 
+#> Samples: 16 
 #> 
-#> # A tibble: 3 × 5
-#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity
-#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>
-#> 1 PS-50K     48500  50200  52100          1.03
-#> 2 PS-100K    97200 101000 105000          1.04
-#> 3 PS-200K   195000 203000 211000          1.04
+#> # A tibble: 16 × 5
+#>    sample_id    mw_mn   mw_mw mw_dispersity   mp_da
+#>    <chr>        <dbl>   <dbl>         <dbl>   <dbl>
+#>  1 PS-3150000 3080000 3200000          1.04 3150000
+#>  2 PS-1870000 1830000 1900000          1.04 1870000
+#>  3 PS-1090000 1070000 1100000          1.03 1090000
+#>  4 PS-630000   618000  640000          1.04  630000
+#>  5 PS-430000   422000  437000          1.04  430000
+#>  6 PS-216000   212000  219000          1.03  216000
+#>  7 PS-120000   118000  122000          1.03  120000
+#>  8 PS-67500     66200   68500          1.03   67500
+#>  9 PS-33500     32800   34000          1.04   33500
+#> 10 PS-19800     19400   20100          1.04   19800
+#> 11 PS-9680       9470    9820          1.04    9680
+#> 12 PS-5030       4900    5120          1.04    5030
+#> 13 PS-2970       2890    3020          1.05    2970
+#> 14 PS-1050       1020    1070          1.05    1050
+#> 15 PS-580         570     590          1.04     580
+#> 16 PS-162         160     163          1.02     162
 ```
 
-### Including Additional Columns
-
-You can include any numeric column from your data:
+The figure uses the averages in the supplied standard table. It is a
+view of the package data, not an analysis of a newly measured
+chromatogram.
 
 ``` r
 
-# Include method metadata alongside MW results
-summary_with_meta <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id",
-  additional_cols = c("injection_volume", "concentration")
+summary_plot_data <- summary_tbl |>
+  as_tibble() |>
+  pivot_longer(
+    cols = c(mw_mn, mw_mw),
+    names_to = "average",
+    values_to = "molecular_weight"
+  ) |>
+  mutate(
+    average = recode(
+      average,
+      mw_mn = "Number average (Mn)",
+      mw_mw = "Weight average (Mw)"
+    )
+  )
+
+ggplot(
+  summary_plot_data,
+  aes(x = mp_da, y = molecular_weight, colour = average, group = average)
+) +
+  geom_line(linewidth = 0.6) +
+  geom_point(size = 1.8) +
+  scale_x_log10(labels = scales::label_comma()) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_colour_manual(
+    values = c(
+      "Number average (Mn)" = "#2E86AB",
+      "Weight average (Mw)" = "#A23B72"
+    )
+  ) +
+  labs(
+    x = "Supplied modal mass (Da)",
+    y = "Supplied molecular-weight average (Da)",
+    colour = "Average"
+  ) +
+  theme_measure_sec()
+```
+
+![Log-log scatter chart of supplied modal mass in Da versus
+number-average and weight-average molecular weight in Da for 16
+polystyrene standards. Two colored point series rise with modal mass;
+number-average values are below weight-average
+values.](exporting-results_files/figure-html/summary-view-1.png)
+
+Molecular-weight averages from the supplied standard table, returned by
+[`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
+and plotted against each standard’s supplied modal mass.
+
+## Comparing standards
+
+[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md)
+returns a summary and differences from a selected reference. This
+example compares three rows from the same supplied standard table; it
+does not represent batch release results.
+
+``` r
+
+comparison_rows <- summary_tbl |>
+  as_tibble() |>
+  filter(sample_id %in% c("PS-430000", "PS-216000", "PS-120000"))
+
+comparison <- measure_sec_compare(
+  comparison_rows |> filter(sample_id == "PS-430000"),
+  comparison_rows |> filter(sample_id == "PS-216000"),
+  comparison_rows |> filter(sample_id == "PS-120000"),
+  samples = c("PS-430000", "PS-216000", "PS-120000"),
+  metrics = "mw_averages",
+  plot = FALSE,
+  reference = "PS-430000"
 )
 
-print(summary_with_meta)
-#> SEC Analysis Summary
-#> ============================================================ 
-#> Samples: 3 
-#> 
+comparison$summary
+#> # A tibble: 3 × 4
+#>   sample     mw_mn  mw_mw mw_dispersity
+#>   <chr>      <dbl>  <dbl>         <dbl>
+#> 1 PS-430000 422000 437000          1.04
+#> 2 PS-216000 212000 219000          1.03
+#> 3 PS-120000 118000 122000          1.03
+comparison$differences
 #> # A tibble: 3 × 7
-#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity injection_volume concentration
-#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>            <dbl>         <dbl>
-#> 1 PS-50K     48500  50200  52100          1.03              100             2
-#> 2 PS-100K    97200 101000 105000          1.04              100             2
-#> 3 PS-200K   195000 203000 211000          1.04              100             2
+#>   sample    mw_mn_diff mw_mn_pct mw_mw_diff mw_mw_pct mw_dispersity_diff
+#>   <chr>          <dbl>     <dbl>      <dbl>     <dbl>              <dbl>
+#> 1 PS-430000          0       0            0       0                 0   
+#> 2 PS-216000    -210000     -49.8    -218000     -49.9              -0.01
+#> 3 PS-120000    -304000     -72      -315000     -72.1              -0.01
+#> # ℹ 1 more variable: mw_dispersity_pct <dbl>
 ```
-
-### Controlling Decimal Places
-
-For regulatory submissions that require specific precision:
 
 ``` r
 
-# Higher precision for documentation
-summary_precise <- measure_sec_summary_table(
-  processed,
-  sample_id = "sample_id",
-  digits = 0  # Whole numbers for MW
-)
+comparison_plot_data <- comparison$differences |>
+  filter(sample != "PS-430000")
 
-print(summary_precise)
-#> SEC Analysis Summary
-#> ============================================================ 
-#> Samples: 3 
-#> 
-#> # A tibble: 3 × 5
-#>   sample_id  mw_mn  mw_mw  mw_mz mw_dispersity
-#>   <chr>      <dbl>  <dbl>  <dbl>         <dbl>
-#> 1 PS-50K     48500  50200  52100             1
-#> 2 PS-100K    97200 101000 105000             1
-#> 3 PS-200K   195000 203000 211000             1
+ggplot(
+  comparison_plot_data,
+  aes(x = mw_mw_pct, y = sample)
+) +
+  geom_vline(xintercept = 0, colour = "grey45", linetype = "dashed") +
+  geom_point(colour = "#A23B72", size = 2.4) +
+  labs(
+    x = "Difference in Mw from PS-430000 (%)",
+    y = NULL
+  ) +
+  theme_measure_sec()
 ```
 
-## Slice Tables: Point-by-Point Data
+![Horizontal dot chart of percent difference in weight-average molecular
+weight relative to PS-430000. The PS-216000 and PS-120000 reference rows
+fall below zero because their supplied weight-average values are lower
+than the selected
+reference.](exporting-results_files/figure-html/comparison-view-1.png)
 
-### Understanding Slice Data
+Percent differences in supplied weight-average molecular weight from the
+PS-430000 reference, using the `differences` table returned by
+[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md).
 
-SEC analysis works on a point-by-point basis across the chromatogram.
-Each “slice” represents one data point with its elution time and
-corresponding signal values. Use
-[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md)
-to extract this detailed data from recipes that produce `measure_list`
-columns.
+## Slice table from a chromatogram
 
-### Creating Slice Data
-
-First, let’s process actual chromatogram data to demonstrate slice
-extraction:
+Long format is convenient for plotting and interchange. This example
+converts a single synthetic PS-100K chromatogram to the measure format,
+corrects its RI baseline, and extracts slice values.
 
 ``` r
 
-# Load and process actual chromatogram data
-data(sec_triple_detect)
+data(sec_triple_detect, package = "measure.sec")
 
-# Process a single sample
 ps_sample <- sec_triple_detect |>
   filter(sample_id == "PS-100K")
 
@@ -222,23 +239,15 @@ rec <- recipe(
   ) |>
   step_sec_baseline(measures = "ri")
 
-chromatogram_data <- prep(rec) |> bake(new_data = NULL)
-```
+chromatogram_data <- prep(rec) |>
+  bake(new_data = NULL)
 
-### Long Format (Default)
-
-Long format is best for plotting with ggplot2:
-
-``` r
-
-# Extract slice data in long format
 slices_long <- measure_sec_slice_table(
   chromatogram_data,
   measures = "ri",
   sample_id = "sample_id"
 )
 
-# View structure - one row per data point
 head(slices_long, 10)
 #> # A tibble: 10 × 5
 #>    sample_id slice location measure   value
@@ -257,27 +266,31 @@ head(slices_long, 10)
 
 ``` r
 
-# Plot using the slice table
 ggplot(slices_long, aes(x = location, y = value)) +
-  geom_line(color = "#2E86AB") +
+  geom_line(colour = "#2E86AB", linewidth = 0.7) +
   labs(
-    x = "Elution Time (min)",
-    y = "RI Signal (baseline corrected)",
-    title = "Chromatogram from Slice Data"
+    x = "Elution time (min)",
+    y = "Baseline-corrected RI signal (native units)"
   ) +
-  theme_minimal()
+  theme_measure_sec()
 ```
 
-![](exporting-results_files/figure-html/plot-slices-1.png)
+![Line chart of elution time in minutes versus baseline-corrected RI
+detector response in its native units for the synthetic PS-100K trace.
+The signal forms one broad peak in the middle of the displayed elution
+range and approaches baseline on either
+side.](exporting-results_files/figure-html/slice-view-1.png)
 
-### Wide Format
+The baseline-corrected RI slice table for the synthetic PS-100K example,
+plotted against its stored elution-time locations.
 
-Wide format is better for spreadsheet export or correlating multiple
-measures:
+## Wide slice tables
+
+Wide format gives each measure its own column. It can be useful when
+exporting several aligned measures from the same baked recipe.
 
 ``` r
 
-# Wide format puts each measure in its own column
 slices_wide <- measure_sec_slice_table(
   chromatogram_data,
   measures = "ri",
@@ -297,374 +310,219 @@ head(slices_wide)
 #> 6 PS-100K       6     5.05 0.00116
 ```
 
-### Exporting Slice Data to CSV
+## Write CSV files to a temporary directory
+
+These two files are written to the current R session’s temporary
+directory. They are not saved in the package or vignette source tree.
 
 ``` r
 
-# Export for external analysis
-write.csv(slices_long, "sec_slice_data.csv", row.names = FALSE)
+export_dir <- tempdir()
+summary_csv <- file.path(export_dir, "sec_summary_table.csv")
+slices_csv <- file.path(export_dir, "sec_slice_data.csv")
 
-# Or use readr for consistent formatting
-readr::write_csv(slices_long, "sec_slice_data.csv")
-```
+utils::write.csv(as.data.frame(summary_tbl), summary_csv, row.names = FALSE)
+utils::write.csv(slices_long, slices_csv, row.names = FALSE)
 
-## Comparing Multiple Samples
-
-### Basic Comparison
-
-[`measure_sec_compare()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_compare.md)
-provides side-by-side comparison with differences from a reference:
-
-``` r
-
-# Compare the three batches we created earlier
-comparison <- measure_sec_compare(
-  batch1, batch2, batch3,
-  samples = c("Batch 001", "Batch 002", "Batch 003"),
-  metrics = "mw_averages",
-  plot = FALSE
+tibble::tibble(
+  file = basename(c(summary_csv, slices_csv)),
+  bytes = file.info(c(summary_csv, slices_csv))$size
 )
-
-print(comparison)
-#> SEC Multi-Sample Comparison
-#> ============================================================ 
-#> Samples: 3 
-#> Reference: Batch 001 
-#> 
-#> Summary:
-#> # A tibble: 3 × 5
-#>   sample    mw_mn mw_mw mw_mz mw_dispersity
-#>   <chr>     <dbl> <dbl> <dbl>         <dbl>
-#> 1 Batch 001 48200 50100 52000          1.04
-#> 2 Batch 002 49100 51200 53100          1.04
-#> 3 Batch 003 47800 49800 51900          1.04
-#> 
-#> Differences from reference:
-#> # A tibble: 3 × 9
-#>   sample    mw_mn_diff mw_mn_pct mw_mw_diff mw_mw_pct mw_mz_diff mw_mz_pct
-#>   <chr>          <dbl>     <dbl>      <dbl>     <dbl>      <dbl>     <dbl>
-#> 1 Batch 001          0       0            0       0            0       0  
-#> 2 Batch 002        900       1.9       1100       2.2       1100       2.1
-#> 3 Batch 003       -400      -0.8       -300      -0.6       -100      -0.2
-#> # ℹ 2 more variables: mw_dispersity_diff <dbl>, mw_dispersity_pct <dbl>
+#> # A tibble: 2 × 2
+#>   file                  bytes
+#>   <chr>                 <dbl>
+#> 1 sec_summary_table.csv   604
+#> 2 sec_slice_data.csv    88325
 ```
 
-### Understanding the Comparison Output
+## Other export targets
 
-The comparison object contains:
+The following chunks are not run when this vignette is rendered. They
+show optional local integrations; set paths and connection details for
+your own environment before running them.
 
-- **`$summary`**: All samples with their metrics
-- **`$differences`**: Absolute and percent differences from reference
-- **`$plot`**: MWD overlay (if requested and available)
-- **`$reference`**: Which sample is the reference
+### Excel workbook
 
 ``` r
 
-# Access individual components
-comparison$summary      # Metrics for all samples
-comparison$differences  # Differences from reference
-comparison$reference    # Reference sample name
-```
+# Requires the optional writexl package.
+excel_file <- file.path(tempdir(), "sec_results.xlsx")
 
-### Setting a Different Reference
-
-By default, the first sample is the reference. You can change this:
-
-``` r
-
-# Use PS 500K as reference
-comparison_ref <- measure_sec_compare(
-  ps100k, ps500k, pmma,
-  samples = c("PS 100K", "PS 500K", "PMMA High"),
-  reference = "PS 500K"
-)
-```
-
-### Batch-to-Batch Comparison
-
-A common use case is comparing production batches to a reference lot:
-
-``` r
-
-# Compare production batches
-batch_comparison <- measure_sec_compare(
-  reference_lot,
-  batch_001,
-  batch_002,
-  batch_003,
-  samples = c("Reference", "Batch 001", "Batch 002", "Batch 003"),
-  reference = "Reference"
-)
-
-# Check for significant deviations
-batch_comparison$differences |>
-  filter(abs(mw_mw_pct) > 5)  # Flag batches > 5% different
-```
-
-## Automated Reports
-
-### Available Templates
-
-``` r
-
-# See available report templates
-list_sec_templates()
-#> # A tibble: 3 × 3
-#>   template description                                         formats        
-#>   <chr>    <chr>                                               <chr>          
-#> 1 standard Summary table, chromatogram, and MWD plot           html, pdf, docx
-#> 2 detailed All plots, multi-detector view, optional slice data html, pdf, docx
-#> 3 qc       System suitability with pass/fail metrics           html, pdf, docx
-```
-
-### Standard Report
-
-The standard template includes: - Summary table with MW averages -
-Chromatogram overlay - Molecular weight distribution plot
-
-``` r
-
-# Generate HTML report
-measure_sec_report(
-  processed,
-  template = "standard",
-  output_format = "html",
-  title = "Polymer SEC Analysis",
-  author = "Lab Analyst"
-)
-```
-
-### Detailed Report
-
-For more comprehensive documentation:
-
-``` r
-
-measure_sec_report(
-  processed,
-  template = "detailed",
-  output_format = "pdf",
-  title = "Comprehensive SEC Report",
-  sample_id = "sample_id",
-  include_slice_table = TRUE  # Append raw data
-)
-```
-
-### QC Report
-
-For system suitability testing:
-
-``` r
-
-measure_sec_report(
-  sst_data,
-  template = "qc",
-  output_format = "html",
-  specs = list(
-    plate_count_min = 10000,
-    asymmetry_min = 0.8,
-    asymmetry_max = 1.5,
-    resolution_min = 1.5
-  )
-)
-```
-
-### Saving Reports to Specific Locations
-
-``` r
-
-# Save to a specific path
-measure_sec_report(
-  processed,
-  template = "standard",
-  output_file = "reports/polymer_analysis_2024-01-15.html",
-  open = FALSE  # Don't open automatically
-)
-```
-
-## Integration with Other Tools
-
-### Export to Excel
-
-For spreadsheet-based workflows:
-
-``` r
-
-# Requires writexl package
-library(writexl)
-
-# Create a workbook with multiple sheets
-write_xlsx(
+writexl::write_xlsx(
   list(
-    "Summary" = summary_tbl,
-    "Slice Data" = slices_long
+    Summary = as.data.frame(summary_tbl),
+    `Slice Data` = slices_long
   ),
-  "sec_results.xlsx"
+  excel_file
 )
 ```
 
-### Export to Database
-
-For LIMS integration:
+### Database
 
 ``` r
 
-# Using DBI for database connection
-library(DBI)
-
-con <- dbConnect(RSQLite::SQLite(), "lims.db")
-
-# Write summary to database
-dbWriteTable(con, "sec_results", summary_tbl, append = TRUE)
-
-dbDisconnect(con)
+# Requires DBI and RSQLite. The example database path is temporary.
+db_file <- file.path(tempdir(), "sec_results.sqlite")
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = db_file)
+DBI::dbWriteTable(con, "sec_results", as.data.frame(summary_tbl), append = TRUE)
+DBI::dbDisconnect(con)
 ```
 
-### Export for GraphPad Prism
-
-Prism prefers wide format with specific column arrangements:
+### GraphPad Prism
 
 ``` r
 
-# Create Prism-friendly format
 prism_data <- slices_long |>
   select(location, sample_id, value) |>
-  tidyr::pivot_wider(names_from = sample_id, values_from = value)
+  pivot_wider(names_from = sample_id, values_from = value)
 
-write.csv(prism_data, "sec_for_prism.csv", row.names = FALSE)
+prism_file <- file.path(tempdir(), "sec_for_prism.csv")
+utils::write.csv(prism_data, prism_file, row.names = FALSE)
 ```
 
-### Export for Python Analysis
-
-For interoperability with Python workflows:
+### Python-readable files
 
 ``` r
 
-# Save as feather for fast Python loading
-arrow::write_feather(slices_long, "sec_data.feather")
+# Requires the optional arrow package.
+feather_file <- file.path(tempdir(), "sec_data.feather")
+parquet_file <- file.path(tempdir(), "sec_data.parquet")
 
-# Or as parquet for columnar storage
-arrow::write_parquet(slices_long, "sec_data.parquet")
+arrow::write_feather(slices_long, feather_file)
+arrow::write_parquet(slices_long, parquet_file)
 ```
 
-## Best Practices
+## Reports
 
-### Traceability
-
-Always include metadata for regulatory compliance:
+Report generation can write files and may require Quarto or other local
+software. These examples remain unevaluated during rendering; each
+output path points to
+[`tempdir()`](https://rdrr.io/r/base/tempfile.html).
 
 ``` r
 
-# Add audit trail information
-summary_with_audit <- summary_tbl |>
+measure_sec_report(
+  as.data.frame(summary_tbl),
+  template = "standard",
+  output_format = "html",
+  output_file = file.path(tempdir(), "sec_standard_report.html"),
+  title = "SEC analysis summary",
+  open = FALSE
+)
+```
+
+``` r
+
+measure_sec_report(
+  as.data.frame(summary_tbl),
+  template = "detailed",
+  output_format = "pdf",
+  output_file = file.path(tempdir(), "sec_detailed_report.pdf"),
+  sample_id = "sample_id",
+  include_slice_table = TRUE
+)
+```
+
+A QC report needs peak-level input and criteria from the method. Those
+objects are not part of the standard-table example.
+
+``` r
+
+measure_sec_report(
+  integration_peak_table,
+  template = "qc",
+  output_format = "html",
+  output_file = file.path(tempdir(), "sec_qc_report.html"),
+  specs = method_criteria
+)
+```
+
+## Traceability fields
+
+Attach provenance fields from the actual run record. The placeholders
+below are intentionally empty because no analyst or instrument record is
+included with the supplied standard table.
+
+``` r
+
+summary_with_audit <- as.data.frame(summary_tbl) |>
   mutate(
-    analysis_date = Sys.Date(),
-    analyst = "JW",
-    instrument = "Agilent 1260",
-    column = "PLgel Mixed-C",
-    software_version = packageVersion("measure.sec")
+    analysis_date = as.Date(NA),
+    analyst = NA_character_,
+    instrument = NA_character_,
+    column = NA_character_,
+    measure_sec_version = as.character(packageVersion("measure.sec"))
   )
 ```
 
-### File Naming Conventions
-
-Use descriptive, consistent file names:
-
-``` r
-
-# Good: includes key information
-"sec_summary_batch123_2024-01-15.xlsx"
-"mwd_comparison_stability_t12m.pdf"
-
-# Avoid: ambiguous names
-"results.xlsx"
-"output.csv"
-```
-
-### Version Control for Reports
-
-Save report parameters for reproducibility:
+For reproducibility, store the calibration object and analysis settings
+used for the actual sample. The path below is temporary; replace the
+placeholder calibration name with the object or identifier from your
+run.
 
 ``` r
 
-# Save analysis parameters alongside results
 analysis_params <- list(
   date = Sys.time(),
-  calibration = "ps_2024-01.rds",
+  calibration = calibration_object,
   baseline_method = "linear",
-  integration_limits = c(8, 18),
   package_version = packageVersion("measure.sec")
 )
 
-saveRDS(analysis_params, "sec_analysis_params.rds")
+parameter_file <- file.path(tempdir(), "sec_analysis_parameters.rds")
+saveRDS(analysis_params, parameter_file)
 ```
 
 ## Troubleshooting
 
-### Missing Columns in Summary
+### Missing molecular-weight columns
 
-If MW columns are missing from your summary table, check that you’ve run
-the calibration and MW averaging steps:
-
-``` r
-
-# Ensure you have MW data
-names(processed)  # Should include Mn, Mw, Mz, or mw_mn, mw_mw, mw_mz
-```
-
-### Empty Slice Tables
-
-If
-[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md)
-returns no data:
+Check that the input to
+[`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md)
+contains `Mn`, `Mw`, `Mz`, or their `mw_`-prefixed names.
 
 ``` r
 
-# Check that measure columns exist
-find_measure_cols <- function(data) {
-  names(data)[vapply(data, inherits, logical(1), "measure_list")]
-}
-find_measure_cols(processed)
+names(processed_results)
 ```
 
-### Report Generation Fails
+### Empty slice table
 
-If
-[`measure_sec_report()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_report.md)
-fails:
+Confirm that the baked recipe contains measure columns before calling
+[`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md).
 
-1.  Verify Quarto is installed:
-    [`quarto::quarto_version()`](https://quarto-dev.github.io/quarto-r/reference/quarto_version.html)
-2.  For PDF output, ensure LaTeX is installed
-3.  Check data has required columns
+``` r
 
-## See Also
+measure::find_measure_cols(processed_results)
+```
+
+## See also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
-  Basic SEC workflow and concepts
+  started](https://jameshwade.github.io/measure.sec/articles/getting-started.md)
+  — basic SEC workflow
 - [Calibration
-  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
-  Save and reuse calibrations
+  management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md)
+  — save and reuse calibrations
 - [System
-  Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
-  QC metrics and column performance
-- [Comprehensive SEC
-  Analysis](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md) -
-  Complete reference with all functions
+  suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md)
+  — QC calculations and limits
+- [SEC analysis
+  reference](https://jameshwade.github.io/measure.sec/articles/sec-analysis.md)
+  — function reference
 
-## Session Info
+## Session info
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -679,8 +537,8 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
-#> [4] recipes_1.4.0          dplyr_1.2.1           
+#> [1] tidyr_1.3.2            ggplot2_4.0.4          measure.sec_0.0.0.9000
+#> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
@@ -691,20 +549,19 @@ sessionInfo()
 #> [16] lifecycle_1.0.5     compiler_4.6.2      farver_2.1.2       
 #> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
 #> [22] class_7.3-24        sass_0.4.10         yaml_2.3.12        
-#> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
-#> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-66        
-#> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
-#> [34] parallelly_1.50.0   lava_1.11           tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
-#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
-#> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          
-#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-12    
-#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
-#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
-#> [55] globals_0.20.0      otel_0.3.0          nnet_7.3-21        
-#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
-#> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
-#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
-#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
-#> [70] fs_2.1.0
+#> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
+#> [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       
+#> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.50.0  
+#> [34] lava_1.11           tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
+#> [40] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
+#> [43] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     
+#> [46] utf8_1.2.6          survival_3.8-12     future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.3.0          nnet_7.3-21         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       rlang_1.3.0         Rcpp_1.1.2         
+#> [64] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [67] R6_2.6.1            systemfonts_1.3.3   fs_2.1.0
 ```

@@ -1,15 +1,9 @@
 # Tutorial: Triple Detection from Raw Data
 
-## What You’ll Learn
-
-This tutorial walks through a **complete triple detection SEC workflow**
-from raw instrument data. By the end, you will be able to: 1.
-**Determine inter-detector delays** using a narrow standard 2. **Align
-detector signals** so peaks match across RI, UV, and MALS 3. **Calculate
-absolute molecular weight** from MALS + concentration 4. **Validate
-results** against known values
-
-**Time to complete**: ~30 minutes
+This tutorial uses the bundled raw multi-detector SEC example to find
+detector offsets, align a delay standard, and process sample signals. It
+also shows what the single-angle MALS step does and which calibration
+inputs an absolute estimate needs.
 
 ## Prerequisites
 
@@ -19,21 +13,18 @@ results** against known values
 - Familiarity with conventional SEC calibration
 - Basic understanding of light scattering (optional but helpful)
 
-## Why Triple Detection?
+## Why triple detection?
 
-**Conventional calibration** requires standards of the same polymer type
-as your sample. But what if:
-
-- You’re analyzing an unknown polymer?
-- No standards exist for your polymer type?
-- You need absolute MW, not relative to standards?
-
-**Triple detection** solves this by using light scattering (MALS) to
-measure MW directly. The “triple” refers to:
+Conventional calibration maps elution against molecular-weight
+standards. Triple detection adds scattering alongside
+concentration-related RI and UV signals. Absolute molecular-weight
+estimates require a suitable instrument calibration constant and
+concentration with declared units. The “triple” refers to:
 
 1.  **RI detector** → concentration
 2.  **UV detector** → chromophore content (optional)
-3.  **MALS detector** → absolute molecular weight
+3.  MALS, for a single-angle estimate; absolute values require
+    calibration
 
 ## Setup
 
@@ -62,11 +53,10 @@ library(tidyr)
 library(ggplot2)
 ```
 
-## The Raw Data Challenge
+## The raw data challenge
 
-When you export data from an SEC system with multiple detectors, the
-signals are **NOT aligned**. Each detector is at a different position in
-the flow path, so they see the same molecules at different times.
+The bundled raw example records detector signals at different elution
+coordinates because the detector cells are separated in the flow path.
 
 ``` r
 
@@ -86,7 +76,7 @@ sec_raw_multidetector |>
 #> 4 Sample-3    Copolymer sample                   45000 0.15
 ```
 
-Let’s visualize the delay standard to see the misalignment:
+The delay standard shows the offset between the three channels:
 
 ``` r
 
@@ -104,36 +94,62 @@ delay_plot <- delay_std |>
   select(time_min, RI = ri_norm, UV = uv_norm, MALS = mals_norm) |>
   pivot_longer(-time_min, names_to = "detector", values_to = "signal")
 
+peak_time_for_plot <- function(signal) {
+  smoothed <- stats::filter(signal, rep(1 / 5, 5), sides = 2)
+  smoothed[is.na(smoothed)] <- signal[is.na(smoothed)]
+  delay_std$time_min[which.max(smoothed)]
+}
+peak_markers <- tibble(
+  detector = c("RI", "UV", "MALS"),
+  peak_time = c(
+    peak_time_for_plot(delay_std$ri_mv),
+    peak_time_for_plot(delay_std$uv_au),
+    peak_time_for_plot(delay_std$mals_mv)
+  )
+)
+
 ggplot(delay_plot, aes(time_min, signal, color = detector)) +
   geom_line(linewidth = 0.8) +
+  geom_vline(
+    data = peak_markers,
+    aes(xintercept = peak_time, colour = detector),
+    linetype = "dashed", show.legend = FALSE
+  ) +
   scale_color_manual(values = c("RI" = "#2E86AB", "UV" = "#A23B72", "MALS" = "#F18F01")) +
   labs(
     x = "Time (min)",
-    y = "Normalized Signal",
-    title = "Raw Multi-Detector Data: Peaks Are NOT Aligned!",
-    subtitle = "UV leads RI, MALS lags RI - this must be corrected before analysis",
+    y = "Normalized signal",
     color = "Detector"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 11) +
   theme(legend.position = "bottom")
 ```
 
-![](tutorial-triple-detection_files/figure-html/plot-misaligned-1.png)
+![Line chart of independently normalized RI, UV, and MALS signals
+against time in minutes for PS-DelayStd in the synthetic
+\`sec_raw_multidetector\` dataset. Dashed vertical markers show the
+five-point-smoothed maximum of each channel; the maxima occur at
+different times and need not equal the geometric detector delays. Each
+signal is scaled to its own maximum, so response heights are not
+comparable.](tutorial-triple-detection_files/figure-html/plot-misaligned-1.png)
 
-Notice how:
+Independently normalized detector responses for PS-DelayStd in the
+synthetic `sec_raw_multidetector` dataset, before correction. Dashed
+markers show maxima from the five-point moving average used below; those
+signal maxima are not the dataset’s declared geometric delay volumes.
 
-- **UV peak** appears first (UV detector is before RI in flow path)
-- **RI peak** is in the middle (reference detector)
-- **MALS peak** appears last (MALS detector is after RI in flow path)
+The vertical markers show signal maxima, not physical detector offsets.
+`sec_raw_multidetector` stores the declared geometric offsets separately
+in `delay_uv_ml` and `delay_mals_ml`. A UV or scattering response can
+peak at a different time from RI because the channels weight composition
+and molecular weight differently.
 
-If we don’t correct this, we’ll match the wrong MW to each concentration
-point!
+## Step 1: compare peak-time offsets with declared delays
 
-## Step 1: Determine Inter-Detector Delays
-
-The delay standard (a narrow PS standard) helps us measure the time
-offset between detectors. We find the peak maximum in each detector and
-calculate the difference.
+The example smooths each signal with a five-point moving average, finds
+its maximum, then calculates target-minus-reference peak-time offsets.
+These maxima are signal-dependent and do not by themselves establish the
+geometric detector delay.
 
 ``` r
 
@@ -159,42 +175,61 @@ cat("  UV:   ", round(uv_peak, 3), "min\n")
 cat("  MALS: ", round(mals_peak, 3), "min\n")
 #>   MALS:  14.757 min
 
-# Calculate delays relative to RI (the reference)
-delay_uv <- uv_peak - ri_peak      # Negative: UV sees the sample before RI
-delay_mals <- mals_peak - ri_peak  # Positive: MALS sees the sample after RI
+# Calculate peak-time offsets relative to RI (the reference)
+peak_offset_uv_min <- uv_peak - ri_peak
+peak_offset_mals_min <- mals_peak - ri_peak
 
-cat("\nDelays relative to RI:\n")
+cat("\nPeak-time offsets relative to RI:\n")
 #> 
-#> Delays relative to RI:
-cat("  UV delay:   ", round(delay_uv, 4), "min (shift UV signal later)\n")
-#>   UV delay:    -0.42 min (shift UV signal later)
-cat("  MALS delay: ", round(delay_mals, 4), "min (shift MALS signal earlier)\n")
-#>   MALS delay:  -0.795 min (shift MALS signal earlier)
+#> Peak-time offsets relative to RI:
+cat("  UV:   ", round(peak_offset_uv_min, 4), "min\n")
+#>   UV:    -0.42 min
+cat("  MALS: ", round(peak_offset_mals_min, 4), "min\n")
+#>   MALS:  -0.795 min
 
-# Convert to volume (using flow rate of 1.0 mL/min)
+# Compare peak-time offsets with the dataset's declared geometric delays.
 flow_rate <- 1.0
-cat("\nDelay volumes:\n")
-#> 
-#> Delay volumes:
-cat("  UV:   ", round(delay_uv * flow_rate, 3), "mL\n")
-#>   UV:    -0.42 mL
-cat("  MALS: ", round(delay_mals * flow_rate, 3), "mL\n")
-#>   MALS:  -0.795 mL
+peak_offset_comparison <- tibble(
+  detector = c("UV", "MALS"),
+  peak_offset_min = c(peak_offset_uv_min, peak_offset_mals_min),
+  peak_offset_equivalent_mL = c(peak_offset_uv_min, peak_offset_mals_min) *
+    flow_rate,
+  declared_geometric_delay_mL = c(
+    unique(delay_std$delay_uv_ml),
+    unique(delay_std$delay_mals_ml)
+  )
+)
+knitr::kable(peak_offset_comparison, digits = 3)
 ```
 
-## Step 2: Apply Delay Correction
+| detector | peak_offset_min | peak_offset_equivalent_mL | declared_geometric_delay_mL |
+|:---|---:|---:|---:|
+| UV | -0.420 | -0.420 | -0.08 |
+| MALS | -0.795 | -0.795 | 0.18 |
 
-Now we align all signals to the RI reference. These stored time
-coordinates are rounded: adjacent widths range from 0.0016 to 0.0017
-minutes. Use `method = "interpolate"` for this irregular grid rather
-than an index shift. `delay_times` retains the observed
-target-minus-reference offset in minutes; a positive offset moves a late
-target signal earlier.
+The table compares peak-time offsets with the geometric offsets declared
+in the bundled dataset. They differ in this noisy example. UV and
+scattering responses can weight composition and molecular weight
+differently, so a global signal maximum is not by itself a
+geometric-delay estimate. The recipe below uses the declared
+delay-volume fields; use values established for the instrument method in
+an analysis.
+
+## Step 2: apply delay correction
+
+Now we apply the dataset’s declared geometric delay volumes to align the
+channels to the RI reference. The stored time coordinates are rounded,
+with adjacent widths from 0.0016 to 0.0017 minutes, so use
+`method = "interpolate"` for this irregular grid. A positive delay means
+a later target and correction samples at a larger target coordinate,
+shifting its corrected signal earlier on the fixed output axis. A
+negative delay samples at a smaller target coordinate and shifts the
+corrected signal later.
 
 ``` r
 
 # Process delay standard with correction
-# Declare the measured time offset and the minute coordinate axis explicitly.
+# Use the dataset's declared geometric delay volumes and minute coordinate axis.
 rec_aligned <- recipe(
   ri_mv + uv_au + mals_mv + time_min + dn_dc ~ sample_id,
   data = delay_std
@@ -211,7 +246,11 @@ rec_aligned <- recipe(
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_times = c(uv = delay_uv, mals = delay_mals),
+    delay_volumes = c(
+      uv = unique(delay_std$delay_uv_ml),
+      mals = unique(delay_std$delay_mals_ml)
+    ),
+    flow_rate = flow_rate,
     elution_units = "min",
     method = "interpolate"
   )
@@ -239,28 +278,39 @@ aligned_plot <- tibble(
 )
 
 ggplot(aligned_plot, aes(location, signal, color = detector)) +
-  geom_line(linewidth = 0.8) +
+  geom_line(linewidth = 0.8, na.rm = TRUE) +
   scale_color_manual(values = c("RI" = "#2E86AB", "UV" = "#A23B72", "MALS" = "#F18F01")) +
   labs(
     x = "Time (min)",
-    y = "Normalized Signal",
-    title = "After Delay Correction: Peaks Are Now Aligned!",
-    subtitle = "All detectors see the same molecules at the same time",
+    y = "Normalized signal",
     color = "Detector"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 11) +
   theme(legend.position = "bottom")
-#> Warning: Removed 729 rows containing missing values or values outside the scale range
-#> (`geom_line()`).
 ```
 
-![](tutorial-triple-detection_files/figure-html/plot-aligned-1.png)
+![Line chart of independently normalized RI, UV, and MALS signals
+against time in minutes for PS-DelayStd in the synthetic
+\`sec_raw_multidetector\` dataset, after interpolation using the
+declared UV and MALS delay volumes. The response maxima do not all
+coincide after correction. Missing values at unsupported edges leave
+gaps rather than extending the
+curves.](tutorial-triple-detection_files/figure-html/plot-aligned-1.png)
 
-The peaks now align across all detectors.
+Independently normalized PS-DelayStd responses after applying the
+declared geometric delay volumes from the bundled dataset. Values
+outside interpolation support remain missing; signal maxima can remain
+offset because the detector responses differ.
 
-## Step 3: Process Unknown Samples
+The recipe applies the declared path delays, so response maxima need not
+coincide. This plot shows the corrected coordinate relationship and
+missing edge support; peak alignment alone is not a validation of the
+molecular-weight calculation.
 
-Let’s analyze the unknown samples using our determined delays:
+## Step 3: process sample signals
+
+The recipe below applies the same declared geometric delay volumes to
+Sample-1, then processes its RI, UV, and MALS signals.
 
 ``` r
 
@@ -284,7 +334,11 @@ rec_triple <- recipe(
   step_sec_detector_delay(
     reference = "ri",
     targets = c("uv", "mals"),
-    delay_times = c(uv = delay_uv, mals = delay_mals),
+    delay_volumes = c(
+      uv = unique(delay_std$delay_uv_ml),
+      mals = unique(delay_std$delay_mals_ml)
+    ),
+    flow_rate = flow_rate,
     elution_units = "min",
     method = "interpolate"
   ) |>
@@ -302,12 +356,10 @@ result_sample |>
 #> 1 Sample-1  [12,001 × 2] [12,001 × 2] [12,001 × 2] 0.185
 ```
 
-## Step 4: Calculate Absolute MW from MALS
+## Step 4: interpret a MALS estimate
 
-In a full workflow, you would use
-[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-to calculate molecular weight from the light scattering signal combined
-with concentration. The basic relationship is:
+A MALS estimate combines the scattering response with concentration and
+optical inputs. The basic relationship is:
 
 ``` math
 M_w = \frac{R_\theta}{K^* \cdot c \cdot P(\theta)}
@@ -318,11 +370,20 @@ $`K^*`$ = optical constant (depends on dn/dc, wavelength) - $`c`$ =
 concentration (from RI) - $`P(\theta)`$ = form factor (angular
 dependence)
 
-![](tutorial-triple-detection_files/figure-html/mals-concept-1.png)![](tutorial-triple-detection_files/figure-html/mals-concept-2.png)
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+currently uses one angle and assumes the form factor is approximately
+one. It requires a concentration curve with a known unit and an
+instrument calibration constant for absolute estimates. Without
+calibration, the output is relative and uncalibrated; the step does not
+calculate Rg. The [MALS
+guide](https://jameshwade.github.io/measure.sec/articles/mals-detection.md)
+plots the current API output and documents these limits.
 
-## Complete Multi-Sample Analysis
+## Complete multi-sample analysis
 
-Let’s process all samples and compare results to known values:
+The code below records each sample’s RI peak position and its supplied
+molecular-weight metadata. It does not calculate or compare a
+molecular-weight estimate.
 
 ``` r
 
@@ -341,7 +402,8 @@ analyze_sample <- function(sample_data) {
     step_sec_detector_delay(
       reference = "ri",
       targets = "mals",
-      delay_times = c(mals = delay_mals),
+      delay_volumes = c(mals = unique(sample_data$delay_mals_ml)),
+      flow_rate = flow_rate,
       elution_units = "min",
       method = "interpolate"
     ) |>
@@ -379,7 +441,7 @@ print(all_results)
 #> 4 Sample-3       45000      16.0 0.15
 ```
 
-## Comparison: Overlay All Processed Chromatograms
+## Overlay processed chromatograms
 
 ``` r
 
@@ -418,30 +480,36 @@ ggplot(plot_data, aes(location, value, color = label)) +
   geom_line(linewidth = 0.8) +
   scale_color_viridis_d(option = "turbo") +
   labs(
-    x = "Elution Time (min)",
-    y = "RI Signal (baseline corrected)",
-    title = "Processed Multi-Detector Samples",
-    subtitle = "Higher MW samples elute earlier",
+    x = "Elution time (min)",
+    y = "Baseline-corrected RI signal",
     color = "Sample"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 11) +
   theme(legend.position = "right")
 ```
 
-![](tutorial-triple-detection_files/figure-html/overlay-plot-1.png)
+![Line chart of baseline-corrected RI signal versus time in minutes for
+the samples in the synthetic \`sec_raw_multidetector\` dataset. The
+legend identifies each sample and its supplied molecular-weight
+metadata. The higher-molecular-weight examples appear earlier on the
+elution axis; this plot shows RI traces, not an independent
+molecular-weight
+estimate.](tutorial-triple-detection_files/figure-html/overlay-plot-1.png)
 
-## When to Use Triple Detection vs Conventional Calibration
+Baseline-corrected RI traces from the bundled raw example samples.
+Labels report the dataset’s supplied molecular-weight metadata; the
+curves are not molecular-weight calculations.
 
-| Scenario | Recommended Method |
+## When to use triple detection
+
+| Scenario | Consider |
 |----|----|
-| Known polymer with available standards | Conventional calibration |
-| Unknown polymer type | Triple detection |
-| Need absolute MW for regulatory submission | Triple detection |
-| Branching analysis | Triple detection (with viscometer) |
-| Routine QC of known products | Conventional calibration |
-| Copolymers with variable composition | Triple detection |
+| Same polymer type as available standards | Conventional calibration |
+| A standard-relative result is insufficient | Light scattering with a validated calibration |
+| Intrinsic viscosity is needed | Add a viscometer signal and concentration calculation |
+| Detector channels are offset | Measure and correct the delays before slice-level calculations |
 
-## Troubleshooting Common Issues
+## Troubleshooting
 
 | Problem | Possible Cause | Solution |
 |----|----|----|
@@ -449,30 +517,19 @@ ggplot(plot_data, aes(location, value, color = label)) +
 | MW values too high | Aggregates or dust in sample | Filter sample, check for aggregates |
 | MW values too low | Incorrect dn/dc | Measure dn/dc or use literature value |
 | Peaks still misaligned | Wrong delay values | Re-run delay determination |
-| Negative MW at edges | Low S/N ratio | Use integration limits to exclude edges |
+| Missing estimates near peak edges | Signal below the configured threshold | Check the threshold and select integration support based on the method |
 
 ## Summary
 
-You’ve completed a triple detection workflow:
+The example applies the dataset’s declared UV and MALS delay volumes,
+converts them to time using the stated flow rate, and interpolates onto
+the fixed time axis. The response maxima are diagnostics; they do not
+estimate those path delays. Re-measure detector delays after changing
+the flow path. The sample recipe processes RI, UV, and MALS signals; an
+absolute MALS molecular-weight estimate also requires a calibrated
+scattering channel and concentration with a declared unit.
 
-1.  **Identified the delay problem** - raw detector signals are not
-    aligned
-2.  **Determined delays** using a narrow standard
-3.  **Applied corrections** with
-    [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
-4.  **Processed samples** through the complete workflow
-
-### Key Takeaways
-
-- **Always determine delays** with a narrow standard before analyzing
-  unknowns
-- **RI is typically the reference** detector (delay = 0)
-- **UV leads, MALS lags** in most instrument configurations
-- **Delay values depend on** flow rate, tubing length, and flow cell
-  volumes
-- **Re-check delays** if you change any plumbing or flow rates
-
-## Next Steps
+## Next steps
 
 | Topic | Resource |
 |----|----|
@@ -481,18 +538,18 @@ You’ve completed a triple detection workflow:
 | Adding viscometer for \[η\] | [Multi-Detector SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) |
 | Conventional calibration | [Conventional Calibration Tutorial](https://jameshwade.github.io/measure.sec/articles/tutorial-conventional-calibration.md) |
 
-## Session Info
+## Session info
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -507,7 +564,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          tidyr_1.3.2            measure.sec_0.0.0.9000
+#> [1] ggplot2_4.0.4          tidyr_1.3.2            measure.sec_0.0.0.9000
 #> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -533,6 +590,6 @@ sessionInfo()
 #> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
 #> [61] hardhat_1.4.3       viridisLite_0.4.3   rlang_1.3.0        
 #> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
-#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
 #> [70] fs_2.1.0
 ```

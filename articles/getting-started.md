@@ -1,21 +1,18 @@
 # Getting Started with measure.sec
 
-## What You’ll Learn
+## What you’ll learn
 
-By the end of this tutorial, you will be able to:
+This tutorial shows how to:
 
-1.  **Load and convert** SEC chromatogram data into the measure format
-2.  **Build a recipe** that processes your detector signals
-3.  **Apply calibration** to convert retention time to molecular weight
-4.  **Calculate MW averages** (Mn, Mw, Mz, dispersity)
-
-**Time to complete**: ~15 minutes
+1.  Convert detector data to the `measure` format
+2.  Build and apply an SEC preprocessing recipe
+3.  Add a conventional calibration from standards
+4.  Calculate molecular weight averages and dispersity
 
 ## Prerequisites
 
-Before starting, you should have: - Basic R knowledge (data frames,
-pipes, functions) - R and RStudio installed - No prior SEC/GPC knowledge
-required (we’ll cover the basics)
+You need basic familiarity with R, data frames, and pipes. The guide
+introduces the SEC terms used in its examples.
 
 ## Overview
 
@@ -27,55 +24,22 @@ analysis. It extends the
 
 ## What is SEC/GPC?
 
-**Size Exclusion Chromatography (SEC)**, also known as **Gel Permeation
-Chromatography (GPC)**, separates molecules by size. Larger molecules
-elute faster (excluded from pores), smaller molecules elute slower
-(enter pores). This lets you determine **molecular weight averages**
-(Mn, Mw, Mz) and **dispersity** (distribution breadth).
+**Size Exclusion Chromatography (SEC)**, also called **Gel Permeation
+Chromatography (GPC)**, separates molecules by hydrodynamic size. Larger
+molecules generally elute earlier than smaller molecules. A conventional
+calibration relates elution time or volume to molecular weight for the
+standards used.
 
-SEC data consists of **chromatograms** (detector response vs. elution
-time). Common detectors include **RI** (concentration), **UV**
-(chromophores), and **light scattering** (absolute MW). This package
-processes these signals to extract molecular weight information.
+SEC chromatograms record detector response over an elution coordinate.
+`measure.sec` provides recipe steps for processing RI, UV, and
+light-scattering signals. Its scattering calculation is single-angle; a
+molecular weight estimate requires suitable concentration units and a
+detector calibration constant.
 
-## Workflow Overview
+## Workflow overview
 
-The typical SEC analysis workflow follows these steps:
-
-    ┌─────────────────────────────────────────────────────────────────────────┐
-    │                        SEC Analysis Workflow                            │
-    └─────────────────────────────────────────────────────────────────────────┘
-
-      ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-      │   Raw Data   │────▶│ Preprocess   │────▶│  Calibrate   │
-      │ (CSV/Export) │     │  Signals     │     │   MW Scale   │
-      └──────────────┘     └──────────────┘     └──────────────┘
-             │                    │                    │
-             │                    │                    │
-             ▼                    ▼                    ▼
-       • Detector signals   • Baseline correct  • Apply standards
-       • Elution times      • Align detectors   • Or use MALS for
-       • Sample metadata    • Convert units       absolute MW
-                                                       │
-                                                       ▼
-                            ┌──────────────────────────────────────┐
-                            │          Calculate Results           │
-                            │  • MW averages (Mn, Mw, Mz)         │
-                            │  • Dispersity                        │
-                            │  • MW distribution                   │
-                            │  • Aggregate/fragment %              │
-                            └──────────────────────────────────────┘
-
-In measure.sec, each box becomes one or more **recipe steps**. You chain
-these steps together into a reproducible analysis pipeline.
-
-### Basic Workflow Overview
-
-A typical SEC analysis starts with raw detector signals, converts them
-to the measure format, applies baseline correction, processes detector
-signals with appropriate normalization factors, then either applies
-calibration from standards (conventional) or uses light scattering for
-absolute molecular weight (MALS).
+The diagram summarizes the conventional recipe; the separate scattering
+branch uses the calibrated single-angle inputs described above.
 
 ``` mermaid
 flowchart TD
@@ -84,7 +48,7 @@ flowchart TD
     C --> D[step_sec_ri / step_sec_uv<br>Detector processing with dn/dc or ε]
     D --> E{Calibration<br>method?}
     E -->|"Standards available<br>(same polymer type)"| F[step_sec_conventional_cal<br>Polynomial fit to standards]
-    E -->|"MALS detector<br>(absolute MW needed)"| G[step_sec_mals<br>Single-angle approximation]
+    E -->|"Calibrated scattering signal available"| G[step_sec_mals<br>Single-angle calculation]
     F --> H[step_sec_mw_averages<br>Calculate Mn, Mw, Mz]
     G --> I[Calibrated single-angle<br>MW estimate]
     H --> J[Results<br>MW averages, distributions, plots]
@@ -93,11 +57,6 @@ flowchart TD
     style A fill:#e1f5fe
     style J fill:#c8e6c9
 ```
-
-*Conventional calibration uses narrow MW standards. The current
-scattering step is a single-angle approximation; it needs a calibrated
-detector and known concentration units. Multi-angle extrapolation and Rg
-are not implemented.*
 
 ## Installation
 
@@ -135,26 +94,26 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## The Data Model
+## The data model
 
 SEC data in measure.sec uses the **measure** package’s nested tibble
 structure. Understanding this structure is key to working effectively
 with the package.
 
-### measure_tbl: A Single Chromatogram
+### `measure_tbl`: one chromatogram
 
 A **`measure_tbl`** is a tibble (data frame) representing a single
 chromatogram with two required columns:
 
 - **`location`**: The x-axis values—typically elution time (minutes) or
   elution volume (mL)
-- **`value`**: The y-axis values—detector response (mV, AU, or processed
-  units)
+- **`value`**: The detector response, in the source or processed units
+  supplied by the workflow
 
 Think of it as one line on a chromatogram plot. For example, an RI
 detector signal from one injection is stored as a `measure_tbl`.
 
-### measure_list: Multiple Chromatograms (Internal Format)
+### `measure_list`: multiple chromatograms
 
 A **`measure_list`** is a list column containing multiple `measure_tbl`
 objects. This is the **internal format** used by measure.sec recipe
@@ -162,24 +121,15 @@ steps—you typically won’t create this yourself. Instead,
 [`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
 converts your raw data into this format automatically.
 
-**After conversion**, your data will look like this:
+After conversion, each sample row contains a list-column entry with one
+`measure_tbl`. This schematic shows the structure; its placeholders are
+not example measurements:
 
-    ┌──────────────────────────────────────────────────────────────┐
-    │  sample_id   known_mw   dn_dc       ri                      │
-    ├──────────────────────────────────────────────────────────────┤
-    │  "PS-50K"    50000      0.185       <measure_list[1]>       │
-    │  "PS-100K"   100000     0.185       <measure_list[1]>       │
-    │  "PMMA-75K"  75000      0.084       <measure_list[1]>       │
-    └──────────────────────────────────────────────────────────────┘
-                                               │
-                                               ▼
-                                Each entry contains a measure_tbl:
-                                  location │ value
-                                  ─────────┼────────
-                                  5.0      │ 0.002
-                                  5.1      │ 0.015
-                                  5.2      │ 0.089
-                                  ...      │ ...
+    sample_id     dn_dc       ri
+    <sample_id>   <metadata>  <measure_list[1]>
+                                └─ location | value
+                                   <x value> | <response>
+                                   <x value> | <response>
 
 This nested structure has several advantages:
 
@@ -191,11 +141,12 @@ This nested structure has several advantages:
 4.  **Metadata preservation**: Sample properties like `dn_dc` or
     `known_mw` travel with the chromatogram
 
-## Example Dataset
+## Example dataset
 
 The package includes `sec_triple_detect`, a synthetic multi-detector SEC
-dataset in **long format** (one row per time point). This is a good
-starting point for learning the workflow before analyzing your own data.
+dataset in **long format** (one row per time point). Its `elution_time`
+field is in minutes. Use it to follow the workflow; it is not instrument
+data.
 
 ``` r
 
@@ -225,9 +176,9 @@ The dataset contains:
 - **12 polymer samples**: polystyrene (PS), PMMA, PEG, and copolymers
 - **~2,000 time points per sample**: giving 24,012 total rows
 - **Three detector signals**: RI, UV, and MALS (as numeric columns)
-- **Known molecular weights**: For validating your analysis
-- **Optical constants**: dn/dc and extinction coefficients (needed for
-  quantitative analysis)
+- **Supplied molecular weights** for these synthetic examples
+- **Example optical constants** such as dn/dc and extinction
+  coefficients; use values appropriate to your sample and method
 
 ``` r
 
@@ -253,11 +204,10 @@ sec_triple_detect |>
 #> 12 Copoly-B  sample      copolymer
 ```
 
-## Basic Workflow: RI Detector Analysis
+## Basic workflow: RI detector analysis
 
-Let’s walk through a complete analysis of a polystyrene sample using the
-RI detector. This demonstrates the core pattern you’ll use for all SEC
-analysis.
+The next example processes the synthetic `PS-50K` trace with the RI
+detector.
 
 ``` r
 
@@ -350,8 +300,8 @@ prepped <- prep(rec)
 # Bake: Apply transformations (new_data = NULL means use the training data)
 result <- bake(prepped, new_data = NULL)
 
-# View the processed data - ri now contains the baseline-corrected,
-# concentration-converted chromatogram
+# View the processed data - ri contains the baseline-corrected,
+# dn/dc-scaled RI response
 result |>
   select(sample_id, ri)
 #> # A tibble: 1 × 2
@@ -360,19 +310,52 @@ result |>
 #> 1 PS-50K    [2,001 × 2]
 ```
 
-> **Why two steps?** This design lets you prep once on training data
-> (like calibration standards), then bake on new samples without
-> re-learning parameters. It also makes your analysis reproducible.
+The source data are synthetic and do not assign units to the detector
+signal. The plot uses the same elution-time support before and after
+processing; its panels have separate vertical scales because
+[`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md)
+also scales the response by `dn_dc`.
 
-------------------------------------------------------------------------
+``` r
 
-**✓ Checkpoint**: You’ve successfully converted raw detector data into
-the measure format and applied baseline correction. Your `result` tibble
-now contains a processed `ri` column ready for calibration.
+raw_signal <- ps_sample |>
+  transmute(location = elution_time, value = ri_signal, stage = "Raw RI signal")
 
-------------------------------------------------------------------------
+processed_signal <- result$ri[[1]] |>
+  transmute(location, value, stage = "Processed RI response")
 
-## Molecular Weight Averages
+stopifnot(identical(raw_signal$location, processed_signal$location))
+
+bind_rows(raw_signal, processed_signal) |>
+  mutate(stage = factor(stage, levels = c("Raw RI signal", "Processed RI response"))) |>
+  ggplot(aes(location, value)) +
+  geom_line(color = "#2E86AB", linewidth = 0.45) +
+  facet_wrap(vars(stage), ncol = 1, scales = "free_y") +
+  labs(
+    x = "Elution time (min)",
+    y = "Signal value (dataset scale)"
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+![Two-panel faceted line chart of synthetic PS-50K RI response. Elution
+time in minutes is on the horizontal axis and signal value on the
+vertical axis. The first panel shows the input RI signal; the second
+shows the response after baseline correction and dn/dc scaling. Both
+panels use the same measured locations and separate vertical
+ranges.](getting-started_files/figure-html/signal-before-after-1.png)
+
+Synthetic PS-50K RI trace before and after baseline correction and dn/dc
+scaling. Both panels use the same measured elution-time locations; their
+vertical scales are independent, and the dataset does not specify signal
+units.
+
+> [`prep()`](https://recipes.tidymodels.org/reference/prep.html) learns
+> step parameters from its training data.
+> [`bake()`](https://recipes.tidymodels.org/reference/bake.html) applies
+> the prepared recipe to new data.
+
+## Molecular weight averages
 
 The most common outputs from SEC analysis are **molecular weight
 averages**: - **Mn (number-average)**: Emphasizes lower MW species -
@@ -389,18 +372,19 @@ locations remain elution time or volume. Alternatively, an input trace
 can already use log₁₀(MW) as its axis. See the Calibration section below
 for the complete workflow.
 
-## Calibration Curves
+## Calibration curves
 
 Most SEC analysis requires **calibration** to convert retention time to
 molecular weight. The most common approach uses **narrow
 standards**—polymers with known molecular weights and low dispersity—to
 build a calibration curve.
 
-> **Note**: A calibrated light-scattering detector can estimate
-> molecular weight without polymer standards.
-> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-> currently uses a single-angle approximation and does not calculate Rg
-> or perform angular extrapolation.
+A light-scattering workflow can estimate molecular weight without
+polymer standards when it has suitable concentration units and a
+detector calibration constant.
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+currently uses one angle; it does not calculate Rg or perform angular
+extrapolation.
 
 ``` r
 
@@ -425,28 +409,29 @@ sec_ps_standards |>
 #> 8 PS-67500        67500   4.83           15.0
 #> # ℹ 8 more rows
 
-# Visualize the calibration curve
-# The relationship between log(MW) and retention time is typically linear
-# or slightly curved, so we fit a polynomial
-ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
-  geom_point(size = 3, color = "#2E86AB") +
-  geom_smooth(
-    method = "lm",
-    formula = y ~ poly(x, 3),
-    se = TRUE,
-    color = "#A23B72",
-    fill = "#A23B72",
-    alpha = 0.2
-  ) +
+# Visualize the cubic calibration with the package plotting helper
+plot_sec_calibration(sec_ps_standards) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
-    title = "Polystyrene Calibration Curve"
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Synthetic polystyrene standards"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 11)
 ```
 
-![](getting-started_files/figure-html/calibration-1.png)
+![Calibration chart for the synthetic polystyrene standards, produced by
+\`plot_sec_calibration()\`. Retention time in minutes is on the
+horizontal axis and log10 peak molecular weight in daltons is on the
+vertical axis. Points mark the supplied standards; a fitted cubic curve
+decreases across their observed retention range, with the plotted
+R-squared annotation describing this synthetic
+fit.](getting-started_files/figure-html/calibration-1.png)
+
+Calibration plot returned by
+[`plot_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_calibration.md)
+for the supplied synthetic polystyrene standards. The cubic fit and
+R-squared annotation summarize this example standard set; retention is
+shown only across the supplied range.
 
 Apply the calibration using
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md):
@@ -497,24 +482,14 @@ result_cal |>
 #> 1 PS-50K    1816. 205442. 1236629.          113.
 ```
 
-> **Important**: The example integrates only the portion within the
-> standards’ retention range; signal outside that range is excluded, so
-> these are not necessarily whole-sample averages. Conventional
-> calibration assumes your sample has similar hydrodynamic behavior to
-> your standards. Polystyrene standards work well for other flexible
-> polymers in THF, but for proteins in aqueous SEC, use protein
-> standards or light scattering.
+> The example integrates only the portion within the standards’
+> retention range. Signal outside that range is excluded, so the results
+> may not represent whole-sample averages. Conventional calibration
+> assumes sample and standard hydrodynamic behavior are comparable;
+> choose standards or another calibration approach appropriate to the
+> sample and method.
 
-------------------------------------------------------------------------
-
-**✓ Checkpoint**: You’ve completed a full SEC analysis! Your
-`result_cal` tibble contains molecular weight averages (Mn, Mw, Mz) and
-dispersity calculated from your chromatogram using conventional
-calibration.
-
-------------------------------------------------------------------------
-
-## Available Steps
+## Available steps
 
 The package provides a comprehensive set of recipe steps. Here’s a quick
 reference organized by function:
@@ -584,7 +559,7 @@ measure::find_measure_cols(result)  # Find measure columns after bake
 result$ri[[1]] |> summary()         # Inspect chromatogram data
 ```
 
-## Next Steps
+## Next steps
 
 Now that you understand the basics, explore these vignettes for
 specialized workflows:
@@ -592,7 +567,7 @@ specialized workflows:
 | Vignette | Use when you need to… |
 |----|----|
 | [Multi-Detector SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) | Integrate multiple detectors (RI + UV + LS) |
-| [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) | Get absolute MW and radius of gyration |
+| [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) | Configure and interpret the single-angle scattering step |
 | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) | Use single-angle light scattering |
 | [Protein SEC](https://jameshwade.github.io/measure.sec/articles/protein-sec.md) | Analyze aggregates (HMWS/monomer/LMWS) |
 | [Copolymer Composition](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md) | Determine composition via UV/RI ratio |
@@ -608,18 +583,18 @@ You can also browse all available functions with:
 measure::measure_steps(techniques = "SEC/GPC")
 ```
 
-## Session Info
+## Session information
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -634,7 +609,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9003    
 #> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -649,17 +624,17 @@ sessionInfo()
 #> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
 #> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-66        
 #> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
-#> [34] nlme_3.1-171        parallelly_1.50.0   lava_1.11          
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.82.0      
-#> [40] purrr_1.2.2         listenv_1.1.0       labeling_0.4.3     
-#> [43] splines_4.6.2       fastmap_1.2.0       grid_4.6.2         
-#> [46] cli_3.6.6           magrittr_2.0.5      utf8_1.2.6         
-#> [49] survival_3.8-12     future.apply_1.21.0 withr_3.0.3        
-#> [52] scales_1.4.0        lubridate_1.9.5     timechange_0.4.0   
-#> [55] rmarkdown_2.32      globals_0.20.0      otel_0.3.0         
-#> [58] nnet_7.3-21         timeDate_4052.112   ragg_1.5.2         
-#> [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      
-#> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         
-#> [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
-#> [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
+#> [34] parallelly_1.50.0   lava_1.11           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
+#> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          
+#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-12    
+#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
+#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
+#> [55] globals_0.20.0      otel_0.3.0          nnet_7.3-21        
+#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
+#> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
+#> [70] fs_2.1.0
 ```

@@ -6,92 +6,20 @@ clipping](https://jameshwade.github.io/measure.sec/articles/detector-qualificati
 
 ## Overview
 
-> **Implementation status:**
-> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-> currently uses a single-angle approximation. Its output is relative
-> without a scattering calibration constant; multi-angle extrapolation
-> and Rg are not implemented. Validate all detector workflows against
-> instrument-specific reference data.
+Multi-detector SEC combines concentration measurements with scattering
+or viscometer signals. Detector delays and signal processing affect
+slice-level calculations, so the channels need to be aligned on a shared
+elution axis.
 
-Multi-detector SEC combines concentration detectors (RI, UV) with
-molecular weight detectors (light scattering) and/or viscometers to
-provide absolute molecular weight and structural information. This
-vignette focuses on **integrating multiple detectors** into a unified
-workflow.
+This guide shows the recipe structure and the roles of common SEC
+detectors. The current
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+step returns a single-angle estimate; absolute values require a
+calibrated detector and concentration with declared units.
 
-This vignette covers:
-
-1.  Detector types and their roles
-2.  Inter-detector delay correction (critical!)
-3.  Building multi-detector recipes
-4.  Viscometer integration and intrinsic viscosity
-5.  Universal calibration
-
-For detailed information on specific light scattering detectors, see:
-
-- [MALS
-  Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
-  scattering theory and current single-angle approximation
-- [LALS/RALS
-  Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
-  Single-angle alternatives
-
-## Why Multi-Detector SEC?
-
-### The Limitation of Conventional SEC
-
-Conventional SEC with a single concentration detector (RI or UV) relies
-on **column calibration** with narrow standards of known molecular
-weight. This approach has a fundamental limitation: it assumes your
-sample has the same relationship between hydrodynamic size and molecular
-weight as the calibration standards. For a polystyrene sample measured
-with polystyrene standards, this works well. But what about other
-polymers, proteins, or branched structures?
-
-The problem is that SEC separates by **hydrodynamic volume**—how much
-space a molecule occupies in solution—not by molecular weight directly.
-A compact, branched polymer with MW = 100,000 Da might elute at the same
-time as a linear polymer with MW = 50,000 Da simply because they occupy
-similar volumes. Conventional calibration cannot distinguish between
-them.
-
-### What Each Detector Adds
-
-Multi-detector SEC overcomes this limitation by measuring molecular
-properties directly:
-
-- **Concentration detectors (RI, UV)** tell you *how much* material is
-  present at each elution slice. RI responds to refractive index changes
-  (nearly universal), while UV detects chromophores (selective but
-  sensitive).
-
-- **Light scattering detectors (MALS, LALS, RALS)** measure molecular
-  weight *directly* from the intensity of scattered light, independent
-  of calibration standards. They also provide radius of gyration (Rg)
-  for larger molecules, revealing information about molecular shape and
-  structure.
-
-- **Viscometers** measure intrinsic viscosity \[η\], which reflects
-  molecular size and shape in solution. Combined with MW from light
-  scattering, viscometry reveals branching and conformation through the
-  Mark-Houwink relationship.
-
-### When to Use Absolute vs Relative MW
-
-**Use conventional calibration** (relative MW) when: - Your sample is
-the same polymer type as your standards (e.g., PS sample with PS
-standards) - You need fast screening and don’t require absolute values -
-Relative comparison between samples is sufficient
-
-**Use multi-detector SEC** (absolute MW) when: - Your sample differs
-structurally from available standards - You’re analyzing proteins,
-copolymers, or branched polymers - Regulatory requirements demand
-absolute MW values - You need structural information beyond molecular
-weight (Rg, branching, conformation)
-
-The additional complexity of multi-detector systems is justified when
-accurate absolute measurements matter—and for proteins and complex
-polymers, they almost always do.
+For a runnable delay correction using the package’s raw example data,
+see the [Tutorial: triple detection from raw
+data](https://jameshwade.github.io/measure.sec/articles/tutorial-triple-detection.md).
 
 ## Setup
 
@@ -119,11 +47,10 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## Multi-Detector Workflow
+## Multi-detector workflow
 
-The key to multi-detector SEC is proper orchestration of signals. Each
-detector provides different information, and they must be aligned before
-calculations.
+Align detector channels to shared elution coordinates before matching
+values at each slice.
 
 ``` mermaid
 flowchart TB
@@ -150,7 +77,7 @@ flowchart TB
     end
 
     subgraph Calculate["🔬 Calculations"]
-        D2[Absolute MW<br>from LS + concentration]
+        D2[Single-angle MW estimate<br>absolute only with calibration]
         D4[step_sec_intrinsic_visc<br>η from viscometer + concentration]
     end
 
@@ -173,9 +100,9 @@ flowchart TB
     style Results fill:#e8f5e9
 ```
 
-## Detector Types
+## Detector types
 
-### Concentration Detectors
+### Concentration detectors
 
 | Detector | Signal              | Best For                                      |
 |----------|---------------------|-----------------------------------------------|
@@ -183,22 +110,22 @@ flowchart TB
 | **UV**   | Absorbance          | Chromophore-containing samples                |
 | **DAD**  | Multi-wavelength UV | Complex samples, composition                  |
 
-### Molecular Weight Detectors
+### Molecular-weight detectors
 
 | Detector | When to Use | See Also |
 |----|----|----|
-| **MALS** | Large molecules, need Rg | [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
-| **LALS** | Medium molecules, no Rg needed | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
-| **RALS** | Small molecules, QC screening | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
+| **MALS** | One-angle estimate; current step does not calculate Rg | [MALS Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
+| **LALS** | Low-angle single-angle estimate | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
+| **RALS** | Right-angle single-angle estimate | [LALS/RALS Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) |
 
-### Hydrodynamic Detectors
+### Hydrodynamic detectors
 
 | Detector       | Signal                | Output                    |
 |----------------|-----------------------|---------------------------|
 | **Viscometer** | Differential pressure | Intrinsic viscosity \[η\] |
 | **DLS**        | Dynamic scattering    | Hydrodynamic radius Rh    |
 
-## Example Dataset
+## Example dataset
 
 ``` r
 
@@ -224,15 +151,62 @@ glimpse(samples)
 #> $ extinction_coef  <dbl> 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1…
 ```
 
-## Inter-Detector Delay Correction
+The dataset stores RI, UV, and MALS responses on separate numeric
+scales. This plot shows one synthetic sample without rescaling the
+channels; the y-axis units are not specified by the dataset.
 
-**This is the most critical step in multi-detector SEC.** When detectors
-are connected in series, each experiences a different delay. If not
-corrected, MW calculations will be wrong.
+``` r
 
-![](triple-detection_files/figure-html/detector-delay-concept-1.png)
+response_plot <- samples |>
+  filter(sample_id == "PMMA-Med") |>
+  tidyr::pivot_longer(
+    cols = c(ri_signal, uv_signal, mals_signal),
+    names_to = "detector",
+    names_pattern = "(.*)_signal",
+    values_to = "signal"
+  ) |>
+  mutate(detector = factor(detector, levels = c("ri", "uv", "mals"),
+                           labels = c("RI", "UV", "MALS")))
 
-### Correcting Delays
+ggplot(response_plot, aes(elution_time, signal, color = detector)) +
+  geom_line(linewidth = 0.6) +
+  facet_wrap(~detector, nrow = 1, scales = "free_y") +
+  scale_color_manual(values = c(RI = "#2E86AB", UV = "#A23B72",
+                                MALS = "#F18F01")) +
+  labs(
+    x = "Elution time (min)",
+    y = "Recorded signal (unit not declared)"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none")
+```
+
+![Faceted line chart of the synthetic \`sec_triple_detect\` PMMA-Med
+data with three panels in order: RI, UV, and MALS signal versus elution
+time from 5 to 25 minutes. Each panel has a separate vertical scale. The
+traces show detector-specific response profiles on a shared time axis;
+their heights are not directly
+comparable.](triple-detection_files/figure-html/detector-responses-1.png)
+
+Raw RI, UV, and MALS signals for PMMA-Med from the synthetic
+`sec_triple_detect` dataset. Each detector has its own vertical scale,
+so the panel heights do not compare response magnitude across detectors;
+the dataset does not declare response units.
+
+## Inter-detector delay correction
+
+Detectors connected in series can observe the same sample at different
+elution coordinates. Correct measured delays before matching detector
+values at each slice.
+
+The package’s [raw-data
+tutorial](https://jameshwade.github.io/measure.sec/articles/tutorial-triple-detection.md)
+plots a delay standard before and after interpolation-based alignment.
+The correction samples each target at the reference coordinate plus its
+declared target-minus-reference delay; positive and negative delays
+therefore move in opposite directions.
+
+### Correcting delays
 
 Use
 [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
@@ -258,7 +232,7 @@ rec <- recipe(
   )
 ```
 
-### Determining Delay Values
+### Determining delay values
 
 Delay volumes should be determined experimentally:
 
@@ -269,7 +243,7 @@ Delay volumes should be determined experimentally:
 
 **Tip**: Re-calibrate delays after column changes or major maintenance.
 
-## Triple Detection Workflow
+## Triple-detection workflow
 
 A complete “triple detection” recipe with RI, UV, and light scattering:
 
@@ -308,7 +282,7 @@ rec_triple <- recipe(
     sample_concentration = 2.0    # mg/mL
   ) |>
 
-  # Step 6: Process MALS (requires concentration for absolute MW)
+  # Step 6: Process MALS (absolute values also require detector calibration)
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
 #> Warning: No scattering calibration constant supplied; output is relative and
 #> uncalibrated.
@@ -334,144 +308,205 @@ result_triple |>
 #> 5 Copoly-B  [2,001 × 2]
 ```
 
-## Viscometer Integration
+## Viscometer integration
 
-The viscometer measures differential pressure across a capillary, which
-relates to solution viscosity. Combined with concentration, this gives
-**intrinsic viscosity \[η\]**—a key parameter for polymer
-characterization.
+[`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)
+converts calibrated pressure signals to specific viscosity.
+[`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md)
+combines it with concentration to estimate intrinsic viscosity \[η\].
 
-### Why Intrinsic Viscosity Matters
+### Why intrinsic viscosity matters
 
-![](triple-detection_files/figure-html/viscosity-concept-1.png)
+Intrinsic viscosity relates polymer size in solution to concentration.
+The Mark-Houwink relationship is `[η] = K × M^a`; its parameters depend
+on the polymer and solution conditions.
 
-### Viscometer Workflow
+### Viscometer workflow
 
 ``` r
 
 # Viscometer integration
-# Note: Requires viscometer data (visc_signal)
+# This external input must include RI, differential-pressure (DP), and
+# inlet-pressure (IP) curves on a shared elution axis. Supply the settings
+# below from the method, sample record, and viscometer standard calibration.
+# dp_delay_ml, ip_delay_ml, flow_rate_ml_min, injection_volume_ul,
+# sample_concentration_mg_ml, viscometer_constant, left_baseline_fraction,
+# and right_baseline_fraction are method-specific. The baseline fractions must
+# cover peak-free regions for both RI and DP.
 
-rec_visc <- recipe(
-  ri_signal + visc_signal + elution_time + dn_dc ~ sample_id,
-  data = visc_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  # Input signals
+rec_visc <- recipe(~ ., data = visc_samples) |>
+  update_role(sample_id, dn_dc, new_role = "id") |>
+  # Convert the measured pressure and RI curves to measure columns
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
-  # Delay correction (viscometer typically last in line)
+  step_measure_input_long(dp_signal, location = vars(elution_time), col_name = "dp") |>
+  step_measure_input_long(ip_signal, location = vars(elution_time), col_name = "ip") |>
+  # Baseline-correct RI and DP in their recorded peak-free regions; retain IP
+  step_sec_baseline(
+    measures = c("ri", "dp"),
+    left_frac = left_baseline_fraction,
+    right_frac = right_baseline_fraction
+  ) |>
+  # Use target-minus-reference delays measured for these channels
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(visc = 0.25)
+    targets = c("dp", "ip"),
+    delay_volumes = c(dp = dp_delay_ml, ip = ip_delay_ml),
+    flow_rate = flow_rate_ml_min,
+    elution_units = "min",
+    method = "interpolate"
   ) |>
-  # Process detectors
-  step_sec_baseline(measures = c("ri", "visc")) |>
+  # Process the baseline-corrected RI response; IP keeps its positive reference
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_viscometer(measures = "visc") |>
-  # Get concentration
+  # Use the calibrated viscometer constant and both pressure channels
+  step_sec_viscometer(
+    dp_col = "dp",
+    ip_col = "ip",
+    output_col = "specific_visc",
+    viscometer_constant = viscometer_constant
+  ) |>
+  # Concentration normalization updates the selected RI measure in place
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0
+    injection_volume = injection_volume_ul,
+    sample_concentration = sample_concentration_mg_ml,
+    flow_rate = flow_rate_ml_min,
+    concentration_units = "mg/mL",
+    elution_units = "min"
   ) |>
-  # Calculate intrinsic viscosity
+  # The concentration column is still named ri after normalization
   step_sec_intrinsic_visc(
-    visc_col = "visc",
-    conc_col = "concentration"
+    specific_visc_col = "specific_visc",
+    concentration_col = "ri",
+    concentration_unit = "mg/mL",
+    units = "dL/g"
   )
+
+# After substituting method-specific inputs and standards:
+prepped_visc <- prep(rec_visc)
+result_visc <- bake(prepped_visc, new_data = NULL)
 ```
 
-### Intrinsic Viscosity Output
+This template expects a `visc_samples` object containing measured
+`dp_signal` and `ip_signal` curves, plus RI, `elution_time`, and
+`dn_dc`. The recipe keeps signals as predictors and preserves sample
+metadata with an ID role, so an exactly constant IP channel remains a
+curve during input conversion. Select left and right baseline fractions
+from recorded peak-free regions for RI and DP, and apply them before
+delay interpolation. Do not baseline-subtract IP: the differential
+calculation uses the measured positive IP reference in `IP - 2 * DP`.
+Interpolation leaves unsupported target edges missing. The template is
+not run here because the instrument data, delays, baseline regions,
+concentration inputs, and calibration constant are not bundled.
 
-The
+### Intrinsic-viscosity output
+
+The viscometer step adds `specific_visc`. Concentration normalization
+writes the mass-concentration curve into the selected measure (`ri` in
+the template), and
 [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md)
-step calculates \[η\] at each elution slice:
+adds `[η]` at each elution slice:
 
-| Output           | Description                             |
-|------------------|-----------------------------------------|
-| `intrinsic_visc` | Intrinsic viscosity \[η\] at each slice |
+| Step | Output column | Description |
+|----|----|----|
+| [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md) | `specific_visc` | Specific viscosity from DP and IP |
+| `step_sec_concentration(measures = "ri")` | `ri` | Concentration in mg/mL; the measure is updated in place |
+| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md) | `intrinsic_visc` | Intrinsic viscosity \[η\], in dL/g by default |
 
 This can be combined with MW data for Mark-Houwink analysis or branching
 calculations.
 
-## Universal Calibration
+## Universal calibration
 
-Universal calibration uses the principle that **hydrodynamic volume**
-(not molecular weight) determines elution time. The hydrodynamic volume
-is proportional to \[η\] × M.
+Universal calibration relates elution to hydrodynamic volume, commonly
+expressed using `[η] × M`.
 
-### The Universal Calibration Principle
+### The universal-calibration principle
 
 ``` math
 \log([\eta] \times M)_{\text{sample}} = \log([\eta] \times M)_{\text{standard}}
 ```
 
-This allows you to determine MW for any polymer type using standards of
-a different polymer (typically polystyrene).
+The recipe below extends `rec_visc` from the previous section. It
+expects a calibration object built from measured standard retention and
+molecular-weight values, plus Mark-Houwink parameters for the standard
+and sample polymers in the same solvent and temperature conditions.
+Retention values must use the same elution coordinate as the sample
+measure. The current data-frame path fits a cubic curve, so provide
+enough distinct standard retention values. The template uses
+`mw_universal` as the default output column; it does not supply or imply
+a measured calibration.
 
-![](triple-detection_files/figure-html/universal-cal-concept-1.png)
-
-### Applying Universal Calibration
+### Applying universal calibration
 
 ``` r
 
-# Universal calibration with Mark-Houwink parameters
-# Convert PS calibration to another polymer type
+# `ps_calibration` must come from measured standards: a data frame with
+# `retention` and either `mw` or `log_mw` columns, or an `lm` model.
+# Define these four values from the standard/sample polymer method conditions.
+rec_universal <- rec_visc |>
+  step_sec_universal_cal(
+    measures = "intrinsic_visc",
+    calibration = ps_calibration,
+    intrinsic_visc_col = "intrinsic_visc",
+    K_sample = K_sample,
+    a_sample = a_sample,
+    K_standard = K_standard,
+    a_standard = a_standard
+  )
 
-step_sec_universal_cal(
-  visc_col = "intrinsic_visc",
-  # PS reference parameters (from calibration standards)
-  reference_k = 1.14e-4,
-  reference_a = 0.716,
-  # Sample parameters (from literature or measurement)
-  sample_k = 6.0e-5,      # e.g., PMMA in THF
-  sample_a = 0.73
-)
+prepped_universal <- prep(rec_universal)
+result_universal <- bake(prepped_universal, new_data = NULL)
+result_universal |>
+  select(sample_id, mw_universal)
 ```
 
-### Mark-Houwink Parameters
+### Mark-Houwink parameters
 
-Common Mark-Houwink parameters (\[η\] = K × M^a):
+Use Mark-Houwink parameters measured or reported for the polymer,
+solvent, and temperature in the method. Values from other conditions may
+not apply.
 
-| Polymer | Solvent | K (dL/g)    | a     |
-|---------|---------|-------------|-------|
-| PS      | THF     | 1.14 × 10⁻⁴ | 0.716 |
-| PMMA    | THF     | 6.0 × 10⁻⁵  | 0.73  |
-| PEG     | Water   | 1.25 × 10⁻⁴ | 0.78  |
-| PVP     | Water   | 2.8 × 10⁻⁵  | 0.64  |
-
-**Note**: Values are temperature and solvent dependent. Use literature
-values for your specific conditions.
-
-## Complete Quadruple Detection
+## Quadruple-detection workflow
 
 Full workflow combining RI, UV, light scattering, and viscometer:
 
 ``` r
 
 # Complete quadruple detection workflow
-rec_quad <- recipe(
-  ri_signal + uv_signal + mals_signal + visc_signal +
-    elution_time + dn_dc + extinction_coef ~ sample_id,
-  data = quad_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
+# This external dataset needs DP and IP pressure curves as separate channels.
+# Replace each delay, flow, injection, concentration, baseline, and calibration
+# symbol below with values from the method, sample record, or standards.
+rec_quad <- recipe(~ ., data = quad_samples) |>
+  update_role(sample_id, dn_dc, extinction_coef, new_role = "id") |>
   # Input all detectors
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
-  step_measure_input_long(visc_signal, location = vars(elution_time), col_name = "visc") |>
+  step_measure_input_long(dp_signal, location = vars(elution_time), col_name = "dp") |>
+  step_measure_input_long(ip_signal, location = vars(elution_time), col_name = "ip") |>
+
+  # Use peak-free regions for RI, UV, MALS, and DP; preserve the IP reference
+  step_sec_baseline(
+    measures = c("ri", "uv", "mals", "dp"),
+    left_frac = left_baseline_fraction,
+    right_frac = right_baseline_fraction
+  ) |>
 
   # Delay correction (all relative to RI)
   step_sec_detector_delay(
     reference = "ri",
-    delay_volumes = c(uv = -0.05, mals = 0.15, visc = 0.25)
+    targets = c("uv", "mals", "dp", "ip"),
+    delay_volumes = c(
+      uv = uv_delay_ml,
+      mals = mals_delay_ml,
+      dp = dp_delay_ml,
+      ip = ip_delay_ml
+    ),
+    flow_rate = flow_rate_ml_min,
+    elution_units = "min",
+    method = "interpolate"
   ) |>
-
-  # Baseline correction
-  step_sec_baseline(measures = c("ri", "uv", "mals", "visc")) |>
 
   # Process concentration detectors
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
@@ -481,25 +516,48 @@ rec_quad <- recipe(
   step_sec_concentration(
     measures = "ri",
     detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0
+    injection_volume = injection_volume_ul,
+    sample_concentration = sample_concentration_mg_ml,
+    flow_rate = flow_rate_ml_min,
+    concentration_units = "mg/mL",
+    elution_units = "min"
   ) |>
 
   # Process MW detector (choose appropriate step)
   step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc") |>
 
-  # Process viscometer
-  step_sec_viscometer(measures = "visc") |>
-  step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
+  # Process measured DP/IP and use calibrated viscometer output fields
+  step_sec_viscometer(
+    dp_col = "dp",
+    ip_col = "ip",
+    output_col = "specific_visc",
+    viscometer_constant = viscometer_constant
+  ) |>
+  step_sec_intrinsic_visc(
+    specific_visc_col = "specific_visc",
+    concentration_col = "ri",
+    concentration_unit = "mg/mL",
+    units = "dL/g"
+  )
 ```
 
-## Comparing Conventional vs Absolute MW
+This external template keeps `ip` out of baseline subtraction because
+its positive pressure reference is required in the `IP - 2 * DP`
+denominator. Choose the common baseline fractions from peak-free regions
+of RI, UV, MALS, and DP, then interpolate using method-measured delays
+and flow. Unsupported target edges remain missing; the instrument data
+and method settings are not included here.
 
-![](triple-detection_files/figure-html/comparison-1.png)
+## Comparing molecular-weight results
+
+A conventional calibration reports values on the scale of its standards.
+Light-scattering estimates use detector response and concentration;
+absolute values require a suitable instrument calibration constant.
+Compare results only when the calibration basis and units are recorded.
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 | Problem | Likely Cause | Solution |
 |----|----|----|
@@ -508,7 +566,7 @@ rec_quad <- recipe(
 | RI baseline drift | Temperature variation | Improve thermal control |
 | LS signal too weak | Low concentration | Increase injection mass |
 
-### Detector-Specific Troubleshooting
+### Detector-specific troubleshooting
 
 For light scattering issues, see: - [MALS
 Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
@@ -516,11 +574,11 @@ MALS-specific troubleshooting - [LALS/RALS
 Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
 Single-angle troubleshooting
 
-## See Also
+## See also
 
 - [MALS
   Detection](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) -
-  Multi-angle light scattering for Rg
+  Single-angle implementation and multi-angle limits
 - [LALS/RALS
   Detection](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md) -
   Single-angle alternatives
@@ -534,18 +592,18 @@ Single-angle troubleshooting
   Composition](https://jameshwade.github.io/measure.sec/articles/copolymer-analysis.md) -
   Multi-detector composition analysis
 
-## Session Info
+## Session info
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -560,7 +618,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9003    
 #> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -586,6 +644,6 @@ sessionInfo()
 #> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
 #> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
 #> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
-#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
 #> [70] fs_2.1.0
 ```

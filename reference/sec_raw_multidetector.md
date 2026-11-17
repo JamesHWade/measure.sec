@@ -1,8 +1,7 @@
 # Raw Multi-Detector SEC Data
 
-A dataset containing raw SEC chromatograms with RI, UV, and MALS
-detector signals that have NOT been corrected for inter-detector delay.
-Designed for teaching triple detection workflows from raw data.
+Synthetic RI, UV and scattering signals before detector-delay
+correction, for teaching multi-detector processing.
 
 ## Usage
 
@@ -70,13 +69,15 @@ Synthetic data generated for package tutorials.
 
 This dataset simulates raw multi-detector SEC data before inter-detector
 delay correction. The detectors are physically separated in the flow
-path, so peaks appear at different times in each detector.
+path, so the simulated profiles are shifted. Detector-specific noise and
+drift mean the observed peak maxima need not recover the declared
+delays.
 
 **Detector Configuration:**
 
-- UV detector is 0.08 mL BEFORE RI (peaks appear earlier)
+- Declared UV delay: -0.08 mL relative to RI
 
-- MALS detector is 0.18 mL AFTER RI (peaks appear later)
+- Declared MALS delay: +0.18 mL relative to RI
 
 - RI is the reference detector (delay = 0)
 
@@ -94,15 +95,15 @@ path, so peaks appear at different times in each detector.
 
 1.  Load raw multi-detector data
 
-2.  Use delay standard to determine inter-detector offsets
+2.  Compare response diagnostics with the declared detector offsets
 
 3.  Apply
     [`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
     to align signals
 
-4.  Process with
+4.  Supply response calibration and concentration for the single-angle
+    approximation in
     [`step_sec_mals`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-    for absolute MW
 
 ## See also
 
@@ -111,7 +112,7 @@ for delay correction
 [`step_sec_mals`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
 for MALS processing
 [`sec_triple_detect`](https://jameshwade.github.io/measure.sec/reference/sec_triple_detect.md)
-for pre-processed multi-detector data
+for another synthetic detector dataset
 
 Other sec-data:
 [`sec_branched`](https://jameshwade.github.io/measure.sec/reference/sec_branched.md),
@@ -167,7 +168,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
       x = "Time (min)",
       y = "Normalized Signal",
       title = "Raw Multi-Detector Data (Before Delay Correction)",
-      subtitle = "Note: Peaks are NOT aligned - UV leads, MALS lags"
+      subtitle = "Noise and drift affect the observed peak maxima"
     ) +
     theme_minimal()
 }

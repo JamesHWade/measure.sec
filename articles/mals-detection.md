@@ -2,29 +2,18 @@
 
 ## Overview
 
-> **Implementation status:** The theory below describes multi-angle
-> light scattering.
-> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-> currently implements only a single-angle approximation, does not fit
-> Zimm/Debye/Berry angular models, and does not calculate Rg. Its output
-> is uncalibrated unless an instrument calibration constant is supplied.
+Light scattering combined with concentration can estimate molecular
+weight without polymer calibration standards. Absolute values still
+require an instrument calibration constant and appropriate optical
+inputs.
 
-Multi-Angle Light Scattering (MALS) is a powerful technique that
-provides **absolute molecular weight** without calibration standards.
-Unlike conventional calibration (which gives MW relative to polymer
-standards), MALS measures the actual molecular weight of your sample
-based on fundamental light scattering physics. This vignette covers:
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+currently uses one scattering angle and assumes the particle form factor
+is approximately one. It does not fit a multi-angle model or calculate
+Rg. Without a scattering calibration constant, its output is relative
+and uncalibrated.
 
-1.  How MALS measures absolute molecular weight
-
-2.  Key parameters: dn/dc, wavelength, angles
-
-3.  Zimm, Debye, and Berry formalisms
-
-4.  Radius of gyration (Rg) from angular dependence
-
-5.  Practical workflows with
-    [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+This guide describes the inputs and limits of the current step.
 
 ## Setup
 
@@ -52,12 +41,12 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## How MALS Works
+## How MALS works
 
-### The Light Scattering Principle
+### Light-scattering principle
 
-When light passes through a polymer solution, molecules scatter light in
-all directions. The intensity of scattered light depends on:
+Molecules in solution scatter incident light. The measured response
+depends on:
 
 - **Molecular weight**: Larger molecules scatter more light
 - **Concentration**: More molecules = more scattering
@@ -80,7 +69,7 @@ Where:
 | P(θ)   | Particle scattering function (angular dependence)        |
 | A₂     | Second virial coefficient                                |
 
-### The Optical Constant K
+### Optical constant K
 
 The optical constant depends on your experimental setup:
 
@@ -95,74 +84,45 @@ Where:
 - **λ**: Laser wavelength
 - **Nₐ**: Avogadro’s number
 
-![](mals-detection_files/figure-html/optical-constant-concept-1.png)
+![Line chart of calculated optical constant K, scaled in units of 10 to
+the minus 7 mol cm squared per gram squared, versus dn/dc from 0.05 to
+0.25 mL/g. With wavelength and solvent refractive index held fixed, K
+rises quadratically as dn/dc increases. Vertical markers indicate 0.084
+and 0.185
+mL/g.](mals-detection_files/figure-html/optical-constant-concept-1.png)
 
-**Key insight**: Accurate dn/dc is critical. A 10% error in dn/dc causes
-a ~20% error in MW.
+Optical constant K calculated from the displayed equation at a fixed
+wavelength of 658 nm and solvent refractive index of 1.333, across the
+shown dn/dc values. This is a calculation, not an instrument
+measurement.
 
-## Why Use MALS?
+With wavelength and solvent refractive index fixed, the equation makes K
+proportional to the square of `dn_dc`.
 
-### Conventional Calibration Limitations
+## Light scattering and calibration
 
-Conventional (relative) calibration has significant limitations:
+Conventional SEC calibration maps elution to the molecular-weight scale
+of its standards. Light scattering instead combines detector response
+with concentration and optical constants. Absolute estimates require a
+detector calibration constant as well as the concentration and optical
+inputs.
 
-![](mals-detection_files/figure-html/calibration-comparison-1.png)
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+implements a single-angle approximation. It does not provide a
+multi-angle fit or an Rg estimate. For the current workflow, use the
+result as relative and uncalibrated unless an appropriate detector
+calibration constant is supplied.
 
-| Polymer Type        | Conventional Cal | MALS     |
-|---------------------|------------------|----------|
-| Same as standards   | Accurate         | Accurate |
-| Different chemistry | **Biased**       | Accurate |
-| Branched            | **Biased**       | Accurate |
-| Copolymers          | **Biased**       | Accurate |
+## Multi-angle analysis and Rg
 
-**MALS is essential when**: - Analyzing polymers different from your
-calibration standards - Studying branched or star polymers -
-Characterizing copolymers - Absolute MW is required for regulatory
-submissions
+Multi-angle methods use the change in scattering across angles to
+estimate molecular size. The current
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+step accepts one angle and does not calculate Rg. Its `formalism`
+argument is reserved for future angular fitting; only the default value
+is currently accepted.
 
-## Angular Dependence and Rg
-
-### Why Multiple Angles?
-
-Large molecules (Rg \> λ/20) scatter light differently at different
-angles. This angular dependence reveals the **radius of gyration
-(Rg)** - a measure of molecular size.
-
-![](mals-detection_files/figure-html/angular-dependence-1.png)
-
-### Calculating Rg
-
-From the Zimm equation, the slope of Kc/R(θ) vs sin²(θ/2) gives Rg:
-
-``` math
-\frac{Kc}{R(\theta)} = \frac{1}{M_w}\left(1 + \frac{16\pi^2 n_0^2}{3\lambda^2}R_g^2 \sin^2(\theta/2)\right)
-```
-
-The y-intercept gives 1/Mw, and the slope gives Rg².
-
-## Formalisms for Angular Extrapolation
-
-### Zimm, Debye, and Berry
-
-Three common approaches for angular extrapolation:
-
-| Formalism | Plot                 | Best For                         |
-|-----------|----------------------|----------------------------------|
-| **Zimm**  | Kc/R vs sin²(θ/2)    | Random coils, most polymers      |
-| **Debye** | Kc/R vs sin²(θ/2)    | Similar to Zimm                  |
-| **Berry** | √(Kc/R) vs sin²(θ/2) | Very large particles, aggregates |
-
-    #> `geom_smooth()` using formula = 'y ~ x'
-
-![](mals-detection_files/figure-html/formalisms-concept-1.png)
-
-**Choosing a formalism:**
-
-- **Start with Zimm** - works for most polymers
-- **Use Berry** if Zimm plot shows significant curvature
-- **Berry is essential** for Rg \> 50 nm or aggregates
-
-## Example Dataset
+## Example dataset
 
 ``` r
 
@@ -188,9 +148,9 @@ glimpse(mals_samples)
 #> $ extinction_coef  <dbl> 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1…
 ```
 
-## MALS Workflow with measure.sec
+## MALS workflow with measure.sec
 
-### Basic MALS Analysis
+### Basic MALS analysis
 
 ``` r
 
@@ -244,139 +204,115 @@ result_mals |>
 #> 3 PMMA-High [2,001 × 2] [2,001 × 2] [2,001 × 2]
 ```
 
-### Key Parameters
-
-| Parameter | Description | Typical Values |
-|----|----|----|
-| `dn_dc` | Refractive index increment | 0.185 (PS/THF), 0.084 (PMMA/THF) |
-| `wavelength` | Laser wavelength (nm) | 658, 690, 785 |
-| `solvent_ri` | Solvent refractive index | 1.333 (water), 1.407 (THF) |
-| `angles` | One detection angle | 90 (single) |
-| `formalism` | Reserved for future angular fits | Default only; no angular fit is performed |
-
-## The Critical Role of dn/dc
-
-### What is dn/dc?
-
-The refractive index increment (dn/dc) is the change in solution
-refractive index per unit concentration:
-
-``` math
-\frac{dn}{dc} = \frac{n_{solution} - n_{solvent}}{c}
-```
-
-### Typical dn/dc Values
-
-| Polymer     | Solvent        | dn/dc (mL/g) |
-|-------------|----------------|--------------|
-| Polystyrene | THF            | 0.185        |
-| PMMA        | THF            | 0.084        |
-| PEG/PEO     | Water          | 0.135        |
-| Proteins    | Aqueous buffer | ~0.185       |
-| DNA         | Aqueous        | ~0.170       |
-
-### Measuring dn/dc
-
-For accurate MALS, measure dn/dc using:
-
-1.  **Differential refractometer** with known concentrations
-2.  **Batch-mode measurement** (most accurate)
-3.  **Online measurement** during SEC (convenient but less accurate)
-
-**Warning**: Using literature dn/dc values can introduce 5-20% error in
-MW.
-
-## Multi-Angle Detection
-
-### Setting Up Multi-Angle Analysis
-
-Multi-angle fitting and Rg determination are not yet implemented. The
-following illustrates a future API and currently returns an error:
+The example dataset is synthetic. The recipe omits a scattering
+calibration constant, so `mw_mals` is relative and uncalibrated.
 
 ``` r
 
-# Multi-angle MALS for MW and Rg
+mals_index <- match("PMMA-Med", result_mals$sample_id)
+mals_curve <- result_mals$mw_mals[[mals_index]]
+mals_plot <- tibble(
+  elution_time = mals_curve$location,
+  estimate = mals_curve$value
+)
+
+ggplot(mals_plot, aes(elution_time, estimate)) +
+  geom_line(linewidth = 0.7, colour = "#4A90A4", na.rm = TRUE) +
+  scale_y_log10() +
+  labs(
+    x = "Elution time (min)",
+    y = "Single-angle estimate (uncalibrated; no MW unit)"
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+![Line chart of the relative, uncalibrated single-angle estimate from
+\`mw_mals\` against elution time in minutes for PMMA-Med in the
+synthetic \`sec_triple_detect\` dataset. The logarithmic y-axis has no
+molecular-weight unit. The estimate is much noisier near the
+chromatogram edges than through the middle; gaps mark missing output
+points, which the line does not
+bridge.](mals-detection_files/figure-html/mals-output-1.png)
+
+Relative, uncalibrated
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+output for PMMA-Med from the synthetic `sec_triple_detect` example data.
+The output has no molecular-weight unit; gaps are missing estimates and
+remain unconnected.
+
+### Key parameters
+
+| Parameter | Description | Value |
+|----|----|----|
+| `dn_dc` | Refractive index increment for the sample and solvent | Set from the validated method |
+| `wavelength` | Laser wavelength in nm | Set from the instrument |
+| `solvent_ri` | Solvent refractive index | Set for the solvent and measurement conditions |
+| `angles` | One detection angle in degrees | Supply the angle used by the detector |
+| `formalism` | Reserved for future angular fits | Default only; no angular fit is performed |
+
+## Refractive index increment
+
+The refractive index increment (`dn_dc`) is the change in refractive
+index per unit concentration. Because the optical constant depends on
+its square, use a value established for the sample, solvent,
+temperature, and wavelength.
+
+## Multi-angle detection
+
+Multi-angle fitting and Rg calculation are not implemented. The
+following example is not executable with the current step because it
+supplies several angles:
+
+``` r
+
 step_sec_mals(
   mals_col = "mals",
   dn_dc = 0.185,
   wavelength = 658,
   solvent_ri = 1.407,
-  angles = c(35, 50, 75, 90, 105, 120, 145),  # Typical MALS detector angles
-  formalism = "zimm"                           # Try "berry" for large particles
+  angles = c(35, 50, 75, 90, 105, 120, 145),
+  formalism = "zimm"
 )
 ```
 
-### Interpreting Rg Results
+## Conformation analysis
 
-| Rg Range  | Interpretation                        |
-|-----------|---------------------------------------|
-| \< 10 nm  | Small molecules, Rg may be unreliable |
-| 10-50 nm  | Typical random coil polymers          |
-| 50-100 nm | Large polymers, branched structures   |
-| \> 100 nm | Very large or aggregated species      |
-
-## Conformation Analysis
-
-### Rg vs MW Relationship
-
-The relationship between Rg and MW reveals polymer conformation:
-
-``` math
-R_g = K \cdot M_w^\nu
-```
-
-Where ν (the scaling exponent) indicates conformation:
-
-| ν Value | Conformation                   |
-|---------|--------------------------------|
-| 0.33    | Hard sphere                    |
-| 0.5-0.6 | Random coil (theta conditions) |
-| 0.6-0.7 | Random coil (good solvent)     |
-| 1.0     | Rigid rod                      |
-
-![](mals-detection_files/figure-html/conformation-concept-1.png)
+Relating Rg to molecular weight can help characterize polymer
+conformation, but the current step does not calculate Rg. Use another
+validated source for that measurement.
 
 ## Troubleshooting
 
-### Common MALS Issues
+### Common MALS issues
 
 | Problem | Possible Causes | Solutions |
 |----|----|----|
-| Noisy MW data | Low concentration, dust | Increase conc, filter samples |
-| Negative MW | Baseline issues | Improve baseline, check alignment |
-| MW too high | Aggregates, dust | Filter samples, check for aggregation |
-| MW too low | Wrong dn/dc | Measure dn/dc accurately |
-| Inconsistent Rg | Poor signal, few angles | Use more angles, increase concentration |
+| Noisy or missing estimates | Low signal or concentration | Check response, baseline, and alignment |
+| Unstable estimates | Aggregates or dust | Inspect sample preparation and detector response |
+| Unexpected scale | dn/dc or instrument calibration mismatch | Verify inputs against the measurement method |
 
-### Signal-to-Noise Requirements
+### Signal-to-noise requirements
 
-MALS requires good signal-to-noise for accurate results:
+Check the detector response and concentration over the full integration
+support. Values below the configured signal threshold produce missing MW
+estimates; the step does not interpolate across them.
 
-- **Minimum concentration**: 0.5-1 mg/mL for most polymers
-- **Higher for low MW**: Small molecules scatter less
-- **Lower for very high MW**: Large molecules scatter strongly
+### Detector alignment
 
-### Detector Alignment
+Correct measured RI-to-scattering delay before matching values at each
+elution slice. Use instrument-specific procedures for detector
+normalization and angle checks.
 
-Ensure proper detector alignment:
+## When to use MALS
 
-1.  **Inter-detector delay** - Correct for time offset between RI and
-    MALS
-2.  **Normalization** - Calibrate MALS using toluene or known standard
-3.  **Angle calibration** - Verify detector angles are accurate
+Light scattering can help when the sample differs from available polymer
+standards or when a standard-relative result is not sufficient. The
+current
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+output is absolute only when the concentration units and instrument
+calibration constant are appropriate for the detector.
 
-## When to Use MALS vs Conventional Calibration
-
-| Scenario | Recommendation |
-|----|----|
-| Routine QC of known polymer | Conventional cal is faster and sufficient |
-| Different polymer from standards | **Use MALS** |
-| Branched or complex architecture | **Use MALS** |
-| Absolute MW required | **Use MALS** |
-| Characterizing new materials | **Use MALS** |
-| Regulatory submissions | **Use MALS** for accuracy |
-
-## See Also
+## See also
 
 - [Getting
   Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
@@ -391,18 +327,18 @@ Ensure proper detector alignment:
   Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
   QC metrics for MALS
 
-## Session Info
+## Session info
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -417,7 +353,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9003    
 #> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -432,17 +368,17 @@ sessionInfo()
 #> [25] prodlim_2026.03.11  tidyr_1.3.2         pillar_1.11.1      
 #> [28] pkgdown_2.2.1       jquerylib_0.1.4     MASS_7.3-66        
 #> [31] cachem_1.1.0        gower_1.0.2         rpart_4.1.27       
-#> [34] nlme_3.1-171        parallelly_1.50.0   lava_1.11          
-#> [37] tidyselect_1.2.1    digest_0.6.39       future_1.82.0      
-#> [40] purrr_1.2.2         listenv_1.1.0       labeling_0.4.3     
-#> [43] splines_4.6.2       fastmap_1.2.0       grid_4.6.2         
-#> [46] cli_3.6.6           magrittr_2.0.5      utf8_1.2.6         
-#> [49] survival_3.8-12     future.apply_1.21.0 withr_3.0.3        
-#> [52] scales_1.4.0        lubridate_1.9.5     timechange_0.4.0   
-#> [55] rmarkdown_2.32      globals_0.20.0      otel_0.3.0         
-#> [58] nnet_7.3-21         timeDate_4052.112   ragg_1.5.2         
-#> [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      
-#> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         
-#> [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
-#> [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
+#> [34] parallelly_1.50.0   lava_1.11           tidyselect_1.2.1   
+#> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
+#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
+#> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          
+#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-12    
+#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
+#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
+#> [55] globals_0.20.0      otel_0.3.0          nnet_7.3-21        
+#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
+#> [61] knitr_1.52          hardhat_1.4.3       rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
+#> [70] fs_2.1.0
 ```

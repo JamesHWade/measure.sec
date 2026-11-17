@@ -1,41 +1,82 @@
 # SEC Concepts: A Practical Guide
 
-## About This Guide
+## About this guide
 
-This guide explains SEC concepts from a practical perspective—what you
-need to know to use `measure.sec` effectively. It’s not a textbook;
-every concept ties back to package functionality with guidance on *when*
-and *why* to use different approaches.
+This guide connects SEC concepts to the recipe steps and calibration
+options in `measure.sec`. It assumes basic chemistry or chromatography
+knowledge; each section can be read on its own.
 
-**Who this is for**: Users with a chemistry background who are new to
-SEC or want to understand when to use which package features.
+## How SEC data flows through measure.sec
 
-**How to use it**: Read straight through for a conceptual foundation, or
-jump to specific sections when you need decision guidance.
+### Reading detector traces
 
-## How SEC Data Flows Through measure.sec
+The package examples convert detector signals to a common format,
+preprocess them, apply calibration where needed, and calculate results.
+The traces below come from the synthetic `sec_triple_detect` dataset;
+their signal units are not specified by the dataset.
 
-### The Processing Pipeline
+``` r
 
-SEC data processing follows a consistent pattern: raw detector signals
-are converted to a common format, processed to remove artifacts,
-calibrated to molecular weight, and then used to calculate results.
-Understanding this flow helps you build recipes that make sense.
+library(ggplot2)
+library(dplyr)
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
+library(tidyr)
 
-    #> Warning in geom_segment(aes(x = 1.15, xend = 4.85, y = 1, yend = 1), arrow = arrow(length = unit(0.3, : All aesthetics have length 1, but the data has 5 rows.
-    #> ℹ Please consider using `annotate()` or provide this layer with data containing
-    #>   a single row.
+data(sec_triple_detect, package = "measure.sec")
 
-![](sec-concepts_files/figure-html/pipeline-diagram-1.png)
+signal_data <- sec_triple_detect |>
+  filter(sample_id == "PS-50K") |>
+  arrange(elution_time) |>
+  select(elution_time, ri_signal, uv_signal, mals_signal) |>
+  pivot_longer(
+    cols = c(ri_signal, uv_signal, mals_signal),
+    names_to = "detector",
+    values_to = "signal"
+  ) |>
+  mutate(
+    detector = recode(
+      detector,
+      ri_signal = "RI",
+      uv_signal = "UV",
+      mals_signal = "MALS"
+    ),
+    detector = factor(detector, levels = c("RI", "UV", "MALS"))
+  )
+
+ggplot(signal_data, aes(elution_time, signal)) +
+  geom_line(color = "#2E86AB", linewidth = 0.4) +
+  facet_wrap(vars(detector), ncol = 1, scales = "free_y") +
+  labs(
+    x = "Elution time (min)",
+    y = "Signal value (dataset units not specified)"
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+![Three-panel faceted line chart of the synthetic PS-50K detector
+signals. Elution time in minutes is on the horizontal axis and signal
+value, in unspecified dataset units, is on the vertical axis. The panels
+show RI, UV, and MALS traces on separate vertical scales; the figure
+describes the example data and does not assess an
+instrument.](sec-concepts_files/figure-html/detector-traces-1.png)
+
+Raw synthetic RI, UV, and MALS response columns for sample PS-50K from
+`sec_triple_detect`. Each detector is shown in its own panel and on its
+own vertical scale; the traces have not been preprocessed.
 
 ### Stage 1: Input Signals
 
-Every recipe starts by converting raw detector signals into `measure`
-format using
+The examples convert raw detector columns to `measure` format with
 [`step_measure_input_long()`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html).
-This standardizes different detectors into a common structure where each
-measurement has a location (elution time or volume) and a value (signal
-intensity).
+Each measure stores a location (elution time or volume) and a response
+value.
 
 ``` r
 
@@ -48,17 +89,18 @@ recipe(...) |>
 
 Before calibration, signals need cleaning:
 
-| Step | What It Does | When to Use |
+| Step | What it does | Consider it when |
 |----|----|----|
-| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | Aligns multi-detector signals | Always with multiple detectors |
-| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | Removes baseline drift | Almost always |
-| [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md) / [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md) | Normalizes by response factor | Before concentration calculation |
-| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | Converts to mass concentration | Before light scattering or viscometry |
-| [`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md) | Corrects peak spreading | High-resolution MW distributions |
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | Aligns detector locations | Combining signals from detectors with different path delays |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | Corrects baseline shape | The trace has baseline offset or drift that the method addresses |
+| [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md) / [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md) | Applies detector response factors | The required sample-specific response factor is available |
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | Calculates concentration from detector response | Downstream calculations require concentration in defined units |
+| [`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md) | Applies a peak-spreading correction | The broadening model and parameters are supported by the method |
 
-**Order matters**: Detector delay correction must come first. Baseline
-correction should precede normalization. Concentration is needed before
-MALS calculations.
+For multi-detector calculations, align detector locations before
+comparing responses. Baseline correction usually precedes response
+scaling. A scattering calculation also needs a concentration column with
+known units.
 
 ### Stage 3: Calibration
 
@@ -87,141 +129,143 @@ With calibration complete, calculate molecular weight results:
 Extract results for reporting:
 
 - [`measure_sec_summary_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_summary_table.md):
-  Publication-ready summary statistics
+  Summary statistics
 - [`measure_sec_slice_table()`](https://jameshwade.github.io/measure.sec/reference/measure_sec_slice_table.md):
   Point-by-point data for custom analysis
 - `plot_sec_*()` family: Chromatograms, MWDs, calibration curves
 
-## Choosing Your Calibration Approach
+## Choose a calibration approach
 
-Calibration is where most users face their first major decision. This
-section helps you choose the right approach.
+Choose a calibration based on detector capability, available standards,
+and sample type. The tree is a starting point; the method still needs
+appropriate range and fit checks.
 
-### Decision Tree
+### Decision guide
 
-![](sec-concepts_files/figure-html/decision-tree-1.png)
+![Decision tree. If a calibrated scattering signal and concentration
+data are available, consider a calibrated single-angle scattering
+estimate. Otherwise, if narrow standards are available, use conventional
+calibration when they match the sample polymer; use universal
+calibration only when suitable Mark-Houwink parameters are available. If
+narrow standards are unavailable, a characterized broad standard can
+support broad-standard calibration. Each path still requires
+method-specific
+review.](sec-concepts_files/figure-html/decision-tree-1.png)
 
-### Conventional Calibration
+A starting-point guide based on detector calibration and the standards
+or reference data available. The scattering path describes the package’s
+calibrated single-angle calculation; conventional and universal paths
+require standards and method-specific support.
 
-**When to use**: You have narrow MW standards (low dispersity) of the
-*same polymer type* as your samples.
+### Conventional calibration
 
-**How it works**: Fit a polynomial relationship between log(MW) and
-elution time using standards. Apply this curve to unknown samples.
+Use narrow molecular-weight standards that match the sample polymer
+type. The step fits a polynomial relationship between log molecular
+weight and retention from a standards data frame with `retention` and
+`log_mw` columns.
 
 ``` r
 
 step_sec_conventional_cal(
-  standards_data = standards,
-  degree = 3              # Polynomial order (usually 3)
+  measures = "ri",
+  standards = standards,
+  fit_type = "cubic",
+  extrapolation = "none"
 )
 ```
 
-**Advantages**: Simple, well-understood, widely used. Calibration curve
-provides diagnostics (R², residuals).
+Inspect residuals and the standards’ range before applying the fit. A
+difference in hydrodynamic behavior between sample and standard can bias
+the reported molecular weight; branching is one possible cause.
 
-**Limitations**: Assumes your sample behaves like the standards. A
-branched polymer will report incorrect MW because it elutes later than a
-linear polymer of the same MW.
+### Broad-standard calibration
 
-**Best practices**:
+**Use when**: You have a broad reference standard with known number- and
+weight-average molecular weights.
 
-- Use 5+ standards spanning your MW range of interest
-- Check residuals—systematic patterns indicate poor fit
-- Don’t extrapolate far beyond your calibration range
-
-### Broad Standard Calibration
-
-**When to use**: You have one well-characterized broad-distribution
-reference material instead of multiple narrow standards.
-
-**How it works**: Uses the known MWD of the reference to establish the
-MW-elution relationship in a single injection.
+The Hamielec method fits from the broad-standard chromatogram and its
+supplied averages. The integral method also needs a reference cumulative
+molecular-weight distribution.
 
 ``` r
 
 step_sec_broad_standard(
-  reference_mwd = known_distribution,
-  reference_mn = 50000,
-  reference_mw = 150000
+  measures = "ri",
+  broad_standard = reference_trace,
+  known_mn = reference_mn_da,
+  known_mw = reference_mw_da,
+  method = "hamielec",
+  fit_type = "linear",
+  extrapolation = "none"
 )
 ```
 
-**Advantages**: Single injection, good for routine QC. Convenient when
-narrow standards aren’t available.
+The result depends on the quality of the reference standard’s supplied
+averages or cumulative distribution. Check that the standard and sample
+are suitable for this calibration method.
 
-**Limitations**: Accuracy depends entirely on how well you know the
-reference material’s MWD. Any error in the reference propagates to all
-samples.
+### Universal calibration
 
-### Universal Calibration
-
-**When to use**: Your samples are a *different polymer type* than your
-available standards.
-
-**How it works**: Calibrates on hydrodynamic volume (\[η\] × M) rather
-than molecular weight directly. Uses Mark-Houwink parameters to convert
-between polymer types.
+**Use when**: You have a calibration for one polymer type and reliable
+Mark-Houwink parameters for both the standard and sample polymers.
+Universal calibration relates retention to hydrodynamic volume,
+`[η] × M`.
 
 ``` r
 
 step_sec_universal_cal(
-  # Calibration standards (e.g., polystyrene)
-  reference_k = 1.14e-4,
-  reference_a = 0.716,
-  # Your sample (e.g., PMMA)
-  sample_k = 6.0e-5,
-  sample_a = 0.73
+  measures = "ri",
+  calibration = standard_calibration,
+  K_sample = sample_k,
+  a_sample = sample_a,
+  K_standard = standard_k,
+  a_standard = standard_a
 )
 ```
 
-**Requires**: Intrinsic viscosity data (from viscometer) AND
-Mark-Houwink parameters for both polymer types.
+Use parameters measured or sourced for the solvent and temperature of
+the method.
 
-**Advantages**: Accurate MW for different polymer types using common
-standards.
+The current step uses Mark-Houwink parameters for both polymer types.
+Their solvent, temperature, and molecular-weight range must match the
+method; parameter applicability should be reviewed for the sample.
 
-**Limitations**: You need reliable K and a values for your sample, which
-may require literature search or independent measurement. Doesn’t work
-well for highly branched polymers where Mark-Houwink parameters aren’t
-constant.
+### Light-scattering calibration
 
-### Absolute MW (Light Scattering)
-
-**When to use**: You need true molecular weight independent of polymer
-structure, or have no appropriate standards.
-
-**How it works**: Under the single-angle approximation, scattering
-intensity depends on molecular weight and concentration. A calibrated
-detector and known concentration units are still required.
+The current
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+calculates a calibrated single-angle molecular-weight estimate. It needs
+a concentration column with known units, a suitable dn/dc value, and a
+detector calibration constant. The step accepts exactly one angle; it
+does not fit angular dependence or calculate radius of gyration.
 
 ``` r
 
 step_sec_mals(
-  dn_dc_column = "dn_dc"   # Refractive index increment
+  mals_col = "mals",
+  concentration_col = "concentration",
+  concentration_unit = "mg/mL",
+  dn_dc_column = "dn_dc",
+  angles = 90,
+  calibration_constant = instrument_calibration_constant
 )
 ```
 
-**Requires**: Light scattering detector (MALS, LALS, or RALS), accurate
-dn/dc value, good signal quality.
+The column names and calibration value must match the data and detector
+method. Without a calibration constant, the output is relative and
+uncalibrated.
 
-**Implementation**: The present step estimates MW at one angle, assuming
-a suitable form factor and calibrated scattering. It does not fit
-angular dependence, report Rg, or establish branching.
-
-**Limitations**: More expensive instrumentation. Sensitive to dust and
-bubbles. Low MW samples may have weak scattering signal.
-
-## Understanding Your Detectors
+## Understand detector signals
 
 Each detector type provides different information. Knowing what each
 measures helps you interpret results and troubleshoot problems.
 
-### Concentration Detectors
+### Concentration detectors
 
-These tell you *how much* material is present at each elution slice.
+These responses can be related to concentration when the required
+detector response factor is known.
 
-#### Refractive Index (RI)
+#### Refractive index (RI)
 
 **What it measures**: Change in refractive index proportional to
 concentration.
@@ -233,16 +277,10 @@ concentration.
 step_sec_ri(dn_dc_column = "dn_dc")
 ```
 
-| Pros                               | Cons                                  |
-|------------------------------------|---------------------------------------|
-| Universal—responds to all polymers | Sensitive to temperature              |
-| Mass-based response                | Sensitive to mobile phase composition |
-| Most common detector               | Baseline drift common                 |
+RI response depends on the sample’s dn/dc and solvent conditions. Use a
+response factor appropriate to the method and sample.
 
-**When to use**: Default concentration detector for most polymer SEC.
-Essential for MW calculations.
-
-#### UV Detector
+#### UV detector
 
 **What it measures**: Absorbance at specific wavelength(s).
 
@@ -253,16 +291,11 @@ Essential for MW calculations.
 step_sec_uv(extinction_column = "extinction_coef", wavelength = 280)
 ```
 
-| Pros            | Cons                                    |
-|-----------------|-----------------------------------------|
-| Very sensitive  | Only detects UV-active chromophores     |
-| Selective       | Response depends on chromophore content |
-| Stable baseline | May need multiple wavelengths           |
+UV response depends on absorbance at the selected wavelength and the
+sample’s chromophores. Choose wavelengths and response factors for the
+material being measured.
 
-**When to use**: Proteins (280 nm), aromatic polymers, or when combined
-with RI for composition analysis.
-
-#### DAD (Diode Array)
+#### Diode-array detector (DAD)
 
 **What it measures**: Full UV-Vis spectrum at each point.
 
@@ -275,33 +308,34 @@ step_sec_dad(wavelengths = c(254, 280, 320))
 identify components. Copolymer composition with wavelength-dependent
 absorption.
 
-### Molecular Weight Detectors
+### Light-scattering detectors
 
-These measure MW directly, independent of calibration.
+Light scattering relates detector response to molecular weight when
+combined with concentration, dn/dc, and detector calibration. The
+package step currently calculates a single-angle estimate.
 
 #### Multi-Angle Light Scattering (MALS)
 
 **What it measures**: Scattered light intensity at multiple angles.
 
-**Provides**: A single-angle MW estimate when concentration units and
-detector calibration are known. The current step does not fit multiple
-angles or estimate radius of gyration (Rg).
+The current step requires a concentration column in known units, dn/dc,
+and a detector calibration constant for a calibrated estimate. It
+accepts one angle and does not estimate radius of gyration (Rg).
 
 ``` r
 
 step_sec_mals(
-  concentration_col = "ri",
+  mals_col = "mals",
+  concentration_col = "concentration",
   concentration_unit = "mg/mL",
   dn_dc_column = "dn_dc",
-  angles = 90
+  angles = 90,
+  calibration_constant = instrument_calibration_constant
 )
 ```
 
-| Best for                    | Limitations                     |
-|-----------------------------|---------------------------------|
-| Large molecules (\> 10 kDa) | Requires very clean samples     |
-| Rg measurement              | Signal weak for small molecules |
-| Branching analysis          | Expensive                       |
+Supply detector and concentration fields from the method. This step does
+not calculate Rg or branching indices.
 
 **See also**: [MALS Detection
 vignette](https://jameshwade.github.io/measure.sec/articles/mals-detection.md)
@@ -310,48 +344,54 @@ vignette](https://jameshwade.github.io/measure.sec/articles/mals-detection.md)
 
 **What it measures**: Scattered light near 0° angle.
 
+Add this step to a recipe with aligned detector and concentration
+columns. `dn_dc` is one numeric value in mL/g for the recipe; 0.185
+below is an illustrative setting. Choose it for the sample, solvent and
+method.
+
 ``` r
 
 step_sec_lals(
-  concentration_col = "ri",
+  measures = "lals",
+  concentration_col = "concentration",
   concentration_unit = "mg/mL",
   dn_dc = 0.185,
-  calibration_constant = 1.0
+  calibration_constant = lals_calibration_constant
 )
 ```
 
-| Best for          | Limitations                       |
-|-------------------|-----------------------------------|
-| Medium molecules  | No Rg measurement                 |
-| Simpler than MALS | Less accurate for large molecules |
-| Lower cost        | Still needs clean samples         |
+Supply the detector’s calibration constant for a calibrated mass
+estimate. Without it, the step returns a relative estimate.
 
 #### Right-Angle Light Scattering (RALS)
 
 **What it measures**: Scattered light at 90°.
 
+Use the same concentration and dn/dc declarations, with the calibration
+constant for the right-angle detector:
+
 ``` r
 
 step_sec_rals(
-  concentration_col = "ri",
+  measures = "rals",
+  concentration_col = "concentration",
   concentration_unit = "mg/mL",
   dn_dc = 0.185,
-  calibration_constant = 1.0
+  calibration_constant = rals_calibration_constant
 )
 ```
 
-| Best for              | Limitations                |
-|-----------------------|----------------------------|
-| Small molecules       | Biased for large molecules |
-| Screening/QC          | No structural information  |
-| Lowest cost LS option | Limited to narrow MW range |
+The single-angle interpretation still needs to suit the sample and
+method.
 
 **See also**: [LALS/RALS Detection
 vignette](https://jameshwade.github.io/measure.sec/articles/lals-rals-detection.md)
 
-### Hydrodynamic Detectors
+### Hydrodynamic detectors
 
-These measure molecular size and conformation in solution.
+Viscosity and diffusion measurements provide information about molecular
+behavior in solution. Their interpretation depends on the sample,
+solvent, and measurement conditions.
 
 #### Viscometer
 
@@ -363,8 +403,13 @@ concentration.
 
 ``` r
 
-step_sec_viscometer()
-step_sec_intrinsic_visc(visc_col = "visc", conc_col = "concentration")
+recipe(...) |>
+  step_sec_viscometer(dp_col = "dp", ip_col = "ip") |>
+  step_sec_intrinsic_visc(
+    specific_visc_col = "specific_visc",
+    concentration_col = "concentration",
+    concentration_unit = "mg/mL"
+  )
 ```
 
 | Best for                   | Limitations                 |
@@ -390,7 +435,7 @@ step_sec_dls()
 | Particle sizing      | Less common online      |
 | Conformation studies | Concentration-dependent |
 
-## Common Pitfalls and Solutions
+## Common pitfalls
 
 This section addresses problems you’re likely to encounter and how
 `measure.sec` helps you fix them.
@@ -411,28 +456,27 @@ with an appropriate method:
 
 step_sec_baseline(
   measures = "ri",
-  method = "linear",       # Simple start-to-end connection
-  # or
-  method = "spline",       # Follows gradual curves
-  # or
-  method = "asymmetric"    # Handles uneven noise
+  method = "spline"        # Smooth spline between baseline regions
 )
 ```
 
-**Which method to choose**:
+Supported methods are `"linear"`, `"median"`, `"spline"`, and `"rf"`:
 
-- **linear**: Fast, works when baseline is truly straight
-- **spline**: Better for gradual drift or temperature effects
-- **asymmetric**: Best for noisy data or when peak tails affect baseline
+- **linear**: Interpolates between the means of the two baseline
+  regions.
+- **median**: Uses their medians, which are less sensitive to outliers.
+- **spline**: Fits a smooth spline between baseline regions.
+- **rf**: Uses robust local regression for curved or drifting baselines.
 
 ### Inter-Detector Delay
 
-**Symptoms**: Calculated MW varies with injection volume, or MW appears
-to vary across a peak that should be uniform.
+**Symptoms**: Detector traces appear offset along the elution axis,
+which can affect calculations that combine signals.
 
-**Cause**: Detectors in series experience different delays. A 150 µL
-delay volume at 1 mL/min means 9 seconds of offset—which can shift MW by
-orders of magnitude.
+**Cause**: Detectors in series can have different path volumes. The
+correction depends on the delay measured for the detector path and
+reference used by the method; the package example traces do not
+establish those values.
 
 **Solution**: Use
 [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
@@ -442,17 +486,22 @@ orders of magnitude.
 
 step_sec_detector_delay(
   reference = "ri",
-  delay_volumes = c(uv = -0.05, mals = 0.15)  # mL
+  delay_times = c(uv = uv_delay_min, mals = mals_delay_min),
+  elution_units = "min"
 )
 ```
 
-**How to measure delays**:
+For a time-based elution axis, pass measured offsets in minutes with
+`delay_times`. For volume-based offsets, pass `delay_volumes` in mL and
+set `flow_rate` in mL/min. The delay arguments keep these units
+regardless of `elution_units`.
 
-1.  Inject a low-MW marker (toluene, polymer standard)
-2.  Record peak apex time on each detector
-3.  Convert time difference to volume: delay = Δt × flow_rate
+**Example measurement outline**:
 
-**Tip**: Re-measure after column changes or major maintenance.
+1.  Inject a method-appropriate reference.
+2.  Record the reference response location for each detector.
+3.  Express the measured offsets as minutes for `delay_times` or
+    millilitres for `delay_volumes`.
 
 ### Band Broadening
 
@@ -464,25 +513,20 @@ or injection effects.
 
 **Solution**: Use
 [`step_sec_band_broadening()`](https://jameshwade.github.io/measure.sec/reference/step_sec_band_broadening.md)
-to deconvolve the true distribution:
+only when the method supports its peak-spreading model and parameter.
+Express `sigma` in the same unit as the trace location.
 
 ``` r
 
 step_sec_band_broadening(
-  sigma = 0.03  # Peak spreading parameter (mL)
+  measures = "ri",
+  sigma = measured_sigma
 )
 ```
 
-**Estimate sigma** using a narrow standard—the peak width should be
-entirely from broadening:
-
-``` r
-
-sigma <- estimate_sigma(
-  narrow_standard_data,
-  signal_col = "ri"
-)
-```
+Estimate `sigma` from a suitable narrow standard using a documented
+procedure. The standard’s own distribution and other sources of
+broadening also affect its observed peak.
 
 ### Out-of-Range Calibration
 
@@ -498,18 +542,15 @@ calibration standards.
 ``` r
 
 step_sec_conventional_cal(
-  standards_data = standards,
-  extrapolate = "linear",    # Continue slope beyond range
-  # or
-  extrapolate = "constant",  # Clamp at boundary
-  # or
-  extrapolate = "none"       # Return NA outside range
+  measures = "ri",
+  standards = standards,
+  extrapolation = "linear"  # or "none" to return NA outside the range
 )
 ```
 
-**Best practice**: Use standards that span your sample’s MW range. If
-extrapolation is unavoidable, use “linear” with caution and flag those
-results.
+Use standards that span the range of interest. If the method uses
+extrapolation, identify and review the extrapolated locations
+separately.
 
 ### Noisy Light Scattering
 
@@ -519,14 +560,17 @@ results.
 
 **Solutions**:
 
-1.  **Filter samples**: 0.22 µm minimum, 0.1 µm for MALS
-2.  **Degas mobile phase**: Remove dissolved gases
-3.  **Increase concentration**: More sample = more scattering signal
-4.  **Apply smoothing**: In step parameters or post-processing
+1.  Check for bubbles, particulates, and instrument status using the
+    method’s procedures.
+2.  Review concentration and dn/dc inputs.
+3.  Apply smoothing only when it is specified and justified by the
+    method.
+4.  Inspect the signal region used for the calculation and report any
+    exclusions.
 
-## Interpreting Results
+## Interpret results
 
-### Molecular Weight Averages
+### Molecular-weight averages
 
 SEC produces multiple MW averages. Each tells you something different:
 
@@ -546,17 +590,13 @@ SEC produces multiple MW averages. Each tells you something different:
 
 Dispersity = Mw/Mn measures the breadth of the distribution.
 
-| Đ Value   | Interpretation                                       |
-|-----------|------------------------------------------------------|
-| 1.0       | Perfectly monodisperse (theoretical limit)           |
-| \< 1.1    | Very narrow (controlled polymerization)              |
-| 1.5 - 2.0 | Typical for step-growth or conventional free radical |
-| \> 3.0    | Very broad, may indicate blending or degradation     |
+Dispersity is at least 1 for a positive molecular-weight distribution.
+Values close to 1 indicate a narrower distribution; larger values
+indicate a broader distribution. Interpretation depends on the sample
+and the integration and calibration used. A result below 1 is a reason
+to inspect the signal, units, calibration, and calculation support.
 
-**Tip**: If Đ \< 1.0, something is wrong—often a calibration or
-integration problem.
-
-### When Results Look Wrong
+### When results look unexpected
 
 **MW seems too high or too low**:
 
@@ -576,13 +616,14 @@ integration problem.
 - Check column equilibration
 - Check sample stability (aggregation, degradation)
 
-**Negative MW at distribution edges**:
+**Negative detector response**:
 
-- Normal at very low signal—noise can go negative
-- Set appropriate thresholds in MW calculation steps
-- Focus on the region with good signal-to-noise
+- Low-signal detector response can be negative after baseline
+  correction.
+- Treat negative molecular-weight output as invalid or unsupported;
+  inspect the signal, normalization, and calibration inputs.
 
-## See Also
+## See also
 
 - [Getting
   Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -

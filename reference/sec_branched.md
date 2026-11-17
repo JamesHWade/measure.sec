@@ -70,8 +70,10 @@ The dataset includes polyethylene-like samples with three topologies:
 
 **Key Observation:** At the same molecular weight, branched polymers
 have smaller hydrodynamic volume and elute LATER than their linear
-counterparts. This is the basis for branching analysis by comparing SEC
-retention to absolute MW from MALS.
+counterparts. This is the basis for comparing retention with
+independently determined molecular weight. The stored MW, radius and
+viscosity values are simulation inputs, repeated along each
+chromatogram; they are not independently measured slices.
 
 **Branching Index (g'):** g' = \\\[\eta\]\_{branched}\\ /
 \\\[\eta\]\_{linear}\\ at same MW
@@ -81,9 +83,8 @@ Values less than 1.0 indicate branching. Lower values mean more compact
 
 **Typical Workflow:**
 
-1.  Apply
-    [`step_sec_mals`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-    for absolute MW
+1.  Obtain calibrated molecular-weight estimates and inspect their
+    assumptions
 
 2.  Apply
     [`step_sec_viscometer`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md)

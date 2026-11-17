@@ -1,8 +1,8 @@
 # SEC Calibration Standards - Complete Dataset
 
-Comprehensive calibration standard data for SEC/GPC analysis, containing
-polystyrene and PMMA narrow standards with certificate values, retention
-data, and Mark-Houwink parameters. Based on commercial standard kits.
+Synthetic polystyrene and PMMA narrow standards with assigned molecular
+weights, retention data and Mark-Houwink parameters for calibration
+examples.
 
 ## Usage
 
@@ -99,7 +99,7 @@ Mixed-C columns in THF at 1.0 mL/min.
 
 ## Details
 
-This dataset enables several key calibration workflows:
+Use the assigned values to exercise the following calibration workflows:
 
 **Conventional Calibration:** Use `retention_time` (or
 `retention_volume`) and `log_mp` with
@@ -110,9 +110,10 @@ to build a calibration curve.
 polymer-independent calibration. The Mark-Houwink parameters (`k_value`,
 `a_value`) enable conversion between polymers.
 
-**Quality Assessment:** The `mp_uncertainty` values (from typical
-certificates) enable uncertainty propagation through the calibration.
-Dispersity values confirm standards are suitably narrow.
+**Quality Assessment:** The illustrative `mp_uncertainty` values can be
+propagated through a calibration. Use certificate values for a real
+standard; these synthetic values do not qualify a calibration or
+instrument.
 
 **Polymer Types:**
 

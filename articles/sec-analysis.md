@@ -2,26 +2,18 @@
 
 ## Introduction
 
-> **Implementation status:**
-> [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
-> is a single-angle approximation. It requires concentration units and
-> an instrument calibration constant for calibrated MW; multi-angle fits
-> and Rg are not implemented. The other detector examples are
-> illustrative and require validation for the instrument and method.
+[`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md)
+currently calculates a single-angle molecular-weight estimate. A
+calibrated estimate requires concentration in known units, suitable
+dn/dc, and a detector calibration constant; multi-angle extrapolation
+and Rg are not implemented. The examples below use synthetic data and
+illustrative settings.
 
-Size Exclusion Chromatography (SEC), also known as Gel Permeation
-Chromatography (GPC), is a fundamental technique for characterizing the
-molecular weight distribution of polymers, proteins, and other
-macromolecules. The **measure.sec** package extends the
-[measure](https://github.com/JamesHWade/measure) package with
-specialized preprocessing steps for SEC/GPC data analysis. This vignette
-demonstrates how to:
-
-1.  Process multi-detector SEC data (RI, UV/DAD, MALS, LALS, RALS, DLS)
-2.  Calculate molecular weight averages and distributions
-3.  Analyze copolymer composition
-4.  Quantify protein aggregates
-5.  Perform quality control checks
+Size Exclusion Chromatography (SEC), also called Gel Permeation
+Chromatography (GPC), separates molecules by hydrodynamic size.
+`measure.sec` extends [measure](https://github.com/JamesHWade/measure)
+with recipe steps for processing detector signals, applying calibration,
+and summarizing results.
 
 ## Setup
 
@@ -51,7 +43,7 @@ library(purrr)
 library(ggplot2)
 ```
 
-## The measure.sec Data Model
+## The measure.sec data model
 
 The package uses the **measure** framework, where chromatographic
 signals are stored as nested tibbles. Each sample has a `measure_tbl`
@@ -62,10 +54,11 @@ containing:
 
 Multiple samples are combined into a `measure_list` column.
 
-## Example Dataset
+## Example dataset
 
-The package includes `sec_triple_detect`, a synthetic dataset
-representing multi-detector SEC analysis:
+The package includes `sec_triple_detect`, a synthetic multi-detector
+dataset. Its `elution_time` is in minutes; its detector signal columns
+do not declare response units.
 
 ``` r
 
@@ -108,7 +101,7 @@ sec_triple_detect |>
 #> 12 Copoly-B  sample      copolymer
 ```
 
-## Basic Workflow: Single Detector Analysis
+## Basic workflow: single-detector analysis
 
 Let’s start with a simple RI detector workflow for polystyrene
 standards:
@@ -154,24 +147,25 @@ result |>
 #> 5 PS-500K   [2,001 × 2]
 ```
 
-## Conventional Calibration
+## Conventional calibration
 
 Conventional (relative) calibration uses narrow molecular weight
 standards to establish the relationship between elution time and
 molecular weight. This is the most common approach for routine polymer
 analysis.
 
-### Calibration Standards
+### Calibration standards
 
-The package includes comprehensive polystyrene and PMMA calibration
-standards:
+The package includes synthetic polystyrene and PMMA calibration-standard
+datasets. The `retention_time` fields are in minutes and
+`retention_volume` fields are in millilitres.
 
 ``` r
 
 # Load polystyrene calibration standards
 data(sec_ps_standards, package = "measure.sec")
 
-# View the standards (16 standards from 162 Da to 3.15 MDa)
+# View the standards (16 supplied values from 162 Da to 3.15 MDa)
 sec_ps_standards |>
   select(standard_name, mp, log_mp, retention_time, dispersity) |>
   print(n = 8)
@@ -189,38 +183,42 @@ sec_ps_standards |>
 #> # ℹ 8 more rows
 ```
 
-### Visualizing the Calibration Curve
+### View the calibration curve
 
 Before fitting, it’s good practice to visualize the standards:
 
 ``` r
 
 ggplot(sec_ps_standards, aes(retention_time, log_mp)) +
-  geom_point(size = 3, color = "#2E86AB") +
+  geom_point(size = 2.5, color = "#2E86AB") +
   geom_smooth(
     method = "lm",
     formula = y ~ poly(x, 3),
     se = TRUE,
     color = "#A23B72",
     fill = "#A23B72",
-    alpha = 0.2
+    alpha = 0.18,
+    linewidth = 0.8
   ) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
-    title = "Polystyrene Calibration Curve",
-    subtitle = "Cubic polynomial fit with 95% confidence band"
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Synthetic polystyrene calibration standards"
   ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold"),
-    axis.title = element_text(size = 11)
-  )
+  theme_minimal(base_size = 11)
 ```
 
-![](sec-analysis_files/figure-html/calibration-plot-1.png)
+![Scatter chart of sixteen synthetic polystyrene standards with a cubic
+fit and confidence band. Retention time in minutes is on the horizontal
+axis; log10 peak molecular weight in daltons is on the vertical axis.
+The supplied points descend across the measured retention
+range.](sec-analysis_files/figure-html/calibration-plot-1.png)
 
-### Building a Calibration Curve
+A cubic fit to the sixteen synthetic PS standards in `sec_ps_standards`.
+The shaded band is the fit’s 95% confidence interval; this example curve
+does not qualify a calibration method.
+
+### Build the calibration curve
 
 Use
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
@@ -302,7 +300,7 @@ is omitted; this does not establish that the omitted mass is negligible.
 Different sample grids need their own supported windows or a common
 range bracketed by finite calibration values.
 
-### Assessing Calibration Quality
+### Review calibration quality
 
 The [`tidy()`](https://generics.r-lib.org/reference/tidy.html) method
 provides comprehensive diagnostics for evaluating calibration quality:
@@ -351,24 +349,17 @@ std_results |>
 #> 16     20.8          2.21             2.19         0.0181         -4.07
 ```
 
-**Key quality metrics:**
+Review R², RMSE on the log molecular-weight scale, residual patterns,
+and percent differences from the supplied values. There are no universal
+cutoffs; use criteria defined for the method and intended application.
 
-| Metric          | Good Value | Description                       |
-|-----------------|------------|-----------------------------------|
-| R²              | \> 0.999   | Coefficient of determination      |
-| RMSE            | \< 0.02    | Root mean square error in log(MW) |
-| Max % Deviation | \< 5%      | Largest deviation at any standard |
-| Dispersity      | \< 1.10    | Standards should be narrow        |
+### Compare fit types
 
-### Comparing Fit Types
-
-Different polynomial orders may be appropriate depending on column
-behavior:
+The following figure fits linear, quadratic, and cubic models to the
+supplied synthetic standards. It compares the curves over the observed
+retention-time range; it does not select a model for a real method.
 
 ``` r
-
-# Compare linear, quadratic, and cubic fits
-library(tidyr)
 
 fits <- tibble(
   fit_type = c("Linear", "Quadratic", "Cubic"),
@@ -377,10 +368,14 @@ fits <- tibble(
   mutate(
     predictions = map(degree, function(d) {
       model <- lm(log_mp ~ poly(retention_time, d), data = sec_ps_standards)
-      tibble(
-        retention_time = seq(11, 21, by = 0.1),
-        log_mp = predict(model, newdata = tibble(retention_time = seq(11, 21, by = 0.1)))
+      grid <- tibble(
+        retention_time = seq(
+          min(sec_ps_standards$retention_time),
+          max(sec_ps_standards$retention_time),
+          length.out = 200
+        )
       )
+      mutate(grid, log_mp = predict(model, newdata = grid))
     }),
     r_squared = map_dbl(degree, function(d) {
       model <- lm(log_mp ~ poly(retention_time, d), data = sec_ps_standards)
@@ -395,89 +390,104 @@ ggplot() +
   geom_point(
     data = sec_ps_standards,
     aes(retention_time, log_mp),
-    size = 3,
-    alpha = 0.7
+    size = 2.4,
+    alpha = 0.7,
+    color = "#2E86AB"
   ) +
   geom_line(
     data = fit_curves,
     aes(retention_time, log_mp, color = fit_type),
-    linewidth = 1
+    linewidth = 0.8
   ) +
   scale_color_manual(
     values = c("Linear" = "#E8751A", "Quadratic" = "#2E86AB", "Cubic" = "#A23B72")
   ) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
-    color = "Fit Type",
-    title = "Calibration Curve Fit Comparison",
-    subtitle = sprintf(
-      "R²: Linear=%.5f, Quadratic=%.5f, Cubic=%.5f",
-      fits$r_squared[1], fits$r_squared[2], fits$r_squared[3]
-    )
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    color = "Fit type",
+    title = "Polynomial fits to synthetic standards"
   ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(face = "bold")
-  )
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
 ```
 
-![](sec-analysis_files/figure-html/compare-fits-1.png)
+![Scatter chart of synthetic polystyrene standards and three fitted
+curves. Retention time in minutes is on the horizontal axis and log10
+peak molecular weight in daltons is on the vertical axis. The legend
+distinguishes linear, quadratic, and cubic fits; their curves closely
+overlap across the observed standard
+range.](sec-analysis_files/figure-html/compare-fits-1.png)
 
-### Polymer-Specific Calibration
+Linear, quadratic, and cubic polynomial fits to the synthetic PS
+standards. The three curves closely overlap over the observed
+retention-time range; this comparison does not identify a preferred
+model for a real method.
 
-Conventional calibration is polymer-specific because different polymers
-have different hydrodynamic volumes at the same molecular weight:
+### Polymer-specific calibration
+
+Conventional calibration depends on the hydrodynamic behavior of the
+standards and sample. The supplied PS and PMMA examples are synthetic;
+their fitted curves illustrate the comparison without qualifying a
+method.
 
 ``` r
 
 data(sec_pmma_standards, package = "measure.sec")
 
-# Combine PS and PMMA for comparison
 combined <- bind_rows(
   sec_ps_standards |> mutate(polymer = "Polystyrene"),
   sec_pmma_standards |> mutate(polymer = "PMMA")
 )
 
 ggplot(combined, aes(retention_time, log_mp, color = polymer, shape = polymer)) +
-  geom_point(size = 3) +
+  geom_point(size = 2.4) +
   geom_smooth(
     method = "lm",
     formula = y ~ poly(x, 3),
     se = FALSE,
-    linewidth = 1
+    linewidth = 0.8
   ) +
   scale_color_manual(values = c("Polystyrene" = "#2E86AB", "PMMA" = "#A23B72")) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
     color = "Polymer",
     shape = "Polymer",
-    title = "PS vs PMMA Calibration Curves",
-    subtitle = "At same MW, PMMA elutes later (smaller hydrodynamic volume in THF)"
+    title = "Synthetic PS and PMMA standards"
   ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(face = "bold")
-  )
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
 ```
 
-![](sec-analysis_files/figure-html/polymer-comparison-1.png)
+![Scatter chart comparing synthetic PS and PMMA calibration standards.
+Retention time in minutes is on the horizontal axis and log10 peak
+molecular weight in daltons is on the vertical axis. Color and point
+shape identify polymer; the two cubic fits closely overlap across the
+observed range. This example does not show that one polymer calibration
+can be applied to the
+other.](sec-analysis_files/figure-html/polymer-comparison-1.png)
 
-**Key insight:** Using a PS calibration for PMMA samples will
-underestimate molecular weight. For cross-polymer analysis, use
-universal calibration with Mark-Houwink parameters.
+Separate cubic fits to the synthetic PS and PMMA calibration-standard
+datasets. Their curves closely overlap in this supplied example; the
+plot does not establish a cross-polymer calibration or sample result.
 
-## Multi-Detector SEC Workflow
+If the sample and calibration standard have different hydrodynamic
+behavior, conventional calibration can be biased. Universal calibration
+is one option when suitable Mark-Houwink parameters are available for
+both polymers.
 
-For more accurate molecular weight determination, multi-detector SEC
-uses RI for concentration and MALS for absolute molecular weight:
+## Multi-detector SEC workflow
+
+This example combines synthetic RI, UV, and MALS traces. The assumed
+injection volume and concentration are demonstration settings, and no
+detector calibration constant is supplied, so the MALS output is
+relative and uncalibrated. Use measured method settings and calibration
+values for real samples.
 
 ``` r
 
-# Multi-detector SEC workflow for absolute molecular weight
+# Synthetic multi-detector workflow example
 # Note: MALS processing requires additional detector configuration
 rec_multi <- recipe(
   ri_signal + uv_signal + mals_signal + elution_time + dn_dc + extinction_coef ~ sample_id,
@@ -501,11 +511,8 @@ rec_multi <- recipe(
     location = vars(elution_time),
     col_name = "mals"
   ) |>
-  # Correct inter-detector delays
-  step_sec_detector_delay(
-    reference = "ri",
-    delay_volumes = c(uv = -0.05, mals = 0.10)
-  ) |>
+  # No delay correction is applied; the package traces do not establish
+  # known input delays for an alignment example.
   # Apply baseline correction
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
   # Process detectors
@@ -543,10 +550,12 @@ result_multi |>
 #> 3 PS-50K    [2,001 × 2] [2,001 × 2] [2,001 × 2]
 ```
 
-## Copolymer Composition Analysis
+## Copolymer composition
 
-The UV/RI ratio can reveal compositional heterogeneity across the
-molecular weight distribution:
+A UV/RI ratio can contribute to a composition estimate when response
+factors are established for the components and method. The factors below
+are illustrative settings for the synthetic example; the results are not
+known composition measurements.
 
 ``` r
 
@@ -582,28 +591,28 @@ result_comp <- bake(prepped_comp, new_data = NULL)
 # - composition_a: Weight fraction of component A at each point
 ```
 
-## Protein SEC: Aggregate Quantitation
+## Manual aggregate windows
 
-For protein therapeutics, SEC is used to quantify high molecular weight
-species (HMWS/aggregates) and low molecular weight species
-(LMWS/fragments):
+This chunk demonstrates the aggregate-window API on a synthetic UV
+trace. The `sec_triple_detect` data do not represent a protein or define
+validated monomer boundaries; the computed purity fields are
+illustrative only.
 
 ``` r
 
-# Create protein-like data (using UV at 280 nm)
-# Filter to a single sample for demonstration
-protein_data <- sec_triple_detect |>
+# Select one synthetic sample with a UV response
+uv_data <- sec_triple_detect |>
   filter(sample_type == "sample") |>
   filter(sample_id == first(sample_id))
 
-rec_protein <- recipe(
+rec_aggregates <- recipe(
   uv_signal + elution_time ~ sample_id,
-  data = protein_data
+  data = uv_data
 ) |>
   update_role(sample_id, new_role = "id") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_sec_baseline(measures = "uv") |>
-  # Quantify aggregates with manual peak boundaries
+  # Demonstration windows only; define boundaries from the method.
   step_sec_aggregates(
     measures = "uv",
     monomer_start = 10,  # Monomer peak start time
@@ -611,14 +620,11 @@ rec_protein <- recipe(
     method = "manual"
   )
 
-prepped_protein <- prep(rec_protein)
-result_protein <- bake(prepped_protein, new_data = NULL)
+prepped_aggregates <- prep(rec_aggregates)
+result_aggregates <- bake(prepped_aggregates, new_data = NULL)
 
-# Results include:
-# - purity_hmws: % high MW species (before monomer)
-# - purity_monomer: % main peak
-# - purity_lmws: % low MW species (after monomer)
-result_protein |>
+# These fields depend on the manual windows supplied above.
+result_aggregates |>
   select(sample_id, purity_hmws, purity_monomer, purity_lmws)
 #> # A tibble: 1 × 4
 #>   sample_id purity_hmws purity_monomer purity_lmws
@@ -626,7 +632,7 @@ result_protein |>
 #> 1 PMMA-Low         2.05           25.7        72.1
 ```
 
-## Molecular Weight Distribution
+## Molecular-weight distribution
 
 Generate differential and cumulative molecular weight distributions.
 These demonstration samples share the grid used above, so the same
@@ -659,17 +665,15 @@ prepped_mwd <- prep(rec_mwd)
 #> ℹ Consider removing outlier standards or using a different fit type.
 result_mwd <- bake(prepped_mwd, new_data = NULL)
 
-# The result contains:
-# - ri_differential: dW/d(logM) vs logM
-# - ri_cumulative: cumulative weight fraction vs logM
+# Inspect the differential and cumulative outputs on the calibrated range.
 ```
 
-## Quality Control Functions
+## Quality-control functions
 
 The package provides functions for chromatographic system suitability
 testing:
 
-### Peak Resolution
+### Peak resolution
 
 ``` r
 
@@ -686,7 +690,7 @@ cat("Resolution (Rs):", round(Rs, 2), "\n")
 #> Resolution (Rs): 4.62
 ```
 
-### Plate Count
+### Plate count
 
 ``` r
 
@@ -701,7 +705,7 @@ cat("Theoretical plates:", round(N), "\n")
 #> Theoretical plates: 8864
 ```
 
-### System Suitability
+### System suitability
 
 ``` r
 
@@ -731,7 +735,7 @@ print(sst)
 #> --------------------------------------------------
 ```
 
-## Polymer Analysis: Mark-Houwink Parameters
+## Mark-Houwink parameters
 
 Estimate Mark-Houwink parameters from intrinsic viscosity data:
 
@@ -757,9 +761,11 @@ print(mh)
 #> Equation: [eta] = K * M^a
 ```
 
-## Branching Analysis
+## Branching example
 
-Calculate branching indices for branched polymers:
+The vectors below are hypothetical values used to demonstrate
+[`measure_branching_index()`](https://jameshwade.github.io/measure.sec/reference/measure_branching_index.md).
+They are not measurements or a conclusion about a polymer.
 
 ``` r
 
@@ -793,9 +799,9 @@ print(g)
 # g < 1 indicates branching (smaller Rg than linear)
 ```
 
-## Exporting Results
+## Export results
 
-### Slice-by-Slice Data
+### Slice data
 
 Extract point-by-point chromatographic data:
 
@@ -821,7 +827,7 @@ head(slices)
 #> 6 PS-50K        6     5.05 0.00174
 ```
 
-### Summary Table
+### Summary table
 
 Generate a summary table for reporting:
 
@@ -845,14 +851,13 @@ print(summary_tbl)
 #> 1 PS-50K     1825 205538 1236629           113
 ```
 
-## Complete Workflow Example
+## Complete workflow example
 
 Here’s a complete workflow for analyzing polymer standards:
 
 ``` r
 
-# Complete multi-detector SEC workflow
-# Note: This example demonstrates the full processing pipeline
+# Complete synthetic multi-detector workflow example
 
 # Create comprehensive recipe with explicit formula
 rec_complete <- recipe(
@@ -865,8 +870,8 @@ rec_complete <- recipe(
   step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
   step_measure_input_long(uv_signal, location = vars(elution_time), col_name = "uv") |>
   step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
-  # Preprocessing
-  step_sec_detector_delay(reference = "ri", delay_volumes = c(uv = -0.05, mals = 0.10)) |>
+  # These synthetic traces are not a known-input delay fixture.
+  # Apply baseline correction; supply measured delays for real data.
   step_sec_baseline(measures = c("ri", "uv", "mals")) |>
   # Detector processing
   step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
@@ -908,14 +913,14 @@ result_complete |>
 #> 6 PMMA-Low  pmma         [2,001 × 2] [2,001 × 2] [2,001 × 2]
 ```
 
-## Available Steps Reference
+## Available steps
 
 ### Preprocessing Steps
 
 | Step | Key Parameters | Description |
 |----|----|----|
-| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | `reference`, `delay_volumes` | Align multi-detector signals by correcting inter-detector volume delays |
-| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | `measures`, `method`, `points` | Remove baseline drift; methods: `"linear"`, `"polynomial"`, `"spline"` |
+| [`step_sec_detector_delay()`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md) | `reference`, `delay_volumes`, `delay_times`, `flow_rate`, `elution_units` | Align detector locations using measured time or volume offsets |
+| [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md) | `measures`, `left_frac`, `right_frac`, `method`, `rf_span` | Correct baseline; methods: `"linear"`, `"median"`, `"spline"`, `"rf"` |
 
 ### Detector Steps
 
@@ -924,25 +929,25 @@ result_complete |>
 | [`step_sec_ri()`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md) | `measures`, `dn_dc_column` | Process RI signal; requires dn/dc for concentration |
 | [`step_sec_uv()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md) | `measures`, `extinction_column`, `wavelength` | Process UV signal with extinction coefficient |
 | [`step_sec_dad()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dad.md) | `measures`, `wavelengths` | Multi-wavelength diode array detection |
-| [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md) | `mals_col`, `dn_dc_column`, `wavelength` | Single-angle scattering approximation; no Rg or angular fit |
-| [`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md) | `measures`, `concentration_col`, `concentration_unit`, `dn_dc` | Low-angle single-angle estimate; calibration required for absolute MW |
-| [`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md) | `measures`, `concentration_col`, `concentration_unit`, `dn_dc` | Right-angle single-angle estimate; calibration required for absolute MW |
-| [`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md) | `dls_col` | Dynamic LS for hydrodynamic radius |
-| [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md) | `visc_col`, `dp_column` | Differential viscometer for intrinsic viscosity |
+| [`step_sec_mals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mals.md) | `mals_col`, `concentration_col`, `concentration_unit`, `dn_dc_column`, `calibration_constant` | Single-angle estimate; no Rg or angular fit |
+| [`step_sec_lals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_lals.md) | `measures`, `concentration_col`, `concentration_unit`, `dn_dc`, `calibration_constant` | Low-angle single-angle estimate; without a calibration constant, output is relative |
+| [`step_sec_rals()`](https://jameshwade.github.io/measure.sec/reference/step_sec_rals.md) | `measures`, `concentration_col`, `concentration_unit`, `dn_dc`, `calibration_constant` | Right-angle single-angle estimate; without a calibration constant, output is relative |
+| [`step_sec_dls()`](https://jameshwade.github.io/measure.sec/reference/step_sec_dls.md) | `measures`, `temperature`, `viscosity`, `angle`, `output_cols` | Dynamic light scattering; estimates hydrodynamic radius and diffusion coefficient |
+| [`step_sec_viscometer()`](https://jameshwade.github.io/measure.sec/reference/step_sec_viscometer.md) | `dp_col`, `ip_col`, `viscometer_constant` | Processes viscometer signals to specific viscosity |
 
 ### Calibration Steps
 
 | Step | Key Parameters | Description |
 |----|----|----|
 | [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md) | `standards`, `fit_type`, `extrapolation` | Narrow standard calibration (polymer-specific) |
-| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md) | `standards`, `k`, `alpha` | Universal calibration with Mark-Houwink parameters |
+| [`step_sec_universal_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_universal_cal.md) | `calibration`, `K_sample`, `a_sample`, `K_standard`, `a_standard` | Universal calibration using Mark-Houwink parameters |
 
 ### Calculation Steps
 
 | Step | Key Parameters | Outputs |
 |----|----|----|
-| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | `injection_volume`, `sample_concentration` | Absolute concentration (mg/mL) |
-| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md) | `concentration_col`, `viscosity_col` | \[η\] at each slice |
+| [`step_sec_concentration()`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md) | `injection_volume`, `sample_concentration`, `concentration_units` | Concentration in the requested units when inputs are appropriate |
+| [`step_sec_intrinsic_visc()`](https://jameshwade.github.io/measure.sec/reference/step_sec_intrinsic_visc.md) | `specific_visc_col`, `concentration_col`, `concentration_unit`, `units` | Intrinsic viscosity at each slice |
 | [`step_sec_mw_averages()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md) | `measures` | `mw_mn`, `mw_mw`, `mw_mz`, `mw_dispersity` |
 | [`step_sec_mw_fractions()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_fractions.md) | `cutoffs` | Weight fractions above/below MW cutoffs |
 | [`step_sec_mw_distribution()`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_distribution.md) | `type` | Differential and/or cumulative MWD curves |
@@ -955,7 +960,7 @@ result_complete |>
 | [`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md) | `component_a_uv`, `component_a_ri`, … | Weight fraction of each component |
 | [`step_sec_aggregates()`](https://jameshwade.github.io/measure.sec/reference/step_sec_aggregates.md) | `monomer_start`, `monomer_end`, `method` | `purity_hmws`, `purity_monomer`, `purity_lmws` |
 
-## See Also
+## See also
 
 For focused how-to guides on specific workflows:
 
@@ -964,7 +969,7 @@ For focused how-to guides on specific workflows:
   Introduction and basic workflow
 - [Multi-Detector
   SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
-  MALS, viscometer, and absolute MW
+  Multi-detector workflow details
 - [Protein SEC
   Analysis](https://jameshwade.github.io/measure.sec/articles/protein-sec.md) -
   Biopharm aggregate/fragment analysis
@@ -978,18 +983,18 @@ For focused how-to guides on specific workflows:
   Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) -
   QC metrics and SST
 
-## Session Info
+## Session information
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -1004,7 +1009,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          purrr_1.2.2            tidyr_1.3.2           
+#> [1] ggplot2_4.0.4          purrr_1.2.2            tidyr_1.3.2           
 #> [4] measure.sec_0.0.0.9000 measure_0.0.1.9003     recipes_1.4.0         
 #> [7] dplyr_1.2.1           
 #> 
@@ -1031,6 +1036,6 @@ sessionInfo()
 #> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
 #> [61] hardhat_1.4.3       mgcv_1.9-4          rlang_1.3.0        
 #> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
-#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
 #> [70] fs_2.1.0
 ```

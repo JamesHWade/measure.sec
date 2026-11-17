@@ -1,8 +1,7 @@
 # Multi-Detector SEC Data
 
 A synthetic dataset containing multi-detector Size Exclusion
-Chromatography (SEC) data for 12 polymer samples with realistic signal
-characteristics.
+Chromatography (SEC) responses for 12 example polymer samples.
 
 ## Usage
 
@@ -65,8 +64,8 @@ Synthetic data generated for package testing and examples.
 
 ## Details
 
-The dataset includes realistic features commonly encountered in SEC
-analysis:
+The simulated curves include detector delays, response factors and
+baseline drift:
 
 **Sample Composition:**
 
@@ -80,14 +79,17 @@ analysis:
 
 **Multi-Detector Features:**
 
-- Inter-detector volume delays: UV is 0.05 mL before RI, MALS is 0.15 mL
-  after RI
+- Detector offsets are present, but the legacy generator's delay sign
+  differs from the physical convention in
+  [`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md).
+  Do not use this dataset as a known-delay reference.
 
 - Different detector responses based on polymer chemistry
 
 - PEG has no UV response (extinction_coef = 0)
 
-- MALS signal scales with MW for absolute MW determination
+- Scattering signal depends on the molecular weight used in the
+  simulation
 
 **Signal Characteristics:**
 
@@ -97,20 +99,27 @@ analysis:
 
 - Log-normal peak shapes with tailing
 
-**Typical SEC Workflow:** 1 . Convert to measure format with
-[`step_measure_input_long`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
-2. Correct inter-detector delays with
-[`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
-3. Apply baseline correction with
-[`step_sec_baseline`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
-4. Process detectors with
-[`step_sec_ri`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md)
-or
-[`step_sec_uv`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md)
-5. Convert to concentration with
-[`step_sec_concentration`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
-6. Calculate MW averages with
-[`step_sec_mw_averages`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
+**Typical SEC Workflow:**
+
+1.  Convert to measure format with
+    [`step_measure_input_long`](https://jameshwade.github.io/measure/reference/step_measure_input_long.html)
+
+2.  Correct inter-detector delays with
+    [`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
+
+3.  Apply baseline correction with
+    [`step_sec_baseline`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
+
+4.  Process detectors with
+    [`step_sec_ri`](https://jameshwade.github.io/measure.sec/reference/step_sec_ri.md)
+    or
+    [`step_sec_uv`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv.md)
+
+5.  Convert to concentration with
+    [`step_sec_concentration`](https://jameshwade.github.io/measure.sec/reference/step_sec_concentration.md)
+
+6.  Calculate MW averages with
+    [`step_sec_mw_averages`](https://jameshwade.github.io/measure.sec/reference/step_sec_mw_averages.md)
 
 ## See also
 

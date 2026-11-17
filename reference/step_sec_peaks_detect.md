@@ -120,8 +120,8 @@ to automatically determine the optimal threshold for peak/baseline
 separation 4. **Peak boundary detection**: Identifies peak start, apex,
 and end points
 
-This approach is robust to baseline drift and varying peak heights,
-making it well-suited for polymer SEC chromatograms.
+Check the detected boundaries against the chromatogram, especially when
+baseline drift or small neighbouring peaks affect the separation.
 
 **Peak properties stored:**
 

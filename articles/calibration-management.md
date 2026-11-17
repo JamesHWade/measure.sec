@@ -2,13 +2,9 @@
 
 ## Overview
 
-This guide shows you how to save, load, and reuse SEC calibrations with
-measure.sec. Key tasks covered:
-
-1.  Save a calibration from a prepped recipe
-2.  Load and reuse a saved calibration
-3.  Inspect calibration quality
-4.  Compare calibrations over time
+This guide shows how to save a fitted calibration, load it into another
+recipe, and inspect the supplied standards and fit residuals. The
+examples use synthetic package data.
 
 ## Setup
 
@@ -36,12 +32,14 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## How to Create and Save a Calibration
+## Create and save a calibration
 
-### Step 1: Fit a Calibration
+### Fit a calibration
 
-First, create a recipe with calibration standards and prep it to fit the
-calibration:
+`sec_ps_standards` contains synthetic standard values, with retention
+time in minutes and retention volume in millilitres. The recipe uses a
+synthetic PS-50K trace from `sec_triple_detect` so the calibration can
+be prepared and saved through the recipe API.
 
 ``` r
 
@@ -72,35 +70,33 @@ sec_ps_standards |>
 ps_cal_standards <- sec_ps_standards |>
   select(retention = retention_time, log_mw = log_mp)
 
-# Create a simple data frame for the recipe
-# (In practice, this would be your chromatogram data)
-sample_data <- tibble(
-  sample_id = "test",
-  elution_time = seq(10, 20, by = 0.01),
-  ri_signal = dnorm(seq(10, 20, by = 0.01), mean = 14, sd = 1)
-)
+data(sec_triple_detect, package = "measure.sec")
+sample_data <- sec_triple_detect |>
+  filter(sample_id == "PS-50K")
 
-# Create and prep a recipe with conventional calibration
-rec <- recipe(~ ., data = sample_data) |>
+# Create a recipe with conventional calibration
+rec <- recipe(ri_signal + elution_time ~ sample_id, data = sample_data) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
     col_name = "ri"
   ) |>
+  step_sec_baseline(measures = "ri") |>
   step_sec_conventional_cal(
+    measures = "ri",
     standards = ps_cal_standards,
-    fit_type = "cubic"
+    fit_type = "cubic",
+    extrapolation = "none"
   )
 
 # Prep the recipe (this fits the calibration)
 prepped <- prep(rec)
 #> Warning: Standard at 12.58 has 14.4% MW deviation.
 #> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 115 points (11.5%) are outside calibration range.
-#> ℹ Calibration range: 11.15 to 20.79
 ```
 
-### Step 2: Save the Calibration
+### Save the calibration
 
 Use
 [`save_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/save_sec_calibration.md)
@@ -113,19 +109,19 @@ cal_file <- tempfile(fileext = ".rds")
 
 # Save with metadata for traceability
 save_sec_calibration(
- prepped,
+  prepped,
   cal_file,
   metadata = list(
-    column = "PLgel 5um Mixed-C",
-    instrument = "Agilent 1260",
-    analyst = "JW",
-    notes = "Monthly calibration - January 2024"
+    column = "<column-id>",
+    instrument = "<instrument-id>",
+    analyst = "<analyst-id>",
+    notes = "<method notes>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpDZ78xS/file277ee9aedd9.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpgjGmux/file29ce3388b3b4.rds
 ```
 
-### Format Options
+### File formats
 
 Two formats are supported:
 
@@ -140,9 +136,9 @@ Two formats are supported:
 save_sec_calibration(prepped, "calibration.yaml")
 ```
 
-## How to Load and Reuse a Calibration
+## Load and reuse a calibration
 
-### Load a Saved Calibration
+### Load a saved calibration
 
 ``` r
 
@@ -166,23 +162,23 @@ print(cal)
 #> 
 #> ── Settings ──
 #> 
-#> Extrapolation: warn
+#> Extrapolation: none
 #> Output column: mw
 #> Log output: TRUE
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-13 12:39:59
+#> Created: 2026-11-17 11:48:34
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
-#> column: PLgel 5um Mixed-C
-#> instrument: Agilent 1260
-#> analyst: JW
-#> notes: Monthly calibration - January 2024
+#> column: <column-id>
+#> instrument: <instrument-id>
+#> analyst: <analyst-id>
+#> notes: <method notes>
 ```
 
-### Use in a New Recipe
+### Use in a new recipe
 
 Pass the loaded calibration to
 [`step_sec_conventional_cal()`](https://jameshwade.github.io/measure.sec/reference/step_sec_conventional_cal.md)
@@ -190,33 +186,31 @@ to skip fitting:
 
 ``` r
 
-# New sample data
-new_samples <- tibble(
-  sample_id = "unknown_polymer",
-  elution_time = seq(10, 20, by = 0.01),
-  ri_signal = dnorm(seq(10, 20, by = 0.01), mean = 15, sd = 0.8)
-)
+# Use another synthetic PS trace from the packaged dataset.
+# Its elution_time field is in minutes.
+new_samples <- sec_triple_detect |>
+  filter(sample_id == "PS-100K")
 
-# Create recipe using saved calibration (no fitting needed)
-rec_new <- recipe(~ ., data = new_samples) |>
+# Create a recipe using the saved calibration
+rec_new <- recipe(ri_signal + elution_time ~ sample_id, data = new_samples) |>
+  update_role(sample_id, new_role = "id") |>
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
     col_name = "ri"
   ) |>
-  step_sec_conventional_cal(calibration = cal)
+  step_sec_baseline(measures = "ri") |>
+  step_sec_conventional_cal(calibration = cal, extrapolation = "none")
 
 # Prep and bake
 prepped_new <- prep(rec_new)
 #> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.9995)
-#> Warning: 115 points (11.5%) are outside calibration range.
-#> ℹ Calibration range: 11.15 to 20.79
 result <- bake(prepped_new, new_data = NULL)
 ```
 
-## How to Inspect Calibration Quality
+## Inspect calibration quality
 
-### View Fit Diagnostics
+### View fit diagnostics
 
 ``` r
 
@@ -236,20 +230,20 @@ summary(cal)
 #> 
 #> ── Settings ──
 #> 
-#> Extrapolation: warn
+#> Extrapolation: none
 #> Output column: mw
 #> Log output: TRUE
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-13 12:39:59
+#> Created: 2026-11-17 11:48:34
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
-#> column: PLgel 5um Mixed-C
-#> instrument: Agilent 1260
-#> analyst: JW
-#> notes: Monthly calibration - January 2024
+#> column: <column-id>
+#> instrument: <instrument-id>
+#> analyst: <analyst-id>
+#> notes: <method notes>
 #> 
 #> ── Per-Standard Results ──
 #> 
@@ -276,70 +270,110 @@ summary(cal)
 #> #   prediction_se <dbl>, ci_lower_log_mw <dbl>, ci_upper_log_mw <dbl>
 ```
 
-### Key Quality Metrics
+### Quality metrics
 
-| Metric          | Good Value | Meaning                       |
-|-----------------|------------|-------------------------------|
-| R²              | \> 0.999   | Fit explains variance         |
-| RMSE (log MW)   | \< 0.05    | Prediction error in log units |
-| Max % deviation | \< 5%      | Worst individual standard     |
+| Metric          | Meaning                                                   |
+|-----------------|-----------------------------------------------------------|
+| R²              | Fraction of response variation described by the fit       |
+| RMSE (log MW)   | Typical residual size on the log molecular-weight scale   |
+| Max % deviation | Largest percent difference from a supplied standard value |
 
-### Visualize the Calibration Curve
+There is no universal cutoff for these summaries. Set acceptance
+criteria for the method and its intended use.
 
-``` r
-
-# Plot calibration curve from standards data
-plot_sec_calibration(sec_ps_standards)
-```
-
-![](calibration-management_files/figure-html/plot-calibration-1.png)
+### View the calibration curve
 
 ``` r
 
-# With residuals panel to check for systematic errors
-plot_sec_calibration(sec_ps_standards, show_residuals = TRUE)
+plot_sec_calibration(sec_ps_standards) +
+  labs(
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Calibration from synthetic PS standards"
+  ) +
+  theme_minimal(base_size = 11)
 ```
 
-![](calibration-management_files/figure-html/plot-with-residuals-1.png)
+![Scatter chart of sixteen synthetic polystyrene standards. Retention
+time in minutes is on the horizontal axis and log10 peak molecular
+weight in daltons is on the vertical axis. A cubic curve descends across
+the observed standards, with an R-squared annotation in the
+panel.](calibration-management_files/figure-html/plot-calibration-1.png)
 
-## When to Recalibrate vs. Reuse
+The built-in cubic plot of the sixteen synthetic polystyrene standards.
+Its curve and R-squared annotation summarize this dataset; they do not
+define an acceptance limit.
+
+``` r
+
+calibration_plot <- plot_sec_calibration(
+  sec_ps_standards,
+  show_residuals = TRUE
+)
+calibration_plot[[1]] <- calibration_plot[[1]] +
+  labs(
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Calibration from synthetic PS standards"
+  )
+calibration_plot[[2]] <- calibration_plot[[2]] +
+  labs(
+    x = "Retention time (min)",
+    y = "Residual (log10 scale)"
+  )
+calibration_plot <- calibration_plot & theme_minimal(base_size = 11)
+calibration_plot
+```
+
+![Two-panel calibration diagnostic. The upper panel plots sixteen
+standards and a cubic curve against retention time in minutes and log10
+peak molecular weight in daltons. The lower panel plots each standard's
+residual against the same retention-time axis, with a horizontal zero
+line; the points show where the fit over- or under-predicts the supplied
+values.](calibration-management_files/figure-html/plot-with-residuals-1.png)
+
+The calibration curve and residuals returned by
+[`plot_sec_calibration()`](https://jameshwade.github.io/measure.sec/reference/plot_sec_calibration.md)
+for the synthetic polystyrene standards. Residuals are measured in log10
+peak molecular weight; the horizontal zero line marks exact fit at a
+standard.
+
+## Decide when to recalibrate
 
 ### Reuse Existing Calibration When:
 
 - Same column and mobile phase
 - Column performance is stable (check plate count)
-- Within your lab’s validated timeframe (typically 1-4 weeks)
+- Within the timeframe defined by your method and lab criteria
 - Running routine samples
 
 ### Recalibrate When:
 
-- New column installed
-- Mobile phase composition changed
-- Column performance has degraded
-- Significant time has passed
-- Method validation requires fresh calibration
-- Results seem inconsistent
+- A new column is installed or column performance changes.
+- The mobile phase or another method condition changes.
+- A method-specific check indicates the calibration should be repeated.
+- Results or system-suitability measures no longer meet method criteria.
 
-## Best Practices
+## Record and manage calibrations
 
-### Naming Conventions
+### Naming conventions
 
 Use descriptive, consistent file names:
 
 ``` r
 
 # Good: includes key information
-"ps_plgel-mixed-c_2024-01-15.rds"
-"pmma_superose6_instrument2_2024-01.yaml"
+"ps_<column-id>_<date>.rds"
+"pmma_<column-id>_<instrument-id>_<date>.yaml"
 
 # Avoid: ambiguous names
 "calibration.rds"
 "cal_new.rds"
 ```
 
-### Include Metadata
+### Include metadata
 
-Always add metadata for traceability:
+Record enough method details to identify where the calibration applies:
 
 ``` r
 
@@ -347,19 +381,19 @@ save_sec_calibration(
   prepped,
   "ps_calibration.rds",
   metadata = list(
-    column = "PLgel 5um Mixed-C, S/N ABC123",
-    instrument = "Agilent 1260 #2",
-    analyst = "Jane Doe",
+    column = "<column-id>",
+    instrument = "<instrument-id>",
+    analyst = "<analyst-id>",
     date = Sys.Date(),
-    mobile_phase = "THF + 0.1% BHT",
-    flow_rate = "1.0 mL/min",
-    temperature = "35C",
-    notes = "Monthly recalibration after column flush"
+    mobile_phase = "<mobile-phase>",
+    flow_rate = "<flow-rate>",
+    temperature = "<temperature>",
+    notes = "<method notes>"
   )
 )
 ```
 
-### Version Control (YAML Format)
+### Version control with YAML
 
 For labs using git or similar version control:
 
@@ -371,28 +405,29 @@ save_sec_calibration(prepped, "calibrations/ps_current.yaml")
 # Git will show meaningful diffs when calibration changes
 ```
 
-### Lab Workflow Integration
+### Lab workflow
 
 A typical workflow:
 
-1.  **Monthly**: Run calibration standards, save new calibration with
-    date
-2.  **Daily**: Load current calibration for sample analysis
-3.  **Archive**: Keep old calibrations for historical reference
-4.  **Compare**: Periodically compare calibrations to detect drift
+1.  Run standards on the schedule defined by the method.
+2.  Save the fitted calibration with its method metadata.
+3.  Load the calibration selected by the lab’s process for sample
+    analysis.
+4.  Retain prior calibrations and compare them when the method calls for
+    review.
 
 ``` r
 
-# Monthly calibration routine
-monthly_cal <- prep(calibration_recipe)
+# Fit and save on the schedule specified by the method
+current_cal <- prep(calibration_recipe)
 save_sec_calibration(
-  monthly_cal,
-  sprintf("calibrations/ps_%s.rds", format(Sys.Date(), "%Y-%m")),
-  metadata = list(analyst = Sys.info()["user"])
+  current_cal,
+  "calibrations/ps-current.rds",
+  metadata = list(analyst = "<analyst-id>")
 )
 
-# Daily sample analysis
-cal <- load_sec_calibration("calibrations/ps_2024-01.rds")
+# Load the calibration selected by your lab's process
+cal <- load_sec_calibration("calibrations/ps-current.rds")
 samples_recipe <- recipe(...) |>
   step_sec_conventional_cal(calibration = cal) |>
   prep()
@@ -416,23 +451,23 @@ unlink(cal_file)
   Validate column performance
 - [Multi-Detector
   SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
-  Absolute MW without calibration
+  Multi-detector workflows
 - [Exporting
   Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md) -
   Summary tables and reports
 
-## Session Info
+## Session information
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -447,7 +482,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9003    
 #> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -474,5 +509,5 @@ sessionInfo()
 #> [61] evaluate_1.0.5      knitr_1.52          hardhat_1.4.3      
 #> [64] rlang_1.3.0         Rcpp_1.1.2          glue_1.8.1         
 #> [67] ipred_0.9-16        jsonlite_2.0.0      R6_2.6.1           
-#> [70] systemfonts_1.3.2   fs_2.1.0
+#> [70] systemfonts_1.3.3   fs_2.1.0
 ```

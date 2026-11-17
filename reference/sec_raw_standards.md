@@ -1,9 +1,7 @@
 # Raw SEC Calibration Standards
 
-A dataset containing raw SEC chromatograms of polystyrene narrow
-standards with realistic noise, baseline drift, and injection artifacts.
-Designed to mimic data exported directly from SEC instruments for
-tutorial purposes.
+Synthetic SEC chromatograms of polystyrene narrow standards with noise,
+baseline drift and injection artifacts for tutorial examples.
 
 ## Usage
 
@@ -21,7 +19,7 @@ A tibble with approximately 130,000 rows and 6 columns:
 
 - mp:
 
-  Numeric. Peak molecular weight in Da from certificate
+  Numeric. Assigned peak molecular weight in Da
 
 - log_mp:
 
@@ -29,7 +27,7 @@ A tibble with approximately 130,000 rows and 6 columns:
 
 - dispersity:
 
-  Numeric. Polydispersity index from certificate
+  Numeric. Assigned dispersity for the simulation
 
 - time_min:
 
@@ -45,10 +43,9 @@ Synthetic data generated for package tutorials.
 
 ## Details
 
-This dataset represents "raw" data as it would come from an SEC
-instrument, before any processing. Key characteristics include:
+The simulated signals have not been processed. They include:
 
-**Realistic Signal Features:**
+**Simulated Signal Features:**
 
 - Gaussian noise on detector signal
 

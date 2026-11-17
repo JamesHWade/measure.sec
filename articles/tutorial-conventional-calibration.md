@@ -1,20 +1,14 @@
 # Tutorial: Conventional Calibration from Raw Data
 
-### What You’ll Learn
+## What you’ll learn
 
-This tutorial walks through a **realistic SEC/GPC analysis workflow**
-from raw instrument data to final molecular weight results. By the end,
-you will be able to:
+This tutorial uses the package’s synthetic raw standards and
+unknown-sample datasets to show how to process signals, fit and inspect
+a conventional calibration, save it, and apply it to other samples. The
+supplied values support a reproducible example; they do not qualify an
+instrument or method.
 
-1.  **Process raw standard chromatograms** with noise and baseline drift
-2.  **Build and validate** a conventional calibration curve
-3.  **Save calibrations** for reuse in future sessions
-4.  **Analyze unknown samples** using your saved calibration
-5.  **Validate results** against known values
-
-**Time to complete**: ~30 minutes
-
-### Prerequisites
+## Prerequisites
 
 - Basic R knowledge (data frames, pipes)
 - Completed the [Getting
@@ -22,27 +16,14 @@ you will be able to:
   tutorial
 - Understanding of what SEC/GPC does (separates polymers by size)
 
-### The Lab Scenario
+## Example workflow
 
-Imagine you’re in a polymer analysis lab:
+The first part processes twelve synthetic polystyrene standards and
+saves the fitted calibration. The second part applies that calibration
+to synthetic unknown chromatograms and compares calculated averages with
+the values supplied in the example dataset.
 
-**Day 1 (Today):**
-
-- Run 12 polystyrene narrow standards on your SEC system
-- Process the raw data and build a calibration curve
-- Validate the calibration quality
-- Save the calibration for future use
-
-**Day 2 (Tomorrow):**
-
-- Run unknown polymer samples
-- Apply yesterday’s calibration
-- Calculate molecular weight averages
-- Compare to expected values
-
-Let’s get started!
-
-### Setup
+## Setup
 
 ``` r
 
@@ -71,14 +52,14 @@ library(ggplot2)
 
 ------------------------------------------------------------------------
 
-## Day 1: Building the Calibration
+## Build the calibration
 
-### Load Raw Standard Data
+### Load raw standard data
 
-The package includes `sec_raw_standards`, which contains realistic raw
-chromatogram data for 12 polystyrene narrow standards. This data mimics
-what you’d export from an SEC instrument—complete with noise, baseline
-drift, and injection artifacts.
+The package includes `sec_raw_standards`, a synthetic tutorial dataset
+with twelve polystyrene standard traces. It was generated with noise,
+baseline drift, and injection artifacts to resemble features found in
+raw exports; it is not instrument data.
 
 ``` r
 
@@ -119,23 +100,29 @@ sec_raw_standards |>
 
 ``` r
 
-# Plot all raw chromatograms overlaid
-# Note the noise and baseline variation - this is realistic data!
-ggplot(sec_raw_standards, aes(time_min, ri_mv, color = standard_name)) +
-  geom_line(alpha = 0.7) +
-  scale_color_viridis_d(option = "turbo") +
+sec_raw_standards |>
+  filter(standard_name %in% c("PS-580", "PS-67500", "PS-930000")) |>
+  arrange(standard_name, time_min) |>
+  ggplot(aes(time_min, ri_mv)) +
+  geom_line(color = "#2E86AB", linewidth = 0.4) +
+  facet_wrap(vars(standard_name), ncol = 1, scales = "free_y") +
   labs(
-    x = "Time (min)",
-    y = "RI Signal (mV)",
-    title = "Raw Polystyrene Standards",
-    subtitle = "12 narrow standards from 580 Da to 930K Da",
-    color = "Standard"
+    x = "Elution time (min)",
+    y = "RI signal (mV)"
   ) +
-  theme_minimal() +
-  theme(legend.position = "right")
+  theme_minimal(base_size = 11)
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/plot-raw-standards-1.png)
+![Three-panel faceted line chart of synthetic raw RI signals for PS-580,
+PS-67500, and PS-930000. Elution time in minutes is on the horizontal
+axis and raw RI signal in millivolts is on the vertical axis. The named
+standards' peaks occur at earlier times for higher molecular weights;
+each panel uses a separate vertical
+scale.](tutorial-conventional-calibration_files/figure-html/plot-raw-standards-1.png)
+
+Three synthetic raw RI traces selected from the standard set to span its
+molecular-weight range. Each panel uses its own signal range and shows
+the noise and baseline variation present in the tutorial data.
 
 Notice that:
 
@@ -145,7 +132,7 @@ Notice that:
 - There’s visible noise and baseline variation—this is normal for raw
   data
 
-### Process the Standards
+### Process the standards
 
 Before building a calibration curve, we need to:
 
@@ -215,7 +202,7 @@ print(peak_data)
 #> 12 PS-580           580   2.76           15.7        97.5
 ```
 
-### Build the Calibration Curve
+### Build the calibration curve
 
 Now we fit a polynomial relationship between retention time and log(MW):
 
@@ -223,9 +210,10 @@ Now we fit a polynomial relationship between retention time and log(MW):
 
 # Prepare calibration data in the required format
 cal_data <- peak_data |>
-  select(retention = retention_time, log_mw = log_mp)
+  select(standard_name, retention = retention_time, log_mw = log_mp)
+ps_cal <- cal_data |> select(retention, log_mw)
 
-# Fit a cubic polynomial (most common for SEC)
+# Fit a cubic polynomial for this workflow example
 cal_fit <- lm(log_mw ~ poly(retention, 3, raw = TRUE), data = cal_data)
 
 # View fit summary
@@ -257,52 +245,89 @@ cat("\nCalibration R² =", round(summary(cal_fit)$r.squared, 5), "\n")
 
 ``` r
 
-# Visualize calibration with confidence intervals
 cal_pred <- cal_data |>
   mutate(
     fitted = predict(cal_fit),
     residual = log_mw - fitted
   )
 
-# Add prediction interval for new observations
-pred_int <- predict(cal_fit, newdata = cal_data, interval = "prediction", level = 0.95)
-cal_pred <- cal_pred |>
-  mutate(
-    lwr = pred_int[, "lwr"],
-    upr = pred_int[, "upr"]
+cal_grid <- tibble(
+  retention = seq(
+    min(cal_data$retention),
+    max(cal_data$retention),
+    length.out = 200
   )
+)
+curve_interval <- predict(
+  cal_fit,
+  newdata = cal_grid,
+  interval = "confidence",
+  level = 0.95
+)
+cal_grid <- bind_cols(cal_grid, as_tibble(curve_interval))
 
-ggplot(cal_pred, aes(retention, log_mw)) +
-  geom_ribbon(aes(ymin = lwr, ymax = upr), fill = "#A23B72", alpha = 0.2) +
-  geom_smooth(
-    method = "lm", formula = y ~ poly(x, 3, raw = TRUE),
-    se = TRUE, color = "#A23B72", fill = "#A23B72", alpha = 0.3, linewidth = 1
+ggplot() +
+  geom_ribbon(
+    data = cal_grid,
+    aes(retention, ymin = lwr, ymax = upr),
+    fill = "#A23B72",
+    alpha = 0.18
   ) +
-  geom_point(size = 3, color = "#2E86AB") +
+  geom_line(
+    data = cal_grid,
+    aes(retention, fit),
+    color = "#A23B72",
+    linewidth = 0.8
+  ) +
+  geom_point(
+    data = cal_pred,
+    aes(retention, log_mw),
+    size = 2.4,
+    color = "#2E86AB"
+  ) +
   labs(
-    x = "Retention Time (min)",
-    y = expression(log[10](M[p])),
-    title = "Polystyrene Calibration Curve",
-    subtitle = paste("Cubic fit, R² =", round(summary(cal_fit)$r.squared, 5))
+    x = "Retention time (min)",
+    y = expression(log[10](M[p] / Da)),
+    title = "Cubic calibration from synthetic standards",
+    subtitle = paste("R² =", round(summary(cal_fit)$r.squared, 5))
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 11)
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/plot-calibration-1.png)
+![Scatter chart of twelve synthetic polystyrene standards with a cubic
+calibration curve and confidence band. Retention time in minutes is on
+the horizontal axis; log10 peak molecular weight in daltons is on the
+vertical axis. The cubic curve decreases through the middle and turns
+upward near both ends; several standards sit far from the fitted curve.
+The shaded band is the 95% confidence interval for the fitted
+mean.](tutorial-conventional-calibration_files/figure-html/plot-calibration-1.png)
 
-### Validate Calibration Quality
+Cubic calibration fitted to the peak retention times of the twelve
+synthetic standards. The shaded band is a 95% confidence interval for
+the fitted mean curve, not a prediction interval for a future
+measurement. The curve turns upward near both ends and departs
+substantially from several points in this example.
 
-A good calibration should have:
+This synthetic fit is unsuitable for quantitative use: R-squared is
+about 0.832, the curve turns upward near both ends, and some standards
+have large percent differences. The unknown-sample comparison below also
+shows poor agreement. The example does not identify the cause; for real
+data, confirm standard identity and peak assignment, check the supported
+range and fit, then assess the refitted calibration against
+method-specific criteria before interpreting Mw.
 
-- R² \> 0.999 (ideally \> 0.9999)
-- Random residual pattern (no systematic bias)
-- Small relative deviations (\< 5% for most standards)
+### Review calibration fit
+
+Inspect the residuals for structure and compare predicted molecular
+weights with the values supplied for each standard. R² and RMSE
+summarize the fit, but neither has a universal acceptance threshold; set
+criteria for the method and its intended use.
 
 ``` r
 
 # Calculate % deviation for each standard
 cal_pred <- cal_pred |>
-  left_join(peak_data |> select(retention = retention_time, standard_name, mp), by = "retention") |>
+  left_join(peak_data |> select(standard_name, mp), by = "standard_name") |>
   mutate(
     predicted_mp = 10^fitted,
     pct_deviation = (predicted_mp - mp) / mp * 100
@@ -314,37 +339,52 @@ p1 <- ggplot(cal_pred, aes(retention, residual)) +
   geom_point(size = 3, color = "#2E86AB") +
   geom_segment(aes(xend = retention, yend = 0), alpha = 0.5) +
   labs(
-    x = "Retention Time (min)",
-    y = "Residual (log₁₀ MW)",
-    title = "Calibration Residuals"
+    x = "Retention time (min)",
+    y = "Residual in log10(Mp / Da)",
+    title = "Calibration residuals"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 11)
 
 # Percent deviation bar chart
 p2 <- ggplot(cal_pred, aes(reorder(standard_name, mp), pct_deviation)) +
-  geom_col(fill = ifelse(abs(cal_pred$pct_deviation) > 5, "#E74C3C", "#2E86AB")) +
-  geom_hline(yintercept = c(-5, 5), linetype = "dashed", color = "gray50") +
+  geom_col(fill = "#2E86AB") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   coord_flip() +
   labs(
     x = "",
-    y = "% Deviation from Certificate",
-    title = "Standard Deviation Analysis",
-    subtitle = "Red bars exceed ±5% threshold"
+    y = "Difference from supplied Mp (%)",
+    title = "Percent difference by standard"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 11)
 
 # Display plots
 p1
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png)
+![Residual chart with retention time in minutes on the horizontal axis
+and residual in log10 peak molecular weight on the vertical axis. Points
+for twelve standards are connected to a zero reference line; their
+pattern shows where the cubic fit is above or below each supplied
+value.](tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png)
+
+Residuals from the cubic fit at the twelve synthetic standards. The
+horizontal line marks zero residual.
 
 ``` r
 
 p2
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/validate-calibration-2.png)
+![Horizontal bar chart of percent difference from the supplied peak
+molecular weight for twelve synthetic standards. Standard names are
+listed vertically and deviation is on the horizontal axis. A zero line
+marks exact agreement; bars extend to either side according to the
+signed
+difference.](tutorial-conventional-calibration_files/figure-html/validate-calibration-2.png)
+
+Percent difference between fitted and supplied peak molecular weights
+for each synthetic standard. The zero line marks agreement; no
+acceptance limits are shown.
 
 ``` r
 
@@ -370,64 +410,104 @@ cat("  Retention: ", round(min(cal_data$retention), 2), "to",
 #>   Retention:  14.64 to 16.21 min
 ```
 
-### Save the Calibration
+### Save the calibration
 
-Save your calibration so you can reuse it tomorrow (and beyond):
+Save the fitted calibration object so later recipes can reuse it without
+fitting again. This example uses a synthetic PS-50K trace to prepare the
+step; `ps_cal` defines the calibration standards.
 
 ``` r
 
-# Save calibration to a file
-save_sec_calibration(
-  calibration = cal_data,
-  fit_type = "cubic",
-  file = "ps_calibration_2026-01-04.rds",
-  metadata = list(
-    date = Sys.Date(),
-    column = "PLgel Mixed-C",
-    solvent = "THF",
-    flow_rate = 1.0,
-    temperature = 35,
-    standards = "PS EasiVial kit"
-  )
-)
+data(sec_triple_detect, package = "measure.sec")
+calibration_trace <- sec_triple_detect |>
+  filter(sample_id == "PS-50K")
 
-cat("Calibration saved successfully!\n")
+calibration_recipe <- recipe(
+  ri_signal + elution_time ~ sample_id,
+  data = calibration_trace
+) |>
+  update_role(sample_id, new_role = "id") |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_sec_baseline(measures = "ri") |>
+  step_sec_conventional_cal(
+    measures = "ri",
+    standards = ps_cal,
+    fit_type = "cubic",
+    extrapolation = "none"
+  )
+
+prepped_calibration <- prep(calibration_recipe)
+#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
+#> ℹ Typical calibrations have R\u00b2 > 0.999.
+#> Warning: Standard at 15.67 has 484.9% MW deviation.
+#> ℹ Consider removing outlier standards or using a different fit type.
 ```
 
-> **Tip**: Include the date in your calibration filename. Calibrations
-> can drift over time as columns age, so it’s good practice to rebuild
-> periodically.
+``` r
+
+# Use a temporary file here; replace it with a managed path in your workflow.
+cal_file <- tempfile(fileext = ".rds")
+save_sec_calibration(
+  prepped_calibration,
+  file = cal_file,
+  metadata = list(
+    date = Sys.Date(),
+    column = "<column-id>",
+    instrument = "<instrument-id>",
+    mobile_phase = "<mobile-phase>",
+    flow_rate = "<flow-rate>",
+    temperature = "<temperature>"
+  )
+)
+#> ✔ Saved cubic calibration to /tmp/Rtmp4XXoQE/file2cb0733bc04f.rds
+```
+
+> Include the date and method details in the filename or metadata.
+> Follow your method criteria to decide when to repeat calibration.
 
 ------------------------------------------------------------------------
 
-## Day 2: Analyzing Unknown Samples
+## Apply the calibration
 
-### Load Saved Calibration
+### Load a saved calibration
 
 ``` r
 
-# Load yesterday's calibration
-cal_saved <- load_sec_calibration("ps_calibration_2026-01-04.rds")
+# Load the calibration saved above
+cal_saved <- load_sec_calibration(cal_file)
+#> ℹ Loaded cubic calibration (R\u00b2 = 0.8324)
 
 # View the metadata
-cat("Calibration from:", as.character(cal_saved$metadata$date), "\n")
-cat("Column:", cal_saved$metadata$column, "\n")
+stopifnot(
+  !is.null(cal_saved$user_metadata$date),
+  identical(cal_saved$user_metadata$column, "<column-id>")
+)
+cat("Calibration from:", as.character(cal_saved$user_metadata$date), "\n")
+#> Calibration from: 2026-11-17
+cat("Column:", cal_saved$user_metadata$column, "\n")
+#> Column: <column-id>
 cat("Fit type:", cal_saved$fit_type, "\n")
+#> Fit type: cubic
 ```
 
-For this tutorial, we’ll use the calibration we just built:
+The recipes use the saved calibration object. Its retention range also
+defines the integration window for the averages below.
 
 ``` r
 
-# Use the calibration data we prepared
-# (In practice, you'd load from file)
-ps_cal <- cal_data
+calibration_range <- range(ps_cal$retention)
 ```
 
-### Load Unknown Samples
+### Load unknown samples
 
-The package includes `sec_raw_unknowns` with realistic unknown samples
-that have known “true” MW values for validation:
+The package includes `sec_raw_unknowns`, a synthetic dataset with
+supplied reference values for a workflow comparison. These values are
+part of the example data, not measurements from an independent
+instrument validation.
 
 ``` r
 
@@ -450,22 +530,30 @@ sec_raw_unknowns |>
 
 ``` r
 
-# Plot raw unknown chromatograms
-ggplot(sec_raw_unknowns, aes(time_min, ri_mv, color = sample_id)) +
-  geom_line() +
-  facet_wrap(~sample_id, scales = "free_y") +
+sec_raw_unknowns |>
+  arrange(sample_id, time_min) |>
+  ggplot(aes(time_min, ri_mv)) +
+  geom_line(color = "#2E86AB", linewidth = 0.35) +
+  facet_wrap(vars(sample_id), scales = "free_y") +
   labs(
-    x = "Time (min)",
-    y = "RI Signal (mV)",
-    title = "Raw Unknown Sample Chromatograms"
+    x = "Elution time (min)",
+    y = "RI signal (mV)"
   ) +
-  theme_minimal() +
-  theme(legend.position = "none")
+  theme_minimal(base_size = 11)
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/plot-unknowns-1.png)
+![Faceted line chart with six panels, one per synthetic unknown sample.
+Elution time in minutes is on the horizontal axis and raw RI signal in
+millivolts is on the vertical axis. The panels show the supplied trace
+shapes on separate vertical ranges; no sample identification or
+instrument conclusion is inferred from
+them.](tutorial-conventional-calibration_files/figure-html/plot-unknowns-1.png)
 
-### Analyze Unknowns with Calibration
+Synthetic raw RI chromatograms for the six supplied unknown samples.
+Each facet has an independent vertical scale so differences in trace
+shape remain visible.
+
+### Analyze an unknown sample
 
 Now we apply our calibration to calculate molecular weights. Each
 example integrates only the portion within the standards’ retention
@@ -489,19 +577,14 @@ rec_unknown <- recipe(ri_mv + time_min ~ sample_id, data = unknown_a) |>
   ) |>
   step_sec_baseline(measures = "ri") |>
   step_sec_conventional_cal(
-    standards = ps_cal,
-    fit_type = "cubic"
+    calibration = cal_saved,
+    extrapolation = "none"
   ) |>
-  step_sec_mw_averages(integration_range = range(ps_cal$retention))
+  step_sec_mw_averages(integration_range = calibration_range)
 
 # Process
 result_a <- prep(rec_unknown) |> bake(new_data = NULL)
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
 
 # View results
 result_a |>
@@ -512,9 +595,9 @@ result_a |>
 #> 1 Unknown-A 4829. 137331. 409434.          28.4
 ```
 
-### Process All Unknowns
+### Process the remaining unknowns
 
-Let’s analyze all unknown samples and compare to their true values:
+Process the remaining synthetic samples with the same recipe:
 
 ``` r
 
@@ -530,10 +613,10 @@ analyze_unknown <- function(sample_data) {
     ) |>
     step_sec_baseline(measures = "ri") |>
     step_sec_conventional_cal(
-      standards = ps_cal,
-      fit_type = "cubic"
+      calibration = cal_saved,
+      extrapolation = "none"
     ) |>
-    step_sec_mw_averages(integration_range = range(ps_cal$retention))
+    step_sec_mw_averages(integration_range = calibration_range)
 
   result <- prep(rec) |> bake(new_data = NULL)
 
@@ -541,43 +624,18 @@ analyze_unknown <- function(sample_data) {
     select(sample_id, mw_mn, mw_mw, mw_mz, mw_dispersity)
 }
 
-# Analyze all unknowns (excluding bimodal for now - needs special handling)
+# Analyze the non-bimodal samples in this example
 all_results <- sec_raw_unknowns |>
   filter(sample_id != "Unknown-Bimodal") |>  # Skip bimodal for standard analysis
   group_by(sample_id) |>
   group_split() |>
   purrr::map(analyze_unknown) |>
   bind_rows()
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
 
 print(all_results)
 #> # A tibble: 5 × 5
@@ -590,9 +648,10 @@ print(all_results)
 #> 5 Unknown-LMW 4613. 129848. 406376.          28.1
 ```
 
-### Validate Against True Values
+### Compare with the supplied values
 
-Compare calculated MW values to the known “true” values:
+Compare calculated MW averages with the reference values supplied in the
+synthetic dataset:
 
 ``` r
 
@@ -615,53 +674,66 @@ validation |>
   select(
     sample_id,
     `Calc Mw` = mw_mw,
-    `True Mw` = true_mw,
-    `Mw Error %` = mw_error_pct,
+    `Supplied Mw` = true_mw,
+    `Mw Difference %` = mw_error_pct,
     `Calc Đ` = mw_dispersity,
-    `True Đ` = true_dispersity
+    `Supplied Đ` = true_dispersity
   ) |>
   mutate(
     `Calc Mw` = round(`Calc Mw`),
-    `Mw Error %` = round(`Mw Error %`, 1),
+    `Mw Difference %` = round(`Mw Difference %`, 1),
     `Calc Đ` = round(`Calc Đ`, 2)
   )
 #> # A tibble: 5 × 6
-#>   sample_id   `Calc Mw` `True Mw` `Mw Error %` `Calc Đ` `True Đ`
-#>   <chr>           <dbl>     <dbl>        <dbl>    <dbl>    <dbl>
-#> 1 Unknown-A      137331     45000        205.      28.4     2.05
-#> 2 Unknown-B      136697    125000          9.4     28.4     1.32
-#> 3 Unknown-C      135656     82000         65.4     28.3     1.09
-#> 4 Unknown-HMW    140724   1500000        -90.6     28.5     1.25
-#> 5 Unknown-LMW    129848      3500       3610.      28.2     1.25
+#>   sample_id   `Calc Mw` `Supplied Mw` `Mw Difference %` `Calc Đ` `Supplied Đ`
+#>   <chr>           <dbl>         <dbl>             <dbl>    <dbl>        <dbl>
+#> 1 Unknown-A      137331         45000             205.      28.4         2.05
+#> 2 Unknown-B      136697        125000               9.4     28.4         1.32
+#> 3 Unknown-C      135656         82000              65.4     28.3         1.09
+#> 4 Unknown-HMW    140724       1500000             -90.6     28.5         1.25
+#> 5 Unknown-LMW    129848          3500            3610.      28.2         1.25
 ```
 
 ``` r
 
-# Parity plot: calculated vs true
+# Parity plot: calculated vs supplied values
+parity_limits <- range(c(validation$true_mw, validation$mw_mw), finite = TRUE)
+
 ggplot(validation, aes(true_mw, mw_mw)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
   geom_point(size = 4, color = "#2E86AB") +
-  geom_text(aes(label = sample_id), hjust = -0.2, vjust = 0.5, size = 3) +
-  scale_x_log10(labels = scales::label_comma()) +
-  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_log10(limits = parity_limits, labels = scales::label_comma()) +
+  scale_y_log10(limits = parity_limits, labels = scales::label_comma()) +
   labs(
-    x = "True Mw (Da)",
+    x = "Supplied reference Mw (Da)",
     y = "Calculated Mw (Da)",
-    title = "Validation: Calculated vs True Molecular Weight",
-    subtitle = "Points on the dashed line indicate perfect agreement"
+    title = "Calculated and supplied Mw"
   ) +
-  coord_fixed() +
-  theme_minimal()
+  coord_equal(xlim = parity_limits, ylim = parity_limits) +
+  theme_minimal(base_size = 11)
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/validation-plot-1.png)
+![Log-scale parity chart comparing supplied reference Mw on the
+horizontal axis with calculated Mw on the vertical axis, both in
+daltons. Five unlabeled calculated values cluster near 130–141 thousand
+Da, while supplied values range from about 3,500 Da to 1.5 million Da.
+The dashed identity line marks agreement; the points lie far from it.
+The table above identifies the
+samples.](tutorial-conventional-calibration_files/figure-html/validation-plot-1.png)
 
-### Handling Special Cases
+Calculated and supplied weight-average molecular weights for the
+synthetic unknown samples, using only the measured portion within
+calibration support. The dashed identity line marks agreement; omitted
+signal outside the calibration range is not represented. The calculated
+values cluster near 130–141 kDa while supplied values span about 3.5 kDa
+to 1.5 MDa. The table above gives sample IDs.
 
-#### Bimodal Distributions
+## Special case: bimodal signal
 
-The Unknown-Bimodal sample has two distinct peaks. Standard MW averages
-still work, but you may want to analyze each peak separately:
+The synthetic `Unknown-Bimodal` trace is described as a mixture with
+supplied component values of 50,000 and 200,000 Da. Molecular-weight
+averages summarize the calibrated portion of the trace; inspect the
+signal and support before interpreting components.
 
 ``` r
 
@@ -678,112 +750,115 @@ rec_bimodal <- recipe(ri_mv + time_min ~ sample_id, data = bimodal) |>
   ) |>
   step_sec_baseline(measures = "ri") |>
   step_sec_conventional_cal(
-    standards = ps_cal,
-    fit_type = "cubic"
+    calibration = cal_saved,
+    extrapolation = "none"
   ) |>
-  step_sec_mw_averages(integration_range = range(ps_cal$retention))
+  step_sec_mw_averages(integration_range = calibration_range)
 
 result_bimodal <- prep(rec_bimodal) |> bake(new_data = NULL)
-#> Warning: Calibration fit quality is low (R\u00b2 = 0.8324).
-#> ℹ Typical calibrations have R\u00b2 > 0.999.
-#> Warning: Standard at 15.67 has 484.9% MW deviation.
-#> ℹ Consider removing outlier standards or using a different fit type.
-#> Warning: 9857 points (91.3%) are outside calibration range.
-#> ℹ Calibration range: 14.64 to 16.21
+#> ℹ Using pre-loaded cubic calibration (R\u00b2 = 0.8324)
 
-cat("Bimodal Sample Results:\n")
-#> Bimodal Sample Results:
+cat("Bimodal sample results:\n")
+#> Bimodal sample results:
 cat("  Mn =", round(result_bimodal$mw_mn), "Da\n")
 #>   Mn = 4802 Da
 cat("  Mw =", round(result_bimodal$mw_mw), "Da\n")
 #>   Mw = 135990 Da
 cat("  Dispersity =", round(result_bimodal$mw_dispersity, 2), "\n")
 #>   Dispersity = 28.32
-cat("\nNote: High dispersity indicates the bimodal nature!\n")
-#> 
-#> Note: High dispersity indicates the bimodal nature!
 
-# Plot the bimodal chromatogram with MW scale
-bimodal_chrom <- tibble::tibble(
-  mw = 10^result_bimodal$mw[[1]]$value,
-  value = result_bimodal$ri[[1]]$value
-) |>
-  filter(is.finite(mw))
-ggplot(bimodal_chrom, aes(mw, value)) +
-  geom_line(color = "#2E86AB", linewidth = 1) +
-  geom_vline(xintercept = c(50000, 200000), linetype = "dashed", color = "#A23B72") +
-  annotate("text", x = 50000, y = max(bimodal_chrom$value) * 0.8,
-           label = "50K", hjust = 1.2, color = "#A23B72") +
-  annotate("text", x = 200000, y = max(bimodal_chrom$value) * 0.8,
-           label = "200K", hjust = -0.2, color = "#A23B72") +
+# Pair RI response with calibrated MW at the exact measured location.
+# Points avoid drawing a line across excluded calibration support.
+ri_curve <- as.data.frame(result_bimodal$ri[[1]]) |>
+  rename(ri_response = value)
+
+mw_curve <- as.data.frame(result_bimodal$mw[[1]]) |>
+  transmute(location, molecular_weight = 10^value)
+
+bimodal_chrom <- ri_curve |>
+  left_join(mw_curve, by = "location") |>
+  filter(is.finite(molecular_weight), is.finite(ri_response))
+
+ggplot(bimodal_chrom, aes(molecular_weight, ri_response)) +
+  geom_point(color = "#2E86AB", size = 0.45, alpha = 0.65) +
+  geom_vline(
+    xintercept = c(50000, 200000),
+    linetype = "dashed",
+    color = "#A23B72"
+  ) +
   scale_x_log10(labels = scales::label_comma()) +
   labs(
-    x = "Molecular Weight (Da)",
-    y = "RI Signal (processed)",
-    title = "Bimodal Distribution",
-    subtitle = "Mixture of 50K and 200K components"
+    x = "Calibrated molecular weight (Da)",
+    y = "Baseline-corrected RI signal (mV)",
+    title = "Synthetic bimodal sample",
+    subtitle = "Vertical guides mark the two supplied component values"
   ) +
-  theme_minimal()
-#> Warning in scale_x_log10(labels = scales::label_comma()): log-10
-#> transformation introduced infinite values.
+  theme_minimal(base_size = 11)
 ```
 
-![](tutorial-conventional-calibration_files/figure-html/bimodal-1.png)
+![Point chart of baseline-corrected RI response against calibrated
+molecular weight in daltons on a logarithmic horizontal axis. The
+displayed points form a broad cloud over the finite sampled calibration
+support; vertical guides mark the supplied 50,000 and 200,000 Da
+component values. No line joins points across omitted
+support.](tutorial-conventional-calibration_files/figure-html/bimodal-1.png)
 
-### Common Issues and Troubleshooting
+The synthetic bimodal trace is plotted against calibrated molecular
+weight only at measured locations with finite calibration values.
+Vertical guides mark the dataset’s supplied 50,000 and 200,000 Da
+component values; signal outside finite calibration support is omitted.
+
+## Troubleshooting
 
 | Problem | Possible Cause | Solution |
 |----|----|----|
-| MW values all NA | Retention times outside calibration range | Check your integration limits; extend calibration range |
-| Very high error for HMW samples | Extrapolation beyond highest standard | Use higher MW standards or MALS for very high MW |
-| Dispersity \> 3 | Multiple peaks or aggregates | Check chromatogram; may need peak deconvolution |
-| Negative MW values | Severe baseline issues | Improve baseline correction; check for air bubbles |
+| MW values all NA | Retention times outside calibration range | Check supported locations; use standards that bracket the sample range |
+| Very high error for HMW samples | Extrapolation beyond highest standard | Use higher MW standards or additional standards or a method validated for that range |
+| Dispersity \> 3 | Broad or multiple populations, integration, or baseline effects | Inspect the trace and method support before interpreting |
+| Negative detector response | Low signal or baseline correction | Inspect raw and corrected signals; do not interpret a negative response as molecular weight |
 | Inconsistent results day-to-day | Calibration drift | Rebuild calibration; check column condition |
 
-### Summary
+## Summary
 
-You’ve completed a realistic SEC analysis workflow:
+The code sequence demonstrates standard processing, calibration saving,
+application, and comparison with supplied reference values. This
+synthetic example does not provide quantitative sample results.
 
-1.  **Processed raw standards** with baseline correction
-2.  **Built a calibration curve** with quality validation (R² \> 0.999)
-3.  **Saved the calibration** for future use
-4.  **Analyzed unknown samples** and calculated MW averages
-5.  **Validated results** against known true values
+### Key points
 
-#### Key Takeaways
-
-- **Start with good standards**: Use narrow dispersity standards that
-  bracket your sample MW range
-- **Validate your calibration**: Check R², residuals, and % deviation
-  before using
+- **Choose standards**: Use suitable standards that bracket the
+  molecular-weight range of interest
+- **Review calibration fit**: Inspect residuals and compare deviations
+  with method-specific criteria
 - **Watch for extrapolation**: MW values outside your calibration range
   are unreliable
 - **Save calibrations with metadata**: Include date, column, conditions
   for traceability
-- **Re-calibrate periodically**: Columns degrade; rebuild calibration
-  monthly or when QC fails
+- **Set a recalibration schedule**: Follow your method and lab criteria;
+  recheck calibration when the column, mobile phase, or system
+  suitability changes
 
-### Next Steps
+## Next steps
 
 | Task | Resource |
 |----|----|
 | Multi-detector analysis | [Triple Detection Tutorial](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) |
-| Absolute MW without standards | [MALS Detection Guide](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
+| Single-angle scattering estimates | [MALS Detection Guide](https://jameshwade.github.io/measure.sec/articles/mals-detection.md) |
 | Save/load calibrations | [Calibration Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) |
 | Set up QC checks | [System Suitability](https://jameshwade.github.io/measure.sec/articles/system-suitability.md) |
 
-### Session Info
+## Session information
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -798,7 +873,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          tidyr_1.3.2            measure.sec_0.0.0.9000
+#> [1] ggplot2_4.0.4          tidyr_1.3.2            measure.sec_0.0.0.9000
 #> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
@@ -812,18 +887,17 @@ sessionInfo()
 #> [22] class_7.3-24        sass_0.4.10         yaml_2.3.12        
 #> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
 #> [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       
-#> [31] gower_1.0.2         rpart_4.1.27        nlme_3.1-171       
-#> [34] parallelly_1.50.0   lava_1.11           tidyselect_1.2.1   
-#> [37] digest_0.6.39       future_1.82.0       purrr_1.2.2        
-#> [40] listenv_1.1.0       labeling_0.4.3      splines_4.6.2      
-#> [43] fastmap_1.2.0       grid_4.6.2          cli_3.6.6          
-#> [46] magrittr_2.0.5      utf8_1.2.6          survival_3.8-12    
-#> [49] future.apply_1.21.0 withr_3.0.3         scales_1.4.0       
-#> [52] lubridate_1.9.5     timechange_0.4.0    rmarkdown_2.32     
-#> [55] globals_0.20.0      otel_0.3.0          nnet_7.3-21        
-#> [58] timeDate_4052.112   ragg_1.5.2          evaluate_1.0.5     
-#> [61] knitr_1.52          hardhat_1.4.3       viridisLite_0.4.3  
-#> [64] mgcv_1.9-4          rlang_1.3.0         Rcpp_1.1.2         
-#> [67] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
-#> [70] R6_2.6.1            systemfonts_1.3.2   fs_2.1.0
+#> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.50.0  
+#> [34] lava_1.11           tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
+#> [40] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
+#> [43] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     
+#> [46] utf8_1.2.6          survival_3.8-12     future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.3.0          nnet_7.3-21         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       rlang_1.3.0         Rcpp_1.1.2         
+#> [64] glue_1.8.1          ipred_0.9-16        jsonlite_2.0.0     
+#> [67] R6_2.6.1            systemfonts_1.3.3   fs_2.1.0
 ```

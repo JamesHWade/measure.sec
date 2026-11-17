@@ -1,85 +1,21 @@
 # Copolymer Composition Analysis
 
-## Overview
+## Scope
 
-SEC with dual detection (UV and RI) can reveal compositional
-heterogeneity in copolymers. By analyzing the UV/RI ratio across the
-molecular weight distribution, you can:
+This vignette uses `sec_copolymer`, a synthetic dataset with one
+supplied styrene fraction and one supplied molecular-weight value per
+sample. The per-slice UV and RI signals can be used to calculate a
+relative detector response profile. They do not, by themselves, give a
+mass fraction.
 
-- Detect compositional drift during polymerization
-- Identify blocky vs random copolymer structures
-- Quantify the composition at different molecular weights
+[`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md)
+requires four detector-response coefficients calibrated from
+pure-component standards for the selected input basis. The example
+dataset does not include those calibration results, so the composition
+calculation below is shown as a template rather than filled with assumed
+coefficients.
 
-This vignette covers:
-
-1.  UV/RI ratio analysis
-2.  Composition calculations
-3.  Interpreting compositional heterogeneity
-
-## Understanding Copolymer Heterogeneity
-
-### What Makes Copolymers Complex
-
-A **copolymer** is a polymer chain built from two or more different
-monomer units. Unlike homopolymers (single monomer type), copolymers
-have an additional dimension of complexity: **compositional
-heterogeneity**—the variation in monomer ratio across the molecular
-weight distribution.
-
-Consider a styrene-acrylate copolymer: the overall composition might be
-40% styrene, but this is just an average. Individual chains might range
-from 30% to 50% styrene, and this variation often correlates with
-molecular weight. Understanding this heterogeneity is essential for
-predicting material properties—a copolymer with uniform composition
-behaves very differently from one with significant compositional drift,
-even if they have identical average compositions.
-
-### Why Composition Varies with Molecular Weight
-
-During polymerization, monomer consumption changes the reactor
-composition over time. If one monomer reacts faster than the other
-(different reactivity ratios), the chains formed early will have a
-different composition than chains formed later. The result is
-**compositional drift**: a systematic change in composition across the
-molecular weight distribution.
-
-This drift creates a correlation between MW and composition. In SEC,
-higher MW chains elute first. If these high MW chains were formed when
-the reactor was enriched in one monomer, they will have higher content
-of that monomer. The UV/RI ratio across the chromatogram directly
-reveals this variation.
-
-Beyond drift, copolymers can also show **compositional
-distribution**—random variation in composition at each molecular weight.
-Block copolymers, gradient copolymers, and statistical copolymers each
-have distinct compositional signatures that SEC with dual detection can
-reveal.
-
-### What UV/RI Ratio Analysis Can (and Cannot) Tell You
-
-The UV/RI ratio method provides a powerful, accessible approach to
-compositional analysis when one monomer absorbs UV light and the other
-doesn’t. The ratio of UV to RI signal at each elution slice reflects the
-local composition. A flat ratio indicates uniform composition; a
-changing ratio reveals heterogeneity.
-
-However, this approach has important limitations:
-
-- **Both monomers must have different UV responses.** If both absorb
-  equally (or neither absorbs), UV/RI provides no compositional
-  information.
-- **Response factors must be known.** Converting UV/RI ratio to actual
-  composition requires accurate extinction coefficients and dn/dc values
-  for each monomer unit.
-- **Secondary effects can interfere.** Sequence effects (alternating
-  vs. random vs. blocky distribution) can affect both UV absorption and
-  RI response beyond simple compositional effects.
-
-For systems where UV/RI analysis isn’t applicable, more sophisticated
-techniques like SEC-FTIR or SEC-NMR can provide compositional
-information, though with added complexity and cost.
-
-## Setup
+## Sample-level composition values
 
 ``` r
 
@@ -103,78 +39,101 @@ library(measure.sec)
 library(recipes)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 ```
-
-## Copolymer Detection Principles
-
-### UV and RI Response
-
-Different monomers have different detector responses:
-
-| Monomer Type             | UV Response | RI Response    |
-|--------------------------|-------------|----------------|
-| Aromatic (styrene)       | Strong      | Moderate       |
-| Aliphatic (acrylate)     | Weak/None   | Moderate       |
-| UV-absorbing chromophore | Strong      | Variable       |
-| Non-absorbing            | None        | Based on dn/dc |
-
-### UV/RI Ratio Interpretation
-
-![](copolymer-analysis_files/figure-html/uv-ri-concept-1.png)
-
-## Example Dataset
-
-The package includes `sec_copolymer`, a dataset of styrene-acrylate
-copolymers with varying compositions:
 
 ``` r
 
 data(sec_copolymer, package = "measure.sec")
 
-# View the dataset structure
-glimpse(sec_copolymer)
-#> Rows: 4,206
-#> Columns: 8
-#> $ sample_id        <chr> "Copoly-20S", "Copoly-20S", "Copoly-20S", "Copoly-20S…
-#> $ elution_time     <dbl> 8.00, 8.02, 8.04, 8.06, 8.08, 8.10, 8.12, 8.14, 8.16,…
-#> $ ri_signal        <dbl> 0.005043384, 0.004595667, 0.004945809, 0.005114517, 0…
-#> $ uv_254_signal    <dbl> 0.01516172, 0.01369785, 0.01487566, 0.01432866, 0.015…
-#> $ styrene_fraction <dbl> 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2…
-#> $ mw               <dbl> 45000, 45000, 45000, 45000, 45000, 45000, 45000, 4500…
-#> $ dispersity       <dbl> 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8…
-#> $ description      <chr> "20% styrene, 80% acrylate", "20% styrene, 80% acryla…
+sample_composition <- sec_copolymer |>
+  distinct(sample_id, styrene_fraction) |>
+  mutate(acrylate_fraction = 1 - styrene_fraction) |>
+  pivot_longer(
+    cols = c(styrene_fraction, acrylate_fraction),
+    names_to = "component",
+    values_to = "fraction"
+  ) |>
+  mutate(
+    component = recode(
+      component,
+      styrene_fraction = "Styrene",
+      acrylate_fraction = "Acrylate"
+    )
+  )
 
-# Available samples
-sec_copolymer |>
-  distinct(sample_id, styrene_fraction, description)
-#> # A tibble: 6 × 3
-#>   sample_id  styrene_fraction description              
-#>   <chr>                 <dbl> <chr>                    
-#> 1 Copoly-20S              0.2 20% styrene, 80% acrylate
-#> 2 Copoly-40S              0.4 40% styrene, 60% acrylate
-#> 3 Copoly-60S              0.6 60% styrene, 40% acrylate
-#> 4 Copoly-80S              0.8 80% styrene, 20% acrylate
-#> 5 PS-Homo                 1   Polystyrene homopolymer  
-#> 6 PA-Homo                 0   Polyacrylate homopolymer
+sample_composition
+#> # A tibble: 12 × 3
+#>    sample_id  component fraction
+#>    <chr>      <chr>        <dbl>
+#>  1 Copoly-20S Styrene        0.2
+#>  2 Copoly-20S Acrylate       0.8
+#>  3 Copoly-40S Styrene        0.4
+#>  4 Copoly-40S Acrylate       0.6
+#>  5 Copoly-60S Styrene        0.6
+#>  6 Copoly-60S Acrylate       0.4
+#>  7 Copoly-80S Styrene        0.8
+#>  8 Copoly-80S Acrylate       0.2
+#>  9 PS-Homo    Styrene        1  
+#> 10 PS-Homo    Acrylate       0  
+#> 11 PA-Homo    Styrene        0  
+#> 12 PA-Homo    Acrylate       1
 ```
 
-## UV/RI Ratio Analysis
-
-### Basic Workflow
+The bars use the sample-level fraction fields supplied with the
+synthetic dataset. They do not show slice-level composition recovered
+from the detector signals.
 
 ``` r
 
-# Analyze a single copolymer sample
-copoly_40 <- sec_copolymer |>
-  filter(sample_id == "Copoly-40S")
+ggplot(
+  sample_composition,
+  aes(x = sample_id, y = fraction, fill = component)
+) +
+  geom_col(width = 0.72, colour = "white") +
+  scale_y_continuous(
+    labels = scales::label_percent(),
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = 0.25)
+  ) +
+  scale_fill_manual(values = c(Styrene = "#A23B72", Acrylate = "#2E86AB")) +
+  labs(
+    x = NULL,
+    y = "Supplied sample-level fraction",
+    fill = "Component"
+  ) +
+  theme_measure_sec() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
 
-# UV/RI ratio analysis for compositional heterogeneity
-rec_ratio <- recipe(
+![Stacked bar chart of six synthetic samples, with styrene and acrylate
+fractions totaling 100 percent in each bar. Copoly-20S, Copoly-40S,
+Copoly-60S, and Copoly-80S contain 20, 40, 60, and 80 percent styrene;
+PA-Homo contains 0 percent and PS-Homo contains 100
+percent.](copolymer-analysis_files/figure-html/sample-composition-1.png)
+
+Sample-level styrene and acrylate fractions supplied with the synthetic
+dataset. Acrylate is shown as the complement of the supplied styrene
+fraction.
+
+## UV/RI response profiles
+
+[`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv_ri_ratio.md)
+retains a relative UV-to-RI response curve. Baseline correction is
+applied before calculating the ratio. The step sets ratios to `NA` where
+the RI signal is below its configured signal threshold; the plot keeps
+those gaps instead of connecting across them.
+
+``` r
+
+copolymer_samples <- sec_copolymer |>
+  filter(startsWith(sample_id, "Copoly"))
+
+ratio_recipe <- recipe(
   ri_signal + uv_254_signal + elution_time ~ sample_id,
-  data = copoly_40
+  data = copolymer_samples
 ) |>
   update_role(sample_id, new_role = "id") |>
-  # Convert signals to measure format
   step_measure_input_long(
     ri_signal,
     location = vars(elution_time),
@@ -185,224 +144,154 @@ rec_ratio <- recipe(
     location = vars(elution_time),
     col_name = "uv"
   ) |>
-  # Baseline correction
   step_sec_baseline(measures = c("ri", "uv")) |>
-  # Calculate UV/RI ratio
   step_sec_uv_ri_ratio(
     uv_col = "uv",
     ri_col = "ri",
-    smooth = TRUE          # Apply smoothing for noise reduction
+    smooth = TRUE
   )
 
-prepped_ratio <- prep(rec_ratio)
-result_ratio <- bake(prepped_ratio, new_data = NULL)
+ratio_results <- prep(ratio_recipe) |>
+  bake(new_data = NULL)
 
-# View result columns
-names(result_ratio)
-#> [1] "sample_id"    "ri"           "uv"           "elution_time" "uv_ri_ratio"
-```
+sample_fractions <- copolymer_samples |>
+  distinct(sample_id, styrene_fraction)
 
-### Extracting the Ratio Curve
-
-``` r
-
-# The uv_ri_ratio column contains a measure_list
-# Extract the ratio values at each elution time
-ratio_data <- result_ratio |>
+ratio_data <- ratio_results |>
   select(sample_id, uv_ri_ratio) |>
-  tidyr::unnest(uv_ri_ratio)
+  unnest(uv_ri_ratio) |>
+  left_join(sample_fractions, by = "sample_id") |>
+  group_by(sample_id) |>
+  mutate(segment = cumsum(is.na(value))) |>
+  filter(!is.na(value)) |>
+  ungroup()
 
-# Plot ratio vs elution time
-ggplot(ratio_data, aes(location, value)) +
-  geom_line(color = "#A23B72") +
-  labs(
-    x = "Elution Time (min)",
-    y = "UV/RI Ratio",
-    title = "UV/RI Ratio Profile for 40% Styrene Copolymer",
-    subtitle = "Flat ratio indicates uniform composition across MW"
-  ) +
-  theme_minimal()
+head(ratio_data)
+#> # A tibble: 6 × 5
+#>   sample_id  location value styrene_fraction segment
+#>   <chr>         <dbl> <dbl>            <dbl>   <int>
+#> 1 Copoly-20S     8.02  4.24              0.2       1
+#> 2 Copoly-20S     8.24  2.20              0.2      11
+#> 3 Copoly-20S     8.34  1.62              0.2      15
+#> 4 Copoly-20S     8.36  1.62              0.2      15
+#> 5 Copoly-20S     8.48  3.72              0.2      20
+#> 6 Copoly-20S     8.6   2.74              0.2      25
 ```
-
-![](copolymer-analysis_files/figure-html/extract-ratio-1.png)
-
-## Composition Calculation
-
-### Using Known Response Factors
-
-When you know the response factors for each monomer, calculate actual
-composition:
 
 ``` r
 
-# Composition calculation with known response factors for styrene-acrylate
-rec_comp <- recipe(
+ggplot(
+  ratio_data,
+  aes(
+    x = location,
+    y = value,
+    colour = sample_id,
+    group = interaction(sample_id, segment)
+  )
+) +
+  geom_line(linewidth = 0.7) +
+  scale_colour_viridis_d(end = 0.9) +
+  labs(
+    x = "Elution time (min)",
+    y = "UV 254 nm / RI detector-response ratio",
+    colour = "Sample"
+  ) +
+  theme_measure_sec()
+```
+
+![Line chart of elution time in minutes versus UV 254 nm to RI
+detector-response ratio for the synthetic samples Copoly-20S,
+Copoly-40S, Copoly-60S, and Copoly-80S. Each sample has its own colored
+curve; low-signal regions are omitted and remain visible as gaps. The
+curves describe relative detector response, not mass
+fraction.](copolymer-analysis_files/figure-html/ratio-profiles-1.png)
+
+Baseline-corrected UV-to-RI detector-response ratios calculated by
+[`step_sec_uv_ri_ratio()`](https://jameshwade.github.io/measure.sec/reference/step_sec_uv_ri_ratio.md)
+for the four synthetic copolymer samples. The ratio is not calibrated to
+a mass fraction.
+
+The ratio uses the native detector-response basis. Its magnitude depends
+on the detector channels and their calibration. A changing profile can
+be investigated as possible compositional variation, but interpreting it
+as composition requires response calibration and suitable detector
+alignment.
+
+## Calculating component mass fractions
+
+Use
+[`step_sec_composition()`](https://jameshwade.github.io/measure.sec/reference/step_sec_composition.md)
+after measuring the four response coefficients from pure-component
+standards on the same instrument and with the same signal basis. The
+code below leaves those measured values as inputs because they are not
+supplied by `sec_copolymer`.
+
+``` r
+
+composition_recipe <- recipe(
   ri_signal + uv_254_signal + elution_time ~ sample_id,
-  data = copoly_40
+  data = copolymer_samples
 ) |>
   update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
+  step_measure_input_long(
+    ri_signal,
+    location = vars(elution_time),
+    col_name = "ri"
+  ) |>
+  step_measure_input_long(
+    uv_254_signal,
+    location = vars(elution_time),
+    col_name = "uv"
+  ) |>
   step_sec_baseline(measures = c("ri", "uv")) |>
-  # Calculate composition from UV/RI
   step_sec_composition(
     uv_col = "uv",
     ri_col = "ri",
-    # Response factors for styrene (UV-active)
-    component_a_uv = 1.0,    # Strong UV absorption at 254 nm
-    component_a_ri = 0.185,  # dn/dc in THF
-    # Response factors for acrylate (UV-inactive)
-    component_b_uv = 0.02,   # Weak UV absorption
-    component_b_ri = 0.084   # dn/dc in THF
+    component_a_uv = styrene_uv_response,
+    component_a_ri = styrene_ri_response,
+    component_b_uv = acrylate_uv_response,
+    component_b_ri = acrylate_ri_response,
+    output_col = "styrene_fraction"
   )
-
-prepped_comp <- prep(rec_comp)
-result_comp <- bake(prepped_comp, new_data = NULL)
-
-# Result contains composition columns
-result_comp |>
-  select(sample_id, starts_with("composition_"))
-#> # A tibble: 1 × 2
-#>   sample_id  composition_a
-#>   <chr>             <meas>
-#> 1 Copoly-40S     [701 × 2]
 ```
 
-### Response Factor Determination
+The response coefficients must describe measured detector outputs per
+concentration for the selected basis. Literature extinction coefficients
+or `dn/dc` values alone do not supply these instrument-specific
+coefficients.
 
-Response factors should be measured experimentally:
+The `mw` column in `sec_copolymer` is a supplied sample-level value,
+repeated across the elution-time rows. It is not a calibrated per-slice
+molecular-weight curve, so these examples do not plot within-sample
+composition against MW.
 
-1.  **dn/dc**: Measure with differential refractometer
-2.  **UV extinction**: Measure with UV-Vis spectrophotometer
-
-Typical values (THF, 25°C):
-
-| Polymer       | dn/dc (mL/g) | ε₂₅₄ (mL/(g·cm)) |
-|---------------|--------------|------------------|
-| Polystyrene   | 0.185        | 1.0              |
-| PMMA          | 0.084        | ~0.01            |
-| Polybutadiene | 0.127        | 0.05             |
-| PEG           | 0.069        | ~0               |
-
-## Interpreting Results
-
-### Uniform Composition
-
-![](copolymer-analysis_files/figure-html/uniform-concept-1.png)
-
-**Characteristics:** - Constant UV/RI ratio - Flat composition profile -
-Indicates random or alternating copolymer
-
-### Compositional Drift
-
-![](copolymer-analysis_files/figure-html/drift-concept-1.png)
-
-**Characteristics:** - Changing UV/RI ratio - Sloped composition
-profile - Indicates gradient copolymer or reactivity differences
-
-### Bimodal Composition
-
-![](copolymer-analysis_files/figure-html/bimodal-concept-1.png)
-
-**Characteristics:** - Abrupt ratio changes - Step-like composition
-profile - Indicates blend or block copolymer
-
-## Comparing Multiple Copolymers
-
-Analyze all copolymer samples to compare UV/RI ratios across
-compositions:
-
-``` r
-
-# Analyze all samples (excluding homopolymers for this example)
-copolymers_only <- sec_copolymer |>
-  filter(stringr::str_starts(sample_id, "Copoly"))
-
-# Process all copolymers
-rec_all <- recipe(
-  ri_signal + uv_254_signal + elution_time ~ sample_id,
-  data = copolymers_only
-) |>
-  update_role(sample_id, new_role = "id") |>
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(uv_254_signal, location = vars(elution_time), col_name = "uv") |>
-  step_sec_baseline(measures = c("ri", "uv")) |>
-  step_sec_uv_ri_ratio(uv_col = "uv", ri_col = "ri", smooth = TRUE)
-
-prepped_all <- prep(rec_all)
-result_all <- bake(prepped_all, new_data = NULL)
-
-# Extract ratio curves for plotting
-all_ratios <- result_all |>
-  select(sample_id, uv_ri_ratio) |>
-  tidyr::unnest(uv_ri_ratio)
-
-# Plot UV/RI ratios - higher ratio = more styrene
-ggplot(all_ratios, aes(location, value, color = sample_id)) +
-  geom_line(linewidth = 1) +
-  labs(
-    x = "Elution Time (min)",
-    y = "UV/RI Ratio",
-    color = "Sample",
-    title = "UV/RI Ratio Profiles by Styrene Content",
-    subtitle = "Higher ratio corresponds to more styrene (UV-absorbing)"
-  ) +
-  scale_color_viridis_d() +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-#> Warning: Removed 1 row containing missing values or values outside the scale range
-#> (`geom_line()`).
-```
-
-![](copolymer-analysis_files/figure-html/compare-copolymers-1.png)
-
-## Best Practices
-
-### Detector Calibration
-
-1.  **Verify response factors** with homopolymer standards
-2.  **Account for detector delay** between UV and RI
-3.  **Use same solvent** as for response factor determination
-
-### Data Quality
-
-1.  **Adequate signal-to-noise** on both detectors
-2.  **Baseline correction** before ratio calculation
-3.  **Signal threshold** to avoid noise in low-signal regions
-
-### Interpretation Caveats
-
-1.  **UV/RI ratio is relative**, not absolute composition
-2.  **Assumes no specific interactions** between detector and polymer
-3.  **Block copolymers** may show different behavior than random
-
-## See Also
+## See also
 
 - [Getting
-  Started](https://jameshwade.github.io/measure.sec/articles/getting-started.md) -
-  Basic SEC workflow and concepts
-- [Multi-Detector
-  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md) -
-  Detector setup and processing
+  started](https://jameshwade.github.io/measure.sec/articles/getting-started.md)
+  — basic SEC workflow
+- [Multi-detector
+  SEC](https://jameshwade.github.io/measure.sec/articles/triple-detection.md)
+  — detector processing and limits
 - [Calibration
-  Management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md) -
-  Save and reuse calibrations
+  management](https://jameshwade.github.io/measure.sec/articles/calibration-management.md)
+  — SEC calibrations
 - [Exporting
-  Results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md) -
-  Summary tables and report generation
+  results](https://jameshwade.github.io/measure.sec/articles/exporting-results.md)
+  — tables and files
 
-## Session Info
+## Session info
 
 ``` r
 
 sessionInfo()
 #> R version 4.6.2 (2026-10-29)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.5 LTS
+#> Running under: Ubuntu 26.04.1 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
 #> 
 #> locale:
 #>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
@@ -417,8 +306,8 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.3          measure.sec_0.0.0.9000 measure_0.0.1.9003    
-#> [4] recipes_1.4.0          dplyr_1.2.1           
+#> [1] tidyr_1.3.2            ggplot2_4.0.4          measure.sec_0.0.0.9000
+#> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       
@@ -426,24 +315,23 @@ sessionInfo()
 #>  [7] generics_0.1.4      parallel_4.6.2      tibble_3.3.1       
 #> [10] pkgconfig_2.0.3     Matrix_1.7-6        data.table_1.18.6.1
 #> [13] RColorBrewer_1.1-3  S7_0.2.2            desc_1.4.3         
-#> [16] lifecycle_1.0.5     stringr_1.6.0       compiler_4.6.2     
-#> [19] farver_2.1.2        textshaping_1.0.5   codetools_0.2-20   
-#> [22] htmltools_0.5.9     class_7.3-24        sass_0.4.10        
-#> [25] yaml_2.3.12         prodlim_2026.03.11  tidyr_1.3.2        
-#> [28] pillar_1.11.1       pkgdown_2.2.1       jquerylib_0.1.4    
-#> [31] MASS_7.3-66         cachem_1.1.0        gower_1.0.2        
-#> [34] rpart_4.1.27        parallelly_1.50.0   lava_1.11          
-#> [37] tidyselect_1.2.1    digest_0.6.39       stringi_1.8.9      
-#> [40] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
-#> [43] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
-#> [46] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     
-#> [49] utf8_1.2.6          survival_3.8-12     future.apply_1.21.0
-#> [52] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
-#> [55] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
-#> [58] otel_0.3.0          nnet_7.3-21         timeDate_4052.112  
-#> [61] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
-#> [64] hardhat_1.4.3       viridisLite_0.4.3   rlang_1.3.0        
-#> [67] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
-#> [70] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.2  
-#> [73] fs_2.1.0
+#> [16] lifecycle_1.0.5     compiler_4.6.2      farver_2.1.2       
+#> [19] textshaping_1.0.5   codetools_0.2-20    htmltools_0.5.9    
+#> [22] class_7.3-24        sass_0.4.10         yaml_2.3.12        
+#> [25] prodlim_2026.03.11  pillar_1.11.1       pkgdown_2.2.1      
+#> [28] jquerylib_0.1.4     MASS_7.3-66         cachem_1.1.0       
+#> [31] gower_1.0.2         rpart_4.1.27        parallelly_1.50.0  
+#> [34] lava_1.11           tidyselect_1.2.1    digest_0.6.39      
+#> [37] future_1.82.0       purrr_1.2.2         listenv_1.1.0      
+#> [40] labeling_0.4.3      splines_4.6.2       fastmap_1.2.0      
+#> [43] grid_4.6.2          cli_3.6.6           magrittr_2.0.5     
+#> [46] utf8_1.2.6          survival_3.8-12     future.apply_1.21.0
+#> [49] withr_3.0.3         scales_1.4.0        lubridate_1.9.5    
+#> [52] timechange_0.4.0    rmarkdown_2.32      globals_0.20.0     
+#> [55] otel_0.3.0          nnet_7.3-21         timeDate_4052.112  
+#> [58] ragg_1.5.2          evaluate_1.0.5      knitr_1.52         
+#> [61] hardhat_1.4.3       viridisLite_0.4.3   rlang_1.3.0        
+#> [64] Rcpp_1.1.2          glue_1.8.1          ipred_0.9-16       
+#> [67] jsonlite_2.0.0      R6_2.6.1            systemfonts_1.3.3  
+#> [70] fs_2.1.0
 ```

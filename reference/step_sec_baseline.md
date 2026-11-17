@@ -61,9 +61,8 @@ step_sec_baseline(
 
   - `"spline"`: Smooth spline through baseline regions
 
-  - `"rf"`: Robust local regression (IDPmisc::rfbaseline). Best for
-    complex baselines with curvature or drift. Does not use
-    left_frac/right_frac.
+  - `"rf"`: Robust local regression (IDPmisc::rfbaseline) for curved or
+    drifting baselines. Does not use left_frac/right_frac.
 
 - rf_span:
 
@@ -102,9 +101,8 @@ of any existing operations.
 
 ## Details
 
-GPC/SEC chromatograms typically have distinct baseline regions at the
-beginning and end where no polymer elutes. This step leverages this
-characteristic by:
+When the beginning and end of a chromatogram contain baseline-only
+observations, this step estimates a baseline by:
 
 1.  Identifying baseline regions at the start and end of the
     chromatogram
@@ -125,9 +123,9 @@ chromatogram is considered "baseline". Choose values that:
 
 - Are large enough to average out noise
 
-Unlike general-purpose baseline methods like ALS or polynomial fitting,
-this approach is specifically designed for the characteristic shape of
-GPC/SEC chromatograms and is computationally very fast.
+Inspect the selected edge regions before subtraction. A peak that
+extends into either region can contribute to the estimated baseline and
+lose part of its response during subtraction.
 
 Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
 current input column. Untagged inputs remain untagged, and invalid

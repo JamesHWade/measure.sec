@@ -2,6 +2,13 @@
 
 ## measure.sec 0.0.0.9000
 
+- Guides and the homepage now show detector processing, calibration and
+  analysis results with labeled plots, captions and descriptive alt
+  text. Examples distinguish simulated inputs, measured response
+  diagnostics and calibration requirements; scattering guides describe
+  the current single-angle calculations
+  ([\#87](https://github.com/JamesHWade/measure.sec/issues/87)).
+
 - The detector qualification guide now executes explicit
   time/volume-axis controls, delay direction and missing-gap checks, and
   a synthetic LALS calculation. Public installed-package qualification

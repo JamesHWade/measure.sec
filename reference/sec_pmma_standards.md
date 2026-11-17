@@ -81,9 +81,9 @@ At equivalent molecular weight, PMMA has a smaller hydrodynamic volume
 than PS in THF, so PMMA standards elute later than PS of the same MW.
 This demonstrates why conventional calibration is polymer-specific.
 
-**Universal Calibration Validation:** When plotted as log(M \* \[eta\])
-vs retention time, PS and PMMA should fall on the same curve, confirming
-universal calibration is valid for the column.
+**Universal Calibration Comparison:** Compare log(M \* \[eta\]) against
+retention time for PS and PMMA. Agreement is one diagnostic; these
+synthetic values do not validate a real column.
 
 ## See also
 
