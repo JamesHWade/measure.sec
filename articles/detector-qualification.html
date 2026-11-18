@@ -334,13 +334,13 @@ returns <code>NA</code> outside the target’s supported range.</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">delay_fit</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span>, <span class="va">delay_value</span>, <span class="va">declaration</span> <span class="op">=</span> <span class="st">"time"</span>,</span>
-<span>                      <span class="va">method</span> <span class="op">=</span> <span class="st">"interpolate"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>                      <span class="va">method</span> <span class="op">=</span> <span class="st">"interpolate"</span>, <span class="va">flow_rate</span> <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">delay_recipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>  <span class="va">arguments</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    recipe <span class="op">=</span> <span class="va">delay_recipe</span>,</span>
 <span>    reference <span class="op">=</span> <span class="st">"reference"</span>,</span>
 <span>    targets <span class="op">=</span> <span class="st">"target"</span>,</span>
-<span>    flow_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>    flow_rate <span class="op">=</span> <span class="va">flow_rate</span>,</span>
 <span>    method <span class="op">=</span> <span class="va">method</span>,</span>
 <span>    elution_units <span class="op">=</span> <span class="st">"min"</span>,</span>
 <span>    id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"guide_delay_"</span>, <span class="kw">if</span> <span class="op">(</span><span class="va">delay_value</span> <span class="op">&lt;</span> <span class="fl">0</span><span class="op">)</span> <span class="st">"negative"</span> <span class="kw">else</span> <span class="st">"positive"</span><span class="op">)</span></span>
@@ -648,6 +648,41 @@ one grid; it does not resample between separate reference and target
 grids.</p>
 </div>
 <div class="section level2">
+<h2 id="when-alignment-leaves-no-readings-at-one-end">When alignment leaves no readings at one end<a class="anchor" aria-label="anchor" href="#when-alignment-leaves-no-readings-at-one-end"></a>
+</h2>
+<p>This synthetic run has 201 readings from 9 to 11 minutes. The
+reference peak arrives at 10 minutes and the target peak at 10.15. At 1
+mL/min, correcting a +0.15 mL delay moves the target peak back by 0.15
+minutes. It also leaves the last 15 target values missing. That includes
+all 10 readings in the default right baseline region.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">9</span>, <span class="fl">11</span>, by <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span></span>
+<span><span class="va">background</span> <span class="op">&lt;-</span> <span class="fl">0.10</span> <span class="op">+</span> <span class="fl">0.05</span> <span class="op">*</span> <span class="op">(</span><span class="va">time</span> <span class="op">-</span> <span class="fl">9</span><span class="op">)</span></span>
+<span><span class="va">peak</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">center</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> <span class="op">(</span><span class="op">(</span><span class="va">time</span> <span class="op">-</span> <span class="va">center</span><span class="op">)</span> <span class="op">/</span> <span class="fl">0.09</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu">make_delay_input</span><span class="op">(</span><span class="va">time</span>, <span class="fu">peak</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span>, <span class="va">background</span> <span class="op">+</span> <span class="fu">peak</span><span class="op">(</span><span class="fl">10.15</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Both ends of the <strong>recorded</strong> target trace contain
+background and are clear of the peak. Fit the baseline there, then align
+the corrected signal. In the reverse order,
+<code><a href="../reference/step_sec_baseline.html">step_sec_baseline()</a></code> reports that the right edge has no
+finite readings (<code>measure_sec_baseline_support</code>).</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">process</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">run</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_baseline.html">step_sec_baseline</a></span><span class="op">(</span>measures <span class="op">=</span> <span class="st">"target"</span>, method <span class="op">=</span> <span class="st">"linear"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/step_sec_detector_delay.html">step_sec_detector_delay</a></span><span class="op">(</span></span>
+<span>    reference <span class="op">=</span> <span class="st">"reference"</span>, targets <span class="op">=</span> <span class="st">"target"</span>,</span>
+<span>    delay_volumes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>target <span class="op">=</span> <span class="fl">0.15</span><span class="op">)</span>, flow_rate <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    method <span class="op">=</span> <span class="st">"interpolate"</span>, elution_units <span class="op">=</span> <span class="st">"min"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="va">aligned</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/bake.html" class="external-link">bake</a></span><span class="op">(</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/prep.html" class="external-link">prep</a></span><span class="op">(</span><span class="va">process</span>, training <span class="op">=</span> <span class="va">run</span><span class="op">)</span>, new_data <span class="op">=</span> <span class="va">run</span><span class="op">)</span><span class="op">$</span><span class="va">target</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<div class="figure">
+<img src="detector-qualification_files/figure-html/baseline-delay-plot-1.png" class="r-plt" alt="Two traces plotted against time from 9 to 11 minutes. The recorded target sits on a rising background and peaks at 10.15 minutes. The corrected target sits near zero, peaks at 10 minutes, and ends at 10.85 minutes; the shaded tail has no corrected values." width="672"><p class="caption">
+The corrected target peak aligns with the reference at 10 minutes.
+Shading marks the 15 output times with no target reading after
+alignment.
+</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="inspect-clipping-on-the-current-bake-rows">Inspect clipping on the current bake rows<a class="anchor" aria-label="anchor" href="#inspect-clipping-on-the-current-bake-rows"></a>
 </h2>
 <p>Mass normalization sets negative sampled values to zero. Its typed
@@ -656,7 +691,7 @@ areas use the incoming signal units multiplied by that raw axis unit.
 These areas are not automatically signal-minutes on a seconds or volume
 axis. The example captures the condition from the current bake rather
 than retaining the training-time warning.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">first_interval_min</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">1</span>, <span class="fl">9</span><span class="op">)</span></span>
 <span><span class="va">clipping_input</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>first_interval_min <span class="op">=</span> <span class="va">first_interval_min</span><span class="op">)</span></span>
 <span><span class="va">clipping_input</span><span class="op">$</span><span class="va">ri</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">first_interval_min</span>, <span class="kw">function</span><span class="op">(</span><span class="va">first</span><span class="op">)</span> <span class="op">{</span></span>
@@ -747,7 +782,7 @@ the magnitudes of negative samples. <code>excluded_fraction</code> is
 negative share of <strong>absolute sampled signal area</strong>. It is
 not an estimate of lost or recovered mass, nor an exact integration of
 zero crossings between samples.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">diagnostics</span>, <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span></span>
 <span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">first_interval_min</span>, levels <span class="op">=</span> <span class="va">first_interval_min</span><span class="op">)</span>,</span>
 <span>  y <span class="op">=</span> <span class="fl">100</span> <span class="op">*</span> <span class="va">excluded_fraction</span></span>
@@ -778,7 +813,7 @@ and baseline; this guide defines no universal acceptance threshold.</p>
 under every supported declaration. Its raw areas scale with the declared
 numeric axis, while <code>elution_units</code> identifies the unit used
 for those areas.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">capture_axis_diagnostic</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">axis_unit</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">scale</span> <span class="op">&lt;-</span> <span class="va">axis_per_minute</span><span class="op">[[</span><span class="va">axis_unit</span><span class="op">]</span><span class="op">]</span></span>
 <span>  <span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"signed"</span><span class="op">)</span></span>
@@ -863,7 +898,7 @@ the baked RI column. The calibration and optical constants are fixed
 software inputs. The expected output checks only this single-angle
 calculation; it is not instrument calibration or multi-angle
 analysis.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">lals_location</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">6</span></span>
 <span><span class="va">lals_input</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"synthetic-LALS"</span><span class="op">)</span></span>
 <span><span class="va">lals_input</span><span class="op">$</span><span class="va">ri</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_list.html" class="external-link">new_measure_list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://jameshwade.github.io/measure/reference/new_measure_tbl.html" class="external-link">new_measure_tbl</a></span><span class="op">(</span></span>

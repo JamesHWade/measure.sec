@@ -170,6 +170,18 @@ chromatogram is considered "baseline". Choose values that:</p><ul><li><p>Include
 </ul><p>Inspect the selected edge regions before subtraction. A peak that extends
 into either region can contribute to the estimated baseline and lose part
 of its response during subtraction.</p>
+<p>For <code>"linear"</code>, <code>"median"</code>, and <code>"spline"</code>, each selected edge region must
+contain at least one finite signal value. Otherwise, correction stops with
+an error identifying the unsupported edge, column, and curve. Only finite
+values contribute to edge summaries. Linear interpolation pairs each edge
+mean with the mean of its supported point indices; the median method pairs
+each edge median with the median of those indices. Spline fitting uses finite
+edge values at their original indices and requires four distinct supported
+indices; fewer indices or a failed fit produce a warning and use the linear
+method. Correction retains all point positions and preserves <code>NA</code>, <code>NaN</code>,
+<code>Inf</code>, and <code>-Inf</code> signal values. These support requirements do not apply to
+<code>"rf"</code>. For every method, curves with fewer than 10 points and curves with
+only missing values (<code>NA</code> or <code>NaN</code>) return unchanged with a warning.</p>
 <p>Baseline subtraction retains a recorded <code>g/mL</code> or <code>mg/mL</code> unit on the
 current input column. Untagged inputs remain untagged, and invalid recorded
 units are rejected. The unit tag describes the values' units; it does not

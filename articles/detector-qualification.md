@@ -187,13 +187,13 @@ make_delay_input <- function(location, reference_values, target_values,
 }
 
 delay_fit <- function(data, delay_value, declaration = "time",
-                      method = "interpolate") {
+                      method = "interpolate", flow_rate = 0.5) {
   delay_recipe <- recipe(~., data = data)
   arguments <- list(
     recipe = delay_recipe,
     reference = "reference",
     targets = "target",
-    flow_rate = 0.5,
+    flow_rate = flow_rate,
     method = method,
     elution_units = "min",
     id = paste0("guide_delay_", if (delay_value < 0) "negative" else "positive")
@@ -464,6 +464,51 @@ Reference and target must share the same exact numeric grid on every
 current bake row. This step aligns detector signals already sampled on
 one grid; it does not resample between separate reference and target
 grids.
+
+## When alignment leaves no readings at one end
+
+This synthetic run has 201 readings from 9 to 11 minutes. The reference
+peak arrives at 10 minutes and the target peak at 10.15. At 1 mL/min,
+correcting a +0.15 mL delay moves the target peak back by 0.15 minutes.
+It also leaves the last 15 target values missing. That includes all 10
+readings in the default right baseline region.
+
+``` r
+
+time <- seq(9, 11, by = 0.01)
+background <- 0.10 + 0.05 * (time - 9)
+peak <- function(center) exp(-0.5 * ((time - center) / 0.09)^2)
+run <- make_delay_input(time, peak(10), background + peak(10.15))
+```
+
+Both ends of the **recorded** target trace contain background and are
+clear of the peak. Fit the baseline there, then align the corrected
+signal. In the reverse order,
+[`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
+reports that the right edge has no finite readings
+(`measure_sec_baseline_support`).
+
+``` r
+
+process <- recipe(~., data = run) |>
+  step_sec_baseline(measures = "target", method = "linear") |>
+  step_sec_detector_delay(
+    reference = "reference", targets = "target",
+    delay_volumes = c(target = 0.15), flow_rate = 1,
+    method = "interpolate", elution_units = "min"
+  )
+aligned <- bake(prep(process, training = run), new_data = run)$target[[1]]
+```
+
+![Two traces plotted against time from 9 to 11 minutes. The recorded
+target sits on a rising background and peaks at 10.15 minutes. The
+corrected target sits near zero, peaks at 10 minutes, and ends at 10.85
+minutes; the shaded tail has no corrected
+values.](detector-qualification_files/figure-html/baseline-delay-plot-1.png)
+
+The corrected target peak aligns with the reference at 10 minutes.
+Shading marks the 15 output times with no target reading after
+alignment.
 
 ## Inspect clipping on the current bake rows
 

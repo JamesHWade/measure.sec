@@ -463,7 +463,7 @@ save_sec_calibration(
     temperature = "<temperature>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/Rtmp4XXoQE/file2cb0733bc04f.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpO6zmLm/file2c3f306dbb95.rds
 ```
 
 > Include the date and method details in the filename or metadata.
@@ -487,7 +487,7 @@ stopifnot(
   identical(cal_saved$user_metadata$column, "<column-id>")
 )
 cat("Calibration from:", as.character(cal_saved$user_metadata$date), "\n")
-#> Calibration from: 2026-11-17
+#> Calibration from: 2026-11-18
 cat("Column:", cal_saved$user_metadata$column, "\n")
 #> Column: <column-id>
 cat("Fit type:", cal_saved$fit_type, "\n")

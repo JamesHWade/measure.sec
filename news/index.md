@@ -39,6 +39,13 @@
   column metadata is copied
   ([\#60](https://github.com/JamesHWade/measure.sec/issues/60)).
 
+- [`step_sec_baseline()`](https://jameshwade.github.io/measure.sec/reference/step_sec_baseline.md)
+  now tells you which edge lacks finite readings instead of erasing the
+  rest of the trace. Linear, median, and spline fits use only finite
+  readings within the selected edges. Short or entirely missing curves
+  still return unchanged with a warning
+  ([\#89](https://github.com/JamesHWade/measure.sec/issues/89)).
+
 - The new detector qualification guide uses fixed synthetic traces to
   check signed RI conversion, retained raw outputs, mg/mL versus g/mL
   mass balance, and the difference between negative-point counts and

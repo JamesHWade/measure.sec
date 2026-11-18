@@ -127,6 +127,20 @@ Inspect the selected edge regions before subtraction. A peak that
 extends into either region can contribute to the estimated baseline and
 lose part of its response during subtraction.
 
+For `"linear"`, `"median"`, and `"spline"`, each selected edge region
+must contain at least one finite signal value. Otherwise, correction
+stops with an error identifying the unsupported edge, column, and curve.
+Only finite values contribute to edge summaries. Linear interpolation
+pairs each edge mean with the mean of its supported point indices; the
+median method pairs each edge median with the median of those indices.
+Spline fitting uses finite edge values at their original indices and
+requires four distinct supported indices; fewer indices or a failed fit
+produce a warning and use the linear method. Correction retains all
+point positions and preserves `NA`, `NaN`, `Inf`, and `-Inf` signal
+values. These support requirements do not apply to `"rf"`. For every
+method, curves with fewer than 10 points and curves with only missing
+values (`NA` or `NaN`) return unchanged with a warning.
+
 Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
 current input column. Untagged inputs remain untagged, and invalid
 recorded units are rejected. The unit tag describes the values' units;
