@@ -182,13 +182,13 @@ make_delay_input <- function(location, reference_values, target_values,
 }
 
 delay_fit <- function(data, delay_value, declaration = "time",
-                      method = "interpolate") {
+                      method = "interpolate", flow_rate = 0.5) {
   delay_recipe <- recipe(~., data = data)
   arguments <- list(
     recipe = delay_recipe,
     reference = "reference",
     targets = "target",
-    flow_rate = 0.5,
+    flow_rate = flow_rate,
     method = method,
     elution_units = "min",
     id = paste0("guide_delay_", if (delay_value < 0) "negative" else "positive")
@@ -423,6 +423,59 @@ knitr::kable(data.frame(
 Reference and target must share the same exact numeric grid on every current
 bake row. This step aligns detector signals already sampled on one grid; it
 does not resample between separate reference and target grids.
+
+## When alignment leaves no readings at one end
+
+This synthetic run has 201 readings from 9 to 11 minutes. The reference peak
+arrives at 10 minutes and the target peak at 10.15. At 1 mL/min, correcting a
++0.15 mL delay moves the target peak back by 0.15 minutes. It also leaves the
+last 15 target values missing. That includes all 10 readings in the default
+right baseline region.
+
+```{r baseline-delay-input}
+time <- seq(9, 11, by = 0.01)
+background <- 0.10 + 0.05 * (time - 9)
+peak <- function(center) exp(-0.5 * ((time - center) / 0.09)^2)
+run <- make_delay_input(time, peak(10), background + peak(10.15))
+```
+
+Both ends of the **recorded** target trace contain background and are clear of
+the peak. Fit the baseline there, then align the corrected signal. In the
+reverse order, `step_sec_baseline()` reports that the right edge has no finite
+readings (`measure_sec_baseline_support`).
+
+```{r baseline-before-delay}
+process <- recipe(~., data = run) |>
+  step_sec_baseline(measures = "target", method = "linear") |>
+  step_sec_detector_delay(
+    reference = "reference", targets = "target",
+    delay_volumes = c(target = 0.15), flow_rate = 1,
+    method = "interpolate", elution_units = "min"
+  )
+aligned <- bake(prep(process, training = run), new_data = run)$target[[1]]
+```
+
+```{r baseline-delay-check, include=FALSE}
+reverse <- delay_fit(run, delay_value = 0.15, declaration = "volume", flow_rate = 1) |>
+  step_sec_baseline(measures = "target", method = "linear")
+err <- tryCatch(prep(reverse, training = run), error = identity)
+stopifnot(
+  rlang::cnd_inherits(err, "measure_sec_baseline_support"),
+  identical(which(!is.finite(aligned$value)), 187:201),
+  aligned$location[which.max(aligned$value)] == 10
+)
+```
+
+```{r baseline-delay-plot, echo=FALSE, fig.cap="The corrected target peak aligns with the reference at 10 minutes. Shading marks the 15 output times with no target reading after alignment.", fig.alt="Two traces plotted against time from 9 to 11 minutes. The recorded target sits on a rising background and peaks at 10.15 minutes. The corrected target sits near zero, peaks at 10 minutes, and ends at 10.85 minutes; the shaded tail has no corrected values."}
+plot(time, run$target[[1]]$value, type = "n", ylim = c(0, 1.2),
+     xlab = "Elution time (min)", ylab = "Target signal (mg/mL)")
+rect(min(time[is.na(aligned$value)]), 0, max(time), 1.2,
+     col = "grey90", border = NA)
+lines(time, run$target[[1]]$value, col = "grey35", lty = 2)
+lines(aligned$location, aligned$value, col = "#0072B2", lwd = 2)
+legend("topleft", c("Recorded target", "Baseline corrected and aligned"),
+       lty = c(2, 1), col = c("grey35", "#0072B2"), bty = "n")
+```
 
 ## Inspect clipping on the current bake rows
 
