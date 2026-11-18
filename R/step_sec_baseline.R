@@ -63,6 +63,19 @@
 #' into either region can contribute to the estimated baseline and lose part
 #' of its response during subtraction.
 #'
+#' For `"linear"`, `"median"`, and `"spline"`, each selected edge region must
+#' contain at least one finite signal value. Otherwise, correction stops with
+#' an error identifying the unsupported edge, column, and curve. Only finite
+#' values contribute to edge summaries. Linear interpolation pairs each edge
+#' mean with the mean of its supported point indices; the median method pairs
+#' each edge median with the median of those indices. Spline fitting uses finite
+#' edge values at their original indices and requires four distinct supported
+#' indices; fewer indices or a failed fit produce a warning and use the linear
+#' method. Correction retains all point positions and preserves `NA`, `NaN`,
+#' `Inf`, and `-Inf` signal values. These support requirements do not apply to
+#' `"rf"`. For every method, curves with fewer than 10 points and curves with
+#' only missing values (`NA` or `NaN`) return unchanged with a warning.
+#'
 #' Baseline subtraction retains a recorded `g/mL` or `mg/mL` unit on the
 #' current input column. Untagged inputs remain untagged, and invalid recorded
 #' units are rejected. The unit tag describes the values' units; it does not
@@ -268,7 +281,8 @@ bake.step_sec_baseline <- function(object, new_data, ...) {
       right_frac = object$right_frac,
       method = object$method,
       rf_span = object$rf_span,
-      rf_maxit = object$rf_maxit
+      rf_maxit = object$rf_maxit,
+      column = col
     )
     output <- new_measure_list(result)
     if (!is.null(concentration_unit)) {
@@ -339,6 +353,7 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
 #' @param method Baseline estimation method.
 #' @param rf_span Span parameter for RF baseline.
 #' @param rf_maxit Max iterations for RF baseline.
+#' @param column Measure column name for error context.
 #' @return A list of measure_tbl objects with baseline-corrected values.
 #' @noRd
 .compute_sec_baseline <- function(
@@ -347,16 +362,24 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
   right_frac,
   method,
   rf_span = 2 / 3,
-  rf_maxit = c(20, 20)
+  rf_maxit = c(20, 20),
+  column = NULL
 ) {
-  purrr::map(
+  purrr::map2(
     dat,
-    .sec_baseline_single,
-    left_frac = left_frac,
-    right_frac = right_frac,
-    method = method,
-    rf_span = rf_span,
-    rf_maxit = rf_maxit
+    seq_along(dat),
+    function(x, i) {
+      .sec_baseline_single(
+        x,
+        left_frac = left_frac,
+        right_frac = right_frac,
+        method = method,
+        rf_span = rf_span,
+        rf_maxit = rf_maxit,
+        column = column,
+        curve = i
+      )
+    }
   )
 }
 
@@ -368,6 +391,8 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
 #' @param method Baseline estimation method.
 #' @param rf_span Span parameter for RF baseline.
 #' @param rf_maxit Max iterations for RF baseline.
+#' @param column Measure column name for error context.
+#' @param curve Curve index for error context.
 #' @return A measure_tbl with baseline-corrected values.
 #' @noRd
 .sec_baseline_single <- function(
@@ -376,7 +401,9 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
   right_frac,
   method,
   rf_span = 2 / 3,
-  rf_maxit = c(20, 20)
+  rf_maxit = c(20, 20),
+  column = NULL,
+  curve = NULL
 ) {
   y <- x$value
   n <- length(y)
@@ -408,73 +435,46 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
   left_idx <- seq_len(n_left)
   right_idx <- seq(n - n_right + 1, n)
 
-  left_values <- y[left_idx]
-  right_values <- y[right_idx]
-
-  # Compute baseline based on method
-  if (method == "linear") {
-    # Linear interpolation between mean of left and right regions
-    left_mean <- mean(left_values, na.rm = TRUE)
-    right_mean <- mean(right_values, na.rm = TRUE)
-
-    # Linear baseline from left_mean at left center to right_mean at right center
-    left_center <- mean(left_idx)
-    right_center <- mean(right_idx)
-
-    # Guard against division by zero if regions overlap
-    if (abs(right_center - left_center) < .Machine$double.eps) {
-      cli::cli_warn("Baseline regions overlap; using constant baseline.")
-      baseline <- rep(mean(c(left_mean, right_mean)), n)
+  left_idx <- left_idx[is.finite(y[left_idx])]
+  right_idx <- right_idx[is.finite(y[right_idx])]
+  missing_edges <- c("left", "right")[
+    c(length(left_idx), length(right_idx)) == 0
+  ]
+  if (length(missing_edges) > 0) {
+    context <- c(
+      if (!is.null(column)) paste0("column `", column, "`"),
+      if (!is.null(curve)) paste("curve", curve)
+    )
+    context <- if (length(context) > 0) {
+      paste0(" (", paste(context, collapse = ", "), ")")
     } else {
-      slope <- (right_mean - left_mean) / (right_center - left_center)
-      intercept <- left_mean - slope * left_center
-      baseline <- intercept + slope * seq_len(n)
+      ""
     }
-  } else if (method == "median") {
-    # Use medians for robustness
-    left_med <- stats::median(left_values, na.rm = TRUE)
-    right_med <- stats::median(right_values, na.rm = TRUE)
+    cli::cli_abort(
+      "SEC baseline{context}: no finite signal values in the {.and {missing_edges}} edge region{?s}.",
+      class = "measure_sec_baseline_support",
+      method = method,
+      missing_edges = missing_edges,
+      column = column,
+      curve = curve
+    )
+  }
 
-    left_center <- mean(left_idx)
-    right_center <- mean(right_idx)
-
-    # Guard against division by zero if regions overlap
-    if (abs(right_center - left_center) < .Machine$double.eps) {
-      cli::cli_warn("Baseline regions overlap; using constant baseline.")
-      baseline <- rep(mean(c(left_med, right_med)), n)
-    } else {
-      slope <- (right_med - left_med) / (right_center - left_center)
-      intercept <- left_med - slope * left_center
-      baseline <- intercept + slope * seq_len(n)
-    }
-  } else if (method == "spline") {
+  fit <- NULL
+  if (method == "spline") {
     # Smooth spline through baseline regions
     baseline_idx <- c(left_idx, right_idx)
-    baseline_y <- c(left_values, right_values)
+    baseline_y <- y[baseline_idx]
 
-    # Remove NAs for spline fitting
-    valid <- !is.na(baseline_y)
-    if (sum(valid) < 4) {
+    if (length(unique(baseline_idx)) < 4) {
       cli::cli_warn(
         "Too few valid baseline points for spline; using linear method."
       )
-      # Fall back to linear
-      left_mean <- mean(left_values, na.rm = TRUE)
-      right_mean <- mean(right_values, na.rm = TRUE)
-      left_center <- mean(left_idx)
-      right_center <- mean(right_idx)
-      if (abs(right_center - left_center) < .Machine$double.eps) {
-        baseline <- rep(mean(c(left_mean, right_mean)), n)
-      } else {
-        slope <- (right_mean - left_mean) / (right_center - left_center)
-        intercept <- left_mean - slope * left_center
-        baseline <- intercept + slope * seq_len(n)
-      }
     } else {
       fit <- tryCatch(
         stats::smooth.spline(
-          x = baseline_idx[valid],
-          y = baseline_y[valid],
+          x = baseline_idx,
+          y = baseline_y,
           spar = 0.8 # Strong smoothing
         ),
         error = function(e) {
@@ -484,29 +484,49 @@ required_pkgs.step_sec_baseline <- function(x, ...) {
           return(NULL)
         }
       )
-
-      if (is.null(fit)) {
-        # Fall back to linear
-        left_mean <- mean(left_values, na.rm = TRUE)
-        right_mean <- mean(right_values, na.rm = TRUE)
-        left_center <- mean(left_idx)
-        right_center <- mean(right_idx)
-        if (abs(right_center - left_center) < .Machine$double.eps) {
-          baseline <- rep(mean(c(left_mean, right_mean)), n)
-        } else {
-          slope <- (right_mean - left_mean) / (right_center - left_center)
-          intercept <- left_mean - slope * left_center
-          baseline <- intercept + slope * seq_len(n)
-        }
-      } else {
-        baseline <- stats::predict(fit, x = seq_len(n))$y
-      }
     }
+  }
+
+  baseline <- if (is.null(fit)) {
+    .sec_baseline_interpolate(
+      y,
+      left_idx,
+      right_idx,
+      statistic = if (method == "median") stats::median else mean,
+      warn_overlap = method != "spline"
+    )
+  } else {
+    stats::predict(fit, x = seq_len(n))$y
   }
 
   # Subtract baseline
   x$value <- y - baseline
+  x$value[!is.finite(y)] <- y[!is.finite(y)]
   x
+}
+
+.sec_baseline_interpolate <- function(
+  y,
+  left_idx,
+  right_idx,
+  statistic = mean,
+  warn_overlap = TRUE
+) {
+  left_value <- statistic(y[left_idx])
+  right_value <- statistic(y[right_idx])
+  left_center <- statistic(left_idx)
+  right_center <- statistic(right_idx)
+
+  if (abs(right_center - left_center) < .Machine$double.eps) {
+    if (warn_overlap) {
+      cli::cli_warn("Baseline regions overlap; using constant baseline.")
+    }
+    return(rep(mean(c(left_value, right_value)), length(y)))
+  }
+
+  slope <- (right_value - left_value) / (right_center - left_center)
+  intercept <- left_value - slope * left_center
+  intercept + slope * seq_along(y)
 }
 
 #' Compute RF (Robust Fitting) baseline using IDPmisc::rfbaseline

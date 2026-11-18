@@ -29,6 +29,11 @@
   Untagged inputs stay untagged and invalid recorded units are rejected;
   no other cached column metadata is copied (#60).
 
+* `step_sec_baseline()` now tells you which edge lacks finite readings instead
+  of erasing the rest of the trace. Linear, median, and spline fits use only
+  finite readings within the selected edges. Short or entirely missing curves
+  still return unchanged with a warning (#89).
+
 * The new detector qualification guide uses fixed synthetic traces to check
   signed RI conversion, retained raw outputs, mg/mL versus g/mL mass balance,
   and the difference between negative-point counts and sampled-area shares.
