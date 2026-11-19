@@ -21,3 +21,20 @@ the noiseless response remaining in the right baseline window.
 
 The replay evaluates generator definitions without running the commands that
 write package data. Outputs go to the directory supplied on the command line.
+
+## Compare the unknowns on the supported interval
+
+Install the checkout, then run
+`Rscript tools/fixture-qualification/unknowns.R . /tmp/sec-fixtures`.
+The script compares the installed data with the source files, then checks the
+public recipe against an independent calculation on the same time grid.
+It also compares both implementations with a two-component mixture whose mass
+fractions give known Mn, Mw, and Mz.
+
+In `unknown-moment-qualification.csv`, the fraction of positive area retained
+is the trapezoidal integral of the baseline-corrected signal (negative sampled
+values set to zero) from 14.6367 to 16.2083 minutes, divided by the corresponding
+integral over the recorded 4–22 minutes. Only 19.3%–23.0% remains. It is a
+fraction of observed detector response, not a fraction of the assigned molecular
+weight. The nominal generator mapping is evaluated only on that same interval,
+so the comparison does not require extrapolation.
