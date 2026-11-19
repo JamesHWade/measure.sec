@@ -555,7 +555,7 @@ bake.step_sec_concentration <- function(object, new_data, ...) {
 
     output <- new_measure_list(purrr::map(processed, "measure"))
     if (!is.null(injection_mass)) {
-      attr(output, "sec_concentration_unit") <- concentration_units
+      output <- .sec_tag_concentration(output, concentration_units)
 
       diagnostics <- .sec_concentration_diagnostics(processed)
       negative_count <- sum(diagnostics$negative_points)

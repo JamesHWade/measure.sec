@@ -265,15 +265,7 @@ prep.step_sec_baseline <- function(x, training, info = NULL, ...) {
 #' @export
 bake.step_sec_baseline <- function(object, new_data, ...) {
   for (col in object$measures) {
-    concentration_unit <- attr(
-      new_data[[col]],
-      "sec_concentration_unit",
-      exact = TRUE
-    )
-    .sec_validate_concentration_unit(
-      concentration_unit,
-      "recorded concentration unit"
-    )
+    .sec_measure_value_metadata(new_data[[col]])
 
     result <- .compute_sec_baseline(
       new_data[[col]],
@@ -284,10 +276,10 @@ bake.step_sec_baseline <- function(object, new_data, ...) {
       rf_maxit = object$rf_maxit,
       column = col
     )
-    output <- new_measure_list(result)
-    if (!is.null(concentration_unit)) {
-      attr(output, "sec_concentration_unit") <- concentration_unit
-    }
+    output <- .sec_copy_measure_value_metadata(
+      new_data[[col]],
+      new_measure_list(result)
+    )
     new_data[[col]] <- output
   }
   tibble::as_tibble(new_data)

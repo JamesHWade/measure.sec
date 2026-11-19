@@ -56,18 +56,20 @@ units for raw mode and g/mL after conversion for normalized mode.}
 \item{id}{Unique step identifier.}
 
 \item{input_basis}{Input interpretation: \code{"detector_response"} (default)
-uses untagged raw UV and RI detector responses; \code{"normalized_concentration"}
-uses apparent concentration channels and converts them to g/mL before
-calculating composition.}
+uses raw UV and RI detector responses, whether untagged or explicitly
+declared \code{"detector_response"}; \code{"normalized_concentration"} uses
+apparent concentration channels and converts them to g/mL before
+calculating composition. In raw mode, a declared native unit is recorded
+during prep and must match on bake; untagged training curves do not
+constrain later raw declarations.}
 
-\item{uv_concentration_unit, ri_concentration_unit}{Units of the respective
-curves when \code{input_basis = "normalized_concentration"}. Each can be
-omitted when the training curve records \code{sec_concentration_unit}; an
-explicit unit must agree with any recorded unit. If prep infers a unit
-from its training tag, the corresponding baked curve must retain that
-tag. An explicit unit permits untagged baked curves, but any recorded
-tag must agree. Both units are required for untagged training curves.
-These arguments must be \code{NULL} for raw detector responses.}
+\item{uv_concentration_unit, ri_concentration_unit}{Each concentration unit
+is either \code{"mg/mL"} or \code{"g/mL"}. Prep can read it from a
+\code{mass_concentration} declaration or a legacy \code{sec_concentration_unit}
+tag. When prep reads a unit, bake requires the same recorded unit on
+new data. Supply the unit explicitly for an untagged concentration
+curve. Any recorded unit must agree. Leave both arguments \code{NULL}
+for raw detector responses.}
 }
 \value{
 An updated recipe with the new step added.

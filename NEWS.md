@@ -1,5 +1,14 @@
 # measure.sec 0.0.0.9000
 
+* RI, UV and mass-normalized concentration curves now declare their quantity
+  and unit for use in measure recipes. A smoothed concentration can feed a
+  scattering calculation directly. A curve divided by its peak height is
+  labeled as normalized and rejected as a concentration input (#60).
+
+* Raw UV/RI ratios and copolymer composition fits remember declared native
+  detector units. A fit trained with UV in AU reports a unit change when
+  given UV in mAU, before applying its response coefficients.
+
 * Guides and the homepage now show detector processing, calibration and
   analysis results with labeled plots, captions and descriptive alt text.
   Examples distinguish simulated inputs, measured response diagnostics and

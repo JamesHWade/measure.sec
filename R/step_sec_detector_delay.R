@@ -636,14 +636,10 @@ bake.step_sec_detector_delay <- function(object, new_data, ...) {
       }
     )
     output_curve <- new_measure_list(output_curves)
-    concentration_unit <- attr(
+    output_curve <- .sec_copy_measure_value_metadata(
       input_curves,
-      "sec_concentration_unit",
-      exact = TRUE
+      output_curve
     )
-    if (!is.null(concentration_unit)) {
-      attr(output_curve, "sec_concentration_unit") <- concentration_unit
-    }
     new_data[[target]] <- output_curve
   }
 

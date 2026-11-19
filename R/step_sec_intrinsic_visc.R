@@ -25,11 +25,13 @@
 #' @param skip Logical. Should the step be skipped when baking?
 #' @param id Unique step identifier.
 #' @param concentration_unit Unit of the concentration curve: `"mg/mL"` or
-#'   `"g/mL"`. If omitted, the curve must carry a
-#'   `sec_concentration_unit` attribute. An explicit unit must agree with any
-#'   recorded unit. When prep infers the unit from the training tag, baked
-#'   curves must retain that tag. With an explicit unit, baked curves may be
-#'   untagged, but any recorded tag must agree.
+#'   `"g/mL"`. If omitted, the curve must carry a `mass_concentration`
+#'   declaration with a valid unit, either through measurement value metadata
+#'   or the legacy `sec_concentration_unit` attribute. An explicit unit must
+#'   agree with any recorded unit. When prep infers the unit from the training
+#'   declaration, baked curves must retain that declaration. With an explicit
+#'   unit, baked curves may be untagged, but any recorded declaration must
+#'   agree.
 #'
 #' @return An updated recipe with the new step added, containing intrinsic
 #'   viscosity at each elution point.

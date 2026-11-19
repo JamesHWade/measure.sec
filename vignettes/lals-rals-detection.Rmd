@@ -34,259 +34,146 @@ library(dplyr)
 library(ggplot2)
 ```
 
-## The angular dependence problem
+## What a single angle tells you
 
-Scattering response depends on detection angle through the particle form
-factor, `P(theta)`. At low angles, this factor is closer to one for a given
-particle. At wider angles, molecular size can affect the response. The current
-LALS and RALS steps use one supplied angle each; they do not fit an angular
-model or estimate Rg.
+A particle's scattering response depends on the angle of observation. At low
+angles the particle form factor approaches one. The steps take the signal
+from one detector angle and calculate molecular weight using
 
-## LALS: low-angle light scattering
+$$M_w = \frac{S(\theta) \cdot C_{cal}}{K \cdot c_{g/mL}}.$$
 
-### Principle
+Here $S(\theta)$ is the detector signal at the observed angle, $C_{cal}$ is
+its calibration constant, $K$ is the optical constant, and $c_{g/mL}$ is
+the concentration at the same elution time. Omitting `calibration_constant`
+gives a relative estimate. These single-angle steps do not estimate radius of gyration.
 
-LALS detectors measure scattering at a low angle. The current step uses the
-configured angle in a single-angle estimate; it does not fit or correct the
-particle form factor.
+## From refractive index to a molecular-weight estimate
 
-The current step calculates:
+A light-scattering calculation needs the concentration at each elution time.
+Peak height can serve as a scale for comparing chromatogram shapes, but
+dividing by it removes the concentration scale. Keep a calibrated channel for
+the molecular-weight calculation.
 
-$$M_w = \frac{S(\theta) \cdot C_{cal}}{K \cdot c_{g/mL}}$$
+Here is a five-point example with a known answer. The concentration peaks at
+2 mg/mL. We use it to construct the change in refractive index, Δn, and a
+scattering signal for a sample with constant molecular weight. The values and
+calibration constant are chosen to check the calculation.
 
-Where:
-- S(θ) = detector signal
-- C_cal = instrument-specific signal calibration constant
-- K = optical constant
-- c_g/mL = concentration converted to g/mL
-
-Without `calibration_constant`, the implementation uses 1 and labels the
-result relative rather than an absolute molecular weight.
-
-### When to use LALS
-
-LALS samples a low scattering angle, where the form factor is closer to one
-for a given particle. The current step applies a single-angle calculation; it
-does not correct for angular dependence or report Rg. Absolute estimates need
-an instrument-specific calibration constant.
-
-### LALS workflow
-
-```{r lals-workflow, eval = FALSE}
-# LALS workflow example
-# Note: Requires LALS detector data
-
-# Simulate sample data structure
-lals_samples <- tibble(
-  sample_id = "Protein-A",
-  ri_signal = list(c(0.1, 0.5, 1.0, 0.5, 0.1)),
-  lals_signal = list(c(0.05, 0.25, 0.5, 0.25, 0.05)),
-  elution_time = list(c(8, 9, 10, 11, 12)),
-  dn_dc = 0.185
-)
-
-rec_lals <- recipe(
-  ri_signal + lals_signal + elution_time + dn_dc ~ sample_id,
-  data = lals_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  # Convert signals to measure format
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(lals_signal, location = vars(elution_time), col_name = "lals") |>
-  # Baseline correction
-  step_sec_baseline(measures = c("ri", "lals")) |>
-  # Process RI for concentration
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_concentration(
-    measures = "ri",
-    detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0,
-    concentration_units = "mg/mL"
-  ) |>
-  # Process LALS for MW
-  step_sec_lals(
-    measures = "lals",
-    concentration_col = "ri",
-    angle = 7,                        # Detection angle
-    laser_wavelength = 670,           # nm
-    dn_dc = 0.185,                    # mL/g
-    solvent_ri = 1.333,               # Water
-    calibration_constant = 1.5e-5     # From instrument calibration
-  )
-
-prepped_lals <- prep(rec_lals)
-result_lals <- bake(prepped_lals, new_data = NULL)
-```
-
-### LALS parameters
-
-`angle`, `laser_wavelength`, `dn_dc`, `solvent_ri`, and
-`calibration_constant` describe the measurement and calibration. Use the values
-supplied for the instrument and sample. Without a calibration constant, the
-returned estimate is relative.
-
-## A controlled LALS software example
-
-The example constructs a scattering signal algebraically from a chosen
-66,430 g/mol target, a concentration profile, and a calibration constant of
-1.0. Concentration is supplied to `step_sec_lals()` in mg/mL; the signal
-construction converts it to g/mL to match the optical constant equation. The
-plot shows the input concentration and the API output on separate y-scales.
-This checks the calculation and unit handling only: the constructed signal and
-constant are not instrument measurements or an instrument calibration.
-
-```{r lals-software-example, fig.cap = "Controlled software example for `step_sec_lals()`. The input concentration is given in mg/mL and converted to g/mL when constructing a synthetic signal that returns the preset 66,430 g/mol target at each point. Panel y-scales are separate. These algebraically constructed inputs illustrate the API calculation and unit handling; they are not instrument measurements or evidence of LALS accuracy.", fig.alt = "Two side-by-side line charts against elution time from 8 to 12 minutes. The left panel shows the synthetic concentration profile in mg/mL, rising from 0.2 to 1.0 mg/mL and then falling to 0.2 mg/mL. The right panel shows five `step_sec_lals()` estimates at 66,430 g/mol, matching a dashed line for the preset target. Concentration was converted from mg/mL to g/mL in the signal equation; the example is an API calculation illustration, not instrument data."}
-software_input <- tibble::tibble(
-  elution_time = 8:12,
-  concentration_mg_ml = c(0.2, 0.5, 1.0, 0.5, 0.2)
-)
-target_mw_g_mol <- 66430
-concentration_g_ml <- software_input$concentration_mg_ml / 1000
-dn_dc <- 0.185
-solvent_ri <- 1.333
-wavelength_nm <- 670
-calibration_constant <- 1.0 # Chosen for this software illustration only
-
-# Match the step's K calculation: wavelength in cm and dn/dc in cm^3/g.
-lambda_cm <- wavelength_nm * 1e-7
-K <- 4 * pi^2 * solvent_ri^2 * dn_dc^2 /
+```{r lals-input}
+time_min <- 8:12
+conc_mg_ml <- c(0.4, 1.0, 2.0, 1.0, 0.4)
+conc_g_ml <- conc_mg_ml / 1000
+dn_dc <- 0.185 # mL/g
+target_mw <- 66430 # g/mol
+lambda_cm <- 670e-7
+optical_constant <- 4 * pi^2 * 1.333^2 * dn_dc^2 /
   (6.022e23 * lambda_cm^4)
-lals_signal <- K * concentration_g_ml * target_mw_g_mol /
-  calibration_constant
 
-as_measure <- function(value) {
-  measure::new_measure_list(list(
-    measure::new_measure_tbl(software_input$elution_time, value)
-  ))
+channel <- function(values) {
+  new_measure_list(list(new_measure_tbl(time_min, values)))
 }
-concentration_measure <- as_measure(software_input$concentration_mg_ml)
-attr(concentration_measure, "sec_concentration_unit") <- "mg/mL"
-software_data <- tibble::tibble(
-  sample_id = "controlled software example",
-  concentration = concentration_measure,
-  lals = as_measure(lals_signal)
-)
 
-software_recipe <- recipes::recipe(~., data = software_data) |>
-  step_sec_lals(
-    measures = "lals",
-    concentration_col = "concentration",
-    concentration_unit = "mg/mL",
-    angle = 7,
-    laser_wavelength = wavelength_nm,
-    dn_dc = dn_dc,
-    solvent_ri = solvent_ri,
-    calibration_constant = calibration_constant
-  )
-software_result <- recipes::prep(software_recipe, training = software_data) |>
-  recipes::bake(new_data = NULL)
-estimated_mw <- software_result$mw_lals[[1]]$value
-stopifnot(isTRUE(all.equal(
-  estimated_mw,
-  rep(target_mw_g_mol, length(software_input$elution_time)),
-  tolerance = 1e-10
-)))
-
-software_plot_data <- dplyr::bind_rows(
-  tibble::tibble(
-    elution_time = software_input$elution_time,
-    panel = "Input concentration (mg/mL)",
-    value = software_input$concentration_mg_ml
-  ),
-  tibble::tibble(
-    elution_time = software_input$elution_time,
-    panel = "step_sec_lals() output (g/mol)",
-    value = estimated_mw
-  )
+run <- tibble(
+  ri = channel(dn_dc * conc_g_ml),
+  lals = channel(optical_constant * conc_g_ml * target_mw)
 )
-ggplot2::ggplot(
-  software_plot_data,
-  ggplot2::aes(elution_time, value)
-) +
-  ggplot2::geom_line(linewidth = 0.8, colour = "#4A90A4") +
-  ggplot2::geom_point(size = 1.7, colour = "#4A90A4") +
-  ggplot2::geom_hline(
-    data = tibble::tibble(
-      panel = "step_sec_lals() output (g/mol)",
-      target = target_mw_g_mol
-    ),
-    ggplot2::aes(yintercept = target),
-    linetype = "dashed",
-    colour = "#A23B72",
-    inherit.aes = FALSE
-  ) +
-  ggplot2::facet_wrap(~panel, scales = "free_y", ncol = 2) +
-  ggplot2::labs(
-    x = "Elution time (min)",
-    y = "Value (unit shown in panel label)"
-  ) +
-  ggplot2::theme_minimal(base_size = 11)
 ```
+
+`step_sec_ri()` divides Δn by dn/dc and expresses the result in the
+requested unit. Here we smooth both channels with the same three-point
+moving average. Because the constructed channels are proportional, their
+ratio should remain constant even where smoothing changes the peak height.
+
+```{r lals-workflow}
+smoothed <- recipe(~ ., data = run) |>
+  step_sec_ri(
+    measures = "ri", dn_dc = dn_dc,
+    output_col = "concentration", concentration_units = "mg/mL"
+  ) |>
+  step_measure_smooth_ma(measures = c("concentration", "lals"), window = 3)
+
+estimate <- smoothed |>
+  step_sec_lals(
+    measures = "lals", concentration_col = "concentration",
+    optical_constant = optical_constant, calibration_constant = 1
+  ) |>
+  prep() |>
+  bake(new_data = run)
+
+measure_value_metadata(estimate$concentration)
+```
+
+The LALS step reads mg/mL from the smoothed concentration column and converts
+to g/mL for the calculation. The dashed line in the right panel marks the
+66,430 g/mol value used to construct the input.
+
+```{r lals-software-example, fig.cap = "Moving-average smoothing lowers and broadens the concentration peak. Smoothing the proportional scattering channel the same way leaves the calculated molecular weight at the constructed target across all five points.", fig.alt = "Two plots cover 8 to 12 minutes. The input concentration peaks at 2 mg/mL and its three-point moving average peaks near 1.33 mg/mL. Five molecular-weight estimates lie on a horizontal reference at 66,430 g/mol."}
+estimated_mw <- estimate$mw_lals[[1]]$value
+stopifnot(isTRUE(all.equal(estimated_mw, rep(target_mw, 5))))
+
+curves <- bind_rows(
+  tibble(time_min, panel = "Concentration (mg/mL)", series = "Input",
+         value = conc_mg_ml),
+  tibble(time_min, panel = "Concentration (mg/mL)", series = "Smoothed",
+         value = estimate$concentration[[1]]$value),
+  tibble(time_min, panel = "Molecular weight (g/mol)", series = "Calculated",
+         value = estimated_mw)
+)
+
+ggplot(curves, aes(time_min, value, colour = series, linetype = series)) +
+  geom_blank(
+    data = tibble(panel = "Molecular weight (g/mol)", bound = c(0, 70000)),
+    aes(x = 8, y = bound), inherit.aes = FALSE
+  ) +
+  geom_hline(
+    data = tibble(panel = "Molecular weight (g/mol)", target = target_mw),
+    aes(yintercept = target), linetype = "dashed", colour = "grey40"
+  ) +
+  geom_line(data = filter(curves, series != "Calculated"), linewidth = 0.8) +
+  geom_point() +
+  facet_wrap(~panel, scales = "free_y") +
+  scale_colour_manual(values = c(
+    Input = "#555555", Smoothed = "#0072B2", Calculated = "#A54500"
+  )) +
+  labs(x = "Elution time (min)", y = NULL, colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
+```
+
+### Comparing peak shapes
+
+For a shape comparison, branch from the smoothed recipe and divide each
+concentration curve by its maximum. The peak now has height 1. Its values
+are fractions of the peak height. Passing this column as the concentration
+in `step_sec_lals()` gives an error, even if you supply a concentration unit.
+
+```{r lals-shape}
+shape <- smoothed |>
+  step_measure_normalize_max(measures = "concentration") |>
+  prep() |>
+  bake(new_data = run)
+
+measure_value_metadata(shape$concentration)
+```
+
+### Reusing a saved concentration curve
+
+Older SEC recipes stored the unit in an attribute called
+`sec_concentration_unit`. SEC detector steps still read it. To smooth such a
+curve with a core measure step, copy the recorded unit into the declaration
+first. For a saved concentration column `x`, read
+`unit <- attr(x, "sec_concentration_unit", exact = TRUE)`. If the recorded
+unit is `"mg/mL"` or `"g/mL"`, use
+`x <- set_measure_value_metadata(x, "mass_concentration", unit)`. This labels
+the existing numbers. If the unit is missing, consult the calibration record
+before declaring one.
 
 ## RALS: right-angle light scattering
 
-### Principle
-
-RALS detectors measure scattering at 90 degrees by default. The angular
-response can depend on particle size; the current step does not correct it or
-estimate Rg.
-
-### When to use RALS
-
-RALS records at 90 degrees by default. Its angular term can differ from the
-low-angle assumption, so the estimate depends on particle size and instrument
-calibration. The current step returns a single-angle estimate and does not
-calculate Rg.
-
-### RALS workflow
-
-```{r rals-workflow, eval = FALSE}
-# RALS workflow example
-# Note: Requires RALS detector data
-
-# Simulate sample data structure
-rals_samples <- tibble(
-  sample_id = "Polymer-X",
-  ri_signal = list(c(0.1, 0.5, 1.0, 0.5, 0.1)),
-  rals_signal = list(c(0.04, 0.20, 0.40, 0.20, 0.04)),
-  elution_time = list(c(8, 9, 10, 11, 12)),
-  dn_dc = 0.185
-)
-
-rec_rals <- recipe(
-  ri_signal + rals_signal + elution_time + dn_dc ~ sample_id,
-  data = rals_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  # Convert signals to measure format
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(rals_signal, location = vars(elution_time), col_name = "rals") |>
-  # Baseline correction
-  step_sec_baseline(measures = c("ri", "rals")) |>
-  # Process RI for concentration
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_concentration(
-    measures = "ri",
-    detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0,
-    concentration_units = "mg/mL"
-  ) |>
-  # Process RALS for MW
-  step_sec_rals(
-    measures = "rals",
-    concentration_col = "ri",
-    angle = 90,                       # Right angle
-    laser_wavelength = 670,           # nm
-    dn_dc = 0.185,                    # mL/g
-    solvent_ri = 1.333,               # Water
-    calibration_constant = 1.2e-5     # From instrument calibration
-  )
-
-prepped_rals <- prep(rec_rals)
-result_rals <- bake(prepped_rals, new_data = NULL)
-```
+RALS records at 90 degrees by default. Larger particles can scatter less
+light at this angle than at a low angle. Use the instrument's RALS channel
+and its calibration constant with `step_sec_rals()`. Supply the smoothed
+concentration in the same way as for LALS.
 
 ## Choosing a step
 
@@ -306,34 +193,6 @@ Some systems record at several scattering angles. Multiple channels can
 provide cross-checks, but `step_sec_mals()` currently uses one angle and does
 not fit a multi-angle model. The LALS and RALS steps each calculate from their
 own single-angle channel.
-
-```{r combined-workflow, eval = FALSE}
-# Combined LALS + RALS + MALS workflow
-rec_combined <- recipe(
-  ri_signal + lals_signal + rals_signal + mals_signal + elution_time + dn_dc ~ sample_id,
-  data = multi_detector_samples
-) |>
-  update_role(sample_id, new_role = "id") |>
-  # Input all detectors
-  step_measure_input_long(ri_signal, location = vars(elution_time), col_name = "ri") |>
-  step_measure_input_long(lals_signal, location = vars(elution_time), col_name = "lals") |>
-  step_measure_input_long(rals_signal, location = vars(elution_time), col_name = "rals") |>
-  step_measure_input_long(mals_signal, location = vars(elution_time), col_name = "mals") |>
-  # Baseline and concentration
-  step_sec_baseline(measures = c("ri", "lals", "rals", "mals")) |>
-  step_sec_ri(measures = "ri", dn_dc_column = "dn_dc") |>
-  step_sec_concentration(
-    measures = "ri",
-    detector = "ri",
-    injection_volume = 100,
-    sample_concentration = 2.0,
-    concentration_units = "mg/mL"
-  ) |>
-  # Process each LS detector
-  step_sec_lals(measures = "lals", concentration_col = "ri", dn_dc = 0.185) |>
-  step_sec_rals(measures = "rals", concentration_col = "ri", dn_dc = 0.185) |>
-  step_sec_mals(mals_col = "mals", dn_dc_column = "dn_dc")
-```
 
 ## Calibration constants
 

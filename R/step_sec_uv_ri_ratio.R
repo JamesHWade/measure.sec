@@ -15,18 +15,20 @@
 #' @param uv_col Name of the UV detector measure column.
 #' @param ri_col Name of the RI detector measure column.
 #' @param input_basis Input interpretation: `"auto"` (default) selects raw
-#'   detector responses when both curves are untagged and normalized
-#'   concentrations when both curves carry units; `"detector_response"` and
-#'   `"normalized_concentration"` select a basis explicitly. A tagged/raw mix
-#'   is rejected.
-#' @param uv_concentration_unit,ri_concentration_unit Units of the respective
-#'   curves for `"normalized_concentration"`. Each can be omitted when the
-#'   training curve records `sec_concentration_unit`; an explicit unit must
-#'   agree with any recorded unit. When prep infers a unit from its training
-#'   tag, the corresponding baked curve must retain that tag. An explicit unit
-#'   permits untagged baked curves, but any recorded tag must agree. Both units
-#'   are required for untagged normalized training curves. These arguments must
-#'   be `NULL` for raw detector responses and with `input_basis = "auto"`.
+#'   detector responses when both curves are untagged or explicitly declared
+#'   `"detector_response"`, and normalized concentrations when both curves
+#'   carry `"mass_concentration"` metadata; `"detector_response"` and
+#'   `"normalized_concentration"` select a basis explicitly. A raw/concentration
+#'   mix is rejected. In raw mode, a declared native unit is recorded during
+#'   prep and must match on bake; untagged training curves do not constrain
+#'   later raw declarations.
+#' @param uv_concentration_unit,ri_concentration_unit Each concentration unit
+#'   is either `"mg/mL"` or `"g/mL"`. Prep can read it from a
+#'   `mass_concentration` declaration or a legacy `sec_concentration_unit`
+#'   tag. When prep reads a unit, bake requires the same recorded unit on
+#'   new data. Supply the unit explicitly for an untagged concentration
+#'   curve. Any recorded unit must agree. Leave both arguments `NULL`
+#'   for raw detector responses.
 #' @param output_col Name for the output ratio column. Default is `"uv_ri_ratio"`.
 #' @param min_signal Minimum signal threshold (as fraction of max) below which
 #'   ratio is set to `NA`. Default is 0.01 (1%). The threshold is a fraction of
@@ -201,7 +203,9 @@ step_sec_uv_ri_ratio_new <- function(
   role,
   trained,
   skip,
-  id
+  id,
+  uv_raw_unit = NULL,
+  ri_raw_unit = NULL
 ) {
   recipes::step(
     subclass = "sec_uv_ri_ratio",
@@ -212,6 +216,8 @@ step_sec_uv_ri_ratio_new <- function(
     ri_concentration_unit = ri_concentration_unit,
     uv_concentration_unit_source = uv_concentration_unit_source,
     ri_concentration_unit_source = ri_concentration_unit_source,
+    uv_raw_unit = uv_raw_unit,
+    ri_raw_unit = ri_raw_unit,
     output_col = output_col,
     min_signal = min_signal,
     smooth = smooth,
@@ -262,29 +268,22 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   ri_concentration_unit <- x$ri_concentration_unit
   uv_concentration_unit_source <- NULL
   ri_concentration_unit_source <- NULL
-  uv_recorded_unit <- attr(
-    training[[uv_col]],
-    "sec_concentration_unit",
-    exact = TRUE
-  )
-  ri_recorded_unit <- attr(
-    training[[ri_col]],
-    "sec_concentration_unit",
-    exact = TRUE
-  )
-  .sec_validate_concentration_unit(
-    uv_recorded_unit,
-    "recorded UV concentration unit"
-  )
-  .sec_validate_concentration_unit(
-    ri_recorded_unit,
-    "recorded RI concentration unit"
-  )
+  uv_raw_unit <- NULL
+  ri_raw_unit <- NULL
+  uv_declaration <- .sec_detector_declaration(training[[uv_col]], "uv_col")
+  ri_declaration <- .sec_detector_declaration(training[[ri_col]], "ri_col")
 
   if (identical(input_basis, "auto")) {
-    if (is.null(uv_recorded_unit) && is.null(ri_recorded_unit)) {
+    if (
+      uv_declaration$quantity %in%
+        c("untagged", "detector_response") &&
+        ri_declaration$quantity %in% c("untagged", "detector_response")
+    ) {
       input_basis <- "detector_response"
-    } else if (!is.null(uv_recorded_unit) && !is.null(ri_recorded_unit)) {
+    } else if (
+      identical(uv_declaration$quantity, "mass_concentration") &&
+        identical(ri_declaration$quantity, "mass_concentration")
+    ) {
       input_basis <- "normalized_concentration"
     } else {
       cli::cli_abort(
@@ -294,11 +293,16 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   }
 
   if (identical(input_basis, "detector_response")) {
-    if (!is.null(uv_recorded_unit) || !is.null(ri_recorded_unit)) {
+    if (
+      identical(uv_declaration$quantity, "mass_concentration") ||
+        identical(ri_declaration$quantity, "mass_concentration")
+    ) {
       cli::cli_abort(
         "Raw detector-response mode cannot use concentration-tagged curves."
       )
     }
+    uv_raw_unit <- uv_declaration$unit
+    ri_raw_unit <- ri_declaration$unit
   } else {
     uv_concentration_unit_source <- if (is.null(uv_concentration_unit)) {
       "inferred"
@@ -330,6 +334,8 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
     ri_concentration_unit = ri_concentration_unit,
     uv_concentration_unit_source = uv_concentration_unit_source,
     ri_concentration_unit_source = ri_concentration_unit_source,
+    uv_raw_unit = uv_raw_unit,
+    ri_raw_unit = ri_raw_unit,
     output_col = x$output_col,
     min_signal = x$min_signal,
     smooth = x$smooth,
@@ -375,28 +381,26 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
   ri_concentration_unit <- object$ri_concentration_unit
   uv_concentration_unit_source <- object$uv_concentration_unit_source
   ri_concentration_unit_source <- object$ri_concentration_unit_source
+  uv_raw_unit <- object$uv_raw_unit
+  ri_raw_unit <- object$ri_raw_unit
   output_col <- object$output_col
   min_signal <- object$min_signal
   smooth <- object$smooth
   smooth_window <- object$smooth_window
 
   if (identical(input_basis, "detector_response")) {
+    uv_declaration <- .sec_detector_declaration(new_data[[uv_col]], "uv_col")
+    ri_declaration <- .sec_detector_declaration(new_data[[ri_col]], "ri_col")
     if (
-      !is.null(attr(
-        new_data[[uv_col]],
-        "sec_concentration_unit",
-        exact = TRUE
-      )) ||
-        !is.null(attr(
-          new_data[[ri_col]],
-          "sec_concentration_unit",
-          exact = TRUE
-        ))
+      identical(uv_declaration$quantity, "mass_concentration") ||
+        identical(ri_declaration$quantity, "mass_concentration")
     ) {
       cli::cli_abort(
         "Raw detector-response mode cannot bake concentration-tagged curves."
       )
     }
+    .sec_validate_raw_response_unit(uv_raw_unit, uv_declaration$unit, "uv_col")
+    .sec_validate_raw_response_unit(ri_raw_unit, ri_declaration$unit, "ri_col")
   } else {
     .sec_resolve_concentration_unit(
       uv_concentration_unit,

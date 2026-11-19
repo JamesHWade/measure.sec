@@ -44,11 +44,13 @@ Common alternatives are \code{"mL/g"} (100 mL/g equals 1 dL/g).}
 \item{id}{Unique step identifier.}
 
 \item{concentration_unit}{Unit of the concentration curve: \code{"mg/mL"} or
-\code{"g/mL"}. If omitted, the curve must carry a
-\code{sec_concentration_unit} attribute. An explicit unit must agree with any
-recorded unit. When prep infers the unit from the training tag, baked
-curves must retain that tag. With an explicit unit, baked curves may be
-untagged, but any recorded tag must agree.}
+\code{"g/mL"}. If omitted, the curve must carry a \code{mass_concentration}
+declaration with a valid unit, either through measurement value metadata
+or the legacy \code{sec_concentration_unit} attribute. An explicit unit must
+agree with any recorded unit. When prep infers the unit from the training
+declaration, baked curves must retain that declaration. With an explicit
+unit, baked curves may be untagged, but any recorded declaration must
+agree.}
 }
 \value{
 An updated recipe with the new step added, containing intrinsic
