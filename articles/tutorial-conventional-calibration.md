@@ -551,7 +551,7 @@ save_sec_calibration(
     temperature = "<temperature>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpZtf0Uq/file2a537606e51b.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpYnxfcu/file2b253acfcb89.rds
 ```
 
 > Include the date and method details in the filename or metadata.
@@ -978,7 +978,7 @@ sessionInfo()
 #> 
 #> other attached packages:
 #> [1] ggplot2_4.0.4          tidyr_1.3.2            measure.sec_0.0.0.9000
-#> [4] measure_0.0.1.9003     recipes_1.4.0          dplyr_1.2.1           
+#> [4] measure_0.0.1.9004     recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] gtable_0.3.6        xfun_0.62           bslib_0.12.0       

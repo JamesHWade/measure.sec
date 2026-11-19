@@ -118,7 +118,7 @@ save_sec_calibration(
     notes = "<method notes>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/Rtmp5eEqRf/file276a769adaf5.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpcY3wZ7/file283537ecdd11.rds
 ```
 
 ### File formats
@@ -168,7 +168,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-19 02:23:21
+#> Created: 2026-11-19 04:19:31
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -236,7 +236,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-19 02:23:21
+#> Created: 2026-11-19 04:19:31
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -482,7 +482,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9003    
+#> [1] ggplot2_4.0.4          measure.sec_0.0.0.9000 measure_0.0.1.9004    
 #> [4] recipes_1.4.0          dplyr_1.2.1           
 #> 
 #> loaded via a namespace (and not attached):
