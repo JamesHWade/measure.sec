@@ -118,7 +118,7 @@ save_sec_calibration(
     notes = "<method notes>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/Rtmp7Y19sH/file293b494e3810.rds
+#> ✔ Saved cubic calibration to /tmp/Rtmp5eEqRf/file276a769adaf5.rds
 ```
 
 ### File formats
@@ -168,7 +168,7 @@ print(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-18 03:57:57
+#> Created: 2026-11-19 02:23:21
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata
@@ -236,7 +236,7 @@ summary(cal)
 #> 
 #> ── Metadata ──
 #> 
-#> Created: 2026-11-18 03:57:57
+#> Created: 2026-11-19 02:23:21
 #> measure.sec version: 0.0.0.9000
 #> 
 #> ── User Metadata

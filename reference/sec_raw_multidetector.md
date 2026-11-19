@@ -83,7 +83,8 @@ delays.
 
 **Samples Included:**
 
-- **PS-DelayStd**: Narrow PS standard for determining delays
+- **PS-DelayStd**: Synthetic PS standard for comparing detector
+  responses
 
 - **Sample-1**: PS sample with strong UV absorption
 

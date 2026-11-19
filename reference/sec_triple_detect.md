@@ -79,10 +79,10 @@ baseline drift:
 
 **Multi-Detector Features:**
 
-- Detector offsets are present, but the legacy generator's delay sign
-  differs from the physical convention in
-  [`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md).
-  Do not use this dataset as a known-delay reference.
+- The legacy generator moved a positive-delay target earlier on the time
+  axis.
+  [`step_sec_detector_delay`](https://jameshwade.github.io/measure.sec/reference/step_sec_detector_delay.md)
+  expects it later. Do not use this dataset as a known-delay reference.
 
 - Different detector responses based on polymer chemistry
 

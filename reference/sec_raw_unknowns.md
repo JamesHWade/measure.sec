@@ -1,4 +1,4 @@
-# Raw SEC Unknown Samples with Known Molecular Weights
+# Raw SEC Unknown Samples with Assigned Molecular Weights
 
 Synthetic SEC chromatograms with assigned molecular weights, including
 bimodal distributions and high molecular weight shoulders.
@@ -23,19 +23,19 @@ A tibble with approximately 65,000 rows and 8 columns:
 
 - true_mw:
 
-  Numeric. Known weight-average MW in Da (NA for bimodal)
+  Numeric. Assigned weight-average MW in Da (NA for bimodal)
 
 - true_mn:
 
-  Numeric. Known number-average MW in Da
+  Numeric. Assigned number-average MW in Da
 
 - true_mz:
 
-  Numeric. Known z-average MW in Da
+  Numeric. Assigned z-average MW in Da
 
 - true_dispersity:
 
-  Numeric. Known dispersity (Mw/Mn)
+  Numeric. Assigned dispersity
 
 - time_min:
 
@@ -51,9 +51,10 @@ Synthetic data generated for package tutorials.
 
 ## Details
 
-The `true_*` fields are simulation inputs. Compare calculated results
-with those values to investigate the workflow; agreement does not
-validate an instrument or a physical sample.
+For non-bimodal samples, `true_mw` sets the main peak position and
+`true_dispersity` sets its width. The generator attaches `true_mn` and
+`true_mz` as metadata; it does not constrain the signal to integrate to
+those moments. The bimodal sample has no assigned whole-sample moments.
 
 **Sample Types:**
 
@@ -61,7 +62,7 @@ validate an instrument or a physical sample.
 
 - **Unknown-B**: Medium dispersity (~1.3)
 
-- **Unknown-C**: Narrow distribution (~1.1) for accuracy check
+- **Unknown-C**: Narrow distribution (~1.1)
 
 - **Unknown-Bimodal**: Two-peak mixture (50K + 200K)
 

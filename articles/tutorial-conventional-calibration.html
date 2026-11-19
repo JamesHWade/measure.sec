@@ -94,7 +94,7 @@
 <p>This tutorial uses the package’s synthetic raw standards and
 unknown-sample datasets to show how to process signals, fit and inspect
 a conventional calibration, save it, and apply it to other samples. The
-supplied values support a reproducible example; they do not qualify an
+shipped values support a reproducible example; they do not qualify an
 instrument or method.</p>
 </div>
 <div class="section level2">
@@ -113,7 +113,7 @@ tutorial</li>
 <p>The first part processes twelve synthetic polystyrene standards and
 saves the fitted calibration. The second part applies that calibration
 to synthetic unknown chromatograms and compares calculated averages with
-the values supplied in the example dataset.</p>
+the generator-assigned values in the example dataset.</p>
 </div>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
@@ -152,6 +152,14 @@ the values supplied in the example dataset.</p>
 tutorial dataset with twelve polystyrene standard traces. It was
 generated with noise, baseline drift, and injection artifacts to
 resemble features found in raw exports; it is not instrument data.</p>
+<p>This example has three different kinds of values. <code>mp</code> is
+the molecular-weight input used by the generator to place a standard
+peak. The generator’s declared retention-time convention is
+<code>19 - 0.75 * log10(mp)</code>; it is a construction parameter, not
+a measurement. The raw maximum and the maximum after baseline correction
+are observations extracted from the distributed traces. Treating the
+generator input as if it were an independently measured peak would hide
+the distinction this tutorial is intended to inspect.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_raw_standards</span><span class="op">)</span></span>
 <span></span>
@@ -228,6 +236,10 @@ data</li>
 <span>  <span class="va">std_name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">std_data</span><span class="op">$</span><span class="va">standard_name</span><span class="op">)</span></span>
 <span>  <span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">std_data</span><span class="op">$</span><span class="va">mp</span><span class="op">)</span></span>
 <span></span>
+<span>  <span class="va">raw_peak_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">std_data</span><span class="op">$</span><span class="va">ri_mv</span><span class="op">)</span></span>
+<span>  <span class="va">raw_retention_time</span> <span class="op">&lt;-</span> <span class="va">std_data</span><span class="op">$</span><span class="va">time_min</span><span class="op">[[</span><span class="va">raw_peak_idx</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="va">generator_retention_time</span> <span class="op">&lt;-</span> <span class="fl">19</span> <span class="op">-</span> <span class="fl">0.75</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span></span>
 <span>  <span class="co"># Create recipe for baseline correction</span></span>
 <span>  <span class="va">rec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://recipes.tidymodels.org/reference/recipe.html" class="external-link">recipe</a></span><span class="op">(</span><span class="va">ri_mv</span> <span class="op">+</span> <span class="va">time_min</span> <span class="op">~</span> <span class="va">standard_name</span>, data <span class="op">=</span> <span class="va">std_data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="https://recipes.tidymodels.org/reference/roles.html" class="external-link">update_role</a></span><span class="op">(</span><span class="va">standard_name</span>, new_role <span class="op">=</span> <span class="st">"id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -253,6 +265,8 @@ data</li>
 <span>    standard_name <span class="op">=</span> <span class="va">std_name</span>,</span>
 <span>    mp <span class="op">=</span> <span class="va">mp</span>,</span>
 <span>    log_mp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span>,</span>
+<span>    generator_retention_time <span class="op">=</span> <span class="va">generator_retention_time</span>,</span>
+<span>    raw_retention_time <span class="op">=</span> <span class="va">raw_retention_time</span>,</span>
 <span>    retention_time <span class="op">=</span> <span class="va">peak_time</span>,</span>
 <span>    peak_height <span class="op">=</span> <span class="va">peak_height</span></span>
 <span>  <span class="op">)</span></span>
@@ -267,28 +281,93 @@ data</li>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/desc.html" class="external-link">desc</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">peak_data</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 5</span></span></span>
-<span><span class="co">#&gt;    standard_name     mp log_mp retention_time peak_height</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> PS-930000     <span style="text-decoration: underline;">930</span>000   5.97           14.7       154. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> PS-495000     <span style="text-decoration: underline;">495</span>000   5.69           14.9       140. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> PS-270000     <span style="text-decoration: underline;">270</span>000   5.43           14.6       139. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> PS-135000     <span style="text-decoration: underline;">135</span>000   5.13           15.2       129. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> PS-67500       <span style="text-decoration: underline;">67</span>500   4.83           15.2       116. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> PS-33500       <span style="text-decoration: underline;">33</span>500   4.53           15.3       114. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> PS-19600       <span style="text-decoration: underline;">19</span>600   4.29           15.5       108. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> PS-9680         <span style="text-decoration: underline;">9</span>680   3.99           16.0       116. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> PS-5970         <span style="text-decoration: underline;">5</span>970   3.78           15.4       116. </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> PS-2960         <span style="text-decoration: underline;">2</span>960   3.47           15.7        99.4</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> PS-1270         <span style="text-decoration: underline;">1</span>270   3.10           16.2        85.1</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span> PS-580           580   2.76           15.7        97.5</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 7</span></span></span>
+<span><span class="co">#&gt;    standard_name     mp log_mp generator_retention_time raw_retention_time</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> PS-930000     <span style="text-decoration: underline;">930</span>000   5.97                     14.5               14.7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> PS-495000     <span style="text-decoration: underline;">495</span>000   5.69                     14.7               14.9</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> PS-270000     <span style="text-decoration: underline;">270</span>000   5.43                     14.9               15.2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> PS-135000     <span style="text-decoration: underline;">135</span>000   5.13                     15.2               15.2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> PS-67500       <span style="text-decoration: underline;">67</span>500   4.83                     15.4               15.2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> PS-33500       <span style="text-decoration: underline;">33</span>500   4.53                     15.6               15.3</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> PS-19600       <span style="text-decoration: underline;">19</span>600   4.29                     15.8               16.0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> PS-9680         <span style="text-decoration: underline;">9</span>680   3.99                     16.0               16.0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> PS-5970         <span style="text-decoration: underline;">5</span>970   3.78                     16.2               16.6</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> PS-2960         <span style="text-decoration: underline;">2</span>960   3.47                     16.4               16.4</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> PS-1270         <span style="text-decoration: underline;">1</span>270   3.10                     16.7               16.5</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span> PS-580           580   2.76                     16.9               17.0</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: retention_time &lt;dbl&gt;, peak_height &lt;dbl&gt;</span></span></span></code></pre></div>
+<p>The following plot keeps the generator target beside the two peak
+locations actually extracted from each trace. It is a diagnostic of this
+fixture, not a calibration acceptance plot: noise, drift, peak shape,
+and the chosen baseline window can move the observed maximum away from
+the generator input.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">apex_comparison</span> <span class="op">&lt;-</span> <span class="va">peak_data</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span></span>
+<span>    <span class="va">standard_name</span>,</span>
+<span>    <span class="va">mp</span>,</span>
+<span>    <span class="va">generator_retention_time</span>,</span>
+<span>    <span class="va">raw_retention_time</span>,</span>
+<span>    <span class="va">retention_time</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
+<span>    cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      <span class="va">generator_retention_time</span>,</span>
+<span>      <span class="va">raw_retention_time</span>,</span>
+<span>      <span class="va">retention_time</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    names_to <span class="op">=</span> <span class="st">"source"</span>,</span>
+<span>    values_to <span class="op">=</span> <span class="st">"retention_time"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
+<span>    source <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/recode.html" class="external-link">recode</a></span><span class="op">(</span></span>
+<span>      <span class="va">source</span>,</span>
+<span>      generator_retention_time <span class="op">=</span> <span class="st">"Generator input"</span>,</span>
+<span>      raw_retention_time <span class="op">=</span> <span class="st">"Raw maximum"</span>,</span>
+<span>      retention_time <span class="op">=</span> <span class="st">"Baseline-corrected maximum"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">apex_comparison</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">mp</span>, <span class="va">retention_time</span>, color <span class="op">=</span> <span class="va">source</span>, shape <span class="op">=</span> <span class="va">source</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>group <span class="op">=</span> <span class="va">standard_name</span><span class="op">)</span>,</span>
+<span>    color <span class="op">=</span> <span class="st">"grey75"</span>,</span>
+<span>    linewidth <span class="op">=</span> <span class="fl">0.35</span>,</span>
+<span>    show.legend <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">2.3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">"Standard molecular weight input (Da)"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"Peak time (min)"</span>,</span>
+<span>    color <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    shape <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span></code></pre></div>
+<div class="figure">
+<img src="tutorial-conventional-calibration_files/figure-html/compare-standard-apices-1.png" class="r-plt" alt="Line plot on a logarithmic molecular-weight axis comparing declared generator peak time, raw detector maximum, and baseline-corrected detector maximum for twelve synthetic standards. Higher molecular weights have earlier nominal times, while several raw and corrected maxima depart from the declared times." width="672"><p class="caption">
+Declared generator peak times and two observed maxima for the twelve
+distributed synthetic standards. The generator time is the input
+convention; raw and baseline-corrected times are maxima extracted from
+the shipped traces.
+</p>
+</div>
+<p>The noiseless peaks elute in the expected order. Two neighboring
+pairs reverse after noise is added; three reverse after baseline
+correction. For the 580 Da standard, the raw maximum is at 17.015
+minutes and the corrected maximum at 15.668 minutes. The final 5% of
+this trace still contains, on average, 63% of the noiseless peak height.
+Subtracting that edge as background changes the shape of the peak. The
+<a href="https://github.com/JamesHWade/measure.sec/tree/main/tools/fixture-qualification" class="external-link">fixture
+replay</a> shows the intermediate signals for all twelve standards.</p>
 </div>
 <div class="section level3">
 <h3 id="build-the-calibration-curve">Build the calibration curve<a class="anchor" aria-label="anchor" href="#build-the-calibration-curve"></a>
 </h3>
 <p>Now we fit a polynomial relationship between retention time and
 log(MW):</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Prepare calibration data in the required format</span></span>
 <span><span class="va">cal_data</span> <span class="op">&lt;-</span> <span class="va">peak_data</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">standard_name</span>, retention <span class="op">=</span> <span class="va">retention_time</span>, log_mw <span class="op">=</span> <span class="va">log_mp</span><span class="op">)</span></span>
@@ -322,7 +401,7 @@ log(MW):</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nCalibration R² ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cal_fit</span><span class="op">)</span><span class="op">$</span><span class="va">r.squared</span>, <span class="fl">5</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Calibration R² = 0.83243</span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cal_pred</span> <span class="op">&lt;-</span> <span class="va">cal_data</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
 <span>    fitted <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cal_fit</span><span class="op">)</span>,</span>
@@ -382,19 +461,18 @@ substantially from several points in this example.
 <p>This synthetic fit is unsuitable for quantitative use: R-squared is
 about 0.832, the curve turns upward near both ends, and some standards
 have large percent differences. The unknown-sample comparison below also
-shows poor agreement. The example does not identify the cause; for real
-data, confirm standard identity and peak assignment, check the supported
-range and fit, then assess the refitted calibration against
-method-specific criteria before interpreting Mw.</p>
+shows poor agreement. For an experimental run, inspect the standards and
+their baseline regions before interpreting any calculated molecular
+weights.</p>
 </div>
 <div class="section level3">
 <h3 id="review-calibration-fit">Review calibration fit<a class="anchor" aria-label="anchor" href="#review-calibration-fit"></a>
 </h3>
 <p>Inspect the residuals for structure and compare predicted molecular
-weights with the values supplied for each standard. R² and RMSE
-summarize the fit, but neither has a universal acceptance threshold; set
-criteria for the method and its intended use.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+weights with the declared <code>mp</code> inputs for each standard. R²
+and RMSE summarize the fit, but neither has a universal acceptance
+threshold; set criteria for the method and its intended use.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate % deviation for each standard</span></span>
 <span><span class="va">cal_pred</span> <span class="op">&lt;-</span> <span class="va">cal_pred</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="va">peak_data</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">standard_name</span>, <span class="va">mp</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"standard_name"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -422,7 +500,7 @@ criteria for the method and its intended use.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_flip.html" class="external-link">coord_flip</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="st">""</span>,</span>
-<span>    y <span class="op">=</span> <span class="st">"Difference from supplied Mp (%)"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"Difference from declared Mp (%)"</span>,</span>
 <span>    title <span class="op">=</span> <span class="st">"Percent difference by standard"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span>
@@ -430,21 +508,21 @@ criteria for the method and its intended use.</p>
 <span><span class="co"># Display plots</span></span>
 <span><span class="va">p1</span></span></code></pre></div>
 <div class="figure">
-<img src="tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png" class="r-plt" alt="Residual chart with retention time in minutes on the horizontal axis and residual in log10 peak molecular weight on the vertical axis. Points for twelve standards are connected to a zero reference line; their pattern shows where the cubic fit is above or below each supplied value." width="672"><p class="caption">
+<img src="tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png" class="r-plt" alt="Residual chart with retention time in minutes on the horizontal axis and residual in log10 peak molecular weight on the vertical axis. Points for twelve standards are connected to a zero reference line; their pattern shows where the cubic fit is above or below each declared input." width="672"><p class="caption">
 Residuals from the cubic fit at the twelve synthetic standards. The
 horizontal line marks zero residual.
 </p>
 </div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p2</span></span></code></pre></div>
 <div class="figure">
-<img src="tutorial-conventional-calibration_files/figure-html/validate-calibration-2.png" class="r-plt" alt="Horizontal bar chart of percent difference from the supplied peak molecular weight for twelve synthetic standards. Standard names are listed vertically and deviation is on the horizontal axis. A zero line marks exact agreement; bars extend to either side according to the signed difference." width="672"><p class="caption">
-Percent difference between fitted and supplied peak molecular weights
-for each synthetic standard. The zero line marks agreement; no
+<img src="tutorial-conventional-calibration_files/figure-html/validate-calibration-2.png" class="r-plt" alt="Horizontal bar chart of percent difference from the declared peak molecular-weight input for twelve synthetic standards. Standard names are listed vertically and deviation is on the horizontal axis. A zero line marks exact agreement; bars extend to either side according to the signed difference." width="672"><p class="caption">
+Percent difference between fitted and declared peak molecular-weight
+inputs for each synthetic standard. The zero line marks agreement; no
 acceptance limits are shown.
 </p>
 </div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calibration quality summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== Calibration Quality Summary ===\n\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; === Calibration Quality Summary ===</span></span>
@@ -473,7 +551,7 @@ acceptance limits are shown.
 without fitting again. This example uses a synthetic PS-50K trace to
 prepare the step; <code>ps_cal</code> defines the calibration
 standards.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_triple_detect</span>, package <span class="op">=</span> <span class="st">"measure.sec"</span><span class="op">)</span></span>
 <span><span class="va">calibration_trace</span> <span class="op">&lt;-</span> <span class="va">sec_triple_detect</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"PS-50K"</span><span class="op">)</span></span>
@@ -501,7 +579,7 @@ standards.</p>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Typical calibrations have R\u00b2 &gt; 0.999.</span></span>
 <span><span class="co">#&gt; Warning: Standard at 15.67 has 484.9% MW deviation.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Consider removing outlier standards or using a different fit type.</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Use a temporary file here; replace it with a managed path in your workflow.</span></span>
 <span><span class="va">cal_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/save_sec_calibration.html">save_sec_calibration</a></span><span class="op">(</span></span>
@@ -516,7 +594,7 @@ standards.</p>
 <span>    temperature <span class="op">=</span> <span class="st">"&lt;temperature&gt;"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Saved <span style="color: #00BB00;">cubic</span> calibration to <span style="color: #0000BB;">/tmp/RtmpO6zmLm/file2c3f306dbb95.rds</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Saved <span style="color: #00BB00;">cubic</span> calibration to <span style="color: #0000BB;">/tmp/RtmpZtf0Uq/file2a537606e51b.rds</span></span></span></code></pre></div>
 <blockquote>
 <p>Include the date and method details in the filename or metadata.
 Follow your method criteria to decide when to repeat calibration.</p>
@@ -530,7 +608,7 @@ Follow your method criteria to decide when to repeat calibration.</p>
 <div class="section level3">
 <h3 id="load-a-saved-calibration">Load a saved calibration<a class="anchor" aria-label="anchor" href="#load-a-saved-calibration"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load the calibration saved above</span></span>
 <span><span class="va">cal_saved</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_sec_calibration.html">load_sec_calibration</a></span><span class="op">(</span><span class="va">cal_file</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Loaded <span style="color: #00BB00;">cubic</span> calibration (R\u00b2 = 0.8324)</span></span>
@@ -541,40 +619,49 @@ Follow your method criteria to decide when to repeat calibration.</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">cal_saved</span><span class="op">$</span><span class="va">user_metadata</span><span class="op">$</span><span class="va">column</span>, <span class="st">"&lt;column-id&gt;"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Calibration from:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">cal_saved</span><span class="op">$</span><span class="va">user_metadata</span><span class="op">$</span><span class="va">date</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Calibration from: 2026-11-18</span></span>
+<span><span class="co">#&gt; Calibration from: 2026-11-19</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Column:"</span>, <span class="va">cal_saved</span><span class="op">$</span><span class="va">user_metadata</span><span class="op">$</span><span class="va">column</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Column: &lt;column-id&gt;</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Fit type:"</span>, <span class="va">cal_saved</span><span class="op">$</span><span class="va">fit_type</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Fit type: cubic</span></span></code></pre></div>
 <p>The recipes use the saved calibration object. Its retention range
 also defines the integration window for the averages below.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">calibration_range</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ps_cal</span><span class="op">$</span><span class="va">retention</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="load-unknown-samples">Load unknown samples<a class="anchor" aria-label="anchor" href="#load-unknown-samples"></a>
 </h3>
-<p>The package includes <code>sec_raw_unknowns</code>, a synthetic
-dataset with supplied reference values for a workflow comparison. These
-values are part of the example data, not measurements from an
-independent instrument validation.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<p>For the five single-main-peak samples, the generator uses
+<code>true_mw</code> to place the main peak and
+<code>true_dispersity</code> to set its width. It attaches
+<code>true_mn</code> and <code>true_mz</code> as labels; the generated
+signals do not have to integrate to those values. The bimodal sample has
+two assigned component masses.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sec_raw_unknowns</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View the samples</span></span>
 <span><span class="va">sec_raw_unknowns</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">description</span>, <span class="va">true_mw</span>, <span class="va">true_mn</span>, <span class="va">true_dispersity</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span></span>
+<span>    <span class="va">sample_id</span>,</span>
+<span>    <span class="va">description</span>,</span>
+<span>    <span class="va">true_mw</span>,</span>
+<span>    <span class="va">true_mn</span>,</span>
+<span>    <span class="va">true_mz</span>,</span>
+<span>    <span class="va">true_dispersity</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 5</span></span></span>
-<span><span class="co">#&gt;   sample_id       description                   true_mw true_mn true_dispersity</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A       Broad distribution PMMA-like    <span style="text-decoration: underline;">45</span>000   <span style="text-decoration: underline;">22</span>000            2.05</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B       Medium dispersity PS-like      <span style="text-decoration: underline;">125</span>000   <span style="text-decoration: underline;">95</span>000            1.32</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C       Narrow distribution reference   <span style="text-decoration: underline;">82</span>000   <span style="text-decoration: underline;">75</span>000            1.09</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-Bimodal Bimodal mixture (50K + 200K)       <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span>           <span style="color: #BB0000;">NA</span>   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-HMW     Very high MW with aggregates  1<span style="text-decoration: underline;">500</span>000 1<span style="text-decoration: underline;">200</span>000            1.25</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> Unknown-LMW     Low MW oligomer region           <span style="text-decoration: underline;">3</span>500    <span style="text-decoration: underline;">2</span>800            1.25</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 6</span></span></span>
+<span><span class="co">#&gt;   sample_id       description            true_mw true_mn true_mz true_dispersity</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A       Broad distribution PM…   <span style="text-decoration: underline;">45</span>000   <span style="text-decoration: underline;">22</span>000   <span style="text-decoration: underline;">85</span>000            2.05</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B       Medium dispersity PS-…  <span style="text-decoration: underline;">125</span>000   <span style="text-decoration: underline;">95</span>000  <span style="text-decoration: underline;">165</span>000            1.32</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C       Narrow distribution r…   <span style="text-decoration: underline;">82</span>000   <span style="text-decoration: underline;">75</span>000   <span style="text-decoration: underline;">92</span>000            1.09</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-Bimodal Bimodal mixture (50K …      <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span>           <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-HMW     Very high MW with agg… 1<span style="text-decoration: underline;">500</span>000 1<span style="text-decoration: underline;">200</span>000 1<span style="text-decoration: underline;">900</span>000            1.25</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> Unknown-LMW     Low MW oligomer region    <span style="text-decoration: underline;">3</span>500    <span style="text-decoration: underline;">2</span>800    <span style="text-decoration: underline;">4</span>500            1.25</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sec_raw_unknowns</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">time_min</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">time_min</span>, <span class="va">ri_mv</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -586,12 +673,18 @@ independent instrument validation.</p>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
-<img src="tutorial-conventional-calibration_files/figure-html/plot-unknowns-1.png" class="r-plt" alt="Faceted line chart with six panels, one per synthetic unknown sample. Elution time in minutes is on the horizontal axis and raw RI signal in millivolts is on the vertical axis. The panels show the supplied trace shapes on separate vertical ranges; no sample identification or instrument conclusion is inferred from them." width="672"><p class="caption">
-Synthetic raw RI chromatograms for the six supplied unknown samples.
-Each facet has an independent vertical scale so differences in trace
-shape remain visible.
+<img src="tutorial-conventional-calibration_files/figure-html/plot-unknowns-1.png" class="r-plt" alt="Faceted line chart with six panels, one per synthetic unknown sample. Elution time in minutes is on the horizontal axis and raw RI signal in millivolts is on the vertical axis. The panels show the generator-defined trace shapes on separate vertical ranges; no sample identification or instrument conclusion is inferred from them." width="672"><p class="caption">
+Synthetic raw RI chromatograms for the six generator-defined unknown
+samples. Each facet has an independent vertical scale so differences in
+trace shape remain visible.
 </p>
 </div>
+<p>All six traces run from 4 to 22 minutes. The measured standard maxima
+span only 14.6367–16.2083 minutes. That interval contains 944 of 10,801
+readings per trace (8.7%). It accounts for 19.3%–23.0% of the positive,
+baseline-corrected signal area, depending on the sample. Read those
+percentages as detector response inside the window; they do not measure
+sample recovery.</p>
 </div>
 <div class="section level3">
 <h3 id="analyze-an-unknown-sample">Analyze an unknown sample<a class="anchor" aria-label="anchor" href="#analyze-an-unknown-sample"></a>
@@ -600,7 +693,7 @@ shape remain visible.
 example integrates only the portion within the standards’ retention
 range; signal outside that range is excluded, so the reported values may
 not represent the entire sample.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process all unknowns at once</span></span>
 <span><span class="co"># First, let's work with one sample to show the workflow</span></span>
 <span><span class="va">unknown_a</span> <span class="op">&lt;-</span> <span class="va">sec_raw_unknowns</span> <span class="op">|&gt;</span></span>
@@ -637,7 +730,7 @@ not represent the entire sample.</p>
 <h3 id="process-the-remaining-unknowns">Process the remaining unknowns<a class="anchor" aria-label="anchor" href="#process-the-remaining-unknowns"></a>
 </h3>
 <p>Process the remaining synthetic samples with the same recipe:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analyze_unknown</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">sample_data</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">sample_id</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">sample_data</span><span class="op">$</span><span class="va">sample_id</span><span class="op">)</span></span>
 <span></span>
@@ -685,22 +778,23 @@ not represent the entire sample.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW <span style="text-decoration: underline;">4</span>613. <span style="text-decoration: underline;">129</span>848. <span style="text-decoration: underline;">406</span>376.          28.1</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="compare-with-the-supplied-values">Compare with the supplied values<a class="anchor" aria-label="anchor" href="#compare-with-the-supplied-values"></a>
+<h3 id="compare-with-the-assigned-values">Compare with the assigned values<a class="anchor" aria-label="anchor" href="#compare-with-the-assigned-values"></a>
 </h3>
-<p>Compare calculated MW averages with the reference values supplied in
-the synthetic dataset:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Join with true values</span></span>
+<p>Compare the moments calculated inside the calibrated window with the
+assigned values for each sample. A large difference here cannot tell you
+whether an instrument would recover the sample’s molecular-weight
+distribution.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Join with generator-assigned values</span></span>
 <span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="va">all_results</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span></span>
 <span>    <span class="va">sec_raw_unknowns</span> <span class="op">|&gt;</span></span>
-<span>      <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">true_mw</span>, <span class="va">true_mn</span>, <span class="va">true_dispersity</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">sample_id</span>, <span class="va">true_mw</span>, <span class="va">true_dispersity</span><span class="op">)</span>,</span>
 <span>    by <span class="op">=</span> <span class="st">"sample_id"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">true_mw</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
 <span>    mw_error_pct <span class="op">=</span> <span class="op">(</span><span class="va">mw_mw</span> <span class="op">-</span> <span class="va">true_mw</span><span class="op">)</span> <span class="op">/</span> <span class="va">true_mw</span> <span class="op">*</span> <span class="fl">100</span>,</span>
-<span>    mn_error_pct <span class="op">=</span> <span class="op">(</span><span class="va">mw_mn</span> <span class="op">-</span> <span class="va">true_mn</span><span class="op">)</span> <span class="op">/</span> <span class="va">true_mn</span> <span class="op">*</span> <span class="fl">100</span>,</span>
 <span>    disp_error_pct <span class="op">=</span> <span class="op">(</span><span class="va">mw_dispersity</span> <span class="op">-</span> <span class="va">true_dispersity</span><span class="op">)</span> <span class="op">/</span> <span class="va">true_dispersity</span> <span class="op">*</span> <span class="fl">100</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
@@ -709,10 +803,10 @@ the synthetic dataset:</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span></span>
 <span>    <span class="va">sample_id</span>,</span>
 <span>    `Calc Mw` <span class="op">=</span> <span class="va">mw_mw</span>,</span>
-<span>    `Supplied Mw` <span class="op">=</span> <span class="va">true_mw</span>,</span>
+<span>    `Assigned Mw` <span class="op">=</span> <span class="va">true_mw</span>,</span>
 <span>    `Mw Difference %` <span class="op">=</span> <span class="va">mw_error_pct</span>,</span>
 <span>    `Calc Đ` <span class="op">=</span> <span class="va">mw_dispersity</span>,</span>
-<span>    `Supplied Đ` <span class="op">=</span> <span class="va">true_dispersity</span></span>
+<span>    `Assigned Đ` <span class="op">=</span> <span class="va">true_dispersity</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
 <span>    `Calc Mw` <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">`Calc Mw`</span><span class="op">)</span>,</span>
@@ -720,15 +814,15 @@ the synthetic dataset:</p>
 <span>    `Calc Đ` <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">`Calc Đ`</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 6</span></span></span>
-<span><span class="co">#&gt;   sample_id   `Calc Mw` `Supplied Mw` `Mw Difference %` `Calc Đ` `Supplied Đ`</span></span>
+<span><span class="co">#&gt;   sample_id   `Calc Mw` `Assigned Mw` `Mw Difference %` `Calc Đ` `Assigned Đ`</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Unknown-A      <span style="text-decoration: underline;">137</span>331         <span style="text-decoration: underline;">45</span>000             205.      28.4         2.05</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Unknown-B      <span style="text-decoration: underline;">136</span>697        <span style="text-decoration: underline;">125</span>000               9.4     28.4         1.32</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Unknown-C      <span style="text-decoration: underline;">135</span>656         <span style="text-decoration: underline;">82</span>000              65.4     28.3         1.09</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Unknown-HMW    <span style="text-decoration: underline;">140</span>724       1<span style="text-decoration: underline;">500</span>000             -<span style="color: #BB0000;">90.6</span>     28.5         1.25</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Unknown-LMW    <span style="text-decoration: underline;">129</span>848          <span style="text-decoration: underline;">3</span>500            <span style="text-decoration: underline;">3</span>610.      28.2         1.25</span></span></code></pre></div>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Parity plot: calculated vs supplied values</span></span>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Parity plot: calculated vs assigned values</span></span>
 <span><span class="va">parity_limits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">validation</span><span class="op">$</span><span class="va">true_mw</span>, <span class="va">validation</span><span class="op">$</span><span class="va">mw_mw</span><span class="op">)</span>, finite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">validation</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">true_mw</span>, <span class="va">mw_mw</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -737,19 +831,19 @@ the synthetic dataset:</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_x_log10</a></span><span class="op">(</span>limits <span class="op">=</span> <span class="va">parity_limits</span>, labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_log10</a></span><span class="op">(</span>limits <span class="op">=</span> <span class="va">parity_limits</span>, labels <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/label_number.html" class="external-link">label_comma</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
-<span>    x <span class="op">=</span> <span class="st">"Supplied reference Mw (Da)"</span>,</span>
+<span>    x <span class="op">=</span> <span class="st">"Assigned generator Mw (Da)"</span>,</span>
 <span>    y <span class="op">=</span> <span class="st">"Calculated Mw (Da)"</span>,</span>
-<span>    title <span class="op">=</span> <span class="st">"Calculated and supplied Mw"</span></span>
+<span>    title <span class="op">=</span> <span class="st">"Calculated and assigned Mw"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/coord_fixed.html" class="external-link">coord_equal</a></span><span class="op">(</span>xlim <span class="op">=</span> <span class="va">parity_limits</span>, ylim <span class="op">=</span> <span class="va">parity_limits</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
-<img src="tutorial-conventional-calibration_files/figure-html/validation-plot-1.png" class="r-plt" alt="Log-scale parity chart comparing supplied reference Mw on the horizontal axis with calculated Mw on the vertical axis, both in daltons. Five unlabeled calculated values cluster near 130–141 thousand Da, while supplied values range from about 3,500 Da to 1.5 million Da. The dashed identity line marks agreement; the points lie far from it. The table above identifies the samples." width="672"><p class="caption">
-Calculated and supplied weight-average molecular weights for the
-synthetic unknown samples, using only the measured portion within
+<img src="tutorial-conventional-calibration_files/figure-html/validation-plot-1.png" class="r-plt" alt="Log-scale parity chart comparing assigned generator Mw on the horizontal axis with calculated Mw on the vertical axis, both in daltons. Five calculated values cluster near 130–141 thousand Da; the 125 thousand Da assignment is closest to the identity line. The dashed identity line marks agreement; most samples lie far from it. The table above identifies the samples." width="672"><p class="caption">
+Calculated and assigned generator weight-average molecular weights for
+the synthetic unknown samples, using only the measured portion within
 calibration support. The dashed identity line marks agreement; omitted
 signal outside the calibration range is not represented. The calculated
-values cluster near 130–141 kDa while supplied values span about 3.5 kDa
+values cluster near 130–141 kDa while assigned values span about 3.5 kDa
 to 1.5 MDa. The table above gives sample IDs.
 </p>
 </div>
@@ -759,10 +853,11 @@ to 1.5 MDa. The table above gives sample IDs.
 <h2 id="special-case-bimodal-signal">Special case: bimodal signal<a class="anchor" aria-label="anchor" href="#special-case-bimodal-signal"></a>
 </h2>
 <p>The synthetic <code>Unknown-Bimodal</code> trace is described as a
-mixture with supplied component values of 50,000 and 200,000 Da.
-Molecular-weight averages summarize the calibrated portion of the trace;
-inspect the signal and support before interpreting components.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+mixture with generator-assigned component values of 50,000 and 200,000
+Da. Molecular-weight averages summarize the calibrated portion of the
+trace; inspect the signal and support before interpreting
+components.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Process bimodal sample</span></span>
 <span><span class="va">bimodal</span> <span class="op">&lt;-</span> <span class="va">sec_raw_unknowns</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">sample_id</span> <span class="op">==</span> <span class="st">"Unknown-Bimodal"</span><span class="op">)</span></span>
@@ -817,14 +912,14 @@ inspect the signal and support before interpreting components.</p>
 <span>    x <span class="op">=</span> <span class="st">"Calibrated molecular weight (Da)"</span>,</span>
 <span>    y <span class="op">=</span> <span class="st">"Baseline-corrected RI signal (mV)"</span>,</span>
 <span>    title <span class="op">=</span> <span class="st">"Synthetic bimodal sample"</span>,</span>
-<span>    subtitle <span class="op">=</span> <span class="st">"Vertical guides mark the two supplied component values"</span></span>
+<span>    subtitle <span class="op">=</span> <span class="st">"Vertical guides mark the two generator-assigned component values"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
-<img src="tutorial-conventional-calibration_files/figure-html/bimodal-1.png" class="r-plt" alt="Point chart of baseline-corrected RI response against calibrated molecular weight in daltons on a logarithmic horizontal axis. The displayed points form a broad cloud over the finite sampled calibration support; vertical guides mark the supplied 50,000 and 200,000 Da component values. No line joins points across omitted support." width="672"><p class="caption">
+<img src="tutorial-conventional-calibration_files/figure-html/bimodal-1.png" class="r-plt" alt="Point chart of baseline-corrected RI response against calibrated molecular weight in daltons on a logarithmic horizontal axis. The displayed points form a broad cloud over the finite sampled calibration support; vertical guides mark the generator-assigned 50,000 and 200,000 Da component values. No line joins points across omitted support." width="672"><p class="caption">
 The synthetic bimodal trace is plotted against calibrated molecular
 weight only at measured locations with finite calibration values.
-Vertical guides mark the dataset’s supplied 50,000 and 200,000 Da
+Vertical guides mark the generator-assigned 50,000 and 200,000 Da
 component values; signal outside finite calibration support is omitted.
 </p>
 </div>
@@ -879,7 +974,7 @@ response as molecular weight</td>
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
 <p>The code sequence demonstrates standard processing, calibration
-saving, application, and comparison with supplied reference values. This
+saving, application, and comparison with generator-assigned values. This
 synthetic example does not provide quantitative sample results.</p>
 <div class="section level3">
 <h3 id="key-points">Key points<a class="anchor" aria-label="anchor" href="#key-points"></a>
@@ -940,7 +1035,7 @@ Management</a></td>
 <div class="section level2">
 <h2 id="session-information">Session information<a class="anchor" aria-label="anchor" href="#session-information"></a>
 </h2>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.2 (2026-10-29)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>

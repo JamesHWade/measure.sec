@@ -5,7 +5,7 @@
 This tutorial uses the package’s synthetic raw standards and
 unknown-sample datasets to show how to process signals, fit and inspect
 a conventional calibration, save it, and apply it to other samples. The
-supplied values support a reproducible example; they do not qualify an
+shipped values support a reproducible example; they do not qualify an
 instrument or method.
 
 ## Prerequisites
@@ -21,7 +21,7 @@ instrument or method.
 The first part processes twelve synthetic polystyrene standards and
 saves the fitted calibration. The second part applies that calibration
 to synthetic unknown chromatograms and compares calculated averages with
-the values supplied in the example dataset.
+the generator-assigned values in the example dataset.
 
 ## Setup
 
@@ -60,6 +60,15 @@ The package includes `sec_raw_standards`, a synthetic tutorial dataset
 with twelve polystyrene standard traces. It was generated with noise,
 baseline drift, and injection artifacts to resemble features found in
 raw exports; it is not instrument data.
+
+This example has three different kinds of values. `mp` is the
+molecular-weight input used by the generator to place a standard peak.
+The generator’s declared retention-time convention is
+`19 - 0.75 * log10(mp)`; it is a construction parameter, not a
+measurement. The raw maximum and the maximum after baseline correction
+are observations extracted from the distributed traces. Treating the
+generator input as if it were an independently measured peak would hide
+the distinction this tutorial is intended to inspect.
 
 ``` r
 
@@ -146,6 +155,10 @@ process_standard <- function(std_data) {
   std_name <- unique(std_data$standard_name)
   mp <- unique(std_data$mp)
 
+  raw_peak_idx <- which.max(std_data$ri_mv)
+  raw_retention_time <- std_data$time_min[[raw_peak_idx]]
+  generator_retention_time <- 19 - 0.75 * log10(mp)
+
   # Create recipe for baseline correction
   rec <- recipe(ri_mv + time_min ~ standard_name, data = std_data) |>
     update_role(standard_name, new_role = "id") |>
@@ -171,6 +184,8 @@ process_standard <- function(std_data) {
     standard_name = std_name,
     mp = mp,
     log_mp = log10(mp),
+    generator_retention_time = generator_retention_time,
+    raw_retention_time = raw_retention_time,
     retention_time = peak_time,
     peak_height = peak_height
   )
@@ -185,22 +200,96 @@ peak_data <- sec_raw_standards |>
   arrange(desc(mp))
 
 print(peak_data)
-#> # A tibble: 12 × 5
-#>    standard_name     mp log_mp retention_time peak_height
-#>    <chr>          <dbl>  <dbl>          <dbl>       <dbl>
-#>  1 PS-930000     930000   5.97           14.7       154. 
-#>  2 PS-495000     495000   5.69           14.9       140. 
-#>  3 PS-270000     270000   5.43           14.6       139. 
-#>  4 PS-135000     135000   5.13           15.2       129. 
-#>  5 PS-67500       67500   4.83           15.2       116. 
-#>  6 PS-33500       33500   4.53           15.3       114. 
-#>  7 PS-19600       19600   4.29           15.5       108. 
-#>  8 PS-9680         9680   3.99           16.0       116. 
-#>  9 PS-5970         5970   3.78           15.4       116. 
-#> 10 PS-2960         2960   3.47           15.7        99.4
-#> 11 PS-1270         1270   3.10           16.2        85.1
-#> 12 PS-580           580   2.76           15.7        97.5
+#> # A tibble: 12 × 7
+#>    standard_name     mp log_mp generator_retention_time raw_retention_time
+#>    <chr>          <dbl>  <dbl>                    <dbl>              <dbl>
+#>  1 PS-930000     930000   5.97                     14.5               14.7
+#>  2 PS-495000     495000   5.69                     14.7               14.9
+#>  3 PS-270000     270000   5.43                     14.9               15.2
+#>  4 PS-135000     135000   5.13                     15.2               15.2
+#>  5 PS-67500       67500   4.83                     15.4               15.2
+#>  6 PS-33500       33500   4.53                     15.6               15.3
+#>  7 PS-19600       19600   4.29                     15.8               16.0
+#>  8 PS-9680         9680   3.99                     16.0               16.0
+#>  9 PS-5970         5970   3.78                     16.2               16.6
+#> 10 PS-2960         2960   3.47                     16.4               16.4
+#> 11 PS-1270         1270   3.10                     16.7               16.5
+#> 12 PS-580           580   2.76                     16.9               17.0
+#> # ℹ 2 more variables: retention_time <dbl>, peak_height <dbl>
 ```
+
+The following plot keeps the generator target beside the two peak
+locations actually extracted from each trace. It is a diagnostic of this
+fixture, not a calibration acceptance plot: noise, drift, peak shape,
+and the chosen baseline window can move the observed maximum away from
+the generator input.
+
+``` r
+
+apex_comparison <- peak_data |>
+  select(
+    standard_name,
+    mp,
+    generator_retention_time,
+    raw_retention_time,
+    retention_time
+  ) |>
+  pivot_longer(
+    cols = c(
+      generator_retention_time,
+      raw_retention_time,
+      retention_time
+    ),
+    names_to = "source",
+    values_to = "retention_time"
+  ) |>
+  mutate(
+    source = recode(
+      source,
+      generator_retention_time = "Generator input",
+      raw_retention_time = "Raw maximum",
+      retention_time = "Baseline-corrected maximum"
+    )
+  )
+
+ggplot(apex_comparison, aes(mp, retention_time, color = source, shape = source)) +
+  geom_line(
+    aes(group = standard_name),
+    color = "grey75",
+    linewidth = 0.35,
+    show.legend = FALSE
+  ) +
+  geom_point(size = 2.3) +
+  scale_x_log10(labels = scales::label_comma()) +
+  labs(
+    x = "Standard molecular weight input (Da)",
+    y = "Peak time (min)",
+    color = NULL,
+    shape = NULL
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+![Line plot on a logarithmic molecular-weight axis comparing declared
+generator peak time, raw detector maximum, and baseline-corrected
+detector maximum for twelve synthetic standards. Higher molecular
+weights have earlier nominal times, while several raw and corrected
+maxima depart from the declared
+times.](tutorial-conventional-calibration_files/figure-html/compare-standard-apices-1.png)
+
+Declared generator peak times and two observed maxima for the twelve
+distributed synthetic standards. The generator time is the input
+convention; raw and baseline-corrected times are maxima extracted from
+the shipped traces.
+
+The noiseless peaks elute in the expected order. Two neighboring pairs
+reverse after noise is added; three reverse after baseline correction.
+For the 580 Da standard, the raw maximum is at 17.015 minutes and the
+corrected maximum at 15.668 minutes. The final 5% of this trace still
+contains, on average, 63% of the noiseless peak height. Subtracting that
+edge as background changes the shape of the peak. The [fixture
+replay](https://github.com/JamesHWade/measure.sec/tree/main/tools/fixture-qualification)
+shows the intermediate signals for all twelve standards.
 
 ### Build the calibration curve
 
@@ -311,15 +400,14 @@ substantially from several points in this example.
 This synthetic fit is unsuitable for quantitative use: R-squared is
 about 0.832, the curve turns upward near both ends, and some standards
 have large percent differences. The unknown-sample comparison below also
-shows poor agreement. The example does not identify the cause; for real
-data, confirm standard identity and peak assignment, check the supported
-range and fit, then assess the refitted calibration against
-method-specific criteria before interpreting Mw.
+shows poor agreement. For an experimental run, inspect the standards and
+their baseline regions before interpreting any calculated molecular
+weights.
 
 ### Review calibration fit
 
 Inspect the residuals for structure and compare predicted molecular
-weights with the values supplied for each standard. R² and RMSE
+weights with the declared `mp` inputs for each standard. R² and RMSE
 summarize the fit, but neither has a universal acceptance threshold; set
 criteria for the method and its intended use.
 
@@ -352,7 +440,7 @@ p2 <- ggplot(cal_pred, aes(reorder(standard_name, mp), pct_deviation)) +
   coord_flip() +
   labs(
     x = "",
-    y = "Difference from supplied Mp (%)",
+    y = "Difference from declared Mp (%)",
     title = "Percent difference by standard"
   ) +
   theme_minimal(base_size = 11)
@@ -364,8 +452,8 @@ p1
 ![Residual chart with retention time in minutes on the horizontal axis
 and residual in log10 peak molecular weight on the vertical axis. Points
 for twelve standards are connected to a zero reference line; their
-pattern shows where the cubic fit is above or below each supplied
-value.](tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png)
+pattern shows where the cubic fit is above or below each declared
+input.](tutorial-conventional-calibration_files/figure-html/validate-calibration-1.png)
 
 Residuals from the cubic fit at the twelve synthetic standards. The
 horizontal line marks zero residual.
@@ -375,15 +463,15 @@ horizontal line marks zero residual.
 p2
 ```
 
-![Horizontal bar chart of percent difference from the supplied peak
-molecular weight for twelve synthetic standards. Standard names are
-listed vertically and deviation is on the horizontal axis. A zero line
-marks exact agreement; bars extend to either side according to the
+![Horizontal bar chart of percent difference from the declared peak
+molecular-weight input for twelve synthetic standards. Standard names
+are listed vertically and deviation is on the horizontal axis. A zero
+line marks exact agreement; bars extend to either side according to the
 signed
 difference.](tutorial-conventional-calibration_files/figure-html/validate-calibration-2.png)
 
-Percent difference between fitted and supplied peak molecular weights
-for each synthetic standard. The zero line marks agreement; no
+Percent difference between fitted and declared peak molecular-weight
+inputs for each synthetic standard. The zero line marks agreement; no
 acceptance limits are shown.
 
 ``` r
@@ -463,7 +551,7 @@ save_sec_calibration(
     temperature = "<temperature>"
   )
 )
-#> ✔ Saved cubic calibration to /tmp/RtmpO6zmLm/file2c3f306dbb95.rds
+#> ✔ Saved cubic calibration to /tmp/RtmpZtf0Uq/file2a537606e51b.rds
 ```
 
 > Include the date and method details in the filename or metadata.
@@ -487,7 +575,7 @@ stopifnot(
   identical(cal_saved$user_metadata$column, "<column-id>")
 )
 cat("Calibration from:", as.character(cal_saved$user_metadata$date), "\n")
-#> Calibration from: 2026-11-18
+#> Calibration from: 2026-11-19
 cat("Column:", cal_saved$user_metadata$column, "\n")
 #> Column: <column-id>
 cat("Fit type:", cal_saved$fit_type, "\n")
@@ -504,10 +592,11 @@ calibration_range <- range(ps_cal$retention)
 
 ### Load unknown samples
 
-The package includes `sec_raw_unknowns`, a synthetic dataset with
-supplied reference values for a workflow comparison. These values are
-part of the example data, not measurements from an independent
-instrument validation.
+For the five single-main-peak samples, the generator uses `true_mw` to
+place the main peak and `true_dispersity` to set its width. It attaches
+`true_mn` and `true_mz` as labels; the generated signals do not have to
+integrate to those values. The bimodal sample has two assigned component
+masses.
 
 ``` r
 
@@ -515,17 +604,24 @@ data(sec_raw_unknowns)
 
 # View the samples
 sec_raw_unknowns |>
-  distinct(sample_id, description, true_mw, true_mn, true_dispersity) |>
+  distinct(
+    sample_id,
+    description,
+    true_mw,
+    true_mn,
+    true_mz,
+    true_dispersity
+  ) |>
   print()
-#> # A tibble: 6 × 5
-#>   sample_id       description                   true_mw true_mn true_dispersity
-#>   <chr>           <chr>                           <dbl>   <dbl>           <dbl>
-#> 1 Unknown-A       Broad distribution PMMA-like    45000   22000            2.05
-#> 2 Unknown-B       Medium dispersity PS-like      125000   95000            1.32
-#> 3 Unknown-C       Narrow distribution reference   82000   75000            1.09
-#> 4 Unknown-Bimodal Bimodal mixture (50K + 200K)       NA      NA           NA   
-#> 5 Unknown-HMW     Very high MW with aggregates  1500000 1200000            1.25
-#> 6 Unknown-LMW     Low MW oligomer region           3500    2800            1.25
+#> # A tibble: 6 × 6
+#>   sample_id       description            true_mw true_mn true_mz true_dispersity
+#>   <chr>           <chr>                    <dbl>   <dbl>   <dbl>           <dbl>
+#> 1 Unknown-A       Broad distribution PM…   45000   22000   85000            2.05
+#> 2 Unknown-B       Medium dispersity PS-…  125000   95000  165000            1.32
+#> 3 Unknown-C       Narrow distribution r…   82000   75000   92000            1.09
+#> 4 Unknown-Bimodal Bimodal mixture (50K …      NA      NA      NA           NA   
+#> 5 Unknown-HMW     Very high MW with agg… 1500000 1200000 1900000            1.25
+#> 6 Unknown-LMW     Low MW oligomer region    3500    2800    4500            1.25
 ```
 
 ``` r
@@ -544,14 +640,21 @@ sec_raw_unknowns |>
 
 ![Faceted line chart with six panels, one per synthetic unknown sample.
 Elution time in minutes is on the horizontal axis and raw RI signal in
-millivolts is on the vertical axis. The panels show the supplied trace
-shapes on separate vertical ranges; no sample identification or
-instrument conclusion is inferred from
+millivolts is on the vertical axis. The panels show the
+generator-defined trace shapes on separate vertical ranges; no sample
+identification or instrument conclusion is inferred from
 them.](tutorial-conventional-calibration_files/figure-html/plot-unknowns-1.png)
 
-Synthetic raw RI chromatograms for the six supplied unknown samples.
-Each facet has an independent vertical scale so differences in trace
-shape remain visible.
+Synthetic raw RI chromatograms for the six generator-defined unknown
+samples. Each facet has an independent vertical scale so differences in
+trace shape remain visible.
+
+All six traces run from 4 to 22 minutes. The measured standard maxima
+span only 14.6367–16.2083 minutes. That interval contains 944 of 10,801
+readings per trace (8.7%). It accounts for 19.3%–23.0% of the positive,
+baseline-corrected signal area, depending on the sample. Read those
+percentages as detector response inside the window; they do not measure
+sample recovery.
 
 ### Analyze an unknown sample
 
@@ -648,24 +751,25 @@ print(all_results)
 #> 5 Unknown-LMW 4613. 129848. 406376.          28.1
 ```
 
-### Compare with the supplied values
+### Compare with the assigned values
 
-Compare calculated MW averages with the reference values supplied in the
-synthetic dataset:
+Compare the moments calculated inside the calibrated window with the
+assigned values for each sample. A large difference here cannot tell you
+whether an instrument would recover the sample’s molecular-weight
+distribution.
 
 ``` r
 
-# Join with true values
+# Join with generator-assigned values
 validation <- all_results |>
   left_join(
     sec_raw_unknowns |>
-      distinct(sample_id, true_mw, true_mn, true_dispersity),
+      distinct(sample_id, true_mw, true_dispersity),
     by = "sample_id"
   ) |>
   filter(!is.na(true_mw)) |>
   mutate(
     mw_error_pct = (mw_mw - true_mw) / true_mw * 100,
-    mn_error_pct = (mw_mn - true_mn) / true_mn * 100,
     disp_error_pct = (mw_dispersity - true_dispersity) / true_dispersity * 100
   )
 
@@ -674,10 +778,10 @@ validation |>
   select(
     sample_id,
     `Calc Mw` = mw_mw,
-    `Supplied Mw` = true_mw,
+    `Assigned Mw` = true_mw,
     `Mw Difference %` = mw_error_pct,
     `Calc Đ` = mw_dispersity,
-    `Supplied Đ` = true_dispersity
+    `Assigned Đ` = true_dispersity
   ) |>
   mutate(
     `Calc Mw` = round(`Calc Mw`),
@@ -685,7 +789,7 @@ validation |>
     `Calc Đ` = round(`Calc Đ`, 2)
   )
 #> # A tibble: 5 × 6
-#>   sample_id   `Calc Mw` `Supplied Mw` `Mw Difference %` `Calc Đ` `Supplied Đ`
+#>   sample_id   `Calc Mw` `Assigned Mw` `Mw Difference %` `Calc Đ` `Assigned Đ`
 #>   <chr>           <dbl>         <dbl>             <dbl>    <dbl>        <dbl>
 #> 1 Unknown-A      137331         45000             205.      28.4         2.05
 #> 2 Unknown-B      136697        125000               9.4     28.4         1.32
@@ -696,7 +800,7 @@ validation |>
 
 ``` r
 
-# Parity plot: calculated vs supplied values
+# Parity plot: calculated vs assigned values
 parity_limits <- range(c(validation$true_mw, validation$mw_mw), finite = TRUE)
 
 ggplot(validation, aes(true_mw, mw_mw)) +
@@ -705,35 +809,35 @@ ggplot(validation, aes(true_mw, mw_mw)) +
   scale_x_log10(limits = parity_limits, labels = scales::label_comma()) +
   scale_y_log10(limits = parity_limits, labels = scales::label_comma()) +
   labs(
-    x = "Supplied reference Mw (Da)",
+    x = "Assigned generator Mw (Da)",
     y = "Calculated Mw (Da)",
-    title = "Calculated and supplied Mw"
+    title = "Calculated and assigned Mw"
   ) +
   coord_equal(xlim = parity_limits, ylim = parity_limits) +
   theme_minimal(base_size = 11)
 ```
 
-![Log-scale parity chart comparing supplied reference Mw on the
+![Log-scale parity chart comparing assigned generator Mw on the
 horizontal axis with calculated Mw on the vertical axis, both in
-daltons. Five unlabeled calculated values cluster near 130–141 thousand
-Da, while supplied values range from about 3,500 Da to 1.5 million Da.
-The dashed identity line marks agreement; the points lie far from it.
-The table above identifies the
+daltons. Five calculated values cluster near 130–141 thousand Da; the
+125 thousand Da assignment is closest to the identity line. The dashed
+identity line marks agreement; most samples lie far from it. The table
+above identifies the
 samples.](tutorial-conventional-calibration_files/figure-html/validation-plot-1.png)
 
-Calculated and supplied weight-average molecular weights for the
-synthetic unknown samples, using only the measured portion within
+Calculated and assigned generator weight-average molecular weights for
+the synthetic unknown samples, using only the measured portion within
 calibration support. The dashed identity line marks agreement; omitted
 signal outside the calibration range is not represented. The calculated
-values cluster near 130–141 kDa while supplied values span about 3.5 kDa
+values cluster near 130–141 kDa while assigned values span about 3.5 kDa
 to 1.5 MDa. The table above gives sample IDs.
 
 ## Special case: bimodal signal
 
 The synthetic `Unknown-Bimodal` trace is described as a mixture with
-supplied component values of 50,000 and 200,000 Da. Molecular-weight
-averages summarize the calibrated portion of the trace; inspect the
-signal and support before interpreting components.
+generator-assigned component values of 50,000 and 200,000 Da.
+Molecular-weight averages summarize the calibrated portion of the trace;
+inspect the signal and support before interpreting components.
 
 ``` r
 
@@ -791,7 +895,7 @@ ggplot(bimodal_chrom, aes(molecular_weight, ri_response)) +
     x = "Calibrated molecular weight (Da)",
     y = "Baseline-corrected RI signal (mV)",
     title = "Synthetic bimodal sample",
-    subtitle = "Vertical guides mark the two supplied component values"
+    subtitle = "Vertical guides mark the two generator-assigned component values"
   ) +
   theme_minimal(base_size = 11)
 ```
@@ -799,13 +903,13 @@ ggplot(bimodal_chrom, aes(molecular_weight, ri_response)) +
 ![Point chart of baseline-corrected RI response against calibrated
 molecular weight in daltons on a logarithmic horizontal axis. The
 displayed points form a broad cloud over the finite sampled calibration
-support; vertical guides mark the supplied 50,000 and 200,000 Da
-component values. No line joins points across omitted
+support; vertical guides mark the generator-assigned 50,000 and 200,000
+Da component values. No line joins points across omitted
 support.](tutorial-conventional-calibration_files/figure-html/bimodal-1.png)
 
 The synthetic bimodal trace is plotted against calibrated molecular
 weight only at measured locations with finite calibration values.
-Vertical guides mark the dataset’s supplied 50,000 and 200,000 Da
+Vertical guides mark the generator-assigned 50,000 and 200,000 Da
 component values; signal outside finite calibration support is omitted.
 
 ## Troubleshooting
@@ -821,7 +925,7 @@ component values; signal outside finite calibration support is omitted.
 ## Summary
 
 The code sequence demonstrates standard processing, calibration saving,
-application, and comparison with supplied reference values. This
+application, and comparison with generator-assigned values. This
 synthetic example does not provide quantitative sample results.
 
 ### Key points

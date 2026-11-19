@@ -333,6 +333,23 @@ restored, then baked against a current dataset. Its target column
 retained the synthetic `mg/mL` tag. Each baked row is processed from its
 current values; the recipe does not cache a prior bake result.
 
+### Which bundled trace should I use?
+
+In `sec_raw_multidetector`, UV is declared 0.08 mL **before** RI and
+MALS 0.18 mL **after** RI. To construct a target that arrives later by Δ
+minutes, the generator shifts the input times forward: the target at
+time *t* takes its value from the source at *t − Δ*. To align that
+target, the recipe reads it at *t + Δ*. Divide the signed volume in mL
+by the flow in mL/min to obtain Δ.
+
+The older `sec_triple_detect` fixture was generated with the opposite
+sign. Use it to explore detector responses, not to estimate a delay from
+a known offset. Both datasets include detector-specific responses and
+noise, so even in the current convention the distance between two maxima
+need not equal the declared delay. The [triple-detection
+tutorial](https://jameshwade.github.io/measure.sec/articles/tutorial-triple-detection.md)
+shows the distinction on a recorded synthetic run.
+
 ## Index shifting and interpolation
 
 `method = "shift"` uses one integer number of points, rounded to the

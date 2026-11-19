@@ -433,7 +433,7 @@ Realistic raw chromatogram data for tutorials
 - [`sec_raw_standards`](https://jameshwade.github.io/measure.sec/reference/sec_raw_standards.md)
   : Raw SEC Calibration Standards
 - [`sec_raw_unknowns`](https://jameshwade.github.io/measure.sec/reference/sec_raw_unknowns.md)
-  : Raw SEC Unknown Samples with Known Molecular Weights
+  : Raw SEC Unknown Samples with Assigned Molecular Weights
 - [`sec_raw_multidetector`](https://jameshwade.github.io/measure.sec/reference/sec_raw_multidetector.md)
   : Raw Multi-Detector SEC Data
 

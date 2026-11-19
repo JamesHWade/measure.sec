@@ -114,8 +114,8 @@ drift:</p>
 <li><p>3 PMMA samples (25K to 200K MW, broader dispersity 1.8-2.2)</p></li>
 <li><p>2 PEG samples (5K and 20K MW, low dispersity ~1.1-1.15)</p></li>
 <li><p>2 copolymer samples (40K and 80K MW, intermediate dispersity 1.5-1.7)</p></li>
-</ul><p><strong>Multi-Detector Features:</strong></p><ul><li><p>Detector offsets are present, but the legacy generator's delay sign
-differs from the physical convention in <code><a href="step_sec_detector_delay.html">step_sec_detector_delay</a></code>.
+</ul><p><strong>Multi-Detector Features:</strong></p><ul><li><p>The legacy generator moved a positive-delay target earlier on the
+time axis. <code><a href="step_sec_detector_delay.html">step_sec_detector_delay</a></code> expects it later.
 Do not use this dataset as a known-delay reference.</p></li>
 <li><p>Different detector responses based on polymer chemistry</p></li>
 <li><p>PEG has no UV response (extinction_coef = 0)</p></li>
