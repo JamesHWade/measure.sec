@@ -15,10 +15,11 @@
 #' @param uv_col Name of the UV detector measure column.
 #' @param ri_col Name of the RI detector measure column.
 #' @param input_basis Input interpretation: `"auto"` (default) selects raw
-#'   detector responses when both curves are untagged and normalized
-#'   concentrations when both curves carry units; `"detector_response"` and
-#'   `"normalized_concentration"` select a basis explicitly. A tagged/raw mix
-#'   is rejected.
+#'   detector responses when both curves are untagged or explicitly declared
+#'   `"detector_response"`, and normalized concentrations when both curves
+#'   carry `"mass_concentration"` metadata; `"detector_response"` and
+#'   `"normalized_concentration"` select a basis explicitly. A raw/concentration
+#'   mix is rejected.
 #' @param uv_concentration_unit,ri_concentration_unit Units of the respective
 #'   curves for `"normalized_concentration"`. Each can be omitted when the
 #'   training curve records `sec_concentration_unit`; an explicit unit must
@@ -262,29 +263,20 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   ri_concentration_unit <- x$ri_concentration_unit
   uv_concentration_unit_source <- NULL
   ri_concentration_unit_source <- NULL
-  uv_recorded_unit <- attr(
-    training[[uv_col]],
-    "sec_concentration_unit",
-    exact = TRUE
-  )
-  ri_recorded_unit <- attr(
-    training[[ri_col]],
-    "sec_concentration_unit",
-    exact = TRUE
-  )
-  .sec_validate_concentration_unit(
-    uv_recorded_unit,
-    "recorded UV concentration unit"
-  )
-  .sec_validate_concentration_unit(
-    ri_recorded_unit,
-    "recorded RI concentration unit"
-  )
+  uv_basis <- .sec_measure_value_basis(training[[uv_col]], "uv_col")
+  ri_basis <- .sec_measure_value_basis(training[[ri_col]], "ri_col")
 
   if (identical(input_basis, "auto")) {
-    if (is.null(uv_recorded_unit) && is.null(ri_recorded_unit)) {
+    if (
+      uv_basis %in%
+        c("untagged", "detector_response") &&
+        ri_basis %in% c("untagged", "detector_response")
+    ) {
       input_basis <- "detector_response"
-    } else if (!is.null(uv_recorded_unit) && !is.null(ri_recorded_unit)) {
+    } else if (
+      identical(uv_basis, "mass_concentration") &&
+        identical(ri_basis, "mass_concentration")
+    ) {
       input_basis <- "normalized_concentration"
     } else {
       cli::cli_abort(
@@ -294,7 +286,10 @@ prep.step_sec_uv_ri_ratio <- function(x, training, info = NULL, ...) {
   }
 
   if (identical(input_basis, "detector_response")) {
-    if (!is.null(uv_recorded_unit) || !is.null(ri_recorded_unit)) {
+    if (
+      identical(uv_basis, "mass_concentration") ||
+        identical(ri_basis, "mass_concentration")
+    ) {
       cli::cli_abort(
         "Raw detector-response mode cannot use concentration-tagged curves."
       )
@@ -381,17 +376,11 @@ bake.step_sec_uv_ri_ratio <- function(object, new_data, ...) {
   smooth_window <- object$smooth_window
 
   if (identical(input_basis, "detector_response")) {
+    uv_basis <- .sec_measure_value_basis(new_data[[uv_col]], "uv_col")
+    ri_basis <- .sec_measure_value_basis(new_data[[ri_col]], "ri_col")
     if (
-      !is.null(attr(
-        new_data[[uv_col]],
-        "sec_concentration_unit",
-        exact = TRUE
-      )) ||
-        !is.null(attr(
-          new_data[[ri_col]],
-          "sec_concentration_unit",
-          exact = TRUE
-        ))
+      identical(uv_basis, "mass_concentration") ||
+        identical(ri_basis, "mass_concentration")
     ) {
       cli::cli_abort(
         "Raw detector-response mode cannot bake concentration-tagged curves."

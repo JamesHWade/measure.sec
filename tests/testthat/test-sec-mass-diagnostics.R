@@ -99,9 +99,14 @@ test_that("mass normalization reports sampled positive and negative areas", {
   )
   expect_identical(names(captured$value), names(input))
   expect_identical(class(captured$value$ri), class(input$ri))
+  expect_identical(
+    measure::measure_value_metadata(captured$value$ri),
+    list(quantity = "mass_concentration", unit = "mg/mL")
+  )
   output_attributes <- attributes(captured$value$ri)
   input_attributes <- attributes(input$ri)
   output_attributes$sec_concentration_unit <- NULL
+  output_attributes$measure_value_metadata <- NULL
   expect_identical(output_attributes, input_attributes)
   expect_identical(attr(captured$value$ri, "sec_concentration_unit"), "mg/mL")
   expect_identical(input, input_before)

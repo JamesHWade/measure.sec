@@ -18,8 +18,9 @@
 #' @param component_a_ri,component_b_ri RI response coefficients for components
 #'   A and B, calibrated in the selected input-channel basis per g/mL.
 #' @param input_basis Input interpretation: `"detector_response"` (default)
-#'   uses untagged raw UV and RI detector responses; `"normalized_concentration"`
-#'   uses apparent concentration channels and converts them to g/mL before
+#'   uses raw UV and RI detector responses, whether untagged or explicitly
+#'   declared `"detector_response"`; `"normalized_concentration"` uses
+#'   apparent concentration channels and converts them to g/mL before
 #'   calculating composition.
 #' @param uv_concentration_unit,ri_concentration_unit Units of the respective
 #'   curves when `input_basis = "normalized_concentration"`. Each can be
@@ -362,18 +363,12 @@ prep.step_sec_composition <- function(x, training, info = NULL, ...) {
   ri_concentration_unit <- x$ri_concentration_unit
   uv_concentration_unit_source <- NULL
   ri_concentration_unit_source <- NULL
+  uv_basis <- .sec_measure_value_basis(training[[uv_col]], "uv_col")
+  ri_basis <- .sec_measure_value_basis(training[[ri_col]], "ri_col")
   if (identical(input_basis, "detector_response")) {
     if (
-      !is.null(attr(
-        training[[uv_col]],
-        "sec_concentration_unit",
-        exact = TRUE
-      )) ||
-        !is.null(attr(
-          training[[ri_col]],
-          "sec_concentration_unit",
-          exact = TRUE
-        ))
+      identical(uv_basis, "mass_concentration") ||
+        identical(ri_basis, "mass_concentration")
     ) {
       cli::cli_abort(
         c(
@@ -446,17 +441,11 @@ bake.step_sec_composition <- function(object, new_data, ...) {
   ri_concentration_unit_source <- object$ri_concentration_unit_source
 
   if (identical(input_basis, "detector_response")) {
+    uv_basis <- .sec_measure_value_basis(new_data[[uv_col]], "uv_col")
+    ri_basis <- .sec_measure_value_basis(new_data[[ri_col]], "ri_col")
     if (
-      !is.null(attr(
-        new_data[[uv_col]],
-        "sec_concentration_unit",
-        exact = TRUE
-      )) ||
-        !is.null(attr(
-          new_data[[ri_col]],
-          "sec_concentration_unit",
-          exact = TRUE
-        ))
+      identical(uv_basis, "mass_concentration") ||
+        identical(ri_basis, "mass_concentration")
     ) {
       cli::cli_abort(
         "Raw detector-response mode cannot bake concentration-tagged curves."

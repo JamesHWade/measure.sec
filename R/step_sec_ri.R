@@ -346,7 +346,7 @@ bake.step_sec_ri <- function(object, new_data, ...) {
       })
     )
     if (normalize_to_concentration) {
-      attr(output, "sec_concentration_unit") <- concentration_units
+      output <- .sec_tag_concentration(output, concentration_units)
     }
     output_col <- object$output_col %||% source_col
     new_data[[output_col]] <- output

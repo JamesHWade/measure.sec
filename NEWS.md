@@ -1,5 +1,10 @@
 # measure.sec 0.0.0.9000
 
+* RI, UV and mass-normalized concentration curves now declare their quantity
+  and unit for use in measure recipes. A smoothed concentration can feed a
+  scattering calculation directly. A curve divided by its peak height is
+  labeled as normalized and rejected as a concentration input (#60).
+
 * Guides and the homepage now show detector processing, calibration and
   analysis results with labeled plots, captions and descriptive alt text.
   Examples distinguish simulated inputs, measured response diagnostics and
