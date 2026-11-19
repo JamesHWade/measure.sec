@@ -156,6 +156,18 @@ shape <- smoothed |>
 measure_value_metadata(shape$concentration)
 ```
 
+### Reusing a saved concentration curve
+
+Older SEC recipes stored the unit in an attribute called
+`sec_concentration_unit`. SEC detector steps still read it. To smooth such a
+curve with a core measure step, copy the recorded unit into the declaration
+first. For a saved concentration column `x`, read
+`unit <- attr(x, "sec_concentration_unit", exact = TRUE)`. If the recorded
+unit is `"mg/mL"` or `"g/mL"`, use
+`x <- set_measure_value_metadata(x, "mass_concentration", unit)`. This labels
+the existing numbers. If the unit is missing, consult the calibration record
+before declaring one.
+
 ## RALS: right-angle light scattering
 
 RALS records at 90 degrees by default. Larger particles can scatter less
