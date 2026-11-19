@@ -3,16 +3,16 @@
 \docType{data}
 \name{sec_raw_unknowns}
 \alias{sec_raw_unknowns}
-\title{Raw SEC Unknown Samples with Known Molecular Weights}
+\title{Raw SEC Unknown Samples with Assigned Molecular Weights}
 \format{
 A tibble with approximately 65,000 rows and 8 columns:
 \describe{
 \item{sample_id}{Character. Sample identifier}
 \item{description}{Character. Sample description and type}
-\item{true_mw}{Numeric. Known weight-average MW in Da (NA for bimodal)}
-\item{true_mn}{Numeric. Known number-average MW in Da}
-\item{true_mz}{Numeric. Known z-average MW in Da}
-\item{true_dispersity}{Numeric. Known dispersity (Mw/Mn)}
+\item{true_mw}{Numeric. Assigned weight-average MW in Da (NA for bimodal)}
+\item{true_mn}{Numeric. Assigned number-average MW in Da}
+\item{true_mz}{Numeric. Assigned z-average MW in Da}
+\item{true_dispersity}{Numeric. Assigned dispersity}
 \item{time_min}{Numeric. Elution time in minutes}
 \item{ri_mv}{Numeric. RI detector signal in millivolts (raw)}
 }
@@ -28,15 +28,16 @@ Synthetic SEC chromatograms with assigned molecular weights, including
 bimodal distributions and high molecular weight shoulders.
 }
 \details{
-The \verb{true_*} fields are simulation inputs. Compare calculated results with
-those values to investigate the workflow; agreement does not validate an
-instrument or a physical sample.
+For non-bimodal samples, \code{true_mw} sets the main peak position and
+\code{true_dispersity} sets its width. The generator attaches \code{true_mn} and
+\code{true_mz} as metadata; it does not constrain the signal to integrate to
+those moments. The bimodal sample has no assigned whole-sample moments.
 
 \strong{Sample Types:}
 \itemize{
 \item \strong{Unknown-A}: Broad distribution (dispersity ~2.0)
 \item \strong{Unknown-B}: Medium dispersity (~1.3)
-\item \strong{Unknown-C}: Narrow distribution (~1.1) for accuracy check
+\item \strong{Unknown-C}: Narrow distribution (~1.1)
 \item \strong{Unknown-Bimodal}: Two-peak mixture (50K + 200K)
 \item \strong{Unknown-HMW}: Very high MW (~1.5M) with aggregate shoulder
 \item \strong{Unknown-LMW}: Low MW oligomers (~3.5K)

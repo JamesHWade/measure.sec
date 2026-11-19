@@ -36,8 +36,8 @@
 #'
 #' **Multi-Detector Features:**
 #' \itemize{
-#'   \item Detector offsets are present, but the legacy generator's delay sign
-#'     differs from the physical convention in \code{\link{step_sec_detector_delay}}.
+#'   \item The legacy generator moved a positive-delay target earlier on the
+#'     time axis. \code{\link{step_sec_detector_delay}} expects it later.
 #'     Do not use this dataset as a known-delay reference.
 #'   \item Different detector responses based on polymer chemistry
 #'   \item PEG has no UV response (extinction_coef = 0)
@@ -693,7 +693,7 @@
 #' @source Synthetic data generated for package tutorials.
 "sec_raw_standards"
 
-#' Raw SEC Unknown Samples with Known Molecular Weights
+#' Raw SEC Unknown Samples with Assigned Molecular Weights
 #'
 #' Synthetic SEC chromatograms with assigned molecular weights, including
 #' bimodal distributions and high molecular weight shoulders.
@@ -702,24 +702,25 @@
 #' \describe{
 #'   \item{sample_id}{Character. Sample identifier}
 #'   \item{description}{Character. Sample description and type}
-#'   \item{true_mw}{Numeric. Known weight-average MW in Da (NA for bimodal)}
-#'   \item{true_mn}{Numeric. Known number-average MW in Da}
-#'   \item{true_mz}{Numeric. Known z-average MW in Da}
-#'   \item{true_dispersity}{Numeric. Known dispersity (Mw/Mn)}
+#'   \item{true_mw}{Numeric. Assigned weight-average MW in Da (NA for bimodal)}
+#'   \item{true_mn}{Numeric. Assigned number-average MW in Da}
+#'   \item{true_mz}{Numeric. Assigned z-average MW in Da}
+#'   \item{true_dispersity}{Numeric. Assigned dispersity}
 #'   \item{time_min}{Numeric. Elution time in minutes}
 #'   \item{ri_mv}{Numeric. RI detector signal in millivolts (raw)}
 #' }
 #'
 #' @details
-#' The `true_*` fields are simulation inputs. Compare calculated results with
-#' those values to investigate the workflow; agreement does not validate an
-#' instrument or a physical sample.
+#' For non-bimodal samples, `true_mw` sets the main peak position and
+#' `true_dispersity` sets its width. The generator attaches `true_mn` and
+#' `true_mz` as metadata; it does not constrain the signal to integrate to
+#' those moments. The bimodal sample has no assigned whole-sample moments.
 #'
 #' **Sample Types:**
 #' \itemize{
 #'   \item \strong{Unknown-A}: Broad distribution (dispersity ~2.0)
 #'   \item \strong{Unknown-B}: Medium dispersity (~1.3)
-#'   \item \strong{Unknown-C}: Narrow distribution (~1.1) for accuracy check
+#'   \item \strong{Unknown-C}: Narrow distribution (~1.1)
 #'   \item \strong{Unknown-Bimodal}: Two-peak mixture (50K + 200K)
 #'   \item \strong{Unknown-HMW}: Very high MW (~1.5M) with aggregate shoulder
 #'   \item \strong{Unknown-LMW}: Low MW oligomers (~3.5K)
@@ -800,7 +801,7 @@
 #'
 #' **Samples Included:**
 #' \itemize{
-#'   \item \strong{PS-DelayStd}: Narrow PS standard for determining delays
+#'   \item \strong{PS-DelayStd}: Synthetic PS standard for comparing detector responses
 #'   \item \strong{Sample-1}: PS sample with strong UV absorption
 #'   \item \strong{Sample-2}: PMMA sample with weak UV
 #'   \item \strong{Sample-3}: Copolymer sample

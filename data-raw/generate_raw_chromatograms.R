@@ -18,6 +18,14 @@ set.seed(2026)
 # Flow rate (mL/min)
 flow_rate <- 1.0
 
+# Positive values are target-minus-reference detector delays. A later target
+# peak is constructed by assigning source values to shifted input knots at
+# `time + delay_time`; the runtime correction uses the same sign when it
+# evaluates a target at `x + delay`. Keep this label with the generator so a
+# future regeneration cannot silently change the physical meaning of the
+# bundled data.
+delay_convention <- "target_later_v1"
+
 # Time step (seconds converted to minutes)
 time_step <- 0.1 / 60 # 0.1 second sampling = 10 Hz
 
@@ -87,13 +95,14 @@ add_noise <- function(signal, base_noise, hetero_factor = 0.02) {
   signal + base + hetero
 }
 
-# Apply detector delay (shift signal in time)
-# Positive delay_time means detector sees sample LATER (peak shifts to higher t)
-# Negative delay_time means detector sees sample EARLIER (peak shifts to lower t)
+# Apply detector delay using the current `target_later_v1` convention.
+# `approx()` assigns each source value to the shifted input knot
+# `time + delay_time`, so a positive delay moves its peak later.
 apply_delay <- function(signal, time, delay_time) {
   if (abs(delay_time) < 1e-6) {
     return(signal)
   }
+
   approx(time + delay_time, signal, xout = time, rule = 2)$y
 }
 
@@ -342,6 +351,8 @@ generate_raw_multidetector <- function() {
   delay_uv <- -0.08 # UV is 0.08 mL before RI
 
   delay_mals <- 0.18 # MALS is 0.18 mL after RI
+  delay_uv_time <- delay_uv / flow_rate
+  delay_mals_time <- delay_mals / flow_rate
 
   # Samples for multi-detector analysis
   samples <- tribble(
@@ -399,24 +410,24 @@ generate_raw_multidetector <- function() {
 
     # UV signal (BEFORE RI in flow path - sees sample earlier)
     uv_base <- conc_profile * smp_row$ext_coef / smp_row$dn_dc
-    uv_signal <- apply_delay(uv_base, time_points, delay_uv)
+    uv_signal <- apply_delay(uv_base, time_points, delay_uv_time)
     uv_signal <- add_baseline(
       uv_signal,
       time_points,
       drift_amp = 0.8,
-      injection_time = min(time_points) + delay_uv
+      injection_time = min(time_points) + delay_uv_time
     )
     uv_signal <- add_noise(uv_signal, base_noise = 0.4)
 
     # MALS signal (AFTER RI in flow path - sees sample later)
     # MALS scales with MW for absolute MW determination
     mals_base <- conc_profile * (smp_row$mw / 50000) * smp_row$dn_dc
-    mals_signal <- apply_delay(mals_base, time_points, delay_mals)
+    mals_signal <- apply_delay(mals_base, time_points, delay_mals_time)
     mals_signal <- add_baseline(
       mals_signal,
       time_points,
       drift_amp = 2.5,
-      injection_time = min(time_points) + delay_mals
+      injection_time = min(time_points) + delay_mals_time
     )
     mals_signal <- add_noise(
       mals_signal,

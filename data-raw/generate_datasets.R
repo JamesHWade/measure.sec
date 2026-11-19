@@ -26,6 +26,11 @@ flow_rate <- 1.0
 # UV is before RI (negative), MALS is after RI (positive)
 delay_volumes <- c(ri = 0, uv = -0.05, mals = 0.15)
 
+# This generator predates the shared detector-delay convention. Keep its
+# historical output reproducible until the bundled data are deliberately
+# regenerated under the current convention.
+delay_convention <- "legacy_earlier_v1"
+
 # Convert delay volumes to time offsets
 delay_times <- delay_volumes / flow_rate # in minutes
 
@@ -191,13 +196,18 @@ add_noise <- function(signal, noise_level) {
   signal + rnorm(length(signal), 0, noise_level * max(abs(signal)))
 }
 
-# Apply detector delay (shift signal in time)
-apply_delay <- function(signal, time, delay_time) {
+# Historical detector-delay construction for `sec_triple_detect`.
+#
+# `legacy_earlier_v1` is intentionally retained: a positive delay moves the input
+# knots to `time - delay_time`, so the peak appears earlier. The
+# current package convention is `target_later_v1`, where a positive
+# target-minus-reference delay moves the generated peak later and is corrected
+# by evaluating the target at `x + delay`.
+apply_delay_legacy_v1 <- function(signal, time, delay_time) {
   if (abs(delay_time) < 1e-6) {
     return(signal)
   }
 
-  # Interpolate to get delayed signal
   approx(time - delay_time, signal, xout = time, rule = 2)$y
 }
 
@@ -237,11 +247,19 @@ generate_chromatogram <- function(sample_row, time_points) {
   # Apply inter-detector delays
   # RI is reference (no delay)
   ri_signal <- ri_base
-  # UV sees sample slightly before RI
+  # The nominal UV volume is negative; the legacy helper shifts UV later.
 
-  uv_signal <- apply_delay(uv_base, time_points, delay_times["uv"])
-  # MALS sees sample after RI
-  mals_signal <- apply_delay(mals_base, time_points, delay_times["mals"])
+  uv_signal <- apply_delay_legacy_v1(
+    uv_base,
+    time_points,
+    delay_times["uv"]
+  )
+  # The nominal MALS volume is positive; the legacy helper shifts MALS earlier.
+  mals_signal <- apply_delay_legacy_v1(
+    mals_base,
+    time_points,
+    delay_times["mals"]
+  )
 
   # Add baseline drift
   ri_signal <- add_drift(ri_signal, time_points, baseline_drift * dn_dc)

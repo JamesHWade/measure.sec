@@ -46,7 +46,7 @@ mean the observed peak maxima need not recover the declared delays.
 
 \strong{Samples Included:}
 \itemize{
-\item \strong{PS-DelayStd}: Narrow PS standard for determining delays
+\item \strong{PS-DelayStd}: Synthetic PS standard for comparing detector responses
 \item \strong{Sample-1}: PS sample with strong UV absorption
 \item \strong{Sample-2}: PMMA sample with weak UV
 \item \strong{Sample-3}: Copolymer sample

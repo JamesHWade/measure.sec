@@ -44,11 +44,18 @@ jobs:
           Rscript "$RUNNER_TEMP/qualification tools/sec-elution/qualify.R" "$RUNNER_TEMP/sec elution copied"
           python3 "$RUNNER_TEMP/qualification tools/sec-elution/verify.py" "$RUNNER_TEMP/sec elution copied"
 
+      - name: Replay shipped fixtures and qualify calibration and delay
+        run: |
+          Rscript tools/fixture-qualification/standards.R . "$RUNNER_TEMP/sec-fixtures"
+          Rscript tools/fixture-qualification/unknowns.R . "$RUNNER_TEMP/sec-fixtures"
+          Rscript tools/fixture-qualification/delays.R . "$RUNNER_TEMP/sec-fixtures"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: sec-elution-${{ github.sha }}
           path: |
+            ${{ runner.temp }}/sec-fixtures
             ${{ runner.temp }}/sec-elution
             ${{ runner.temp }}/sec elution copied
           if-no-files-found: ignore
