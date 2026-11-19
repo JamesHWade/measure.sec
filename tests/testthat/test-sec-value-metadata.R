@@ -276,6 +276,213 @@ test_that("raw SEC consumers accept native detector-response metadata", {
   expect_true(is.list(composition$composition_a[[1]]))
 })
 
+test_that("raw SEC fits enforce declared native units per detector", {
+  make_data <- function(
+    uv_unit = "UV-AU",
+    ri_unit = "RI-AU",
+    uv_scale = 1,
+    ri_scale = 1
+  ) {
+    data <- tibble::tibble(sample_id = "sample")
+    data$ri <- measure::new_measure_list(list(
+      measure::new_measure_tbl(1:3, ri_scale * c(1, 2, 1))
+    ))
+    data$uv <- measure::new_measure_list(list(
+      measure::new_measure_tbl(1:3, uv_scale * c(0.5, 1, 0.5))
+    ))
+    if (!is.null(ri_unit)) {
+      data$ri <- measure::set_measure_value_metadata(
+        data$ri,
+        quantity = "detector_response",
+        unit = ri_unit
+      )
+    }
+    if (!is.null(uv_unit)) {
+      data$uv <- measure::set_measure_value_metadata(
+        data$uv,
+        quantity = "detector_response",
+        unit = uv_unit
+      )
+    }
+    data
+  }
+
+  training <- make_data()
+  ratio_fit <- recipes::prep(
+    recipes::recipe(training) |>
+      step_sec_uv_ri_ratio(
+        uv_col = "uv",
+        ri_col = "ri",
+        input_basis = "detector_response",
+        smooth = FALSE
+      )
+  )
+  composition_fit <- recipes::prep(
+    recipes::recipe(training) |>
+      step_sec_composition(
+        uv_col = "uv",
+        ri_col = "ri",
+        component_a_uv = 1,
+        component_a_ri = 0.2,
+        component_b_uv = 0.1,
+        component_b_ri = 0.8,
+        input_basis = "detector_response"
+      )
+  )
+
+  expect_identical(ratio_fit$steps[[1]]$uv_raw_unit, "UV-AU")
+  expect_identical(ratio_fit$steps[[1]]$ri_raw_unit, "RI-AU")
+  expect_identical(composition_fit$steps[[1]]$uv_raw_unit, "UV-AU")
+  expect_identical(composition_fit$steps[[1]]$ri_raw_unit, "RI-AU")
+  expect_silent(recipes::bake(ratio_fit, new_data = training))
+  expect_silent(recipes::bake(composition_fit, new_data = training))
+
+  changed_uv <- make_data(uv_unit = "UV-mAU", uv_scale = 1000)
+  expect_error(
+    recipes::bake(ratio_fit, new_data = changed_uv),
+    "unit"
+  )
+  expect_error(
+    recipes::bake(composition_fit, new_data = changed_uv),
+    "unit"
+  )
+
+  lost_ri <- make_data(ri_unit = NULL)
+  expect_error(
+    recipes::bake(ratio_fit, new_data = lost_ri),
+    "retain raw detector-response unit"
+  )
+  expect_error(
+    recipes::bake(composition_fit, new_data = lost_ri),
+    "retain raw detector-response unit"
+  )
+
+  persisted_ratio <- tempfile(fileext = ".rds")
+  persisted_composition <- tempfile(fileext = ".rds")
+  legacy_ratio <- tempfile(fileext = ".rds")
+  legacy_composition <- tempfile(fileext = ".rds")
+  on.exit(
+    unlink(
+      c(
+        persisted_ratio,
+        persisted_composition,
+        legacy_ratio,
+        legacy_composition
+      )
+    ),
+    add = TRUE
+  )
+  saveRDS(ratio_fit, persisted_ratio)
+  saveRDS(composition_fit, persisted_composition)
+  expect_silent(
+    recipes::bake(readRDS(persisted_ratio), new_data = training)
+  )
+  expect_silent(
+    recipes::bake(readRDS(persisted_composition), new_data = training)
+  )
+
+  old_ratio_fit <- ratio_fit
+  old_ratio_fit$steps[[1]]$uv_raw_unit <- NULL
+  old_ratio_fit$steps[[1]]$ri_raw_unit <- NULL
+  old_composition_fit <- composition_fit
+  old_composition_fit$steps[[1]]$uv_raw_unit <- NULL
+  old_composition_fit$steps[[1]]$ri_raw_unit <- NULL
+  saveRDS(old_ratio_fit, legacy_ratio)
+  saveRDS(old_composition_fit, legacy_composition)
+  expect_silent(
+    recipes::bake(readRDS(legacy_ratio), new_data = changed_uv)
+  )
+  expect_silent(
+    recipes::bake(readRDS(legacy_composition), new_data = changed_uv)
+  )
+
+  untagged <- make_data(uv_unit = NULL, ri_unit = NULL)
+  newly_declared <- make_data(uv_unit = "UV-mAU", ri_unit = "RI-mAU")
+  untagged_ratio <- recipes::prep(
+    recipes::recipe(untagged) |>
+      step_sec_uv_ri_ratio(
+        uv_col = "uv",
+        ri_col = "ri",
+        input_basis = "detector_response",
+        smooth = FALSE
+      )
+  )
+  untagged_composition <- recipes::prep(
+    recipes::recipe(untagged) |>
+      step_sec_composition(
+        uv_col = "uv",
+        ri_col = "ri",
+        component_a_uv = 1,
+        component_a_ri = 0.2,
+        component_b_uv = 0.1,
+        component_b_ri = 0.8,
+        input_basis = "detector_response"
+      )
+  )
+  expect_silent(
+    recipes::bake(untagged_ratio, new_data = newly_declared)
+  )
+  expect_silent(
+    recipes::bake(untagged_composition, new_data = newly_declared)
+  )
+})
+
+test_that("raw SEC readers reject unsupported quantities before unit checks", {
+  data <- tibble::tibble(sample_id = "sample")
+  data$ri <- measure::new_measure_list(list(
+    measure::new_measure_tbl(1:3, c(1, 2, 1))
+  ))
+  data$uv <- measure::new_measure_list(list(
+    measure::new_measure_tbl(1:3, c(0.5, 1, 0.5))
+  ))
+  data$ri <- measure::set_measure_value_metadata(
+    data$ri,
+    quantity = "detector_response",
+    unit = "RI-AU"
+  )
+  data$uv <- measure::set_measure_value_metadata(
+    data$uv,
+    quantity = "detector_response",
+    unit = "UV-AU"
+  )
+  ratio_fit <- recipes::prep(
+    recipes::recipe(data) |>
+      step_sec_uv_ri_ratio(
+        uv_col = "uv",
+        ri_col = "ri",
+        input_basis = "detector_response",
+        smooth = FALSE
+      )
+  )
+  composition_fit <- recipes::prep(
+    recipes::recipe(data) |>
+      step_sec_composition(
+        uv_col = "uv",
+        ri_col = "ri",
+        component_a_uv = 1,
+        component_a_ri = 0.2,
+        component_b_uv = 0.1,
+        component_b_ri = 0.8,
+        input_basis = "detector_response"
+      )
+  )
+  invalid <- data
+  invalid$uv <- measure::set_measure_value_metadata(
+    invalid$uv,
+    quantity = "normalized_signal",
+    unit = "UV-AU"
+  )
+
+  expect_error(
+    recipes::bake(ratio_fit, new_data = invalid),
+    "unsupported value quantity"
+  )
+  expect_error(
+    recipes::bake(composition_fit, new_data = invalid),
+    "unsupported value quantity"
+  )
+})
+
 test_that("auto raw mode accepts mixed tagged and untagged response curves", {
   data <- tibble::tibble(sample_id = "sample")
   data$ri <- measure::new_measure_list(list(

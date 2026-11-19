@@ -86,25 +86,38 @@
   list(quantity = "mass_concentration", unit = legacy_unit)
 }
 
-.sec_measure_value_basis <- function(x, argument = "measurement") {
+.sec_detector_declaration <- function(x, argument) {
   metadata <- .sec_measure_value_metadata(x)
-
   if (is.null(metadata)) {
-    return("untagged")
-  }
-  if (identical(metadata$quantity, "mass_concentration")) {
-    return("mass_concentration")
-  }
-  if (identical(metadata$quantity, "detector_response")) {
-    return("detector_response")
+    return(list(quantity = "untagged", unit = NULL))
   }
 
-  cli::cli_abort(
-    c(
+  if (!metadata$quantity %in% c("detector_response", "mass_concentration")) {
+    cli::cli_abort(c(
       "{.arg {argument}} declares unsupported value quantity {.val {metadata$quantity}}.",
       "i" = "Use {.val detector_response} for native detector values or {.val mass_concentration} for calibrated concentration values."
+    ))
+  }
+  metadata
+}
+
+.sec_validate_raw_response_unit <- function(expected, current, argument) {
+  if (is.null(expected)) {
+    return(invisible(NULL))
+  }
+
+  if (is.null(current)) {
+    cli::cli_abort(
+      "{.arg {argument}} must retain raw detector-response unit {.val {expected}} recorded during training."
     )
-  )
+  }
+  if (!identical(current, expected)) {
+    cli::cli_abort(
+      "{.arg {argument}} raw detector-response unit {.val {current}} conflicts with training unit {.val {expected}}."
+    )
+  }
+
+  invisible(NULL)
 }
 
 .sec_tag_concentration <- function(output, unit) {

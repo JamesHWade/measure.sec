@@ -48,19 +48,21 @@ units for raw mode and g/mL after conversion for normalized mode.}
 \item{id}{Unique step identifier.}
 
 \item{input_basis}{Input interpretation: \code{"auto"} (default) selects raw
-detector responses when both curves are untagged and normalized
-concentrations when both curves carry units; \code{"detector_response"} and
-\code{"normalized_concentration"} select a basis explicitly. A tagged/raw mix
-is rejected.}
+detector responses when both curves are untagged or explicitly declared
+\code{"detector_response"}, and normalized concentrations when both curves
+carry \code{"mass_concentration"} metadata; \code{"detector_response"} and
+\code{"normalized_concentration"} select a basis explicitly. A raw/concentration
+mix is rejected. In raw mode, a declared native unit is recorded during
+prep and must match on bake; untagged training curves do not constrain
+later raw declarations.}
 
-\item{uv_concentration_unit, ri_concentration_unit}{Units of the respective
-curves for \code{"normalized_concentration"}. Each can be omitted when the
-training curve records \code{sec_concentration_unit}; an explicit unit must
-agree with any recorded unit. When prep infers a unit from its training
-tag, the corresponding baked curve must retain that tag. An explicit unit
-permits untagged baked curves, but any recorded tag must agree. Both units
-are required for untagged normalized training curves. These arguments must
-be \code{NULL} for raw detector responses and with \code{input_basis = "auto"}.}
+\item{uv_concentration_unit, ri_concentration_unit}{Each concentration unit
+is either \code{"mg/mL"} or \code{"g/mL"}. Prep can read it from a
+\code{mass_concentration} declaration or a legacy \code{sec_concentration_unit}
+tag. When prep reads a unit, bake requires the same recorded unit on
+new data. Supply the unit explicitly for an untagged concentration
+curve. Any recorded unit must agree. Leave both arguments \code{NULL}
+for raw detector responses.}
 }
 \value{
 An updated recipe with the new step added.
