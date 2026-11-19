@@ -36,8 +36,8 @@
 #'
 #' **Multi-Detector Features:**
 #' \itemize{
-#'   \item Detector offsets are present, but the legacy generator's delay sign
-#'     differs from the physical convention in \code{\link{step_sec_detector_delay}}.
+#'   \item The legacy generator moved a positive-delay target earlier on the
+#'     time axis. \code{\link{step_sec_detector_delay}} expects it later.
 #'     Do not use this dataset as a known-delay reference.
 #'   \item Different detector responses based on polymer chemistry
 #'   \item PEG has no UV response (extinction_coef = 0)
@@ -801,7 +801,7 @@
 #'
 #' **Samples Included:**
 #' \itemize{
-#'   \item \strong{PS-DelayStd}: Narrow PS standard for determining delays
+#'   \item \strong{PS-DelayStd}: Synthetic PS standard for comparing detector responses
 #'   \item \strong{Sample-1}: PS sample with strong UV absorption
 #'   \item \strong{Sample-2}: PMMA sample with weak UV
 #'   \item \strong{Sample-3}: Copolymer sample

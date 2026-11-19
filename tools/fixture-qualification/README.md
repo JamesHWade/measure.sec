@@ -38,3 +38,19 @@ integral over the recorded 4–22 minutes. Only 19.3%–23.0% remains. It is a
 fraction of observed detector response, not a fraction of the assigned molecular
 weight. The nominal generator mapping is evaluated only on that same interval,
 so the comparison does not require extrapolation.
+
+## Check the direction of a detector delay
+
+`Rscript tools/fixture-qualification/delays.R . /tmp/sec-fixtures` replays
+the distributed detector fixtures. The legacy `sec_triple_detect` generator
+moves a positive-delay peak earlier. In `sec_raw_multidetector`, a positive
+delay places the target later: move the original sample times forward by
+the delay in minutes, then correct by sampling the target at time plus delay.
+The generator repeats the endpoint signal outside the original grid; the
+runtime correction returns missing values outside the target grid.
+
+The script runs the raw generator again at 0.5 mL/min to detect a missing
+volume-to-time conversion. Twelve clean, broad and noisy controls check both
+signs and both axis units against direct sample indexing, including the missing
+boundaries. The noisy cases translate one fixed realization; they are not
+estimates of physical detector lag from two independently noisy signals.
